@@ -297,7 +297,7 @@ final class AppModel {
         hasConsented = UserDefaults.standard.bool(forKey: "hasConsented")
         marketingOptIn = UserDefaults.standard.bool(forKey: "marketingOptIn")
         hasSeenPlazaIntro = UserDefaults.standard.bool(forKey: "hasSeenPlazaIntro")
-        coins = UserDefaults.standard.object(forKey: "coins") as? Int ?? Self.starterCoins
+        coins = UserDefaults.standard.object(forKey: "coins") == nil ? Self.starterCoins : UserDefaults.standard.integer(forKey: "coins")
         savedLines = UserDefaults.standard.stringArray(forKey: "savedLines") ?? []
         draft = store.load(StarDraft.self, from: "draft") ?? StarDraft()
         stars = store.load([StarItem].self, from: "stars") ?? []

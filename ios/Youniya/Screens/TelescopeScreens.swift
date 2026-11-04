@@ -178,7 +178,7 @@ struct TelescopeScanView: View {
             KeptHero()
                 .padding(.top, Space.sm)
 
-            VStack(alignment: .leading, spacing: Space.lg) {
+            VStack(spacing: Space.lg) {
                 Text("별들을 바라보는 중이에요")
                     .textStyle(.h1)
                     .foregroundStyle(Color.textPrimary)
@@ -186,6 +186,8 @@ struct TelescopeScanView: View {
                     .textStyle(.bodyM)
                     .foregroundStyle(Color.textSecondary)
             }
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
             .fixedSize(horizontal: false, vertical: true)
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isHeader)
