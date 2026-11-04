@@ -88,6 +88,24 @@ extension View {
     }
 }
 
+extension View {
+    /// Figma list `Item` card (17, 18, 20, 22, 26, 28): Cosmos BG on a
+    /// raised→surface gradient, with a violet→slate gradient border.
+    func itemCard(seed: String) -> some View {
+        let shape = RoundedRectangle(cornerRadius: Radius.lg)
+        // Figma gradientTransform [[0.6, 0.8, 0], …]: runs from the top-left
+        // corner along (0.6, 0.8).
+        let start = UnitPoint(x: 0, y: 0), end = UnitPoint(x: 0.6, y: 0.8)
+        return self
+            // Figma items are 76pt tall (Noto Sans line heights 20 + 18).
+            .frame(minHeight: 76)
+            .cosmos(seed, in: shape)
+            .background(LinearGradient(colors: [.bgSurfaceRaised, .bgSurface], startPoint: start, endPoint: end), in: shape)
+            .overlay(shape.strokeBorder(LinearGradient(colors: [.borderFocus, .borderDefault], startPoint: start, endPoint: end), lineWidth: 1))
+            .contentShape(shape)
+    }
+}
+
 /// Figma `Bottom Sheet` background: raised surface with a Cosmos BG.
 struct SheetBackground: View {
     var seed: String

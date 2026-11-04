@@ -276,6 +276,10 @@ final class AppModel {
     var coins: Int {
         didSet { UserDefaults.standard.set(coins, forKey: "coins") }
     }
+    /// Set once the free first telescope ("처음 한 번은 무료", 07) is used.
+    var usedFreeTelescope: Bool {
+        didSet { UserDefaults.standard.set(usedFreeTelescope, forKey: "usedFreeTelescope") }
+    }
     /// 23 lines the user saved from others' stars (anonymous, no source kept).
     var savedLines: [String] {
         didSet { UserDefaults.standard.set(savedLines, forKey: "savedLines") }
@@ -299,6 +303,7 @@ final class AppModel {
         hasSeenPlazaIntro = UserDefaults.standard.bool(forKey: "hasSeenPlazaIntro")
         coins = UserDefaults.standard.object(forKey: "coins") == nil ? Self.starterCoins : UserDefaults.standard.integer(forKey: "coins")
         savedLines = UserDefaults.standard.stringArray(forKey: "savedLines") ?? []
+        usedFreeTelescope = UserDefaults.standard.bool(forKey: "usedFreeTelescope")
         draft = store.load(StarDraft.self, from: "draft") ?? StarDraft()
         stars = store.load([StarItem].self, from: "stars") ?? []
 
@@ -342,6 +347,14 @@ final class AppModel {
         coins -= amount
         return true
     }
+
+    /// The first telescope is free. Users who already have a report
+    /// (from before this rule) have used it.
+    var isTelescopeFree: Bool {
+        !usedFreeTelescope && !stars.contains { $0.report != nil }
+    }
+
+    func useFreeTelescope() { usedFreeTelescope = true }
 
     func saveLine(_ line: String) {
         if !savedLines.contains(line) { savedLines.append(line) }

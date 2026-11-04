@@ -27,6 +27,8 @@ struct MainView: View {
         case starlightLine(String) // 23
         case telescopeConfirm(StarItem.ID) // 24
         case scanning(StarItem.ID)  // 25
+        case reports   // 26
+        case coins     // 28
         case page(String)
     }
 
@@ -36,9 +38,10 @@ struct MainView: View {
                 .edgeSwipeDrawer(isOpen: $drawerOpen, enabled: stack.isEmpty) {
                     DrawerMenu(onSelect: { title in
                         drawerOpen = false
-                        if title == "마음 망원경", let latest = model.stars.first(where: \.isFloated) {
-                            // TODO: `26 리포트 목록`; until then open the latest star's report.
-                            openReport(latest)
+                        if title == "마음 망원경" {
+                            push(.reports)
+                        } else if title == "코인" {
+                            push(.coins)
                         } else if title == "별빛 기록" {
                             push(.records)
                         } else if title == "보관함" {
@@ -153,13 +156,18 @@ struct MainView: View {
         case .telescopeConfirm(let id):
             TelescopeConfirmView(
                 onStart: { replace(with: .scanning(id)) },
-                // TODO: `28 코인 충전`
-                onCharge: { replace(with: .page("코인 충전")) },
+                onCharge: { replace(with: .coins) },
                 onLater: pop
             )
             .edgeSwipeBack(onBack: pop)
         case .scanning(let id):
             TelescopeScanView(starID: id, onDone: { replace(with: .report(id)) }, onBackground: pop)
+        case .reports:
+            ReportListView(onBack: pop, onOpen: { push(.report($0.id)) })
+                .edgeSwipeBack(onBack: pop)
+        case .coins:
+            CoinChargeView(onBack: pop, onPolicy: { push(.page("결제·환불 정책")) })
+                .edgeSwipeBack(onBack: pop)
         case .page(let title):
             PlaceholderPage(title: title, onBack: pop)
                 .edgeSwipeBack(onBack: pop)
@@ -180,11 +188,21 @@ struct MainView: View {
         DispatchQueue.main.async { push(r) }
     }
 
-    /// 10 Mind Telescope Report for a floated star. The first time, it goes
-    /// through 24 (spend coins) and 25 (scanning).
+    /// 10 Mind Telescope Report for a floated star. A star without a report
+    /// goes through 24 (spend coins) and 25 (scanning); the very first one
+    /// is free and goes straight to 25.
     private func openReport(_ star: StarItem, replacing: Bool = false) {
         guard star.isFloated else { return }
-        let route: Route = model.report(for: star.id) == nil ? .telescopeConfirm(star.id) : .report(star.id)
+        let route: Route
+        if model.report(for: star.id) != nil {
+            route = .report(star.id)
+        } else if model.isTelescopeFree {
+            // "처음 한 번은 무료": skip the coin sheet.
+            model.useFreeTelescope()
+            route = .scanning(star.id)
+        } else {
+            route = .telescopeConfirm(star.id)
+        }
         if replacing { replace(with: route) } else { push(route) }
     }
 

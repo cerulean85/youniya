@@ -105,7 +105,6 @@ struct InfoCard: View {
     var detail: String
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: Radius.lg)
         VStack(alignment: .leading, spacing: Space.xs) {
             Text(title)
                 .textStyle(.labelM)
@@ -117,13 +116,7 @@ struct InfoCard: View {
         .lineLimit(1)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Space.lg)
-        .cosmos(seed, in: shape)
-        .background(
-            LinearGradient(stops: [.init(color: .bgSurfaceRaised, location: 0), .init(color: .bgSurface, location: 0.714)],
-                           startPoint: UnitPoint(x: 0.42, y: 0), endPoint: UnitPoint(x: 0.58, y: 1)),
-            in: shape
-        )
-        .overlay(shape.strokeBorder(Color.borderFocus, lineWidth: 1))
+        .itemCard(seed: seed)
         .accessibilityElement(children: .combine)
     }
 }

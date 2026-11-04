@@ -61,6 +61,8 @@ struct TelescopeConfirmView: View {
     var onLater: () -> Void
 
     @State private var showSheet = false
+    /// 29 Coin Shortage replaces the 24 content inside the same sheet.
+    @State private var short = false
     @State private var sheetHeight: CGFloat = 314
     /// What closed the sheet, run once it is gone.
     @State private var next: (() -> Void)?
@@ -92,13 +94,27 @@ struct TelescopeConfirmView: View {
             (next ?? onLater)()
             next = nil
         }) {
-            ActionSheetContent(
-                title: "마음 망원경 켜기",
-                message: "코인 \(AppModel.telescopeCost)개가 사용돼요. 결과는 진단이 아니에요.",
-                primary: ("코인 \(AppModel.telescopeCost)개로 켜기", { close(then: start) }),
-                secondary: ("코인 충전", { close(then: onCharge) }),
-                ghost: ("나중에", { close(then: onLater) })
-            )
+            Group {
+                if short {
+                    // 29 Coin Shortage
+                    ActionSheetContent(
+                        title: "코인이 조금 부족해요",
+                        message: "지금 코인 \(model.coins)개예요. 충전하거나 나중에 켤 수 있어요.",
+                        primary: ("코인 충전", { close(then: onCharge) }),
+                        secondary: ("나중에", { close(then: onLater) }),
+                        // Back to the 24 choice.
+                        ghost: ("닫기", { withAnimation(.snappy) { short = false } })
+                    )
+                } else {
+                    ActionSheetContent(
+                        title: "마음 망원경 켜기",
+                        message: "코인 \(AppModel.telescopeCost)개가 사용돼요. 결과는 진단이 아니에요.",
+                        primary: ("코인 \(AppModel.telescopeCost)개로 켜기", start),
+                        secondary: ("코인 충전", { close(then: onCharge) }),
+                        ghost: ("나중에", { close(then: onLater) })
+                    )
+                }
+            }
             .fixedSize(horizontal: false, vertical: true)
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { sheetHeight = $0 }
             .presentationDetents([.height(sheetHeight)])
@@ -114,8 +130,11 @@ struct TelescopeConfirmView: View {
     }
 
     private func start() {
-        // TODO: `29 코인 부족 시트` when the balance is short.
-        if model.spendCoins(AppModel.telescopeCost) { onStart() } else { onCharge() }
+        if model.spendCoins(AppModel.telescopeCost) {
+            close(then: onStart)
+        } else {
+            withAnimation(.snappy) { short = true }
+        }
     }
 }
 

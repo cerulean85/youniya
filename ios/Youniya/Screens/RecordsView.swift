@@ -61,7 +61,6 @@ struct RecordCard: View {
     var subtitle: String
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: Radius.lg)
         HStack(spacing: 12) {
             StarGlyph(floated: star.isFloated)
             VStack(alignment: .leading, spacing: 4) {
@@ -76,14 +75,7 @@ struct RecordCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(Space.lg)
-        .cosmos(star.id.uuidString, in: shape)
-        .background(
-            LinearGradient(stops: [.init(color: .bgSurfaceRaised, location: 0), .init(color: .bgSurface, location: 0.714)],
-                           startPoint: UnitPoint(x: 0.42, y: 0), endPoint: UnitPoint(x: 0.58, y: 1)),
-            in: shape
-        )
-        .overlay(shape.strokeBorder(Color.borderFocus, lineWidth: 1))
-        .contentShape(shape)
+        .itemCard(seed: star.id.uuidString)
         .accessibilityElement(children: .combine)
     }
 }

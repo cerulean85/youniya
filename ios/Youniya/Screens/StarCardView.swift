@@ -2,6 +2,7 @@ import SwiftUI
 
 /// 07 Today Star Card: the result after floating a star.
 struct StarCardView: View {
+    @Environment(AppModel.self) private var model
     var star: StarItem
     var title: String = "별이 떠올랐어요"
     var onClose: () -> Void
@@ -39,9 +40,12 @@ struct StarCardView: View {
                     .textStyle(.labelS)
                     .foregroundStyle(Color.brandPrimary)
                 Spacer()
-                Text("처음 한 번은 무료")
-                    .textStyle(.caption)
-                    .foregroundStyle(Color.starBright)
+                // Only while the free first telescope is unused.
+                if model.isTelescopeFree {
+                    Text("처음 한 번은 무료")
+                        .textStyle(.caption)
+                        .foregroundStyle(Color.starBright)
+                }
             }
             Text(analysis.telescopeTeaser)
                 .textStyle(.observation)
