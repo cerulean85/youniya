@@ -89,7 +89,7 @@ struct RecordCard: View {
 }
 
 /// 17 `Hero`: the twinkling constellation (342×130).
-private struct RecordsHero: View {
+struct RecordsHero: View {
     private struct S { var image: ImageResource; var center: CGPoint; var size: CGFloat; var keys: [(Double, Double)] }
     private let stars: [S] = [
         S(image: .recordsStar0, center: CGPoint(x: 36, y: 90), size: 66, keys: [(0, 1), (0.12, 0.3), (0.48, 1), (0.84, 0.3), (1, 1)]),
@@ -172,7 +172,7 @@ struct KeptView: View {
 }
 
 /// 18 `Hero`: small orbit system with a golden star in the middle.
-private struct KeptHero: View {
+struct KeptHero: View {
     private struct S { var image: ImageResource; var center: CGPoint; var size: CGFloat; var keys: [(Double, Double)] }
     private let stars: [S] = [
         S(image: .keptStar0, center: CGPoint(x: 171, y: 75), size: 90, keys: [(0, 1), (0.12, 0.3), (0.78, 1), (1, 0.3)]),

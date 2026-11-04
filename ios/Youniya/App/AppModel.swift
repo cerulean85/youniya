@@ -272,6 +272,14 @@ final class AppModel {
     var hasSeenPlazaIntro: Bool {
         didSet { UserDefaults.standard.set(hasSeenPlazaIntro, forKey: "hasSeenPlazaIntro") }
     }
+    /// Coin balance. TODO: Comes from the store/server; mocked on device.
+    var coins: Int {
+        didSet { UserDefaults.standard.set(coins, forKey: "coins") }
+    }
+    /// 23 lines the user saved from others' stars (anonymous, no source kept).
+    var savedLines: [String] {
+        didSet { UserDefaults.standard.set(savedLines, forKey: "savedLines") }
+    }
     /// Plaza nebulae this user left a resonance on (09, 22).
     /// TODO: Send to the plaza API; kept in memory for now.
     var resonated: Set<String> = []
@@ -289,6 +297,8 @@ final class AppModel {
         hasConsented = UserDefaults.standard.bool(forKey: "hasConsented")
         marketingOptIn = UserDefaults.standard.bool(forKey: "marketingOptIn")
         hasSeenPlazaIntro = UserDefaults.standard.bool(forKey: "hasSeenPlazaIntro")
+        coins = UserDefaults.standard.object(forKey: "coins") as? Int ?? Self.starterCoins
+        savedLines = UserDefaults.standard.stringArray(forKey: "savedLines") ?? []
         draft = store.load(StarDraft.self, from: "draft") ?? StarDraft()
         stars = store.load([StarItem].self, from: "stars") ?? []
 
@@ -321,6 +331,22 @@ final class AppModel {
 
     /// Stars stay on the device: there is no server copy yet, so clearing them
     /// on sign-out would lose the user's journal.
+    /// Mock balance for a new device.
+    static let starterCoins = 120
+    /// 24 "코인 30개로 켜기"
+    static let telescopeCost = 30
+
+    /// Takes coins if the balance allows it.
+    func spendCoins(_ amount: Int) -> Bool {
+        guard coins >= amount else { return false }
+        coins -= amount
+        return true
+    }
+
+    func saveLine(_ line: String) {
+        if !savedLines.contains(line) { savedLines.append(line) }
+    }
+
     func toggleResonance(_ id: String) {
         if resonated.contains(id) { resonated.remove(id) } else { resonated.insert(id) }
     }

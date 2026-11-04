@@ -226,6 +226,8 @@ struct OtherNebulaView: View {
     @Environment(AppModel.self) private var model
     var nebula: PlazaNebula
     var onBack: () -> Void
+    /// A star card → 23 Starlight Line with that star's one line.
+    var onOpenLine: (String) -> Void
 
     var body: some View {
         let resonated = model.resonated.contains(nebula.id)
@@ -249,7 +251,11 @@ struct OtherNebulaView: View {
                         .frame(maxWidth: .infinity)
 
                     ForEach(nebula.entries, id: \.title) { entry in
-                        InfoCard(seed: nebula.name + entry.title, title: entry.title, detail: "공명 \(entry.resonance)")
+                        Button { onOpenLine(entry.line) } label: {
+                            InfoCard(seed: nebula.name + entry.title, title: entry.title, detail: "공명 \(entry.resonance)")
+                                .contentShape(.rect)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal, Space.xl)
@@ -273,8 +279,9 @@ struct OtherNebulaView: View {
 extension PlazaNebula {
     /// TODO: From the plaza API. Figma `22 다른 이의 성운` sample data.
     var starCount: Int { 12 - order * 2 }
-    var entries: [(title: String, resonance: Int)] {
-        [("저녁이 길게 느껴진 날", 8 - order), ("놓아주고 싶은 말", 5 + order % 2)]
+    var entries: [(title: String, resonance: Int, line: String)] {
+        [("저녁이 길게 느껴진 날", 8 - order, "그런 마음이 어둠 속에서도 조용히 빛나고 있어요."),
+         ("놓아주고 싶은 말", 5 + order % 2, line)]
     }
 }
 
@@ -289,5 +296,5 @@ extension PlazaNebula {
 }
 
 #Preview("22") {
-    OtherNebulaView(nebula: PlazaNebula.samples[0], onBack: {}).environment(AppModel())
+    OtherNebulaView(nebula: PlazaNebula.samples[0], onBack: {}, onOpenLine: { _ in }).environment(AppModel())
 }

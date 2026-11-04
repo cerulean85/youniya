@@ -24,6 +24,9 @@ struct MainView: View {
         case kept      // 18
         case privacy(StarItem.ID)  // 20
         case otherNebula(String)   // 22, by plaza nebula name
+        case starlightLine(String) // 23
+        case telescopeConfirm(StarItem.ID) // 24
+        case scanning(StarItem.ID)  // 25
         case page(String)
     }
 
@@ -138,12 +141,25 @@ struct MainView: View {
                 .edgeSwipeBack(onBack: pop)
         case .otherNebula(let name):
             if let nebula = PlazaNebula.samples.first(where: { $0.name == name }) {
-                OtherNebulaView(nebula: nebula, onBack: pop)
+                OtherNebulaView(nebula: nebula, onBack: pop, onOpenLine: { push(.starlightLine($0)) })
                     .edgeSwipeBack(onBack: pop)
             } else {
                 PlaceholderPage(title: "이름 없는 성운", onBack: pop)
                     .edgeSwipeBack(onBack: pop)
             }
+        case .starlightLine(let line):
+            StarlightLineView(line: line, onClose: pop)
+                .edgeSwipeBack(onBack: pop)
+        case .telescopeConfirm(let id):
+            TelescopeConfirmView(
+                onStart: { replace(with: .scanning(id)) },
+                // TODO: `28 코인 충전`
+                onCharge: { replace(with: .page("코인 충전")) },
+                onLater: pop
+            )
+            .edgeSwipeBack(onBack: pop)
+        case .scanning(let id):
+            TelescopeScanView(starID: id, onDone: { replace(with: .report(id)) }, onBackground: pop)
         case .page(let title):
             PlaceholderPage(title: title, onBack: pop)
                 .edgeSwipeBack(onBack: pop)
@@ -164,11 +180,12 @@ struct MainView: View {
         DispatchQueue.main.async { push(r) }
     }
 
-    /// 10 Mind Telescope Report for a floated star.
-    /// TODO: `24 마음 망원경 켜기` (coin confirm) should come first.
+    /// 10 Mind Telescope Report for a floated star. The first time, it goes
+    /// through 24 (spend coins) and 25 (scanning).
     private func openReport(_ star: StarItem, replacing: Bool = false) {
-        guard model.prepareReport(for: star.id) else { return }
-        if replacing { replace(with: .report(star.id)) } else { push(.report(star.id)) }
+        guard star.isFloated else { return }
+        let route: Route = model.report(for: star.id) == nil ? .telescopeConfirm(star.id) : .report(star.id)
+        if replacing { replace(with: route) } else { push(route) }
     }
 
     /// 12 Star Detail
