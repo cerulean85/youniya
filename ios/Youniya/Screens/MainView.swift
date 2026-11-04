@@ -22,6 +22,8 @@ struct MainView: View {
         case report(StarItem.ID)
         case records   // 17
         case kept      // 18
+        case privacy(StarItem.ID)  // 20
+        case otherNebula(String)   // 22, by plaza nebula name
         case page(String)
     }
 
@@ -49,6 +51,16 @@ struct MainView: View {
                     .transition(.move(edge: .trailing))
                     .zIndex(Double(index + 1))
             }
+
+            // 21 Plaza Welcome, over the tab bar, the first time the plaza opens.
+            if tab == .plaza && !model.hasSeenPlazaIntro && stack.isEmpty {
+                PlazaWelcomeView(
+                    onBrowse: { withAnimation(.easeInOut(duration: 0.3)) { model.hasSeenPlazaIntro = true } },
+                    onLater: { withAnimation(.easeInOut(duration: 0.3)) { tab = .sky } }
+                )
+                .transition(.opacity)
+                .zIndex(0.5)
+            }
         }
     }
 
@@ -66,7 +78,7 @@ struct MainView: View {
             case .nebula:
                 NebulaView(onOpen: { push(.page($0)) })
             case .plaza:
-                PlazaView(onOpen: { push(.page($0)) })
+                PlazaView(onOpen: { push(.otherNebula($0)) })
             case .records:
                 RecordsView(onOpenStar: openStar)
             }
@@ -106,8 +118,7 @@ struct MainView: View {
                 starID: id,
                 onBack: pop,
                 onRewrite: { replace(with: .compose(rewriteOf: id)) },
-                // TODO: `20 개인정보 확인`
-                onReviewShare: { push(.page("개인정보 확인")) }
+                onReviewShare: { push(.privacy(id)) }
             )
             .edgeSwipeBack(onBack: pop)
         case .report(let id):
@@ -122,6 +133,17 @@ struct MainView: View {
         case .kept:
             KeptView(onBack: pop, onOpenStar: { push(.detail($0.id)) })
                 .edgeSwipeBack(onBack: pop)
+        case .privacy(let id):
+            PrivacyCheckView(starID: id, onBack: pop)
+                .edgeSwipeBack(onBack: pop)
+        case .otherNebula(let name):
+            if let nebula = PlazaNebula.samples.first(where: { $0.name == name }) {
+                OtherNebulaView(nebula: nebula, onBack: pop)
+                    .edgeSwipeBack(onBack: pop)
+            } else {
+                PlaceholderPage(title: "이름 없는 성운", onBack: pop)
+                    .edgeSwipeBack(onBack: pop)
+            }
         case .page(let title):
             PlaceholderPage(title: title, onBack: pop)
                 .edgeSwipeBack(onBack: pop)

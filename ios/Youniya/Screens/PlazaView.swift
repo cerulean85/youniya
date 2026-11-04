@@ -36,7 +36,7 @@ struct PlazaView: View {
 
     @State private var segment: Segment = .star
     @State private var sort: Sort = .newest
-    @State private var resonated: Set<String> = []
+    @Environment(AppModel.self) private var model
 
     private var items: [PlazaNebula] {
         switch sort {
@@ -71,9 +71,9 @@ struct PlazaView: View {
                     LazyVGrid(columns: [GridItem(.flexible(), spacing: Space.md), GridItem(.flexible(), spacing: Space.md)],
                               spacing: Space.md) {
                         ForEach(items) { item in
-                            NebulaCard(item: item, resonated: resonated.contains(item.id),
+                            NebulaCard(item: item, resonated: model.resonated.contains(item.id),
                                        onOpen: { onOpen(item.name) },
-                                       onResonate: { toggle(item.id) })
+                                       onResonate: { model.toggleResonance(item.id) })
                         }
                     }
                 } else {
@@ -86,10 +86,6 @@ struct PlazaView: View {
             .padding(.vertical, Space.lg)
         }
         .scrollIndicators(.hidden)
-    }
-
-    private func toggle(_ id: String) {
-        if resonated.contains(id) { resonated.remove(id) } else { resonated.insert(id) }
     }
 
     /// Figma `Segment`: pill track, selected segment filled violet.
@@ -200,5 +196,6 @@ struct NebulaCard: View {
 
 #Preview {
     PlazaView(onOpen: { _ in })
+        .environment(AppModel())
         .background(Color.bgCanvas)
 }

@@ -268,6 +268,13 @@ final class AppModel {
     var marketingOptIn: Bool {
         didSet { UserDefaults.standard.set(marketingOptIn, forKey: "marketingOptIn") }
     }
+    /// 21 Plaza Welcome is shown until "둘러보기" is tapped once.
+    var hasSeenPlazaIntro: Bool {
+        didSet { UserDefaults.standard.set(hasSeenPlazaIntro, forKey: "hasSeenPlazaIntro") }
+    }
+    /// Plaza nebulae this user left a resonance on (09, 22).
+    /// TODO: Send to the plaza API; kept in memory for now.
+    var resonated: Set<String> = []
     /// Saved to `stars.json` on every change.
     var stars: [StarItem] = [] {
         didSet { store.save(stars, to: "stars") }
@@ -281,6 +288,7 @@ final class AppModel {
         isSignedIn = UserDefaults.standard.bool(forKey: "isSignedIn")
         hasConsented = UserDefaults.standard.bool(forKey: "hasConsented")
         marketingOptIn = UserDefaults.standard.bool(forKey: "marketingOptIn")
+        hasSeenPlazaIntro = UserDefaults.standard.bool(forKey: "hasSeenPlazaIntro")
         draft = store.load(StarDraft.self, from: "draft") ?? StarDraft()
         stars = store.load([StarItem].self, from: "stars") ?? []
 
@@ -313,6 +321,10 @@ final class AppModel {
 
     /// Stars stay on the device: there is no server copy yet, so clearing them
     /// on sign-out would lose the user's journal.
+    func toggleResonance(_ id: String) {
+        if resonated.contains(id) { resonated.remove(id) } else { resonated.insert(id) }
+    }
+
     func signOut() {
         isSignedIn = false
     }
