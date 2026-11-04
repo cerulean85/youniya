@@ -20,6 +20,7 @@ struct YouniyaApp: App {
 /// Splash → Login → Main (night sky tabs).
 struct RootView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @State private var showSplash = true
 
     var body: some View {
@@ -41,6 +42,7 @@ struct RootView: View {
         }
         .animation(.easeInOut(duration: 0.6), value: showSplash)
         .animation(.easeInOut(duration: 0.6), value: model.isSignedIn)
+        .environment(\.motionReduced, systemReduceMotion || model.settings.reduceAnimations)
         .animation(.easeInOut(duration: 0.4), value: model.hasConsented)
         .task {
             try? await Task.sleep(for: .seconds(2))

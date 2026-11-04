@@ -29,6 +29,9 @@ struct MainView: View {
         case scanning(StarItem.ID)  // 25
         case reports   // 26
         case coins     // 28
+        case coinHistory // 33
+        case settings  // 87
+        case inquiry   // 32
         case page(String)
     }
 
@@ -42,6 +45,10 @@ struct MainView: View {
                             push(.reports)
                         } else if title == "코인" {
                             push(.coins)
+                        } else if title == "설정" {
+                            push(.settings)
+                        } else if title == "문의하기" {
+                            push(.inquiry)
                         } else if title == "별빛 기록" {
                             push(.records)
                         } else if title == "보관함" {
@@ -166,7 +173,17 @@ struct MainView: View {
             ReportListView(onBack: pop, onOpen: { push(.report($0.id)) })
                 .edgeSwipeBack(onBack: pop)
         case .coins:
-            CoinChargeView(onBack: pop, onPolicy: { push(.page("결제·환불 정책")) })
+            CoinChargeView(onBack: pop, onPolicy: { push(.page("결제·환불 정책")) },
+                           onHistory: { push(.coinHistory) })
+                .edgeSwipeBack(onBack: pop)
+        case .coinHistory:
+            CoinHistoryView(onBack: pop)
+                .edgeSwipeBack(onBack: pop)
+        case .settings:
+            SettingsView(onBack: pop, onOpen: { push(.page($0)) })
+                .edgeSwipeBack(onBack: pop)
+        case .inquiry:
+            InquiryView(onBack: pop)
                 .edgeSwipeBack(onBack: pop)
         case .page(let title):
             PlaceholderPage(title: title, onBack: pop)

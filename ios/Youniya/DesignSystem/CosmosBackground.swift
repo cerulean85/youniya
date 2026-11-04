@@ -120,7 +120,7 @@ struct SheetBackground: View {
 /// Floated = violet, Kept = grey.
 struct StarGlyph: View {
     var floated: Bool
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.motionReduced) private var reduceMotion
 
     var body: some View {
         let image = Image(floated ? .glyphFloatedSpin : .glyphKeptSpin)

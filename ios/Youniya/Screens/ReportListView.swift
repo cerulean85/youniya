@@ -170,6 +170,8 @@ struct CoinChargeView: View {
     @Environment(AppModel.self) private var model
     var onBack: () -> Void
     var onPolicy: () -> Void
+    /// → 33 Coin History
+    var onHistory: () -> Void = {}
 
     @State private var selected: CoinPackage = CoinPackage.all[1]
     @State private var charged: Int?
@@ -188,14 +190,28 @@ struct CoinChargeView: View {
                             .textStyle(.bodyM)
                             .foregroundStyle(Color.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
-                        Text("지금 코인 \(model.coins)개")
-                            .textStyle(.labelS)
-                            .foregroundStyle(Color.starBright)
-                            .padding(.top, Space.xs)
-                            .contentTransition(.numericText())
                     }
                     .accessibilityElement(children: .combine)
                     .accessibilityAddTraits(.isHeader)
+
+                    // Not in Figma: balance, and the way to 33 Coin History.
+                    Button(action: onHistory) {
+                        HStack(spacing: Space.xs) {
+                            Text("지금 코인 \(model.coins)개")
+                                .contentTransition(.numericText())
+                            Text("· 내역 보기")
+                                .foregroundStyle(Color.textSecondary)
+                            Image(.iconChevronRight)
+                                .renderingMode(.template)
+                                .resizable()
+                                .frame(width: 14, height: 14)
+                                .foregroundStyle(Color.textSecondary)
+                        }
+                        .textStyle(.labelS)
+                        .foregroundStyle(Color.starBright)
+                        .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
 
                     CoinHero()
 
@@ -239,7 +255,7 @@ struct CoinChargeView: View {
     private func charge() {
         // TODO: StoreKit purchase; on success the server credits the coins.
         withAnimation(.snappy) {
-            model.coins += selected.coins
+            model.addCoins(selected.coins)
             charged = selected.coins
         }
         Task {
@@ -250,7 +266,7 @@ struct CoinChargeView: View {
 }
 
 /// 28 `Hero` (342×120): a scatter of gold coins, each with a soft halo.
-private struct CoinHero: View {
+struct CoinHero: View {
     // (center, core diameter, halo diameter)
     private let coins: [(CGPoint, CGFloat, CGFloat)] = [
         (CGPoint(x: 120.5, y: 60.5), 17, 30),

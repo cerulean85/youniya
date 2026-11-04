@@ -21,6 +21,8 @@ struct DrawerMenu: View {
         Item(title: "마음 망원경", subtitle: "리포트 모아보기", icon: .iconNebula),
         Item(title: "코인", subtitle: "충전 · 사용 내역", icon: .iconMoon),
         Item(title: "설정", subtitle: "알림 · 데이터 · 약관", icon: .iconPencil),
+        // Not in the 67 drawer; 30 Menu lists it. Reaches 32 Inquiry.
+        Item(title: "문의하기", subtitle: "궁금한 점 보내기", icon: .iconInfo),
     ]
 
     var body: some View {

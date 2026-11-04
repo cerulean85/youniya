@@ -27,7 +27,7 @@ struct TwinkleModifier: ViewModifier {
     var twinkle: Twinkle
     /// Maps opacity to scale, e.g. Figma stars go 1→0.7 while opacity goes 1→0.3.
     var scale: ((Double) -> Double)?
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.motionReduced) private var reduceMotion
 
     func body(content: Content) -> some View {
         if reduceMotion {
@@ -47,4 +47,9 @@ extension View {
     func twinkle(_ t: Twinkle, scale: ((Double) -> Double)? = nil) -> some View {
         modifier(TwinkleModifier(twinkle: t, scale: scale))
     }
+}
+
+extension EnvironmentValues {
+    /// System Reduce Motion, or the app's "애니메이션 줄이기" (87). Set at the root.
+    @Entry var motionReduced = false
 }

@@ -7,7 +7,7 @@ struct PrismAnalysisView: View {
     var analysis: StarAnalysis
     var onFinish: () -> Void
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.motionReduced) private var reduceMotion
     @State private var start = Date.now
 
     /// Total time on screen before moving to the card.

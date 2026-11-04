@@ -124,7 +124,7 @@ private struct WriteStarIcon: View {
 /// Drives scale from a keyframe track (values are scale factors, not opacity).
 private struct PulseScale: ViewModifier {
     var track: Twinkle
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.motionReduced) private var reduceMotion
 
     func body(content: Content) -> some View {
         if reduceMotion {

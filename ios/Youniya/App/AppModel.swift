@@ -254,6 +254,36 @@ struct LocalStore {
     }
 }
 
+/// One line of 33 Coin History.
+struct CoinEntry: Codable, Identifiable, Hashable {
+    var id = UUID()
+    var title: String
+    /// +charged / −spent
+    var delta: Int
+    var date: Date = .now
+}
+
+/// 87 Settings values. New fields need defaults so old saves still decode.
+struct AppSettings: Codable, Equatable {
+    var reduceAnimations = false
+    var haptics = true
+    var ambience = true
+    var sound = "밤바람"
+    var starReminder = false
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let d = AppSettings()
+        reduceAnimations = try c.decodeIfPresent(Bool.self, forKey: .reduceAnimations) ?? d.reduceAnimations
+        haptics = try c.decodeIfPresent(Bool.self, forKey: .haptics) ?? d.haptics
+        ambience = try c.decodeIfPresent(Bool.self, forKey: .ambience) ?? d.ambience
+        sound = try c.decodeIfPresent(String.self, forKey: .sound) ?? d.sound
+        starReminder = try c.decodeIfPresent(Bool.self, forKey: .starReminder) ?? d.starReminder
+    }
+}
+
 /// App-wide state. No backend yet: sign-in is mocked; stars are saved on device.
 @Observable
 final class AppModel {
@@ -275,6 +305,14 @@ final class AppModel {
     /// Coin balance. TODO: Comes from the store/server; mocked on device.
     var coins: Int {
         didSet { UserDefaults.standard.set(coins, forKey: "coins") }
+    }
+    /// 33 Coin history, newest first. Not sensitive, so kept in UserDefaults.
+    var coinHistory: [CoinEntry] {
+        didSet { UserDefaults.standard.set(try? JSONEncoder().encode(coinHistory), forKey: "coinHistory") }
+    }
+    /// 87 Settings
+    var settings: AppSettings {
+        didSet { UserDefaults.standard.set(try? JSONEncoder().encode(settings), forKey: "settings") }
     }
     /// Set once the free first telescope ("처음 한 번은 무료", 07) is used.
     var usedFreeTelescope: Bool {
@@ -304,6 +342,10 @@ final class AppModel {
         coins = UserDefaults.standard.object(forKey: "coins") == nil ? Self.starterCoins : UserDefaults.standard.integer(forKey: "coins")
         savedLines = UserDefaults.standard.stringArray(forKey: "savedLines") ?? []
         usedFreeTelescope = UserDefaults.standard.bool(forKey: "usedFreeTelescope")
+        coinHistory = UserDefaults.standard.data(forKey: "coinHistory")
+            .flatMap { try? JSONDecoder().decode([CoinEntry].self, from: $0) } ?? []
+        settings = UserDefaults.standard.data(forKey: "settings")
+            .flatMap { try? JSONDecoder().decode(AppSettings.self, from: $0) } ?? AppSettings()
         draft = store.load(StarDraft.self, from: "draft") ?? StarDraft()
         stars = store.load([StarItem].self, from: "stars") ?? []
 
@@ -341,11 +383,18 @@ final class AppModel {
     /// 24 "코인 30개로 켜기"
     static let telescopeCost = 30
 
-    /// Takes coins if the balance allows it.
-    func spendCoins(_ amount: Int) -> Bool {
+    /// Takes coins if the balance allows it, and records it in 33.
+    func spendCoins(_ amount: Int, for title: String = "마음 망원경") -> Bool {
         guard coins >= amount else { return false }
         coins -= amount
+        coinHistory.insert(CoinEntry(title: title, delta: -amount), at: 0)
         return true
+    }
+
+    /// 28 mock purchase. TODO: Credit only after the server verifies a StoreKit receipt.
+    func addCoins(_ amount: Int) {
+        coins += amount
+        coinHistory.insert(CoinEntry(title: "코인 충전", delta: amount), at: 0)
     }
 
     /// The first telescope is free. Users who already have a report

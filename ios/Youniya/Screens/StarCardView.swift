@@ -81,6 +81,8 @@ struct ComposeFlowView: View {
         case card(StarItem)
         case compare(previous: StarItem, current: StarItem)
         case kept(StarItem)
+        /// 37 Crisis Care, then the step that would have come next.
+        case crisis(StarItem, floated: Bool)
     }
 
     @State private var step: Step = .writing
@@ -121,6 +123,13 @@ struct ComposeFlowView: View {
             case .kept(let star):
                 KeptCompleteView(onHome: onClose, onOpenStar: { onOpenStar(star) })
                     .transition(.opacity)
+            case .crisis(let star, let floated):
+                CrisisCareView {
+                    withAnimation(.easeInOut(duration: 0.5)) {
+                        step = floated ? .analyzing(star) : .kept(star)
+                    }
+                }
+                .transition(.opacity)
             }
         }
         .edgeSwipeBack(enabled: !isAnalyzing, onBack: onClose)
@@ -128,7 +137,11 @@ struct ComposeFlowView: View {
 
     private func advance(after star: StarItem, floated: Bool) {
         withAnimation(.easeInOut(duration: 0.5)) {
-            step = floated ? .analyzing(star) : .kept(star)
+            if CrisisSignal.detected(in: star.title + " " + star.body) {
+                step = .crisis(star, floated: floated)
+            } else {
+                step = floated ? .analyzing(star) : .kept(star)
+            }
         }
     }
 

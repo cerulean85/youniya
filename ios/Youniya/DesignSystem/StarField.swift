@@ -5,7 +5,7 @@ import SwiftUI
 /// scaled to the screen width.
 struct StarField: View {
     private static let canvas = CGSize(width: 390, height: 844)
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.motionReduced) private var reduceMotion
 
     var body: some View {
         GeometryReader { geo in
