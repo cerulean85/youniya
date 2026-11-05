@@ -324,6 +324,10 @@ final class AppModel {
     var marketingOptIn: Bool {
         didSet { UserDefaults.standard.set(marketingOptIn, forKey: "marketingOptIn") }
     }
+    /// 56–60 story is shown the first time the nebula tab opens.
+    var hasSeenNebulaStory: Bool {
+        didSet { UserDefaults.standard.set(hasSeenNebulaStory, forKey: "hasSeenNebulaStory") }
+    }
     /// 21 Plaza Welcome is shown until "둘러보기" is tapped once.
     var hasSeenPlazaIntro: Bool {
         didSet { UserDefaults.standard.set(hasSeenPlazaIntro, forKey: "hasSeenPlazaIntro") }
@@ -391,6 +395,7 @@ final class AppModel {
         hasConsented = UserDefaults.standard.bool(forKey: "hasConsented")
         marketingOptIn = UserDefaults.standard.bool(forKey: "marketingOptIn")
         hasSeenPlazaIntro = UserDefaults.standard.bool(forKey: "hasSeenPlazaIntro")
+        hasSeenNebulaStory = UserDefaults.standard.bool(forKey: "hasSeenNebulaStory")
         coins = UserDefaults.standard.object(forKey: "coins") == nil ? Self.starterCoins : UserDefaults.standard.integer(forKey: "coins")
         savedLines = UserDefaults.standard.stringArray(forKey: "savedLines") ?? []
         usedFreeTelescope = UserDefaults.standard.bool(forKey: "usedFreeTelescope")
@@ -517,6 +522,7 @@ final class AppModel {
         nebulaLines = [:]
         skyShare = nil
         hasSeenPlazaIntro = false
+        hasSeenNebulaStory = false
         marketingOptIn = false
         hasConsented = false
         isSignedIn = false
