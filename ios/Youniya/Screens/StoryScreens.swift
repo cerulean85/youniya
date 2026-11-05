@@ -48,8 +48,8 @@ struct NebulaStoryIntroView: View {
             .accessibilityLabel("\(Self.pages.count)장 중 \(index + 1)장")
 
             VStack(spacing: Space.lg) {
-                Text(page.title).textStyleBox(.h2).foregroundStyle(Color.textPrimary)
-                Text(page.sub).textStyleBox(.bodyS).foregroundStyle(Color.textSecondary)
+                Text(page.title).textStyle(.h2).foregroundStyle(Color.textPrimary)
+                Text(page.sub).textStyle(.bodyS).foregroundStyle(Color.textSecondary)
             }
             .multilineTextAlignment(.center)
             .padding(.top, Space.xl)

@@ -52,17 +52,17 @@ private struct StarTooltip: View {
             HStack(spacing: Space.md) {
                 VStack(alignment: .leading, spacing: Space.xs) {
                     Text("내 별 · \(star.title)")
-                        .textStyleBox(.labelM)
+                        .textStyle(.labelM)
                         .foregroundStyle(Color.textPrimary)
                         .lineLimit(1)
                     Text("모양: \(StarShapeSpec(star: star).label) · 별빛 \(star.starlightValue ?? 0)")
-                        .textStyleBox(.caption)
+                        .textStyle(.caption)
                         .foregroundStyle(Color.textTertiary)
                         .lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Text("별 보기 ›")
-                    .textStyleBox(.labelM)
+                    .textStyle(.labelM)
                     .foregroundStyle(Color.hex(0x8555EF))
             }
             .padding(Space.lg)
@@ -117,9 +117,9 @@ private struct GalaxyStat: View {
 
     var body: some View {
         VStack(spacing: Space.sm) {
-            Text("\(value)").textStyleBox(.h2).foregroundStyle(Color.starBright)
+            Text("\(value)").textStyle(.h2).foregroundStyle(Color.starBright)
                 .contentTransition(.numericText())
-            Text(label).textStyleBox(.caption).foregroundStyle(Color.textTertiary)
+            Text(label).textStyle(.caption).foregroundStyle(Color.textTertiary)
                 .lineLimit(1).minimumScaleFactor(0.85)
         }
         .frame(maxWidth: .infinity)
@@ -138,9 +138,9 @@ private struct NebulaInfoTable: View {
         VStack(spacing: Space.sm) {
             ForEach(rows, id: \.0) { k, v in
                 HStack {
-                    Text(k).textStyleBox(.bodyS).foregroundStyle(Color.textTertiary)
+                    Text(k).textStyle(.bodyS).foregroundStyle(Color.textTertiary)
                     Spacer()
-                    Text(v).textStyleBox(.labelS).foregroundStyle(Color.textPrimary)
+                    Text(v).textStyle(.labelS).foregroundStyle(Color.textPrimary)
                 }
                 .accessibilityElement(children: .combine)
             }
@@ -180,13 +180,13 @@ struct MyNebulaZoomView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     Text(model.nebulaName)
-                        .textStyleBox(.labelS)
+                        .textStyle(.labelS)
                         .foregroundStyle(Color.starBright)
                         .padding(.horizontal, Space.md)
                         .padding(.vertical, Space.xs)
                         .background(Color.tintGold, in: .capsule)
                     Text(layout.petals.isEmpty ? "아직 꽃잎이 없는 성운" : "\(layout.petals.count)개의 꽃잎을 가진 성운")
-                        .textStyleBox(.h1)
+                        .textStyle(.h1)
                         .foregroundStyle(Color.textPrimary)
                         .accessibilityAddTraits(.isHeader)
 
@@ -385,19 +385,19 @@ struct GalaxyZoomView: View {
         let mine = model.stars.filter { $0.isFloated && $0.isShared }
         VStack(alignment: .leading, spacing: Space.lg) {
             Text("TONIGHT · \(tonight.formatted())개의 마음")
-                .textStyleBox(.labelS)
+                .textStyle(.labelS)
                 .foregroundStyle(Color.starBright)
                 .padding(.horizontal, Space.md)
                 .padding(.vertical, Space.xs)
                 .background(Color.tintGold, in: .capsule)
             Text("오늘 밤,\n\(tonight.formatted())개의 마음이 모였어요")
-                .textStyleBox(.h1)
+                .textStyle(.h1)
                 .foregroundStyle(Color.textPrimary)
                 .accessibilityAddTraits(.isHeader)
             Text(mine.isEmpty
                  ? "별을 우주 광장에 나누면 이 안에서 함께 빛나요. 별 하나하나는 익명이고, 글은 보이지 않아요."
                  : "내 별 \(mine.count)개가 이 안에서 빛나고 있어요. 별 하나하나는 익명이고, 글은 보이지 않아요.")
-                .textStyleBox(.bodyS)
+                .textStyle(.bodyS)
                 .foregroundStyle(Color.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -586,10 +586,10 @@ struct NebulaStoryView: View {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     VStack(alignment: .leading, spacing: Space.lg) {
                         Text("\(model.nebulaName) 이야기")
-                            .textStyleBox(.h2)
+                            .textStyle(.h2)
                             .foregroundStyle(Color.textPrimary)
                         Text("별마다 고른 핵심 문장을 시간순으로 엮었어요. 원문 문장은 한 글자도 바꾸지 않아요.")
-                            .textStyleBox(.bodyM)
+                            .textStyle(.bodyM)
                             .foregroundStyle(Color.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -603,14 +603,14 @@ struct NebulaStoryView: View {
 
                     if lines.isEmpty {
                         Text("글이 있는 별을 띄우면 이야기가 엮여요.")
-                            .textStyleBox(.bodyM)
+                            .textStyle(.bodyM)
                             .foregroundStyle(Color.textSecondary)
                     } else {
                         storyCard(lines)
                     }
 
                     Text("✦ 표시는 문장 사이를 잇는 자리예요. 서사 다듬기를 켜면 이 자리에만 이어 주는 말이 더해져요.")
-                        .textStyleBox(.caption)
+                        .textStyle(.caption)
                         .foregroundStyle(Color.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -639,11 +639,11 @@ struct NebulaStoryView: View {
                     Group {
                         if model.storyPolished {
                             Text(Self.bridges[(i - 1) % Self.bridges.count])
-                                .textStyleBox(.bodyS)
+                                .textStyle(.bodyS)
                                 .foregroundStyle(Color.starBright)
                         } else {
                             Text("✦")
-                                .textStyleBox(.labelS)
+                                .textStyle(.labelS)
                                 .foregroundStyle(Color.starBright)
                                 .accessibilityHidden(true)
                         }
@@ -652,10 +652,10 @@ struct NebulaStoryView: View {
                 }
                 VStack(alignment: .leading, spacing: 6) {
                     Text("\(line.star.shortDateText) · \(line.star.title)")
-                        .textStyleBox(.caption)
+                        .textStyle(.caption)
                         .foregroundStyle(Color.textTertiary)
                     Text("“\(line.sentence)”")
-                        .textStyleBox(.bodyM)
+                        .textStyle(.bodyM)
                         .foregroundStyle(Color.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -670,7 +670,7 @@ struct NebulaStoryView: View {
 
     private func tag(_ text: String, gold: Bool) -> some View {
         Text(text)
-            .textStyleBox(.labelS)
+            .textStyle(.labelS)
             .foregroundStyle(gold ? Color.starBright : Color.textSecondary)
             .padding(.horizontal, Space.md)
             .padding(.vertical, Space.xs)

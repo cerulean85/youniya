@@ -25,11 +25,11 @@ struct StatusView: View {
 
             VStack(spacing: Space.lg) {
                 Text(title)
-                    .textStyleBox(.h2)
+                    .textStyle(.h2)
                     .foregroundStyle(Color.textPrimary)
                     .accessibilityAddTraits(.isHeader)
                 Text(message)
-                    .textStyleBox(.bodyM)
+                    .textStyle(.bodyM)
                     .foregroundStyle(Color.textSecondary)
             }
             .multilineTextAlignment(.center)

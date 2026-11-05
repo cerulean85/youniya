@@ -78,9 +78,9 @@ struct TelescopeObserveView: View {
 
                 VStack(alignment: .leading, spacing: Space.lg) {
                     VStack(alignment: .leading, spacing: Space.lg) {
-                        Text("문장 사이를 비추는 중").textStyleBox(.h2).foregroundStyle(Color.textPrimary)
+                        Text("문장 사이를 비추는 중").textStyle(.h2).foregroundStyle(Color.textPrimary)
                         Text("망원경 빛이 글을 천천히 지나가며, 감정의 신호가 머문 문장에 불을 켜요.")
-                            .textStyleBox(.bodyM).foregroundStyle(Color.textSecondary)
+                            .textStyle(.bodyM).foregroundStyle(Color.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     .accessibilityElement(children: .combine)
@@ -109,7 +109,7 @@ struct TelescopeObserveView: View {
                     }
 
                     Text("불이 켜진 문장은 리포트의 근거 문장으로 함께 보여 드려요. 평가가 아니라 함께 바라본 자리예요.")
-                        .textStyleBox(.caption).foregroundStyle(Color.textTertiary)
+                        .textStyle(.caption).foregroundStyle(Color.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
 
                     Spacer(minLength: 0)
@@ -141,7 +141,7 @@ struct TelescopeObserveView: View {
             ForEach(sentences.indices, id: \.self) { i in
                 let on = shown.contains(i)
                 Text(sentences[i])
-                    .textStyleBox(.bodyM)
+                    .textStyle(.bodyM)
                     .foregroundStyle(on ? Color.textPrimary : Color.textTertiary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, Space.sm)
@@ -179,7 +179,7 @@ struct TelescopeObserveView: View {
 
     private func lensTag(_ title: String, done: Bool, now: Bool) -> some View {
         Text(done ? "\(title) ✓" : title)
-            .textStyleBox(.labelS)
+            .textStyle(.labelS)
             .foregroundStyle(now ? Color.brandPrimaryText : Color.textSecondary)
             .padding(.horizontal, Space.md)
             .padding(.vertical, done ? Space.sm : Space.xs)
@@ -207,7 +207,7 @@ struct StarBirthView: View {
             Spacer(minLength: 0).frame(maxHeight: done ? 24 : 199)
 
             Text(Self.titles[phase])
-                .textStyleBox(.h2)
+                .textStyle(.h2)
                 .foregroundStyle(Color.textPrimary)
                 .contentTransition(.opacity)
                 .accessibilityAddTraits(.isHeader)

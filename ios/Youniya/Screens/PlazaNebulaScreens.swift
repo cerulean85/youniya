@@ -147,21 +147,21 @@ struct PlazaNebulaField: View {
             .frame(height: 280)
 
             Text("두 손가락으로 확대 · 별을 눌러 보기")
-                .textStyleBox(.caption)
+                .textStyle(.caption)
                 .foregroundStyle(Color.textTertiary)
 
             if let current {
                 Button { onOpen(current) } label: {
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: Space.sm) {
-                            Text(current.name).textStyleBox(.labelM).foregroundStyle(Color.textPrimary)
+                            Text(current.name).textStyle(.labelM).foregroundStyle(Color.textPrimary)
                             HStack(spacing: Space.sm) {
                                 Tag(text: "\(current.stage)단계", tone: .gold)
                                 Tag(text: "공명 \(current.resonance + (model.resonated.contains(Self.key(current)) ? 1 : 0))", tone: .violet)
                             }
                         }
                         Spacer()
-                        Text("들어가기 ›").textStyleBox(.labelS).foregroundStyle(Color.brandPrimaryText)
+                        Text("들어가기 ›").textStyle(.labelS).foregroundStyle(Color.brandPrimaryText)
                     }
                     .padding(Space.lg)
                     .cosmos("field-card", in: RoundedRectangle(cornerRadius: Radius.lg))
@@ -236,7 +236,7 @@ struct Tag: View {
 
     var body: some View {
         Text(text)
-            .textStyleBox(.labelS)
+            .textStyle(.labelS)
             .foregroundStyle(tone == .gold ? Color.starBright : tone == .violet ? Color.brandPrimaryText : Color.textSecondary)
             .padding(.horizontal, Space.md)
             .padding(.vertical, Space.xs)
@@ -299,7 +299,7 @@ struct GalaxyNebulaView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     Text(nebula.name)
-                        .textStyleBox(.h2)
+                        .textStyle(.h2)
                         .foregroundStyle(Color.textPrimary)
                         .accessibilityAddTraits(.isHeader)
                     HStack(spacing: Space.sm) {
@@ -355,7 +355,7 @@ struct GalaxyNebulaView: View {
                     .frame(height: 190)
 
                     Text(zoomed ? "별의 모양은 쓴 글의 결로 정해져요" : "두 손가락으로 확대 · 별을 눌러 보기")
-                        .textStyleBox(.caption)
+                        .textStyle(.caption)
                         .foregroundStyle(Color.textTertiary)
 
                     if zoomed {
@@ -364,12 +364,12 @@ struct GalaxyNebulaView: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: Space.xs) {
                                     Text("익명의 별 · \(stars[selected].title)")
-                                        .textStyleBox(.labelM).foregroundStyle(Color.textPrimary)
+                                        .textStyle(.labelM).foregroundStyle(Color.textPrimary)
                                     Text("모양: \(stars[selected].spec.label) · 공명 \(nebula.resonance)")
-                                        .textStyleBox(.caption).foregroundStyle(Color.textTertiary)
+                                        .textStyle(.caption).foregroundStyle(Color.textTertiary)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                Text("별 보기 ›").textStyleBox(.labelM).foregroundStyle(Color.brandPrimaryText)
+                                Text("별 보기 ›").textStyle(.labelM).foregroundStyle(Color.brandPrimaryText)
                             }
                             .padding(Space.lg)
                             .cosmos("tip-\(nebula.name)", in: RoundedRectangle(cornerRadius: Radius.lg))
@@ -381,11 +381,11 @@ struct GalaxyNebulaView: View {
                     } else {
                         VStack(alignment: .leading, spacing: Space.xs) {
                             Text("“\(nebula.quote)”")
-                                .textStyleBox(.observation)
+                                .textStyle(.observation)
                                 .foregroundStyle(Color.textPrimary)
                                 .fixedSize(horizontal: false, vertical: true)
                             Text("본인이 골라 가린 한 문장이에요")
-                                .textStyleBox(.caption)
+                                .textStyle(.caption)
                                 .foregroundStyle(Color.textTertiary)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -405,7 +405,7 @@ struct GalaxyNebulaView: View {
                     }
 
                     Text("별빛 한 줄")
-                        .textStyleBox(.labelS)
+                        .textStyle(.labelS)
                         .foregroundStyle(Color.textTertiary)
                     VStack(spacing: Space.md) {
                         ForEach(nebula.lines.prefix(2)) { line in
@@ -447,7 +447,7 @@ struct GalaxyLinesView: View {
             ScrollView {
                 VStack(spacing: Space.lg) {
                     Text("한 사람이 한 성운에 한 줄씩. 하루가 지나면 별빛이 희미해져요.")
-                        .textStyleBox(.caption)
+                        .textStyle(.caption)
                         .foregroundStyle(Color.textTertiary)
                         .multilineTextAlignment(.center)
                     ForEach(nebula.lines) { line in
@@ -475,7 +475,7 @@ struct GalaxyLinesView: View {
                     HStack(spacing: Space.md) {
                         TextField("", text: $draft,
                                   prompt: Text("한 줄을 남겨 보세요 (\(Self.limit)자)").foregroundStyle(Color.textTertiary))
-                            .textStyle(.bodyM)
+                            .textInputStyle(.bodyM)
                             .foregroundStyle(Color.textPrimary)
                             .focused($editing)
                             .submitLabel(.send)
@@ -503,7 +503,7 @@ struct GalaxyLinesView: View {
                     .overlay(RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(Color.brandPrimary, lineWidth: 1))
                 } else {
                     Text("이 성운에는 한 줄을 남겼어요.")
-                        .textStyleBox(.bodyS)
+                        .textStyle(.bodyS)
                         .foregroundStyle(Color.textSecondary)
                         .frame(maxWidth: .infinity)
                 }
@@ -513,7 +513,7 @@ struct GalaxyLinesView: View {
                         .buttonStyle(.plain)
                         .underline()
                 }
-                .textStyleBox(.caption)
+                .textStyle(.caption)
                 .foregroundStyle(Color.textTertiary)
                 .frame(maxWidth: .infinity)
                 .minimumScaleFactor(0.85)
@@ -550,10 +550,10 @@ private struct LineCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Space.xs) {
             Text("\(who) · \(line.age)")
-                .textStyleBox(.caption)
+                .textStyle(.caption)
                 .foregroundStyle(mine ? Color.starBright : Color.textTertiary)
             Text(line.text)
-                .textStyleBox(.bodyM)
+                .textStyle(.bodyM)
                 .foregroundStyle(Color.textPrimary)
                 .lineLimit(compact ? 1 : nil)
                 .fixedSize(horizontal: false, vertical: !compact)

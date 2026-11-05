@@ -63,21 +63,21 @@ struct PolicyDocView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.xl) {
                     Text(doc.title)
-                        .textStyleBox(.h1)
+                        .textStyle(.h1)
                         .foregroundStyle(Color.textPrimary)
                         .accessibilityAddTraits(.isHeader)
                     Text(doc.effectiveDate)
-                        .textStyleBox(.caption)
+                        .textStyle(.caption)
                         .foregroundStyle(Color.textSecondary)
 
                     ForEach(doc.sections, id: \.0) { heading, body in
                         VStack(alignment: .leading, spacing: Space.sm) {
                             Text(heading)
-                                .textStyleBox(.h3)
+                                .textStyle(.h3)
                                 .foregroundStyle(Color.textPrimary)
                                 .accessibilityAddTraits(.isHeader)
                             Text(body)
-                                .textStyleBox(.bodyM)
+                                .textStyle(.bodyM)
                                 .foregroundStyle(Color.textSecondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }

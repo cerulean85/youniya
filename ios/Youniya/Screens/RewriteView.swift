@@ -34,7 +34,7 @@ struct RewriteView: View {
 
                 // Editor
                 TextEditor(text: $text)
-                    .textStyle(.journalBody)
+                    .textInputStyle(.journalBody)
                     .foregroundStyle(Color.textSecondary)
                     .scrollContentBackground(.hidden)
                     .focused($focused)
@@ -43,7 +43,7 @@ struct RewriteView: View {
                     .overlay(alignment: .topLeading) {
                         if text.isEmpty {
                             Text("이번에는 어떤 마음이 떠오르나요?")
-                                .textStyle(.journalBody)
+                                .textInputStyle(.journalBody)
                                 .foregroundStyle(Color.textTertiary)
                                 .allowsHitTesting(false)
                         }

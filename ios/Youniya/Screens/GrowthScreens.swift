@@ -18,9 +18,9 @@ struct FloatNebulaSheet: View {
 
             VStack(alignment: .leading, spacing: Space.md) {
                 Text("성운을 하늘에 띄울까요?")
-                    .textStyleBox(.h2).foregroundStyle(Color.textPrimary)
+                    .textStyle(.h2).foregroundStyle(Color.textPrimary)
                 Text("띄우기 전에, 무엇이 나가고 무엇이 나가지 않는지 먼저 보여 드려요.")
-                    .textStyleBox(.bodyS).foregroundStyle(Color.textSecondary)
+                    .textStyle(.bodyS).foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .accessibilityElement(children: .combine)
@@ -40,7 +40,7 @@ struct FloatNebulaSheet: View {
             optionRow("가린 한 문장 함께 보이기", "직접 골라 가린 한 줄만 보여요", isOn: $showQuote)
 
             Text("띄운 성운은 보관함에서 언제든 거둘 수 있어요.")
-                .textStyleBox(.caption).foregroundStyle(Color.textTertiary)
+                .textStyle(.caption).foregroundStyle(Color.textTertiary)
 
             VStack(spacing: Space.md) {
                 Button("띄우기") {
@@ -61,7 +61,7 @@ struct FloatNebulaSheet: View {
 
     private func listCard(_ title: String, tone: Color, check: Bool, items: [String]) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(title).textStyleBox(.caption).foregroundStyle(tone)
+            Text(title).textStyle(.caption).foregroundStyle(tone)
             ForEach(items, id: \.self) { item in
                 HStack(spacing: 6) {
                     Text(check ? "✓" : "✕")
@@ -69,7 +69,7 @@ struct FloatNebulaSheet: View {
                         .foregroundStyle(check ? Color.textPrimary : Color.textTertiary)
                         .accessibilityHidden(true)
                     Text(item)
-                        .textStyleBox(.bodyS)
+                        .textStyle(.bodyS)
                         .foregroundStyle(check ? Color.textPrimary : Color.textSecondary)
                 }
             }
@@ -84,8 +84,8 @@ struct FloatNebulaSheet: View {
         Button { withAnimation(.snappy(duration: 0.2)) { isOn.wrappedValue.toggle() } } label: {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title).textStyleBox(.labelM).foregroundStyle(Color.textPrimary)
-                    Text(detail).textStyleBox(.caption).foregroundStyle(Color.textTertiary)
+                    Text(title).textStyle(.labelM).foregroundStyle(Color.textPrimary)
+                    Text(detail).textStyle(.caption).foregroundStyle(Color.textTertiary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Capsule()
@@ -124,7 +124,7 @@ struct GalaxyStarView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     Text(starTitle)
-                        .textStyleBox(.h2).foregroundStyle(Color.textPrimary)
+                        .textStyle(.h2).foregroundStyle(Color.textPrimary)
                         .accessibilityAddTraits(.isHeader)
                     HStack(spacing: Space.sm) {
                         Tag(text: "익명의 별지기", tone: .neutral)
@@ -158,10 +158,10 @@ struct GalaxyStarView: View {
 
                     VStack(alignment: .leading, spacing: Space.xs) {
                         Text("“\(nebula.quote)”")
-                            .textStyleBox(.observation).foregroundStyle(Color.textPrimary)
+                            .textStyle(.observation).foregroundStyle(Color.textPrimary)
                             .fixedSize(horizontal: false, vertical: true)
                         Text("본인이 골라 공개한 한 문장이에요. 글 전체는 나가지 않아요.")
-                            .textStyleBox(.caption).foregroundStyle(Color.textTertiary)
+                            .textStyle(.caption).foregroundStyle(Color.textTertiary)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(Space.lg)
@@ -215,8 +215,8 @@ struct NebulaGrowthView: View {
 
             VStack(alignment: .leading, spacing: Space.lg) {
                 VStack(alignment: .leading, spacing: Space.lg) {
-                    Text("천천히 자라는 성운").textStyleBox(.h2).foregroundStyle(Color.textPrimary)
-                    Text("별이 모일수록 성운이 넓어져요.").textStyleBox(.bodyM).foregroundStyle(Color.textSecondary)
+                    Text("천천히 자라는 성운").textStyle(.h2).foregroundStyle(Color.textPrimary)
+                    Text("별이 모일수록 성운이 넓어져요.").textStyle(.bodyM).foregroundStyle(Color.textSecondary)
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityAddTraits(.isHeader)
@@ -285,8 +285,8 @@ struct GrowthMomentsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     VStack(alignment: .leading, spacing: Space.lg) {
-                        Text("지나온 순간들").textStyleBox(.h2).foregroundStyle(Color.textPrimary)
-                        Text("비교하지 않고, 있었던 일만 담아요.").textStyleBox(.bodyM).foregroundStyle(Color.textSecondary)
+                        Text("지나온 순간들").textStyle(.h2).foregroundStyle(Color.textPrimary)
+                        Text("비교하지 않고, 있었던 일만 담아요.").textStyle(.bodyM).foregroundStyle(Color.textSecondary)
                     }
                     .accessibilityElement(children: .combine)
                     .accessibilityAddTraits(.isHeader)
@@ -295,7 +295,7 @@ struct GrowthMomentsView: View {
 
                     if moments.isEmpty {
                         Text("첫 별을 띄우면 이곳에 순간이 쌓여요.")
-                            .textStyleBox(.bodyM).foregroundStyle(Color.textSecondary)
+                            .textStyle(.bodyM).foregroundStyle(Color.textSecondary)
                     } else {
                         VStack(spacing: Space.md) {
                             ForEach(moments) { m in
@@ -334,9 +334,9 @@ struct GrowthStagesView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     VStack(alignment: .leading, spacing: Space.md) {
-                        Text("성운이 자라는 네 걸음").textStyleBox(.h2).foregroundStyle(Color.textPrimary)
+                        Text("성운이 자라는 네 걸음").textStyle(.h2).foregroundStyle(Color.textPrimary)
                         Text("서두르지 않아도 괜찮아요. 마음이 쌓이는 만큼 천천히 자라요.")
-                            .textStyleBox(.bodyS).foregroundStyle(Color.textSecondary)
+                            .textStyle(.bodyS).foregroundStyle(Color.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     .accessibilityElement(children: .combine)
@@ -367,7 +367,7 @@ struct GrowthStagesView: View {
         return VStack(alignment: .leading, spacing: Space.sm) {
             HStack(spacing: Space.sm) {
                 Text(now ? "\(s)단계 · 지금 여기" : passed ? "\(s)단계 · 지나옴" : "\(s)단계")
-                    .textStyleBox(.labelS)
+                    .textStyle(.labelS)
                     .foregroundStyle(now ? Color.white : Color.textSecondary)
                     .padding(.horizontal, Space.md)
                     .padding(.vertical, 6)
@@ -375,13 +375,13 @@ struct GrowthStagesView: View {
                         if now { Capsule().fill(Color.hex(0x8555EF)) }
                         else if passed { Capsule().strokeBorder(Color.borderDefault, lineWidth: 1) }
                     }
-                Text(name).textStyleBox(.labelM).foregroundStyle(Color.textPrimary)
+                Text(name).textStyle(.labelM).foregroundStyle(Color.textPrimary)
             }
             Text(condition)
-                .textStyleBox(.caption)
+                .textStyle(.caption)
                 .foregroundStyle(now ? Color.starBright : Color.textTertiary)
             Text(result)
-                .textStyleBox(.bodyS)
+                .textStyle(.bodyS)
                 .foregroundStyle(Color.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             if now && s < 4 { progress(next: s + 1) }
@@ -407,10 +407,10 @@ struct GrowthStagesView: View {
         default: [("깊은 별", model.deepCount, 30), ("감정의 결", moods, 3)]
         }
         return VStack(alignment: .leading, spacing: Space.sm) {
-            Text("\(next)단계까지").textStyleBox(.caption).foregroundStyle(Color.textTertiary)
+            Text("\(next)단계까지").textStyle(.caption).foregroundStyle(Color.textTertiary)
             ForEach(rows, id: \.0) { label, value, goal in
                 HStack(spacing: Space.md) {
-                    Text(label).textStyleBox(.caption).foregroundStyle(Color.textSecondary)
+                    Text(label).textStyle(.caption).foregroundStyle(Color.textSecondary)
                         .frame(width: 84, alignment: .leading)
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
@@ -420,7 +420,7 @@ struct GrowthStagesView: View {
                         }
                     }
                     .frame(height: 4)
-                    Text("\(min(value, goal)) / \(goal)").textStyleBox(.caption).foregroundStyle(Color.textSecondary)
+                    Text("\(min(value, goal)) / \(goal)").textStyle(.caption).foregroundStyle(Color.textSecondary)
                 }
                 .accessibilityElement(children: .combine)
             }

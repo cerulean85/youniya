@@ -43,7 +43,7 @@ struct StarMakingView: View {
                 prompt: Text("제목을 붙여주세요").foregroundStyle(Color.textTertiary),
                 axis: .vertical
             )
-            .textStyle(.h2)
+            .textInputStyle(.h2)
             .foregroundStyle(Color.textPrimary)
             .focused($focus, equals: .title)
             .submitLabel(.next)
@@ -112,7 +112,7 @@ struct StarMakingView: View {
 
     private var bodyEditor: some View {
         TextEditor(text: $draft.body)
-            .textStyle(.journalBody)
+            .textInputStyle(.journalBody)
             .foregroundStyle(Color.textSecondary)
             .scrollContentBackground(.hidden)
             .focused($focus, equals: .body)
@@ -122,7 +122,7 @@ struct StarMakingView: View {
             .overlay(alignment: .topLeading) {
                 if draft.body.isEmpty {
                     Text("마음에 머무는 이야기를 적어주세요.")
-                        .textStyle(.journalBody)
+                        .textInputStyle(.journalBody)
                         .foregroundStyle(Color.textTertiary)
                         .allowsHitTesting(false)
                 }

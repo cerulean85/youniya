@@ -74,7 +74,7 @@ struct NebulaStarsView: View {
                     }
 
                     Text(current.note)
-                        .textStyleBox(.bodyS)
+                        .textStyle(.bodyS)
                         .foregroundStyle(Color.textSecondary)
 
                     if stars.isEmpty {
@@ -84,10 +84,10 @@ struct NebulaStarsView: View {
                                 .scaleEffect(40 / 18.14)
                                 .frame(width: 40, height: 40)
                             Text(current.emptyTitle)
-                                .textStyleBox(.h3)
+                                .textStyle(.h3)
                                 .foregroundStyle(Color.textPrimary)
                             Text(current.emptyMessage)
-                                .textStyleBox(.bodyM)
+                                .textStyle(.bodyM)
                                 .foregroundStyle(Color.textSecondary)
                         }
                         .multilineTextAlignment(.center)
@@ -166,10 +166,10 @@ struct BrightnessFlowView: View {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     VStack(alignment: .leading, spacing: Space.lg) {
                         Text("나의 별빛 흐름")
-                            .textStyleBox(.h2)
+                            .textStyle(.h2)
                             .foregroundStyle(Color.textPrimary)
                         Text("다른 사람과 비교하지 않아요. 지난날의 나와만 나란히 놓아 봐요.")
-                            .textStyleBox(.bodyM)
+                            .textStyle(.bodyM)
                             .foregroundStyle(Color.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -188,7 +188,7 @@ struct BrightnessFlowView: View {
                     if !monthly.isEmpty { monthlyCard }
 
                     Text("숫자는 평가가 아니에요. 빛이 머물렀던 자리를 보여줄 뿐이에요.")
-                        .textStyleBox(.caption)
+                        .textStyle(.caption)
                         .foregroundStyle(Color.textTertiary)
                 }
                 .padding(Space.xl)
@@ -204,18 +204,18 @@ struct BrightnessFlowView: View {
         return VStack(alignment: .leading, spacing: Space.md) {
             HStack(spacing: Space.sm) {
                 Text(s.title)
-                    .textStyleBox(.labelM)
+                    .textStyle(.labelM)
                     .foregroundStyle(Color.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if !s.values.isEmpty {
                     Text("평균 \(average)")
-                        .textStyleBox(.caption)
+                        .textStyle(.caption)
                         .foregroundStyle(Color.textTertiary)
                 }
             }
             if s.values.count < 2 {
                 Text("별을 두 개 이상 띄우면 흐름이 그려져요.")
-                    .textStyleBox(.bodyS)
+                    .textStyle(.bodyS)
                     .foregroundStyle(Color.textSecondary)
                     .frame(maxWidth: .infinity, minHeight: 120)
             } else {
@@ -242,7 +242,7 @@ struct BrightnessFlowView: View {
                 if i < picks.count - 1 { Spacer(minLength: 0) }
             }
         }
-        .textStyleBox(.caption)
+        .textStyle(.caption)
         .foregroundStyle(Color.textTertiary)
         .padding(.leading, 30)
         .accessibilityHidden(true)
@@ -256,13 +256,13 @@ struct BrightnessFlowView: View {
         let thisMonth = Calendar.current.dateInterval(of: .month, for: .now)?.start
         return VStack(alignment: .leading, spacing: Space.md) {
             Text("월평균 별빛")
-                .textStyleBox(.labelM)
+                .textStyle(.labelM)
                 .foregroundStyle(Color.textPrimary)
             ForEach(rows, id: \.month) { row in
                 let current = row.month == thisMonth
                 HStack(spacing: Space.md) {
                     Text(f.string(from: row.month))
-                        .textStyleBox(.labelS)
+                        .textStyle(.labelS)
                         .frame(width: 32, alignment: .leading)
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
@@ -274,7 +274,7 @@ struct BrightnessFlowView: View {
                     }
                     .frame(height: 6)
                     Text(current ? "\(row.average) · 진행 중" : "\(row.average)")
-                        .textStyleBox(.caption)
+                        .textStyle(.caption)
                 }
                 .foregroundStyle(Color.textSecondary)
                 .accessibilityElement(children: .combine)
@@ -377,10 +377,10 @@ struct MilkyWayView: View {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     VStack(alignment: .leading, spacing: Space.lg) {
                         Text("시간의 길을 따라 흐르는 은하수")
-                            .textStyleBox(.h2)
+                            .textStyle(.h2)
                             .foregroundStyle(Color.textPrimary)
                         Text("내가 빚은 별 카드들이 시간순으로 이어져, 나만의 밤하늘 길이 돼요.")
-                            .textStyleBox(.bodyM)
+                            .textStyle(.bodyM)
                             .foregroundStyle(Color.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -392,19 +392,19 @@ struct MilkyWayView: View {
 
                     HStack(spacing: Space.sm) {
                         Text("별 카드 앨범")
-                            .textStyleBox(.labelM)
+                            .textStyle(.labelM)
                             .foregroundStyle(Color.textPrimary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         if let latestMonth {
                             Text("\(Calendar.current.component(.month, from: latestMonth))월 · \(album.count)장")
-                                .textStyleBox(.caption)
+                                .textStyle(.caption)
                                 .foregroundStyle(Color.textTertiary)
                         }
                     }
 
                     if album.isEmpty {
                         Text("별을 띄우면 이곳에 카드로 모여요.")
-                            .textStyleBox(.bodyS)
+                            .textStyle(.bodyS)
                             .foregroundStyle(Color.textSecondary)
                     } else {
                         ScrollView(.horizontal) {
@@ -421,7 +421,7 @@ struct MilkyWayView: View {
                     }
 
                     Text("은하수는 별이 쌓일수록 길어져요. 지난 시간을 다시 걷고 싶을 때 천천히 들러 보세요.")
-                        .textStyleBox(.caption)
+                        .textStyle(.caption)
                         .foregroundStyle(Color.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -442,14 +442,14 @@ private struct AlbumCard: View {
             Circle().fill(star.mood.color).frame(width: 10, height: 10)
                 .shadow(color: Color.hex(0x9980FF).opacity(0.6), radius: 4)
             Text("\(star.starlightValue ?? 0)")
-                .textStyleBox(.h3)
+                .textStyle(.h3)
                 .foregroundStyle(Color.textPrimary)
             Text(star.title)
-                .textStyleBox(.labelS)
+                .textStyle(.labelS)
                 .foregroundStyle(Color.textSecondary)
                 .lineLimit(2)
             Text(star.shortDateText)
-                .textStyleBox(.caption)
+                .textStyle(.caption)
                 .foregroundStyle(Color.textTertiary)
         }
         .frame(width: 118 - Space.lg * 2, alignment: .leading)

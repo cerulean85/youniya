@@ -242,7 +242,7 @@ struct NebulaDrawingFlow: View {
                         Text("빈 자리 \(emptySlots) · 다음 별을 기다려요")
                     }
                 }
-                .textStyleBox(.caption)
+                .textStyle(.caption)
                 .foregroundStyle(Color.textSecondary)
                 .accessibilityElement(children: .combine)
             }
@@ -262,7 +262,7 @@ struct NebulaDrawingFlow: View {
         VStack(spacing: Space.sm) {
             icon().frame(width: 60, height: 40)
             Text(title)
-                .textStyleBox(.labelS)
+                .textStyle(.labelS)
                 .foregroundStyle(selected ? Color.textPrimary : Color.textSecondary)
         }
         .frame(maxWidth: .infinity)
@@ -286,10 +286,10 @@ struct NebulaDrawingFlow: View {
                     header("손님별을 초대할까요?", "광장에서 마음에 닿았던 별을 빈 자리에 들일 수 있어요. 원문 없이 빛깔과 출처만 함께 와요.")
                     HStack {
                         Text("빈 자리 \(emptySlots)")
-                            .textStyleBox(.labelM).foregroundStyle(Color.textPrimary)
+                            .textStyle(.labelM).foregroundStyle(Color.textPrimary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         Text("손님별 \(guests.count) / \(GuestStar.maxGuests)")
-                            .textStyleBox(.labelS).foregroundStyle(Color.brandPrimaryText)
+                            .textStyle(.labelS).foregroundStyle(Color.brandPrimaryText)
                             .padding(.horizontal, Space.md).padding(.vertical, Space.xs)
                             .background(Color.tintPrimary, in: .capsule)
                     }
@@ -308,7 +308,7 @@ struct NebulaDrawingFlow: View {
                     .padding(.horizontal, Space.lg).padding(.vertical, Space.xs)
                     .itemCard(seed: "guests", minHeight: 0)
                     Text("손님별은 최대 5개까지 들일 수 있고, 들인 뒤에도 빛깔과 출처는 그대로 지켜져요.")
-                        .textStyleBox(.caption).foregroundStyle(Color.textTertiary)
+                        .textStyle(.caption).foregroundStyle(Color.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.horizontal, Space.xl).padding(.top, Space.xl).padding(.bottom, Space.lg)
@@ -330,8 +330,8 @@ struct NebulaDrawingFlow: View {
             HStack(spacing: Space.md) {
                 StarGlyph(floated: true)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(g.title).textStyleBox(.labelM).foregroundStyle(Color.textPrimary)
-                    Text("\(g.source) · \(g.day)에 공명").textStyleBox(.caption).foregroundStyle(Color.textTertiary)
+                    Text(g.title).textStyle(.labelM).foregroundStyle(Color.textPrimary)
+                    Text("\(g.source) · \(g.day)에 공명").textStyle(.caption).foregroundStyle(Color.textTertiary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 ZStack {
@@ -418,9 +418,9 @@ struct NebulaDrawingFlow: View {
         VStack(spacing: Space.lg) {
             VStack(spacing: Space.lg) {
                 Text("성운이 그려졌어요")
-                    .textStyleBox(.h2).foregroundStyle(Color.textPrimary)
+                    .textStyle(.h2).foregroundStyle(Color.textPrimary)
                 Text("「\(saved?.name ?? name)」\n언제든 다시 이어 볼 수 있어요.")
-                    .textStyleBox(.bodyM).foregroundStyle(Color.textSecondary)
+                    .textStyle(.bodyM).foregroundStyle(Color.textSecondary)
             }
             .multilineTextAlignment(.center)
             .accessibilityElement(children: .combine)
@@ -471,11 +471,11 @@ struct NebulaDrawingFlow: View {
     private func header(_ title: String, _ sub: String?, h1: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: Space.lg) {
             Text(title)
-                .textStyleBox(h1 ? .h1 : .h2)
+                .textStyle(h1 ? .h1 : .h2)
                 .foregroundStyle(Color.textPrimary)
             if let sub {
                 Text(sub)
-                    .textStyleBox(.bodyM)
+                    .textStyle(.bodyM)
                     .foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .contentTransition(.numericText())
@@ -687,7 +687,7 @@ private struct NameField: View {
 
     var body: some View {
         TextField("", text: $text, prompt: Text("예: 느린 저녁의 성운").foregroundStyle(Color.textTertiary))
-            .textStyle(.bodyM)
+            .textInputStyle(.bodyM)
             .foregroundStyle(Color.textPrimary)
             .focused($focused)
             .submitLabel(.done)

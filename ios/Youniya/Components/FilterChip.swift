@@ -10,7 +10,7 @@ struct FilterChip: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .textStyleBox(.labelS)
+                .textStyle(.labelS)
                 .foregroundStyle(isSelected ? Color.textPrimary : Color.textSecondary)
                 .padding(.horizontal, Space.md)
                 .padding(.vertical, Space.sm)
@@ -33,7 +33,7 @@ struct RangeTag: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .textStyleBox(.labelS)
+                .textStyle(.labelS)
                 .foregroundStyle(isSelected ? Color.white : Color.textSecondary)
                 .padding(.horizontal, Space.md)
                 .padding(.vertical, Space.xs)

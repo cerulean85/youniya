@@ -56,18 +56,20 @@ enum TextStyle {
 }
 
 extension View {
+    /// Figma text style: font, tracking, the line height between lines, and half
+    /// the extra leading above and below, so a text box is exactly the Figma
+    /// line height (as in Figma auto layout).
     func textStyle(_ style: TextStyle) -> some View {
+        textInputStyle(style)
+            .padding(.vertical, style.lineSpacing / 2)
+    }
+
+    /// The same without the outer padding, for text fields and editors (and
+    /// placeholders laid over them), whose own insets set where text sits.
+    func textInputStyle(_ style: TextStyle) -> some View {
         font(style.font)
             .tracking(style.tracking)
             .lineSpacing(style.lineSpacing)
-    }
-
-    /// Like `textStyle`, plus half the extra leading above and below, so the
-    /// text box is exactly the Figma line height (as in Figma auto layout).
-    /// TODO: Older screens use `textStyle` alone and are a few points tighter.
-    func textStyleBox(_ style: TextStyle) -> some View {
-        textStyle(style)
-            .padding(.vertical, style.lineSpacing / 2)
     }
 }
 

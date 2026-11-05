@@ -377,7 +377,7 @@ struct InquiryView: View {
                             TextField("", text: $message,
                                       prompt: Text("여기에 적어 주세요").foregroundStyle(Color.textSecondary),
                                       axis: .vertical)
-                                .textStyle(.bodyS)
+                                .textInputStyle(.bodyS)
                                 .foregroundStyle(Color.textPrimary)
                                 .lineLimit(1...10)
                                 .focused($editing)

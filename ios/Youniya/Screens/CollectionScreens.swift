@@ -53,11 +53,11 @@ struct CollectionView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     VStack(alignment: .leading, spacing: Space.xs) {
-                        Text("컬렉션").textStyleBox(.h1).foregroundStyle(Color.textPrimary)
+                        Text("컬렉션").textStyle(.h1).foregroundStyle(Color.textPrimary)
                         Text(segment == .star
                              ? "쓴 마음이 별이 되어 모여요. 같은 모양의 별은 하나도 없어요."
                              : "별들이 이어져 성운이 돼요. 이름은 직접 지어 줄 수 있어요.")
-                            .textStyleBox(.bodyS).foregroundStyle(Color.textSecondary)
+                            .textStyle(.bodyS).foregroundStyle(Color.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     .accessibilityElement(children: .combine)
@@ -111,7 +111,7 @@ struct CollectionView: View {
                     .rotationEffect(.degrees(rng.next(in: 0...40)))
                     .frame(width: 70, height: 70)
                 Text(kept ? (date.isEmpty ? "곁에 둔" : "\(date) · 곁에 둔") : date)
-                    .textStyleBox(.caption).foregroundStyle(Color.textTertiary)
+                    .textStyle(.caption).foregroundStyle(Color.textTertiary)
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity)
@@ -157,7 +157,7 @@ struct CollectionView: View {
         }
         Button(action: onDraw) {
             Text("＋  새 성운 그리기")
-                .textStyleBox(.labelM).foregroundStyle(Color.textSecondary)
+                .textStyle(.labelM).foregroundStyle(Color.textSecondary)
                 .frame(maxWidth: .infinity)
                 .padding(Space.lg)
                 .cosmos("new-nebula", in: RoundedRectangle(cornerRadius: Radius.lg))
@@ -173,8 +173,8 @@ struct CollectionView: View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: Space.xs) {
                 MiniShapeNebula(seed: seed).frame(height: 100)
-                Text(name).textStyleBox(.labelM).foregroundStyle(Color.textPrimary).lineLimit(1)
-                Text(detail).textStyleBox(.caption).foregroundStyle(Color.textTertiary).lineLimit(1)
+                Text(name).textStyle(.labelM).foregroundStyle(Color.textPrimary).lineLimit(1)
+                Text(detail).textStyle(.caption).foregroundStyle(Color.textTertiary).lineLimit(1)
             }
             .padding(Space.md)
             .itemCard(seed: "neb-\(seed)", minHeight: 0, flatBorder: true)
@@ -197,7 +197,7 @@ struct CollectionView: View {
 
     private func empty(_ text: String) -> some View {
         Text(text)
-            .textStyleBox(.bodyS).foregroundStyle(Color.textSecondary)
+            .textStyle(.bodyS).foregroundStyle(Color.textSecondary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, Space.xxl)
     }
