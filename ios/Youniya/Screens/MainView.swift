@@ -45,6 +45,10 @@ struct MainView: View {
         case drawNebula  // 51–55, 84, 85
         case galaxyNebula(String) // 73/78, by name
         case galaxyLines(String)  // 74
+        case galaxyStar(nebula: String, star: String) // 75
+        case growth     // 65
+        case moments    // 66
+        case stages     // 86
         case page(String)
     }
 
@@ -234,6 +238,7 @@ struct MainView: View {
                 switch title {
                 case "성운 이야기": push(.nebulaStory)
                 case "성운 그리기": push(.drawNebula)
+                case "자라는 모습": push(.growth)
                 default: push(.page(title))
                 }
             })
@@ -263,8 +268,7 @@ struct MainView: View {
             if let n = GalaxyNebula.samples.first(where: { $0.name == name }) {
                 GalaxyNebulaView(nebula: n, onBack: pop,
                                  onLines: { push(.galaxyLines(name)) },
-                                 // TODO: 75 다른 이의 별
-                                 onOpenStar: { _ in push(.page("다른 이의 별")) })
+                                 onOpenStar: { push(.galaxyStar(nebula: name, star: $0)) })
                     .edgeSwipeBack(onBack: pop)
             }
         case .galaxyLines(let name):
@@ -272,6 +276,20 @@ struct MainView: View {
                 GalaxyLinesView(nebula: n, onBack: pop)
                     .edgeSwipeBack(onBack: pop)
             }
+        case .galaxyStar(let name, let star):
+            if let n = GalaxyNebula.samples.first(where: { $0.name == name }) {
+                GalaxyStarView(nebula: n, starTitle: star, onBack: pop)
+                    .edgeSwipeBack(onBack: pop)
+            }
+        case .growth:
+            NebulaGrowthView(onBack: pop, onMoments: { push(.moments) }, onDraw: { push(.drawNebula) })
+                .edgeSwipeBack(onBack: pop)
+        case .moments:
+            GrowthMomentsView(onBack: pop)
+                .edgeSwipeBack(onBack: pop)
+        case .stages:
+            GrowthStagesView(onBack: pop)
+                .edgeSwipeBack(onBack: pop)
         case .page(let title):
             PlaceholderPage(title: title, onBack: pop)
                 .edgeSwipeBack(onBack: pop)
@@ -327,6 +345,7 @@ struct MainView: View {
         case "나의 성운 확대": push(.myNebulaZoom)
         case "성운 이야기": push(.nebulaStory)
         case "성운 그리기": push(.drawNebula)
+        case "성장 단계": push(.stages)
         default: push(.page(title))
         }
     }

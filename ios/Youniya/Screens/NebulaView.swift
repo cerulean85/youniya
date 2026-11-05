@@ -13,7 +13,7 @@ struct NebulaView: View {
                         .textStyle(.h1)
                         .foregroundStyle(Color.textPrimary)
                     // TODO: nebula name and stage come from the backend.
-                    Text("\(model.nebulaName) · 2단계 따뜻한 빛줄기")
+                    Text("\(model.nebulaName) · \(model.growthStage)단계 \(model.stageName)")
                         .textStyle(.bodyM)
                         .foregroundStyle(Color.starBright)
                 }
@@ -33,11 +33,17 @@ struct NebulaView: View {
                     stat(model.supernovaCount, "초신성")
                 }
 
-                Text(hint)
-                    .textStyle(.bodyS)
-                    .foregroundStyle(Color.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
+                // Tapping the hint opens 86 (the four stages).
+                Button { onOpen("성장 단계") } label: {
+                    Text(hint)
+                        .textStyle(.bodyS)
+                        .foregroundStyle(Color.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                        .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("성운이 자라는 네 걸음을 봐요")
 
                 HStack(spacing: Space.md) {
                     Button("모두의 은하") { onOpen("모두의 은하") }

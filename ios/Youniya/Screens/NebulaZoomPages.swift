@@ -123,6 +123,9 @@ struct MyNebulaZoomView: View {
     @State private var level: CGFloat = 2.4
     @State private var selectedID: StarItem.ID?
     @State private var toast: String?
+    /// 71 하늘에 띄우기
+    @State private var askFloat = false
+    @State private var floatSheetHeight: CGFloat = 640
 
     private var floated: [StarItem] { model.stars.filter(\.isFloated) }
     private var selected: StarItem? {
@@ -179,8 +182,7 @@ struct MyNebulaZoomView: View {
             .scrollIndicators(.hidden)
 
             VStack(spacing: Space.md) {
-                // TODO: 71 하늘에 띄우기 시트
-                Button("하늘에 띄우기") { onOpen("하늘에 띄우기") }
+                Button(model.skyShare == nil ? "하늘에 띄우기" : "하늘에 떠 있어요") { askFloat = true }
                     .buttonStyle(.primary)
                 Button("이미지로 저장") { saveImage(layout) }
                     .buttonStyle(.ghost)
@@ -190,6 +192,21 @@ struct MyNebulaZoomView: View {
         }
         .background { StarField() }
         .toast($toast)
+        .sheet(isPresented: $askFloat) {
+            FloatNebulaSheet(
+                onFloat: {
+                    askFloat = false
+                    toast = "성운을 하늘에 띄웠어요"
+                },
+                onLater: { askFloat = false }
+            )
+            .fixedSize(horizontal: false, vertical: true)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { floatSheetHeight = $0 }
+            .presentationDetents([.height(floatSheetHeight)])
+            .presentationDragIndicator(.hidden)
+            .presentationCornerRadius(Radius.xl)
+            .presentationBackground { SheetBackground(seed: "float-sheet") }
+        }
     }
 
     /// Saves the whole nebula (zoomed out) to Photos, then T2.

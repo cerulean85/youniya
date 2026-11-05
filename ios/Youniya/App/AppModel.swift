@@ -272,6 +272,14 @@ struct CoinEntry: Codable, Identifiable, Hashable {
 }
 
 /// 87 Settings values. New fields need defaults so old saves still decode.
+/// 71 하늘에 띄우기 options.
+struct NebulaSkyShare: Codable, Equatable {
+    var name: String
+    var receiveLines = true
+    var showQuote = false
+    var date = Date.now
+}
+
 /// Dev-only failure modes, to see 35, 36 and 38 without a server.
 enum SimulatedFailure: String, CaseIterable {
     case network = "연결 끊김"   // 35
@@ -344,6 +352,10 @@ final class AppModel {
     var storyPolished: Bool {
         didSet { UserDefaults.standard.set(storyPolished, forKey: "storyPolished") }
     }
+    /// 71: my nebula floated to the sky, and what goes with it. TODO: Plaza API.
+    var skyShare: NebulaSkyShare? {
+        didSet { UserDefaults.standard.set(try? JSONEncoder().encode(skyShare), forKey: "skyShare") }
+    }
     /// 74: my one line per plaza nebula, by nebula name. TODO: Plaza API.
     var nebulaLines: [String: String] {
         didSet { UserDefaults.standard.set(nebulaLines, forKey: "nebulaLines") }
@@ -384,6 +396,8 @@ final class AppModel {
         usedFreeTelescope = UserDefaults.standard.bool(forKey: "usedFreeTelescope")
         storyPolished = UserDefaults.standard.bool(forKey: "storyPolished")
         nebulaLines = UserDefaults.standard.dictionary(forKey: "nebulaLines") as? [String: String] ?? [:]
+        skyShare = UserDefaults.standard.data(forKey: "skyShare")
+            .flatMap { try? JSONDecoder().decode(NebulaSkyShare.self, from: $0) }
         drawnNebulae = UserDefaults.standard.data(forKey: "drawnNebulae")
             .flatMap { try? JSONDecoder().decode([DrawnNebula].self, from: $0) } ?? []
         coinHistory = UserDefaults.standard.data(forKey: "coinHistory")
@@ -501,6 +515,7 @@ final class AppModel {
         drawnNebulae = []
         storyPolished = false
         nebulaLines = [:]
+        skyShare = nil
         hasSeenPlazaIntro = false
         marketingOptIn = false
         hasConsented = false
@@ -565,6 +580,21 @@ final class AppModel {
     var supernovaCount: Int { stars.filter { $0.analysis?.isSupernova == true }.count }
     /// Deep stars needed to reach the next nebula stage.
     static let nextStageDeepStars = 15
+
+    /// 86 성운이 자라는 네 걸음. 1 첫 별들 · 2 따뜻한 빛줄기 (깊은 별 6) ·
+    /// 3 짙어지는 성운 (깊은 별 15 · 별빛 900 이상 1번) · 4 온전한 은하수 (깊은 별 30 · 여러 감정의 결).
+    /// TODO: The backend decides the stage.
+    var growthStage: Int {
+        let bright = stars.contains { ($0.starlightValue ?? 0) >= 900 }
+        let moods = Set(stars.filter(\.isFloated).map(\.mood)).count
+        if deepCount >= 30 && moods >= 3 { return 4 }
+        if deepCount >= Self.nextStageDeepStars && bright { return 3 }
+        if deepCount >= 6 { return 2 }
+        return 1
+    }
+
+    static let stageNames = ["첫 별들", "따뜻한 빛줄기", "짙어지는 성운", "온전한 은하수"]
+    var stageName: String { Self.stageNames[growthStage - 1] }
 
     func saveDraft(_ d: StarDraft) {
         draft = d
