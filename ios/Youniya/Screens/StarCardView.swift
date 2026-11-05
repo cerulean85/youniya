@@ -84,6 +84,8 @@ struct ComposeFlowView: View {
         case kept(StarItem)
         /// 37 Crisis Care, then the step that would have come next.
         case crisis(StarItem, floated: Bool)
+        /// 61–64 별 탄생, between 06 and the card.
+        case birth(StarItem)
         /// 35 (network) or 36 (analysis) after 06 could not finish.
         case failed(StarItem, SimulatedFailure)
     }
@@ -114,7 +116,16 @@ struct ComposeFlowView: View {
                         // TODO: The analysis request decides this; for now the dev switch does.
                         if let failure = model.simulatedFailure, failure != .payment {
                             step = .failed(star, failure)
-                        } else if let previous = rewriteOf {
+                        } else {
+                            step = .birth(star)
+                        }
+                    }
+                }
+                .transition(.opacity)
+            case .birth(let star):
+                StarBirthView {
+                    withAnimation(.easeInOut(duration: 0.6)) {
+                        if let previous = rewriteOf {
                             step = .compare(previous: previous, current: star)
                         } else {
                             step = .card(star)

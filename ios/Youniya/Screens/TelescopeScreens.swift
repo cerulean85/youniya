@@ -199,10 +199,21 @@ struct TelescopeScanView: View {
     var onDone: () -> Void
     var onBackground: () -> Void
 
-    /// TODO: Replace with the real analysis request.
-    private let mockDuration: Duration = .seconds(3)
+    /// TODO: Replace with the real analysis request. 25 shows briefly, then 88.
+    private let mockDuration: Duration = .seconds(1.6)
+    /// 88 관측 연출, once the star has text to look through.
+    @State private var observing = false
 
     var body: some View {
+        if observing, let star = model.stars.first(where: { $0.id == starID }) {
+            TelescopeObserveView(star: star, onDone: onDone, onClose: onBackground)
+                .transition(.opacity)
+        } else {
+            lookingView
+        }
+    }
+
+    private var lookingView: some View {
         VStack(alignment: .leading, spacing: Space.lg) {
             KeptHero()
                 .padding(.top, Space.sm)
@@ -236,8 +247,13 @@ struct TelescopeScanView: View {
         .task {
             try? await Task.sleep(for: mockDuration)
             guard !Task.isCancelled else { return }
-            _ = model.prepareReport(for: starID)
-            onDone()
+            let hasText = model.stars.first { $0.id == starID }.map { !$0.body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } ?? false
+            if hasText {
+                withAnimation(.easeInOut(duration: 0.5)) { observing = true }
+            } else {
+                _ = model.prepareReport(for: starID)
+                onDone()
+            }
         }
     }
 }
