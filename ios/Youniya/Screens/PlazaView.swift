@@ -30,6 +30,8 @@ struct PlazaNebula: Identifiable, Hashable {
 /// leave a resonance. No rankings or comments.
 struct PlazaView: View {
     var onOpen: (_ title: String) -> Void
+    /// 72 → 73
+    var onOpenNebula: (GalaxyNebula) -> Void = { _ in }
 
     private enum Segment: String, CaseIterable { case star = "별", nebula = "성운" }
     private enum Sort: String, CaseIterable { case newest = "새로 뜬 것", similar = "나와 결이 비슷한" }
@@ -52,7 +54,9 @@ struct PlazaView: View {
                     Text("우주 광장")
                         .textStyle(.h1)
                         .foregroundStyle(Color.textPrimary)
-                    Text("누군가의 별이에요. 눌러서 한 문장을 읽고, 마음이 닿으면 공명을 남겨 보세요.")
+                    Text(segment == .star
+                         ? "누군가의 별이에요. 눌러서 한 문장을 읽고, 마음이 닿으면 공명을 남겨 보세요."
+                         : "모인 별들의 모양을 둘러보세요. 순위나 인기는 없어요.")
                         .textStyle(.bodyM)
                         .foregroundStyle(Color.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -77,9 +81,7 @@ struct PlazaView: View {
                         }
                     }
                 } else {
-                    // `72 우주 광장 · 성운` is a later screen.
-                    ComingSoonView(title: "성운 광장")
-                        .frame(height: 280)
+                    PlazaNebulaField(onOpen: onOpenNebula)
                 }
             }
             .padding(.horizontal, Space.xl)

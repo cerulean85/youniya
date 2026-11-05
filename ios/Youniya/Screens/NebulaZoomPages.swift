@@ -3,19 +3,27 @@ import SwiftUI
 // MARK: - Shared pieces (76, 77)
 
 /// Figma `Zoom Controls`: + / level / −, 36pt circles. − is filled violet.
-private struct ZoomControls: View {
+struct ZoomControls: View {
     @Binding var level: CGFloat
     var range: ClosedRange<CGFloat>
 
     var body: some View {
         VStack(spacing: Space.xs) {
-            button("+", filled: false, label: "확대") { level = min(range.upperBound, level + 0.4) }
-            Text(String(format: "%.1f×", level))
+            // Figma: at 1× the + is filled; once zoomed, the − is.
+            let atMin = level <= range.lowerBound + 0.01
+            button("+", filled: atMin, label: "확대") { level = min(range.upperBound, level + 0.4) }
+            Text(Self.label(level))
                 .textStyle(.caption)
                 .foregroundStyle(Color.textSecondary)
                 .accessibilityHidden(true)
-            button("−", filled: true, label: "축소") { level = max(range.lowerBound, level - 0.4) }
+            button("−", filled: !atMin, label: "축소") { level = max(range.lowerBound, level - 0.4) }
         }
+    }
+
+    /// "1×", "2.6×"
+    static func label(_ level: CGFloat) -> String {
+        let r = (level * 10).rounded() / 10
+        return r == r.rounded() ? "\(Int(r))×" : String(format: "%.1f×", r)
     }
 
     private func button(_ glyph: String, filled: Bool, label: String, action: @escaping () -> Void) -> some View {

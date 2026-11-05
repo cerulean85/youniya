@@ -43,6 +43,8 @@ struct MainView: View {
         case myNebulaZoom // 77
         case nebulaStory // 83
         case drawNebula  // 51–55, 84, 85
+        case galaxyNebula(String) // 73/78, by name
+        case galaxyLines(String)  // 74
         case page(String)
     }
 
@@ -103,7 +105,8 @@ struct MainView: View {
             case .nebula:
                 NebulaView(onOpen: openFromNebula)
             case .plaza:
-                PlazaView(onOpen: { push(.otherNebula($0)) })
+                PlazaView(onOpen: { push(.otherNebula($0)) },
+                          onOpenNebula: { push(.galaxyNebula($0.name)) })
             case .records:
                 RecordsView(onOpenStar: openStar, onBrightness: { push(.brightness) })
             }
@@ -256,6 +259,19 @@ struct MainView: View {
                     toast = ToastCardMessage(title: "우주 광장에 나눴어요")
                 }
             )
+        case .galaxyNebula(let name):
+            if let n = GalaxyNebula.samples.first(where: { $0.name == name }) {
+                GalaxyNebulaView(nebula: n, onBack: pop,
+                                 onLines: { push(.galaxyLines(name)) },
+                                 // TODO: 75 다른 이의 별
+                                 onOpenStar: { _ in push(.page("다른 이의 별")) })
+                    .edgeSwipeBack(onBack: pop)
+            }
+        case .galaxyLines(let name):
+            if let n = GalaxyNebula.samples.first(where: { $0.name == name }) {
+                GalaxyLinesView(nebula: n, onBack: pop)
+                    .edgeSwipeBack(onBack: pop)
+            }
         case .page(let title):
             PlaceholderPage(title: title, onBack: pop)
                 .edgeSwipeBack(onBack: pop)

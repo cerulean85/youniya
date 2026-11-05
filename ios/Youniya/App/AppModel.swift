@@ -344,6 +344,10 @@ final class AppModel {
     var storyPolished: Bool {
         didSet { UserDefaults.standard.set(storyPolished, forKey: "storyPolished") }
     }
+    /// 74: my one line per plaza nebula, by nebula name. TODO: Plaza API.
+    var nebulaLines: [String: String] {
+        didSet { UserDefaults.standard.set(nebulaLines, forKey: "nebulaLines") }
+    }
     /// Nebulae the user drew (51–55), newest last.
     var drawnNebulae: [DrawnNebula] {
         didSet { UserDefaults.standard.set(try? JSONEncoder().encode(drawnNebulae), forKey: "drawnNebulae") }
@@ -379,6 +383,7 @@ final class AppModel {
         savedLines = UserDefaults.standard.stringArray(forKey: "savedLines") ?? []
         usedFreeTelescope = UserDefaults.standard.bool(forKey: "usedFreeTelescope")
         storyPolished = UserDefaults.standard.bool(forKey: "storyPolished")
+        nebulaLines = UserDefaults.standard.dictionary(forKey: "nebulaLines") as? [String: String] ?? [:]
         drawnNebulae = UserDefaults.standard.data(forKey: "drawnNebulae")
             .flatMap { try? JSONDecoder().decode([DrawnNebula].self, from: $0) } ?? []
         coinHistory = UserDefaults.standard.data(forKey: "coinHistory")
@@ -495,6 +500,7 @@ final class AppModel {
         usedFreeTelescope = false
         drawnNebulae = []
         storyPolished = false
+        nebulaLines = [:]
         hasSeenPlazaIntro = false
         marketingOptIn = false
         hasConsented = false
