@@ -36,6 +36,9 @@ struct MainView: View {
         case inquiry   // 32
         case sky       // 68
         case policy(PolicyDoc) // 43–46
+        case nebulaStars(NebulaStarsView.Kind) // 89/90
+        case brightness // 82
+        case milkyWay   // 81
         case page(String)
     }
 
@@ -94,11 +97,11 @@ struct MainView: View {
                     HomeView(onCompose: { push(.compose()) }, onOpenStar: openStar)
                 }
             case .nebula:
-                NebulaView(onOpen: { push(.page($0)) })
+                NebulaView(onOpen: openFromNebula)
             case .plaza:
                 PlazaView(onOpen: { push(.otherNebula($0)) })
             case .records:
-                RecordsView(onOpenStar: openStar, onBrightness: { push(.page("밝기 흐름")) })
+                RecordsView(onOpenStar: openStar, onBrightness: { push(.brightness) })
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -150,7 +153,7 @@ struct MainView: View {
             .edgeSwipeBack(onBack: pop)
         case .records:
             RecordsView(onBack: pop, onOpenStar: { push(.detail($0.id)) },
-                        onBrightness: { push(.page("밝기 흐름")) })
+                        onBrightness: { push(.brightness) })
                 .background { StarField() }
                 .edgeSwipeBack(onBack: pop)
         case .kept:
@@ -202,6 +205,15 @@ struct MainView: View {
         case .policy(let doc):
             PolicyDocView(doc: doc, onBack: pop)
                 .edgeSwipeBack(onBack: pop)
+        case .nebulaStars(let kind):
+            NebulaStarsView(initial: kind, onBack: pop, onOpenStar: openStar)
+                .edgeSwipeBack(onBack: pop)
+        case .brightness:
+            BrightnessFlowView(onBack: pop)
+                .edgeSwipeBack(onBack: pop)
+        case .milkyWay:
+            MilkyWayView(onBack: pop, onOpenStar: openStar)
+                .edgeSwipeBack(onBack: pop)
         case .page(let title):
             PlaceholderPage(title: title, onBack: pop)
                 .edgeSwipeBack(onBack: pop)
@@ -243,6 +255,17 @@ struct MainView: View {
     /// 12 Star Detail
     private func openStar(_ star: StarItem) {
         push(.detail(star.id))
+    }
+
+    /// 08 links: the stat cards (89), 나의 은하수 (81); the rest are later screens.
+    private func openFromNebula(_ title: String) {
+        switch title {
+        case "떠 있는 별": push(.nebulaStars(.floated))
+        case "깊은 별": push(.nebulaStars(.deep))
+        case "초신성": push(.nebulaStars(.supernova))
+        case "나의 은하수": push(.milkyWay)
+        default: push(.page(title))
+        }
     }
 
     private func handleDev(_ action: DrawerMenu.DevAction) {

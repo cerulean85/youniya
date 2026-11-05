@@ -45,7 +45,8 @@ struct StarAnalysis: Hashable, Codable {
     var tones: [Mood]
 
     var isDeep: Bool { depth >= 0.7 }
-    var isSupernova: Bool { starlight >= 900 }
+    /// Figma 90: "별빛이 700을 넘어 크게 빛난 별".
+    var isSupernova: Bool { starlight >= 700 }
 
     /// TODO: Replace with the real analysis API. This mock is deterministic per text
     /// so the same draft always gives the same card.
@@ -182,6 +183,13 @@ struct StarItem: Identifiable, Hashable, Codable {
 
     var isFloated: Bool {
         if case .floated = state { true } else { false }
+    }
+
+    /// Starlight of a floated star (from the analysis, or the saved value).
+    var starlightValue: Int? {
+        if let analysis { return analysis.starlight }
+        if case .floated(let value) = state { return value }
+        return nil
     }
 
     /// e.g. "11월 3일 화요일 · 21:30" (12 Star Detail header).
