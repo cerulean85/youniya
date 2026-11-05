@@ -41,7 +41,7 @@ enum TextStyle {
         case .labelS: ("Pretendard-Medium", 12, 16, 0.2, .caption)
         case .caption: ("Pretendard-Regular", 12, 18, 0.2, .caption)
         // Figma `Caption/Tab`: tab bar labels and small notes.
-        case .captionTab: ("Pretendard-Regular", 11, 16, 0.2, .caption2)
+        case .captionTab: ("Pretendard-Regular", 12, 16, 0, .caption2)
         }
     }
 

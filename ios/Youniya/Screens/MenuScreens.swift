@@ -16,11 +16,10 @@ struct CoinHistoryView: View {
                     CoinHero()
 
                     if model.coinHistory.isEmpty {
-                        Text("아직 코인 내역이 없어요.")
-                            .textStyle(.bodyM)
-                            .foregroundStyle(Color.textSecondary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, Space.xl)
+                        // 108
+                        EmptyStateView(title: "아직 쓴 코인이 없어요",
+                                       message: "마음 망원경을 켤 때 쓴 코인이\n여기에 차례로 쌓여요.")
+                            .padding(.top, Space.md)
                     } else {
                         LazyVStack(spacing: Space.md) {
                             ForEach(model.coinHistory) { entry in
@@ -65,13 +64,15 @@ struct SettingsView: View {
     /// 91–94 bottom sheets over Settings.
     private enum Sheet: Identifiable {
         case deleteAccount, withdrawShares, export, sound
-        var id: Self { self }
+        case exporting(DataExport.Format) // 114
+        var id: String { "\(self)" }
     }
     @State private var sheet: Sheet?
     @State private var sheetHeight: CGFloat = 346
     /// Run after the sheet is gone (e.g. 91 → 93, or signing out).
     @State private var afterDismiss: (() -> Void)?
     @State private var showPolicies = false
+    @State private var exportProgress = 0.0
     @State private var toast: String?
 
     /// Figma note under 소리 고르기 (written for 밤바람).
@@ -189,10 +190,25 @@ struct SettingsView: View {
             ActionSheetContent(
                 title: "어떤 형식으로 내보낼까요?",
                 message: "쓴 별과 성운 이야기를 모두 파일로 내려받아요. 파일은 내 기기에만 저장돼요.",
-                primary: ("텍스트 파일로", { close { export(.text) } }),
-                secondary: ("PDF로", { close { export(.pdf) } }),
+                primary: ("텍스트 파일로", { close { sheet = .exporting(.text) } }),
+                secondary: ("PDF로", { close { sheet = .exporting(.pdf) } }),
                 ghost: ("닫기", { close() })
             )
+        case .exporting(let format): // 114
+            ExportProgressSheet(
+                detail: "별 \(model.stars.count)개와 성운 이야기 \(max(1, model.drawnNebulae.count))편을 \(format == .pdf ? "PDF" : "텍스트") 파일로 모으고 있어요. 창을 닫아도 이어서 만들어요.",
+                progress: exportProgress,
+                // "창을 닫아도 이어서 만들어요": closing still finishes the file.
+                onClose: { close { export(format) } }
+            )
+            .task {
+                exportProgress = 0
+                for step in 1...10 {
+                    try? await Task.sleep(for: .milliseconds(140))
+                    withAnimation(.linear(duration: 0.14)) { exportProgress = Double(step) / 10 }
+                }
+                close { export(format) }
+            }
         case .sound: // 94
             ActionSheetContent(
                 title: "어떤 소리와 함께할까요?",
@@ -241,7 +257,7 @@ private struct SettingsSection<Rows: View>: View {
             rows
             if let note {
                 Text(note)
-                    .textStyle(.captionTab)
+                    .textStyle(.caption)
                     .foregroundStyle(Color.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, Space.xs)

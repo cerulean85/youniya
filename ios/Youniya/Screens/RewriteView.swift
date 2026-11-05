@@ -52,18 +52,24 @@ struct RewriteView: View {
                     .frame(minHeight: 260, maxHeight: .infinity, alignment: .top)
                     .focusCard(angle: .init(x: 0.25, y: 0), end: .init(x: 0.75, y: 1))
 
-                Text("\(text.count)자")
+                Text("\(text.count.formatted()) / \(AppModel.minFloatLength.formatted())자")
                     .textStyle(.caption)
                     .foregroundStyle(Color.textTertiary)
                     .frame(maxWidth: .infinity, alignment: .trailing)
 
+                // 105: floating needs 1,000 characters.
+                if canPublish && text.count < AppModel.minFloatLength {
+                    NoticeBanner(message: "\(AppModel.minFloatLength.formatted())자부터 별로 띄울 수 있어요")
+                }
+
                 HStack(spacing: Space.md) {
                     Button("조용히 품기") { publish(floated: false) }
                         .buttonStyle(.secondary)
+                        .disabled(!canPublish)
                     Button("별 띄우기") { publish(floated: true) }
                         .buttonStyle(.primary)
+                        .disabled(text.count < AppModel.minFloatLength)
                 }
-                .disabled(!canPublish)
             }
             .padding(.horizontal, Space.xl)
             .padding(.top, Space.sm)

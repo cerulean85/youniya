@@ -73,6 +73,8 @@ struct ReportListView: View {
     @Environment(AppModel.self) private var model
     var onBack: () -> Void
     var onOpen: (StarItem) -> Void
+    /// 98 "마음 망원경 켜기": to the latest floated star without a report.
+    var onTurnOn: () -> Void = {}
 
     enum Order { case newest, oldest }
     @State private var order: Order = .newest
@@ -94,12 +96,10 @@ struct ReportListView: View {
                     KeptHero()
 
                     if weeks.isEmpty {
-                        Text("아직 리포트가 없어요.\n띄운 별에서 마음 망원경을 켜 보세요.")
-                            .textStyle(.bodyM)
-                            .foregroundStyle(Color.textSecondary)
-                            .multilineTextAlignment(.center)
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, Space.xl)
+                        // 98
+                        EmptyStateView(title: "아직 받은 리포트가 없어요",
+                                       message: "마음 망원경을 켜면 일주일 동안의 별을\n모아 리포트로 보여 드려요.")
+                            .padding(.top, Space.xxl)
                     } else {
                         VStack(spacing: Space.md) {
                             ForEach(weeks) { week in
@@ -119,11 +119,19 @@ struct ReportListView: View {
             }
             .scrollIndicators(.hidden)
 
-            Button("정렬") { showSort = true }
-                .buttonStyle(.ghost)
-                .padding(.horizontal, Space.xl)
-                .padding(.bottom, Space.xl)
-                .disabled(weeks.count < 2)
+            if weeks.isEmpty {
+                Button("마음 망원경 켜기", action: onTurnOn)
+                    .buttonStyle(.primary)
+                    .disabled(!model.stars.contains(where: \.isFloated))
+                    .padding(.horizontal, Space.xl)
+                    .padding(.bottom, Space.xl)
+            } else {
+                Button("정렬") { showSort = true }
+                    .buttonStyle(.ghost)
+                    .padding(.horizontal, Space.xl)
+                    .padding(.bottom, Space.xl)
+                    .disabled(weeks.count < 2)
+            }
         }
         .background { StarField() }
         // 27 Sort Sheet
@@ -245,13 +253,24 @@ struct CoinChargeView: View {
                         .foregroundStyle(Color.textSecondary)
                 }
                 .frame(maxWidth: .infinity)
-                Button(charged.map { "코인 \($0)개를 충전했어요" } ?? "충전하기") { charge() }
+                Button("충전하기") { charge() }
                     .buttonStyle(.primary)
             }
             .padding(.horizontal, Space.xl)
             .padding(.bottom, Space.xl)
         }
         .background { StarField() }
+        .overlay {
+            if let charged {
+                StatusView(icon: .iconCheck, title: "충전이 끝났어요",
+                           message: "코인 \(charged)개가 들어왔어요. 지금 코인은 \(model.coins)개예요.",
+                           actions: [
+                               .init(title: "하던 곳으로 돌아가기", style: .primary, run: onBack),
+                               .init(title: "코인 사용 내역 보기", style: .ghost, run: onHistory),
+                           ])
+                    .transition(.opacity)
+            }
+        }
         .overlay {
             if paymentFailed {
                 StatusView(icon: .iconLock, title: "결제가 끝나지 않았어요",
@@ -275,13 +294,10 @@ struct CoinChargeView: View {
             return
         }
         withAnimation(.easeInOut(duration: 0.3)) { paymentFailed = false }
-        withAnimation(.snappy) {
+        // 102 충전이 끝났어요
+        withAnimation(.easeInOut(duration: 0.3)) {
             model.addCoins(selected.coins)
             charged = selected.coins
-        }
-        Task {
-            try? await Task.sleep(for: .seconds(1.6))
-            withAnimation(.snappy) { charged = nil }
         }
     }
 }

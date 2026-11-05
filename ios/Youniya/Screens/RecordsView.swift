@@ -1,61 +1,349 @@
 import SwiftUI
 
-/// 17 Starlight Records (별빛 기록): every star, newest first.
-/// Pushed from the menu (with back) or shown as the 기록 tab (without).
+/// Filters on the records tab (115, 118).
+enum RecordsFilter: Hashable {
+    case all, floated, kept, mood(Mood)
+}
+
+/// 115 기록 · 목록 / 116 달력 / 117 검색 / 118 간직한 별 / 119 비어 있음.
 struct RecordsView: View {
     @Environment(AppModel.self) private var model
-    var onBack: (() -> Void)?
     var onOpenStar: (StarItem) -> Void
-    /// "밝기 흐름 보기" → 82 별빛 기록 · 밝기 흐름
+    /// "밝기 흐름 보기" → 82
     var onBrightness: () -> Void = {}
+    /// 119 "간직할 글 쓰기"
+    var onCompose: () -> Void = {}
+    @Binding var filter: RecordsFilter
+
+    private enum Mode { case list, calendar }
+    @State private var mode: Mode = .list
+    @State private var query = ""
+    @FocusState private var searching: Bool
+    @State private var month = Calendar.current.dateInterval(of: .month, for: .now)!.start
+    @State private var day: Date?
+
+    private var trimmed: String { query.trimmingCharacters(in: .whitespaces) }
+
+    private var filtered: [StarItem] {
+        model.stars.filter { s in
+            switch filter {
+            case .all: true
+            case .floated: s.isFloated
+            case .kept: !s.isFloated
+            case .mood(let m): s.mood == m
+            }
+        }
+        .filter { trimmed.isEmpty || $0.title.localizedCaseInsensitiveContains(trimmed) || $0.body.localizedCaseInsensitiveContains(trimmed) }
+    }
 
     var body: some View {
-        VStack(spacing: 0) {
-            if let onBack {
-                TopAppBar(title: "별빛 기록", onBack: onBack)
-            }
-            ScrollView {
-                VStack(alignment: .leading, spacing: Space.lg) {
-                    Text("나의 별빛 기록")
-                        .textStyle(.h1)
-                        .foregroundStyle(Color.textPrimary)
+        ScrollView {
+            VStack(alignment: .leading, spacing: Space.lg) {
+                VStack(alignment: .leading, spacing: Space.xs) {
+                    Text("기록").textStyle(.h1).foregroundStyle(Color.textPrimary)
                         .accessibilityAddTraits(.isHeader)
-                    Text("쓴 마음이 별이 되어 모이는 곳이에요.")
-                        .textStyle(.bodyM)
-                        .foregroundStyle(Color.textSecondary)
-
+                    Text(filter == .kept
+                         ? "분석 없이 조용히 간직한 별 \(model.stars.filter { !$0.isFloated }.count)개"
+                         : "지금까지 띄우고 품은 별 \(model.stars.count)개")
+                        .textStyle(.bodyM).foregroundStyle(Color.textSecondary)
                     LinkChip(title: "밝기 흐름 보기 ›", action: onBrightness)
+                }
 
-                    RecordsHero()
+                segment
 
-                    if model.stars.isEmpty {
-                        Text("아직 기록된 별이 없어요.")
-                            .textStyle(.bodyM)
-                            .foregroundStyle(Color.textTertiary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, Space.xl)
-                    } else {
-                        LazyVStack(spacing: Space.md) {
-                            ForEach(model.stars) { star in
-                                Button { onOpenStar(star) } label: {
-                                    RecordCard(star: star, subtitle: subtitle(star))
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
+                if mode == .list {
+                    searchBar
+                    chips
+                    listContent
+                } else {
+                    calendar
+                }
+            }
+            .padding(.horizontal, Space.xl)
+            .padding(.top, Space.lg)
+            .padding(.bottom, Space.xl)
+        }
+        .scrollIndicators(.hidden)
+        .scrollDismissesKeyboard(.interactively)
+    }
+
+    // MARK: Segment
+
+    private var segment: some View {
+        HStack(spacing: Space.xs) {
+            seg("목록", .list)
+            seg("달력", .calendar)
+        }
+        .padding(Space.xs)
+        .cosmos("records-seg", in: RoundedRectangle(cornerRadius: Radius.md))
+        .background(Color.bgSurface, in: .rect(cornerRadius: Radius.md))
+        .overlay(RoundedRectangle(cornerRadius: Radius.md).strokeBorder(Color.borderDefault, lineWidth: 1))
+    }
+
+    private func seg(_ title: String, _ m: Mode) -> some View {
+        let on = mode == m
+        return Button { withAnimation(.snappy) { mode = m; searching = false } } label: {
+            Text(title)
+                .textStyle(.labelM)
+                .foregroundStyle(on ? Color.textPrimary : Color.textSecondary)
+                .frame(maxWidth: .infinity, minHeight: 34)
+                .background {
+                    if on {
+                        RoundedRectangle(cornerRadius: Radius.sm).fill(Color.tintPrimary)
+                            .overlay(RoundedRectangle(cornerRadius: Radius.sm).strokeBorder(Color.hex(0x8555EF), lineWidth: 1))
                     }
                 }
-                .padding(.horizontal, Space.xl)
-                .padding(.top, onBack == nil ? Space.lg : Space.sm)
-                .padding(.bottom, Space.xl)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(on ? .isSelected : [])
+    }
+
+    // MARK: List (115, 117, 118, 119)
+
+    private var searchBar: some View {
+        HStack(spacing: Space.sm) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(searching || !query.isEmpty ? Color.textPrimary : Color.textTertiary)
+            TextField("", text: $query, prompt: Text("제목이나 내용으로 찾기").foregroundStyle(Color.textTertiary))
+                .textInputStyle(.bodyM)
+                .foregroundStyle(Color.textPrimary)
+                .focused($searching)
+                .submitLabel(.search)
+            if !query.isEmpty {
+                Button { query = "" } label: {
+                    Image(systemName: "xmark").font(.system(size: 15, weight: .regular))
+                        .foregroundStyle(Color.textSecondary)
+                        .frame(width: 32, height: 32).contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("검색어 지우기")
             }
-            .scrollIndicators(.hidden)
+        }
+        .padding(.leading, 14).padding(.trailing, Space.md)
+        .frame(height: 44)
+        .cosmos("records-search", in: RoundedRectangle(cornerRadius: Radius.md))
+        .background(Color.bgSurface, in: .rect(cornerRadius: Radius.md))
+        .overlay(RoundedRectangle(cornerRadius: Radius.md)
+            .strokeBorder(searching || !query.isEmpty ? Color.hex(0x8555EF) : Color.borderDefault, lineWidth: 1))
+    }
+
+    private var chips: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: Space.sm) {
+                plainChip("전체", .all)
+                plainChip("띄운 별", .floated)
+                plainChip("간직한 별", .kept)
+                ForEach(Mood.allCases) { m in
+                    DotChip(title: m.label, isSelected: filter == .mood(m), dot: m.color) {
+                        withAnimation(.snappy) { filter = filter == .mood(m) ? .all : .mood(m) }
+                    }
+                }
+            }
+            .padding(.horizontal, Space.xl)
+        }
+        .scrollIndicators(.hidden)
+        .padding(.horizontal, -Space.xl)
+    }
+
+    private func plainChip(_ title: String, _ f: RecordsFilter) -> some View {
+        let on = filter == f
+        return Button { withAnimation(.snappy) { filter = f } } label: {
+            Text(title)
+                .textStyle(.labelS)
+                .foregroundStyle(on ? Color.textPrimary : Color.textSecondary)
+                .padding(.horizontal, Space.md).padding(.vertical, Space.sm)
+                .cosmos("rchip-\(title)", in: Capsule(), intensity: 0.6)
+                .background(on ? Color.tintPrimary : Color.bgSurface, in: .capsule)
+                .overlay(Capsule().strokeBorder(on ? Color.hex(0x8555EF) : Color.borderDefault, lineWidth: 1))
+                .contentShape(.capsule)
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(on ? .isSelected : [])
+    }
+
+    @ViewBuilder private var listContent: some View {
+        let stars = filtered
+        if !trimmed.isEmpty {
+            // 117 Search results
+            HStack {
+                Text("‘\(trimmed)’이 담긴 별 \(stars.count)개").textStyle(.labelM).foregroundStyle(Color.textPrimary)
+                Spacer()
+                Text("제목 · 본문").textStyle(.caption).foregroundStyle(Color.textTertiary)
+            }
+            if stars.isEmpty {
+                empty(title: "‘\(trimmed)’이 담긴 별이 없어요", message: "다른 말로 찾아보거나, 필터를 바꿔 보세요.", action: nil)
+            } else {
+                rows(stars)
+            }
+        } else if stars.isEmpty {
+            if filter == .kept {
+                // 119
+                empty(title: "아직 간직한 별이 없어요", message: "분석 없이 조용히 두고 싶은 글은\n여기에 모여요.",
+                      action: ("간직할 글 쓰기", onCompose))
+            } else {
+                empty(title: "아직 별이 없어요", message: "오늘의 마음을 적으면\n이곳에 하나씩 모여요.", action: ("오늘의 별 만들기", onCompose))
+            }
+        } else {
+            // 115: grouped by month, newest first
+            ForEach(Self.byMonth(stars), id: \.0) { month, items in
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text(Self.monthTitle(month)).textStyle(.labelM).foregroundStyle(Color.textPrimary)
+                        Spacer()
+                        Text("별 \(items.count)개").textStyle(.caption).foregroundStyle(Color.textTertiary)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityAddTraits(.isHeader)
+                    rows(items)
+                }
+            }
         }
     }
 
-    private func subtitle(_ star: StarItem) -> String {
-        if let light = star.analysis?.starlight { return "\(star.shortDateText) · 별빛 \(light)" }
-        return star.isFloated ? "\(star.shortDateText) · 띄운 별" : "\(star.shortDateText) · 조용히 품음"
+    private func rows(_ stars: [StarItem]) -> some View {
+        LazyVStack(spacing: Space.md) {
+            ForEach(stars) { star in
+                Button { onOpenStar(star) } label: { StarRow(star: star) }
+                    .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func empty(title: String, message: String, action: (String, () -> Void)?) -> some View {
+        VStack(spacing: Space.md) {
+            StarGlyph(floated: true)
+                .scaleEffect(40 / 18.14)
+                .frame(width: 40, height: 40)
+                .padding(.bottom, Space.sm)
+            Text(title).textStyle(.h3).foregroundStyle(Color.textPrimary)
+            Text(message).textStyle(.bodyS).foregroundStyle(Color.textSecondary)
+            if let action {
+                Button(action.0, action: action.1)
+                    .buttonStyle(.primary)
+                    .fixedSize()
+                    .padding(.top, Space.sm)
+            }
+        }
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 72)
+    }
+
+    // MARK: Calendar (116)
+
+    @ViewBuilder private var calendar: some View {
+        let cal = Self.cal
+        let days = Self.days(in: month)
+        let byDay = Dictionary(grouping: model.stars) { cal.startOfDay(for: $0.date ?? .now) }
+        VStack(spacing: Space.sm) {
+            HStack {
+                Button { shift(-1) } label: { navIcon(.iconBack) }.buttonStyle(.plain).accessibilityLabel("이전 달")
+                Spacer()
+                Text(Self.monthTitle(month)).textStyle(.h3).foregroundStyle(Color.textPrimary)
+                Spacer()
+                Button { shift(1) } label: { navIcon(.iconChevronRight) }.buttonStyle(.plain).accessibilityLabel("다음 달")
+            }
+            .frame(height: 28)
+            HStack(spacing: 0) {
+                ForEach(["일", "월", "화", "수", "목", "금", "토"], id: \.self) {
+                    Text($0).textStyle(.caption).foregroundStyle(Color.textTertiary).frame(maxWidth: .infinity)
+                }
+            }
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: 7), spacing: 4) {
+                ForEach(days.indices, id: \.self) { i in
+                    if let d = days[i] {
+                        let has = byDay[d] != nil
+                        let on = day.map { cal.isDate($0, inSameDayAs: d) } ?? false
+                        let future = d > .now
+                        Button { withAnimation(.snappy) { day = d } } label: {
+                            VStack(spacing: 4) {
+                                Text("\(cal.component(.day, from: d))")
+                                    .textStyle(.bodyS)
+                                    .foregroundStyle(has || on ? Color.textPrimary : future ? Color.textTertiary : Color.textSecondary)
+                                if has {
+                                    StarGlyph(floated: byDay[d]!.contains(where: \.isFloated)).scaleEffect(14 / 18.14).frame(width: 14, height: 14)
+                                } else {
+                                    Color.clear.frame(width: 14, height: 14)
+                                }
+                            }
+                            .frame(maxWidth: .infinity, minHeight: 48)
+                            .background {
+                                if on {
+                                    RoundedRectangle(cornerRadius: Radius.md).fill(Color.tintPrimary)
+                                        .overlay(RoundedRectangle(cornerRadius: Radius.md).strokeBorder(Color.hex(0x8555EF), lineWidth: 1))
+                                }
+                            }
+                            .contentShape(.rect)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("\(cal.component(.month, from: d))월 \(cal.component(.day, from: d))일\(has ? ", 별 \(byDay[d]!.count)개" : "")")
+                        .accessibilityAddTraits(on ? .isSelected : [])
+                    } else {
+                        Color.clear.frame(minHeight: 48)
+                    }
+                }
+            }
+        }
+
+        if let day {
+            let items = byDay[cal.startOfDay(for: day)] ?? []
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text(Self.dayTitle(day)).textStyle(.labelM).foregroundStyle(Color.textPrimary)
+                    Spacer()
+                    Text("별 \(items.count)개").textStyle(.caption).foregroundStyle(Color.textTertiary)
+                }
+                if items.isEmpty {
+                    Text("이날은 쉬어 간 밤이에요.").textStyle(.bodyS).foregroundStyle(Color.textSecondary)
+                } else {
+                    rows(items)
+                }
+            }
+        }
+    }
+
+    private func navIcon(_ image: ImageResource) -> some View {
+        Image(image).renderingMode(.template).resizable().frame(width: 24, height: 24)
+            .foregroundStyle(Color.textPrimary).frame(width: 40, height: 28).contentShape(.rect)
+    }
+
+    private func shift(_ n: Int) {
+        withAnimation(.snappy) {
+            month = Self.cal.date(byAdding: .month, value: n, to: month)!
+            day = nil
+        }
+    }
+
+    // MARK: Dates
+
+    private static var cal: Calendar {
+        var c = Calendar(identifier: .gregorian)
+        c.locale = Locale(identifier: "ko_KR")
+        return c
+    }
+
+    private static func byMonth(_ stars: [StarItem]) -> [(Date, [StarItem])] {
+        let g = Dictionary(grouping: stars) { cal.dateInterval(of: .month, for: $0.date ?? .now)!.start }
+        return g.map { ($0.key, $0.value.sorted { ($0.date ?? .now) > ($1.date ?? .now) }) }.sorted { $0.0 > $1.0 }
+    }
+
+    /// Sunday-first grid; nil for blanks before the 1st.
+    private static func days(in month: Date) -> [Date?] {
+        let first = cal.component(.weekday, from: month) - 1
+        let count = cal.range(of: .day, in: .month, for: month)!.count
+        return Array(repeating: nil, count: first) + (0..<count).map { cal.date(byAdding: .day, value: $0, to: month) }
+    }
+
+    private static func monthTitle(_ d: Date) -> String {
+        let f = DateFormatter(); f.locale = Locale(identifier: "ko_KR"); f.dateFormat = "yyyy년 M월"
+        return f.string(from: d)
+    }
+
+    private static func dayTitle(_ d: Date) -> String {
+        let f = DateFormatter(); f.locale = Locale(identifier: "ko_KR"); f.dateFormat = "M월 d일 EEEE"
+        return f.string(from: d)
     }
 }
 

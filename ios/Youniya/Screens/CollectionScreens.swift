@@ -10,6 +10,8 @@ struct CollectionView: View {
     var onOpenMyNebula: () -> Void
     var onOpenOtherNebula: (GalaxyNebula) -> Void
     var onDraw: () -> Void
+    /// 97 "우주 광장 둘러보기"
+    var onPlaza: () -> Void = {}
 
     private enum Segment: String, CaseIterable { case star = "별", nebula = "성운" }
     private enum Filter { case all, mine, kept }
@@ -83,7 +85,16 @@ struct CollectionView: View {
         filters(all: mine.count + kept.count, mine: ("내가 띄운", mine.count), kept: kept.count)
         let tiles = filter == .mine ? mine : filter == .kept ? kept : mine + kept
         if tiles.isEmpty {
-            empty(filter == .kept ? "광장에서 공명한 별이 이곳에 곁에 남아요." : "별을 띄우면 이곳에 모여요.")
+            if filter == .kept {
+                // 97
+                EmptyStateView(title: "곁에 둔 별이 아직 없어요",
+                               message: "우주 광장에서 마음이 닿은 별을 곁에 두면\n여기에 모여요.",
+                               action: ("우주 광장 둘러보기", .outline, onPlaza))
+                    .padding(.top, 72)
+            } else {
+                EmptyStateView(title: "아직 띄운 별이 없어요", message: "별을 띄우면 이곳에 모여요.")
+                    .padding(.top, 72)
+            }
         } else {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Space.md), count: 3), spacing: Space.md) {
                 ForEach(tiles) { tile in starTile(tile) }
@@ -132,13 +143,19 @@ struct CollectionView: View {
         let drawn = model.drawnNebulae
         let kept = keptNebulae
         // My nebula is always there, drawn or not.
-        let mineCount = max(1, drawn.count)
+        let mineCount = drawn.count
         filters(all: mineCount + kept.count, mine: ("내가 그린", mineCount), kept: kept.count)
+        let showsEmpty = (filter == .mine && drawn.isEmpty) || (filter == .all && drawn.isEmpty && kept.isEmpty)
+        if showsEmpty {
+            // 96
+            EmptyStateView(title: "아직 그린 성운이 없어요",
+                           message: "별이 3개 이상 모이면 이어서\n나만의 성운을 그릴 수 있어요.")
+                .padding(.top, 72)
+        }
         LazyVGrid(columns: [GridItem(.flexible(), spacing: Space.md), GridItem(.flexible(), spacing: Space.md)], spacing: Space.md) {
             if filter != .kept {
                 if drawn.isEmpty {
-                    nebulaCard(name: model.nebulaName, detail: "별 \(model.floatedCount)개 · \(model.growthStage)단계",
-                               seed: model.nebulaName, action: onOpenMyNebula)
+                    EmptyView()
                 } else {
                     ForEach(drawn.reversed()) { n in
                         nebulaCard(name: n.name, detail: "별 \(n.starIDs.count + n.guests.count)개 · \(model.growthStage)단계",

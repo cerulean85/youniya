@@ -11,19 +11,23 @@ struct PrimaryButtonStyle: ButtonStyle {
             : [.primaryGradientStart, .primaryGradientEnd]
         configuration.label
             .textStyle(.labelM)
-            .foregroundStyle(Color.textOnBrand)
+            .foregroundStyle(isEnabled ? Color.textOnBrand : Color.textSecondary)
             .frame(maxWidth: .infinity)
             .padding(.horizontal, Space.xl)
             .padding(.vertical, Space.md)
             // Figma `Button`: 48pt tall
             .frame(minHeight: 48)
-            .background(
-                LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom),
-                in: .rect(cornerRadius: Radius.md)
-            )
+            .background {
+                // Figma State=Disabled: flat #334155, no glow.
+                if isEnabled {
+                    LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom)
+                        .clipShape(.rect(cornerRadius: Radius.md))
+                } else {
+                    RoundedRectangle(cornerRadius: Radius.md).fill(Color.borderDefault)
+                }
+            }
             // brand/primary-glow: #8B5CF6 @ 40%, blur 24
-            .shadow(color: Color.brandPrimary.opacity(0.4), radius: 12)
-            .opacity(isEnabled ? 1 : 0.4)
+            .shadow(color: Color.brandPrimary.opacity(isEnabled ? 0.4 : 0), radius: 12)
             .contentShape(.rect(cornerRadius: Radius.md))
     }
 }
@@ -143,8 +147,9 @@ struct DangerButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
-        let top = Color(red: 0xF9 / 255, green: 0x8B / 255, blue: 0x8B / 255)
-        let bottom = Color(red: 0xE3 / 255, green: 0x5D / 255, blue: 0x5D / 255)
+        // Figma Danger (updated): #BC5457 → #A5202A
+        let top = Color(red: 0xBC / 255, green: 0x54 / 255, blue: 0x57 / 255)
+        let bottom = Color(red: 0xA5 / 255, green: 0x20 / 255, blue: 0x2A / 255)
         configuration.label
             .textStyle(.labelM)
             .foregroundStyle(.white)

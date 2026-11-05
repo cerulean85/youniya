@@ -356,6 +356,10 @@ final class AppModel {
     var storyPolished: Bool {
         didSet { UserDefaults.standard.set(storyPolished, forKey: "storyPolished") }
     }
+    /// 100/101: other people's lines this user reported (hidden for them).
+    var reportedLines: Set<String> {
+        didSet { UserDefaults.standard.set(Array(reportedLines), forKey: "reportedLines") }
+    }
     /// 71: my nebula floated to the sky, and what goes with it. TODO: Plaza API.
     var skyShare: NebulaSkyShare? {
         didSet { UserDefaults.standard.set(try? JSONEncoder().encode(skyShare), forKey: "skyShare") }
@@ -401,6 +405,7 @@ final class AppModel {
         usedFreeTelescope = UserDefaults.standard.bool(forKey: "usedFreeTelescope")
         storyPolished = UserDefaults.standard.bool(forKey: "storyPolished")
         nebulaLines = UserDefaults.standard.dictionary(forKey: "nebulaLines") as? [String: String] ?? [:]
+        reportedLines = Set(UserDefaults.standard.stringArray(forKey: "reportedLines") ?? [])
         skyShare = UserDefaults.standard.data(forKey: "skyShare")
             .flatMap { try? JSONDecoder().decode(NebulaSkyShare.self, from: $0) }
         drawnNebulae = UserDefaults.standard.data(forKey: "drawnNebulae")
@@ -520,12 +525,14 @@ final class AppModel {
         drawnNebulae = []
         storyPolished = false
         nebulaLines = [:]
+        reportedLines = []
         skyShare = nil
         hasSeenPlazaIntro = false
         hasSeenNebulaStory = false
         marketingOptIn = false
         hasConsented = false
         isSignedIn = false
+        appNotice = .accountDeleted
     }
 
     /// 93: every star as plain text, newest first.
@@ -584,6 +591,8 @@ final class AppModel {
     var floatedCount: Int { stars.filter(\.isFloated).count }
     var deepCount: Int { stars.filter { $0.analysis?.isDeep == true }.count }
     var supernovaCount: Int { stars.filter { $0.analysis?.isSupernova == true }.count }
+    /// 104/105: a star can be floated (analyzed) from 1,000 characters; keeping has no minimum.
+    static let minFloatLength = 1000
     /// Deep stars needed to reach the next nebula stage.
     static let nextStageDeepStars = 15
 

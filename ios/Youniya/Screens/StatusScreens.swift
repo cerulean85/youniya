@@ -103,12 +103,14 @@ enum AppNotice: Identifiable {
     case loginExpired      // 39
     case updateRequired    // 40
     case maintenance(String) // 41, e.g. "11월 4일 02:00~04:00"
+    case accountDeleted    // 113
 
     var id: String {
         switch self {
         case .loginExpired: "39"
         case .updateRequired: "40"
         case .maintenance: "41"
+        case .accountDeleted: "113"
         }
     }
 }
@@ -138,6 +140,10 @@ struct AppNoticeView: View {
             StatusView(icon: .iconMoon, title: "잠시 점검 중이에요",
                        message: "\(window)\n기록은 안전하게 보관돼요.",
                        actions: [.init(title: "닫기", style: .ghost) { model.appNotice = nil }])
+        case .accountDeleted:
+            StatusView(icon: .iconMoon, title: "계정을 삭제했어요",
+                       message: "그동안 띄운 별과 성운이 모두 사라졌어요.\n언제든 다시 첫 별을 띄울 수 있어요.",
+                       actions: [.init(title: "처음 화면으로", style: .primary) { model.appNotice = nil }])
         }
     }
 }
@@ -244,4 +250,80 @@ extension View {
     }
     .padding(24)
     .background(Color.bgCanvas)
+}
+
+// MARK: - Empty state (96–98, 103, 108, 109, 119)
+
+/// Figma empty states: a dim star glyph, a title, a short note, and an optional action.
+struct EmptyStateView: View {
+    enum ActionStyle { case primary, outline }
+    var title: String
+    var message: String
+    var action: (title: String, style: ActionStyle, run: () -> Void)? = nil
+
+    var body: some View {
+        VStack(spacing: Space.md) {
+            StarGlyph(floated: true)
+                .scaleEffect(40 / 18.14)
+                .frame(width: 40, height: 40)
+                .padding(.bottom, Space.sm)
+                .accessibilityHidden(true)
+            Text(title).textStyle(.h3).foregroundStyle(Color.textPrimary)
+            Text(message).textStyle(.bodyS).foregroundStyle(Color.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if let action {
+                Group {
+                    switch action.style {
+                    case .primary:
+                        Button(action.title, action: action.run).buttonStyle(.primary)
+                    case .outline:
+                        Button(action.title, action: action.run).buttonStyle(.secondary)
+                    }
+                }
+                .fixedSize()
+                .padding(.top, Space.sm)
+            }
+        }
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .contain)
+    }
+}
+
+// MARK: - 114 Export in progress
+
+/// 114 내보내는 중이에요: shown while the export file is made.
+struct ExportProgressSheet: View {
+    var detail: String
+    var progress: Double
+    var onClose: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Space.lg) {
+            Capsule().fill(Color.borderDefault).frame(width: 40, height: 4)
+                .frame(maxWidth: .infinity).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: Space.sm) {
+                Text("내보내는 중이에요").textStyle(.h3).foregroundStyle(Color.textPrimary)
+                Text(detail).textStyle(.bodyM).foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            VStack(alignment: .leading, spacing: Space.sm) {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color.borderDefault.opacity(0.5))
+                        Capsule().fill(Color.hex(0x8555EF)).frame(width: geo.size.width * progress)
+                    }
+                }
+                .frame(height: 6)
+                Text("\(Int(progress * 100))% · \(progress >= 0.5 ? "거의 다 됐어요" : "모으는 중이에요")")
+                    .textStyle(.caption).foregroundStyle(Color.textTertiary)
+                    .contentTransition(.numericText())
+            }
+            .accessibilityElement(children: .combine)
+            Button("닫기", action: onClose).buttonStyle(.ghost)
+        }
+        .padding(.horizontal, Space.xl)
+        .padding(.top, Space.md)
+        .padding(.bottom, Space.xl)
+    }
 }

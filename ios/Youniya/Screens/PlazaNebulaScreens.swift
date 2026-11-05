@@ -106,6 +106,15 @@ struct PlazaNebulaField: View {
                 }
             }
 
+            if items.isEmpty {
+                // 103
+                EmptyStateView(title: "곁에 둔 성운이 아직 없어요",
+                               message: "마음이 닿은 성운을 곁에 두면\n여기서 다시 모아 볼 수 있어요.",
+                               action: ("나와 비슷한 결 둘러보기", .outline, {
+                                   withAnimation(.snappy) { filter = .similar; selected = nil }
+                               }))
+                    .padding(.top, 72)
+            } else {
             ZStack(alignment: .topTrailing) {
                 GeometryReader { geo in
                     let size = geo.size
@@ -131,12 +140,6 @@ struct PlazaNebulaField: View {
                             .accessibilityLabel("\(n.name), \(n.stage)단계, 공명 \(n.resonance)")
                             .accessibilityAddTraits(on ? .isSelected : [])
                         }
-                        if items.isEmpty {
-                            Text("공명을 남긴 성운이 이곳에 곁에 남아요.")
-                                .textStyle(.bodyS)
-                                .foregroundStyle(Color.textSecondary)
-                                .frame(width: size.width, height: size.height)
-                        }
                     }
                 }
                 .clipped()
@@ -149,6 +152,7 @@ struct PlazaNebulaField: View {
             Text("두 손가락으로 확대 · 별을 눌러 보기")
                 .textStyle(.caption)
                 .foregroundStyle(Color.textTertiary)
+            }
 
             if let current {
                 Button { onOpen(current) } label: {
@@ -207,12 +211,13 @@ struct MiniConstellation: View {
 struct DotChip: View {
     var title: String
     var isSelected: Bool
+    var dot: Color = .brandPrimary
     var action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: Space.sm) {
-                Circle().fill(Color.brandPrimary).frame(width: 8, height: 8)
+                Circle().fill(dot).frame(width: 8, height: 8)
                 Text(title)
                     .textStyle(.labelS)
                     .foregroundStyle(isSelected ? Color.textPrimary : Color.textSecondary)
@@ -433,12 +438,19 @@ struct GalaxyLinesView: View {
 
     @State private var draft = ""
     @State private var toast: ToastCardMessage?
+    /// 99: the last line was held back by the filter.
+    @State private var rejected = false
+    /// 100: the line being reported.
+    @State private var reporting: GalaxyNebula.Line?
+    @State private var reportSheetHeight: CGFloat = 420
     @FocusState private var editing: Bool
 
     private static let reactions = ["공감해요", "저도 그랬어요", "고마워요"]
     private static let limit = 60
 
     private var mine: String? { model.nebulaLines[nebula.name] }
+    private var over: Bool { draft.count > Self.limit }
+    private var canSend: Bool { !draft.trimmingCharacters(in: .whitespaces).isEmpty && !over }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -451,7 +463,16 @@ struct GalaxyLinesView: View {
                         .foregroundStyle(Color.textTertiary)
                         .multilineTextAlignment(.center)
                     ForEach(nebula.lines) { line in
-                        LineCard(who: "익명의 별지기", line: line, mine: false, compact: false)
+                        if model.reportedLines.contains(line.text) {
+                            // 101: a reported line is hidden right away.
+                            HiddenLineCard()
+                        } else {
+                            LineCard(who: "익명의 별지기", line: line, mine: false, compact: false)
+                                .contextMenu {
+                                    Button("신고하기", systemImage: "flag") { reporting = line }
+                                }
+                                .accessibilityAction(named: "신고하기") { reporting = line }
+                        }
                     }
                     if let mine {
                         LineCard(who: "나", line: .init(hoursAgo: 0, text: mine), mine: true, compact: false)
@@ -466,77 +487,180 @@ struct GalaxyLinesView: View {
             .scrollDismissesKeyboard(.interactively)
 
             VStack(alignment: .leading, spacing: Space.md) {
-                if mine == nil {
-                    HStack(spacing: Space.sm) {
-                        ForEach(Self.reactions, id: \.self) { r in
-                            DotChip(title: r, isSelected: false) { send(r) }
-                        }
-                    }
-                    HStack(spacing: Space.md) {
-                        TextField("", text: $draft,
-                                  prompt: Text("한 줄을 남겨 보세요 (\(Self.limit)자)").foregroundStyle(Color.textTertiary))
-                            .textInputStyle(.bodyM)
-                            .foregroundStyle(Color.textPrimary)
-                            .focused($editing)
-                            .submitLabel(.send)
-                            .onSubmit { send(draft) }
-                            .onChange(of: draft) { _, v in
-                                if v.count > Self.limit { draft = String(v.prefix(Self.limit)) }
-                            }
-                        // Figma `Send`: a plain 34pt violet circle.
-                        Button { send(draft) } label: {
-                            Circle().fill(Color.brandPrimary)
-                                .frame(width: 34, height: 34)
-                                .frame(width: 44, height: 44)
-                                .contentShape(.circle)
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty)
-                        .opacity(draft.trimmingCharacters(in: .whitespaces).isEmpty ? 0.5 : 1)
-                        .accessibilityLabel("보내기")
-                    }
-                    .padding(.leading, Space.lg)
-                    .padding(.trailing, Space.md)
-                    .frame(height: 68)
-                    .cosmos("line-input", in: RoundedRectangle(cornerRadius: Radius.lg))
-                    .background(Color.bgSurface, in: .rect(cornerRadius: Radius.lg))
-                    .overlay(RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(Color.brandPrimary, lineWidth: 1))
+                if mine != nil {
+                    // 107
+                    NoticeBanner(message: "이 성운에는 이미 한 줄을 남겼어요")
                 } else {
-                    Text("이 성운에는 한 줄을 남겼어요.")
-                        .textStyle(.bodyS)
-                        .foregroundStyle(Color.textSecondary)
-                        .frame(maxWidth: .infinity)
+                    if rejected {
+                        // 99
+                        NoticeBanner(message: "상처가 될 수 있는 말이 있어 띄우지 못했어요", tone: .warm)
+                            .transition(.opacity)
+                    } else if over {
+                        // 106
+                        NoticeBanner(message: "\(draft.count) / \(Self.limit)자 · \(Self.limit)자 안으로 줄여 주세요", tone: .warm)
+                            .transition(.opacity)
+                    } else {
+                        HStack(spacing: Space.sm) {
+                            ForEach(Self.reactions, id: \.self) { r in
+                                DotChip(title: r, isSelected: false) { send(r) }
+                            }
+                        }
+                    }
+                    composer
                 }
-                HStack(spacing: 0) {
-                    Text("상처 주는 말은 별빛이 되지 못해요 · 보내기 전에 한 번 걸러요 · ")
-                    Button("신고") { toast = ToastCardMessage(title: "알려 줘서 고마워요", detail: "살펴본 뒤 조용히 정리할게요") }
-                        .buttonStyle(.plain)
-                        .underline()
+                if mine == nil {
+                    HStack(spacing: 0) {
+                        Text("상처 주는 말은 별빛이 되지 못해요 · 보내기 전에 한 번 걸러요 · ")
+                        Button("신고") { reporting = nebula.lines.first { !model.reportedLines.contains($0.text) } }
+                            .buttonStyle(.plain)
+                            .underline()
+                    }
+                    .textStyle(.caption)
+                    .foregroundStyle(Color.textTertiary)
+                    .frame(maxWidth: .infinity)
+                    .minimumScaleFactor(0.85)
+                    .lineLimit(1)
                 }
-                .textStyle(.caption)
-                .foregroundStyle(Color.textTertiary)
-                .frame(maxWidth: .infinity)
-                .minimumScaleFactor(0.85)
-                .lineLimit(1)
             }
             .padding(.horizontal, Space.xl)
             .padding(.bottom, Space.lg)
+            .animation(.easeInOut(duration: 0.2), value: over)
+            .animation(.easeInOut(duration: 0.2), value: rejected)
         }
         .background { StarField() }
         .toastCard($toast)
+        .sheet(item: $reporting) { line in
+            ReportLineSheet(
+                onReport: {
+                    reporting = nil
+                    _ = withAnimation(.snappy) { model.reportedLines.insert(line.text) }
+                    toast = ToastCardMessage(title: "신고를 받았어요", detail: "살펴본 뒤 결과를 알림으로 알려 드릴게요")
+                },
+                onCancel: { reporting = nil }
+            )
+            .fixedSize(horizontal: false, vertical: true)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { reportSheetHeight = $0 }
+            .presentationDetents([.height(reportSheetHeight)])
+            .presentationDragIndicator(.hidden)
+            .presentationCornerRadius(Radius.xl)
+            .presentationBackground { SheetBackground(seed: "report-sheet") }
+        }
+    }
+
+    /// Figma `Composer`: grows with the text (68pt, 94pt over three lines).
+    private var composer: some View {
+        HStack(alignment: .center, spacing: Space.md) {
+            TextField("", text: $draft,
+                      prompt: Text("한 줄을 남겨 보세요 (\(Self.limit)자)").foregroundStyle(Color.textTertiary),
+                      axis: .vertical)
+                .textInputStyle(.bodyS)
+                .foregroundStyle(Color.textPrimary)
+                .lineLimit(1...4)
+                .focused($editing)
+                .submitLabel(.send)
+                .onSubmit { send(draft) }
+                .onChange(of: draft) { _, _ in if rejected { withAnimation { rejected = false } } }
+            // Figma `Send`: a plain 34pt violet circle (40% when it can't send).
+            Button { send(draft) } label: {
+                Circle().fill(Color.hex(0x8555EF))
+                    .frame(width: 34, height: 34)
+                    .frame(width: 44, height: 44)
+                    .contentShape(.circle)
+            }
+            .buttonStyle(.plain)
+            .disabled(!canSend)
+            .opacity(canSend ? 1 : 0.4)
+            .accessibilityLabel("보내기")
+        }
+        .padding(.leading, Space.lg)
+        .padding(.trailing, Space.md)
+        .padding(.vertical, Space.md)
+        .frame(minHeight: 68)
+        .itemCard(seed: "line-input", minHeight: 0)
     }
 
     /// Mock: a quick local filter, then save. TODO: Server-side moderation.
     private func send(_ text: String) {
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !t.isEmpty else { return }
+        guard !t.isEmpty, t.count <= Self.limit else { return }
         if LineFilter.isHurtful(t) {
-            toast = ToastCardMessage(title: "이 말은 별빛이 되지 못해요", detail: "조금 부드럽게 다시 써 볼까요?")
+            // 99: keep the text so it can be rewritten.
+            withAnimation { rejected = true }
             return
         }
         editing = false
         withAnimation(.snappy) { model.nebulaLines[nebula.name] = t }
         draft = ""
+    }
+}
+
+/// 101: a line the user reported, hidden in place.
+private struct HiddenLineCard: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: Space.xs) {
+            Text("신고한 별빛").textStyle(.caption).foregroundStyle(Color.textTertiary)
+            Text("가려진 별빛이에요. 살펴본 뒤 알려 드릴게요.").textStyle(.bodyS).foregroundStyle(Color.textSecondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Space.lg)
+        .flatCard(seed: "hidden-line")
+        .opacity(0.7)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// 100 이 별빛을 신고할까요?: pick reasons, then report.
+private struct ReportLineSheet: View {
+    var onReport: () -> Void
+    var onCancel: () -> Void
+
+    private static let reasons = ["상처를 주는 말이에요", "개인정보가 드러나 있어요", "광고나 스팸이에요", "그 밖의 이유가 있어요"]
+    @State private var picked: Set<String> = [reasons[0]]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Space.lg) {
+            Capsule().fill(Color.borderDefault).frame(width: 40, height: 4)
+                .frame(maxWidth: .infinity).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: Space.sm) {
+                Text("이 별빛을 신고할까요?").textStyle(.h3).foregroundStyle(Color.textPrimary)
+                Text("신고한 별빛은 바로 가려지고 운영팀이 살펴봐요. 누가 신고했는지는 알리지 않아요.")
+                    .textStyle(.bodyS).foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isHeader)
+            VStack(spacing: 0) {
+                ForEach(Self.reasons, id: \.self) { r in
+                    let on = picked.contains(r)
+                    Button { if on { picked.remove(r) } else { picked.insert(r) } } label: {
+                        HStack(spacing: Space.md) {
+                            ZStack {
+                                if on {
+                                    RoundedRectangle(cornerRadius: 6).fill(Color.brandPrimary)
+                                    Image(.iconCheck).resizable().frame(width: 14, height: 14)
+                                } else {
+                                    RoundedRectangle(cornerRadius: 6).strokeBorder(Color.borderDefault, lineWidth: 1.5)
+                                }
+                            }
+                            .frame(width: 22, height: 22)
+                            Text(r).textStyle(.bodyM).foregroundStyle(Color.textPrimary)
+                            Spacer()
+                        }
+                        .frame(minHeight: 46)
+                        .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(on ? .isSelected : [])
+                }
+            }
+            VStack(spacing: Space.md) {
+                Button("신고하기", action: onReport).buttonStyle(.primary).disabled(picked.isEmpty)
+                Button("취소", action: onCancel).buttonStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, Space.xl)
+        .padding(.top, Space.md)
+        .padding(.bottom, Space.xl)
     }
 }
 
@@ -553,7 +677,7 @@ private struct LineCard: View {
                 .textStyle(.caption)
                 .foregroundStyle(mine ? Color.starBright : Color.textTertiary)
             Text(line.text)
-                .textStyle(.bodyM)
+                .textStyle(.bodyS)
                 .foregroundStyle(Color.textPrimary)
                 .lineLimit(compact ? 1 : nil)
                 .fixedSize(horizontal: false, vertical: !compact)

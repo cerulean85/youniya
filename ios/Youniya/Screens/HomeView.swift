@@ -5,6 +5,8 @@ struct HomeView: View {
     @Environment(AppModel.self) private var model
     var onCompose: () -> Void
     var onOpenStar: (StarItem) -> Void = { _ in }
+    /// "전체 보기 ›" → the records tab
+    var onSeeAll: () -> Void = {}
 
     var body: some View {
         ScrollView {
@@ -16,13 +18,26 @@ struct HomeView: View {
 
                 HeroConstellation()
 
-                Text("최근 별")
-                    .textStyle(.labelM)
-                    .foregroundStyle(Color.textSecondary)
-                    .accessibilityAddTraits(.isHeader)
+                HStack {
+                    Text("최근 별")
+                        .textStyle(.labelM)
+                        .foregroundStyle(Color.textSecondary)
+                        .accessibilityAddTraits(.isHeader)
+                    Spacer()
+                    Button(action: onSeeAll) {
+                        HStack(spacing: 2) {
+                            Text("전체 보기").textStyle(.labelS)
+                            Image(.iconChevronRight).renderingMode(.template).resizable().frame(width: 16, height: 16)
+                        }
+                        .foregroundStyle(Color.borderFocus)
+                        .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
+                }
 
+                // Figma 04: the four most recent; the rest live in the records tab.
                 LazyVStack(spacing: Space.md) {
-                    ForEach(model.stars) { star in
+                    ForEach(model.stars.prefix(4)) { star in
                         Button { onOpenStar(star) } label: { StarRow(star: star) }
                             .buttonStyle(.plain)
                     }

@@ -21,6 +21,8 @@ struct StarMakingView: View {
     private var canPublish: Bool {
         !draft.body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
+    /// 104: floating (analysis) needs 1,000 characters; keeping does not.
+    private var canFloat: Bool { draft.body.count >= AppModel.minFloatLength }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.lg) {
@@ -51,19 +53,26 @@ struct StarMakingView: View {
 
             bodyEditor
 
-            Text("\(draft.body.count)자")
+            Text("\(draft.body.count.formatted()) / \(AppModel.minFloatLength.formatted())자")
                 .textStyle(.caption)
                 .foregroundStyle(Color.textTertiary)
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .accessibilityLabel("\(draft.body.count)자 작성함")
 
+            if canPublish && !canFloat {
+                NoticeBanner(message: "\(AppModel.minFloatLength.formatted())자부터 별로 띄울 수 있어요")
+                    .transition(.opacity)
+            }
+
             HStack(spacing: Space.md) {
                 Button("조용히 품기") { publish(floated: false) }
                     .buttonStyle(.secondary)
+                    .disabled(!canPublish)
                 Button("별 띄우기") { publish(floated: true) }
                     .buttonStyle(.primary)
+                    .disabled(!canFloat)
             }
-            .disabled(!canPublish)
+            .animation(.easeInOut(duration: 0.2), value: canFloat)
         }
         .padding(.horizontal, Space.xl)
         .padding(.top, Space.sm)

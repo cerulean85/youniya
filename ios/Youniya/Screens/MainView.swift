@@ -13,6 +13,8 @@ struct MainView: View {
         var route: Route
     }
     @State private var drawerOpen = false
+    /// 115/118: the records tab filter (the menu's "간직한 별" opens it on .kept).
+    @State private var recordsFilter: RecordsFilter = .all
     /// 42 toast shown over whatever page is on top.
     @State private var toast: ToastCardMessage?
 
@@ -68,11 +70,13 @@ struct MainView: View {
                         } else if title == "문의하기" {
                             push(.inquiry)
                         } else if title == "별빛 기록" {
-                            push(.records)
+                            recordsFilter = .all
+                            tab = .records
                         } else if title == "컬렉션" {
                             push(.collection)
-                        } else if title == "보관함" {
-                            push(.kept)
+                        } else if title == "간직한 별" {
+                            recordsFilter = .kept
+                            tab = .records
                         } else {
                             push(.page(title))
                         }
@@ -116,7 +120,8 @@ struct MainView: View {
                 if model.stars.isEmpty {
                     FirstNightSkyView(onCompose: { push(.compose()) })
                 } else {
-                    HomeView(onCompose: { push(.compose()) }, onOpenStar: openStar)
+                    HomeView(onCompose: { push(.compose()) }, onOpenStar: openStar,
+                             onSeeAll: { recordsFilter = .all; tab = .records })
                 }
             case .nebula:
                 NebulaView(onOpen: openFromNebula)
@@ -124,7 +129,8 @@ struct MainView: View {
                 PlazaView(onOpen: { push(.otherNebula($0)) },
                           onOpenNebula: { push(.galaxyNebula($0.name)) })
             case .records:
-                RecordsView(onOpenStar: openStar, onBrightness: { push(.brightness) })
+                RecordsView(onOpenStar: openStar, onBrightness: { push(.brightness) },
+                            onCompose: { push(.compose()) }, filter: $recordsFilter)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -175,10 +181,14 @@ struct MainView: View {
             }
             .edgeSwipeBack(onBack: pop)
         case .records:
-            RecordsView(onBack: pop, onOpenStar: { push(.detail($0.id)) },
-                        onBrightness: { push(.brightness) })
-                .background { StarField() }
-                .edgeSwipeBack(onBack: pop)
+            // Pushed copy (older links); the tab is the main entry now.
+            VStack(spacing: 0) {
+                TopAppBar(title: "기록", onBack: pop)
+                RecordsView(onOpenStar: { push(.detail($0.id)) }, onBrightness: { push(.brightness) },
+                            onCompose: { push(.compose()) }, filter: $recordsFilter)
+            }
+            .background { StarField() }
+            .edgeSwipeBack(onBack: pop)
         case .kept:
             KeptView(onBack: pop, onOpenStar: { push(.detail($0.id)) })
                 .edgeSwipeBack(onBack: pop)
@@ -206,7 +216,12 @@ struct MainView: View {
         case .scanning(let id):
             TelescopeScanView(starID: id, onDone: { replace(with: .report(id)) }, onBackground: pop)
         case .reports:
-            ReportListView(onBack: pop, onOpen: { push(.report($0.id)) })
+            ReportListView(onBack: pop, onOpen: { push(.report($0.id)) },
+                           onTurnOn: {
+                               if let star = model.stars.first(where: { $0.isFloated && $0.report == nil }) {
+                                   openReport(star)
+                               }
+                           })
                 .edgeSwipeBack(onBack: pop)
         case .coins:
             CoinChargeView(onBack: pop, onPolicy: { push(.policy(.payment)) },
@@ -309,7 +324,11 @@ struct MainView: View {
                 onOpenOtherStar: { push(.galaxyStar(nebula: $0, star: $1)) },
                 onOpenMyNebula: { push(.myNebulaZoom) },
                 onOpenOtherNebula: { push(.galaxyNebula($0.name)) },
-                onDraw: { push(.drawNebula) }
+                onDraw: { push(.drawNebula) },
+                onPlaza: {
+                    withAnimation(.easeInOut(duration: 0.32)) { stack.removeAll() }
+                    tab = .plaza
+                }
             )
             .edgeSwipeBack(onBack: pop)
         case .page(let title):
@@ -363,6 +382,7 @@ struct MainView: View {
         case "깊은 별": push(.nebulaStars(.deep))
         case "초신성": push(.nebulaStars(.supernova))
         case "나의 은하수": push(.milkyWay)
+        case "성운 모음": push(.collection)
         case "모두의 은하": push(.galaxyZoom)
         case "나의 성운 확대": push(.myNebulaZoom)
         case "성운 이야기": push(.nebulaStory)

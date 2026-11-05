@@ -184,8 +184,15 @@ struct BrightnessFlowView: View {
                         }
                     }
 
-                    trendCard
-                    if !monthly.isEmpty { monthlyCard }
+                    if points.count < 3 {
+                        // 109
+                        EmptyStateView(title: "흐름을 그리기엔 별이 조금 적어요",
+                                       message: "지금은 별이 \(points.count)개예요. 별이 더 모이면\n흐름을 선으로 이어 보여 드릴게요.")
+                            .padding(.top, Space.xxl)
+                    } else {
+                        trendCard
+                        if !monthly.isEmpty { monthlyCard }
+                    }
 
                     Text("숫자는 평가가 아니에요. 빛이 머물렀던 자리를 보여줄 뿐이에요.")
                         .textStyle(.caption)
@@ -500,7 +507,7 @@ private struct GalaxyRiver: View {
 
             ZStack(alignment: .topLeading) {
                 river(in: size)
-                    .stroke(Color.hex(0x8555EF), style: StrokeStyle(lineWidth: 80, lineCap: .round))
+                    .stroke(Color.hex(0x8555EF).opacity(0.3), style: StrokeStyle(lineWidth: 80, lineCap: .round))
                     // Figma layer blur 30 ≈ SwiftUI radius 15.
                     .blur(radius: 15)
                 river(in: size)
