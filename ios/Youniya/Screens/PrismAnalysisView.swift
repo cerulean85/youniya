@@ -71,7 +71,7 @@ struct PrismAnalysisView: View {
                 .opacity(reduceMotion ? 1 : Twinkle(duration: 2, keys: [(0, 1), (0.4, 0.25), (0.8, 1), (1, 0.25)]).opacity(at: now))
             Text("별빛 프리즘 분석 중")
                 .textStyle(.labelS)
-                .foregroundStyle(Color.brandPrimary)
+                .foregroundStyle(Color.brandPrimaryText)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 5)

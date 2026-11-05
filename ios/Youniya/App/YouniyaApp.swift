@@ -43,6 +43,7 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.6), value: showSplash)
         .animation(.easeInOut(duration: 0.6), value: model.isSignedIn)
         .environment(\.motionReduced, systemReduceMotion || model.settings.reduceAnimations)
+        .environment(\.skyTheme, model.settings.sky)
         .animation(.easeInOut(duration: 0.4), value: model.hasConsented)
         .task {
             try? await Task.sleep(for: .seconds(2))

@@ -61,6 +61,14 @@ extension View {
             .tracking(style.tracking)
             .lineSpacing(style.lineSpacing)
     }
+
+    /// Like `textStyle`, plus half the extra leading above and below, so the
+    /// text box is exactly the Figma line height (as in Figma auto layout).
+    /// TODO: Older screens use `textStyle` alone and are a few points tighter.
+    func textStyleBox(_ style: TextStyle) -> some View {
+        textStyle(style)
+            .padding(.vertical, style.lineSpacing / 2)
+    }
 }
 
 enum AppFonts {

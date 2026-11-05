@@ -116,7 +116,7 @@ struct TelescopeReportView: View {
         VStack(alignment: .leading, spacing: Space.md) {
             Text("스스로 물어볼 질문")
                 .textStyle(.labelS)
-                .foregroundStyle(Color.brandPrimary)
+                .foregroundStyle(Color.brandPrimaryText)
             Text(r.question)
                 .textStyle(.h3)
                 .foregroundStyle(Color.textPrimary)

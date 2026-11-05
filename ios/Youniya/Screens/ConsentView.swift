@@ -13,13 +13,13 @@ struct ConsentView: View {
         case marketing = "(선택) 새 기능·혜택 알림"
         var id: Self { self }
         var isRequired: Bool { self != .marketing }
-        /// Title of the full-text page (43–45).
-        var documentTitle: String {
+        /// The full-text page (43–45). Marketing has no document in Figma yet.
+        var document: PolicyDoc? {
             switch self {
-            case .terms: "이용약관"
-            case .privacy: "개인정보 처리방침"
-            case .sensitive: "민감정보 수집·이용 동의"
-            case .marketing: "새 기능·혜택 알림"
+            case .terms: .terms
+            case .privacy: .privacy
+            case .sensitive: .sensitive
+            case .marketing: nil
             }
         }
     }
@@ -66,9 +66,15 @@ struct ConsentView: View {
         }
         .background { StarField() }
         .sheet(item: $openDocument) { term in
-            // TODO: 43–45 full documents.
-            PlaceholderPage(title: term.documentTitle, onBack: { openDocument = nil })
-                .presentationBackground(Color.bgCanvas)
+            Group {
+                if let doc = term.document {
+                    PolicyDocView(doc: doc, onBack: { openDocument = nil })
+                } else {
+                    // TODO: Marketing consent text.
+                    PlaceholderPage(title: "새 기능·혜택 알림", onBack: { openDocument = nil })
+                }
+            }
+            .presentationBackground(Color.bgCanvas)
         }
     }
 
@@ -112,17 +118,29 @@ struct CheckboxRow: View {
 
             if showsChevron {
                 Button(action: onOpen) {
-                    Image(.iconChevronRight).resizable().frame(width: 18, height: 18)
-                        .frame(width: 32, height: 32)
-                        .contentShape(.rect)
+                    chevron.contentShape(.rect)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("\(label) 전문 보기")
             } else {
-                Color.clear.frame(width: 32, height: 32)
+                // Figma shows the chevron on every row; without a full text it just toggles.
+                chevron
+                    .contentShape(.rect)
+                    .onTapGesture(perform: onToggle)
+                    .accessibilityHidden(true)
             }
         }
         .padding(.vertical, Space.md - 5)
+    }
+
+    /// Figma `Icon/chevron-right`: 18pt, text/tertiary.
+    private var chevron: some View {
+        Image(.iconChevronRight)
+            .renderingMode(.template)
+            .resizable()
+            .frame(width: 18, height: 18)
+            .foregroundStyle(Color.textTertiary)
+            .frame(width: 32, height: 32)
     }
 }
 

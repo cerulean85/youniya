@@ -270,6 +270,8 @@ struct AppSettings: Codable, Equatable {
     var ambience = true
     var sound = "밤바람"
     var starReminder = false
+    /// 68 우주의 색
+    var sky: SkyTheme = .violet
 
     init() {}
 
@@ -281,6 +283,7 @@ struct AppSettings: Codable, Equatable {
         ambience = try c.decodeIfPresent(Bool.self, forKey: .ambience) ?? d.ambience
         sound = try c.decodeIfPresent(String.self, forKey: .sound) ?? d.sound
         starReminder = try c.decodeIfPresent(Bool.self, forKey: .starReminder) ?? d.starReminder
+        sky = (try? c.decodeIfPresent(SkyTheme.self, forKey: .sky)) ?? d.sky
     }
 }
 
@@ -415,6 +418,42 @@ final class AppModel {
 
     func signOut() {
         isSignedIn = false
+    }
+
+    /// 92: takes every star back from the plaza. Resonance and lines received stay.
+    /// TODO: Send to the plaza API.
+    func withdrawAllShares() {
+        for i in stars.indices where stars[i].isShared {
+            stars[i].sharedToPlaza = false
+        }
+    }
+
+    /// 91: removes everything on this device and goes back to 02 Login.
+    /// TODO: Also delete the server account once there is one.
+    func deleteAccount() {
+        stars = []
+        saveDraft(StarDraft())
+        coinHistory = []
+        savedLines = []
+        resonated = []
+        settings = AppSettings()
+        coins = Self.starterCoins
+        usedFreeTelescope = false
+        hasSeenPlazaIntro = false
+        marketingOptIn = false
+        hasConsented = false
+        isSignedIn = false
+    }
+
+    /// 93: every star as plain text, newest first.
+    func exportText() -> String {
+        var out = "YOUNIYA 기록 내보내기\n\n"
+        for s in stars {
+            out += "■ \(s.title)\n\(s.dateText) · \(s.isFloated ? "띄운 별" : "품은 별")\n"
+            if !s.body.isEmpty { out += "\n\(s.body)\n" }
+            out += "\n"
+        }
+        return out
     }
 
     /// Dev shortcut to reach `04 Home` quickly.

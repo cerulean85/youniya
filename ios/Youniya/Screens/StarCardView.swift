@@ -38,7 +38,7 @@ struct StarCardView: View {
             HStack(alignment: .top) {
                 Text("마음 망원경")
                     .textStyle(.labelS)
-                    .foregroundStyle(Color.brandPrimary)
+                    .foregroundStyle(Color.brandPrimaryText)
                 Spacer()
                 // Only while the free first telescope is unused.
                 if model.isTelescopeFree {

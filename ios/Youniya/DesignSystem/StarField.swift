@@ -6,6 +6,7 @@ import SwiftUI
 struct StarField: View {
     private static let canvas = CGSize(width: 390, height: 844)
     @Environment(\.motionReduced) private var reduceMotion
+    @Environment(\.skyTheme) private var sky
 
     var body: some View {
         GeometryReader { geo in
@@ -14,9 +15,10 @@ struct StarField: View {
                 Color.bgCanvas
 
                 Group {
-                    place(.nebulaViolet, x: 150, y: -140, w: 420, h: 420)
-                    place(.nebulaPink, x: -160, y: 520, w: 420, h: 420)
-                    place(.nebulaCyan, x: 200, y: 360, w: 260, h: 260)
+                    let (main, second, third) = sky.colors
+                    place(.nebulaViolet, tint: main, x: 150, y: -140, w: 420, h: 420)
+                    place(.nebulaPink, tint: second, x: -160, y: 520, w: 420, h: 420)
+                    place(.nebulaCyan, tint: third, x: 200, y: 360, w: 260, h: 260)
                     place(.constellation0, x: 48, y: 119.56, w: 182.364, h: 48.9005)
                     place(.constellation1, x: 259.77, y: 599.45, w: 90.5463, h: 60.7564)
                 }
@@ -52,6 +54,21 @@ struct StarField: View {
             .resizable()
             .frame(width: w, height: h)
             .offset(x: x, y: y)
+    }
+
+    /// Nebula glow: the Figma raster for the default sky, tinted for other themes.
+    @ViewBuilder
+    private func place(_ image: ImageResource, tint: Color, x: CGFloat, y: CGFloat, w: CGFloat, h: CGFloat) -> some View {
+        if sky == .violet {
+            place(image, x: x, y: y, w: w, h: h)
+        } else {
+            Image(image)
+                .renderingMode(.template)
+                .resizable()
+                .foregroundStyle(tint)
+                .frame(width: w, height: h)
+                .offset(x: x, y: y)
+        }
     }
 
     private struct Dot {

@@ -7,6 +7,7 @@ struct CosmosBackground: View {
     var seed: String
     /// 1 for cards and sheets; Figma uses about half on buttons.
     var intensity: Double = 1
+    @Environment(\.skyTheme) private var sky
 
     var body: some View {
         Canvas { ctx, size in
@@ -19,10 +20,12 @@ struct CosmosBackground: View {
             let rx = min(w * 0.9, max(w * 0.32, ry * 1.6))
 
             // (color, peak alpha × layer opacity) from the Figma fills
+            // Colors follow the 68 sky theme (violet, pink, cyan by default).
+            let (main, second, third) = sky.colors
             let glows: [(Color, Double, ClosedRange<Double>, ClosedRange<Double>)] = [
-                (.brandPrimary, 0.28 * 0.55, 0.2...0.4, 0.25...0.75),                   // violet
-                (Color(red: 0xEC / 255, green: 0x48 / 255, blue: 0x99 / 255), 0.14 * 0.4, 0.65...0.9, 0.6...1.0), // pink
-                (Color(red: 0x33 / 255, green: 0xB5 / 255, blue: 0xD9 / 255), 0.10 * 0.3, 0.5...0.9, 0.0...0.3),  // cyan
+                (main, 0.28 * 0.55, 0.2...0.4, 0.25...0.75),
+                (second, 0.14 * 0.4, 0.65...0.9, 0.6...1.0),
+                (third, 0.10 * 0.3, 0.5...0.9, 0.0...0.3),
             ]
             for (color, alpha, xr, yr) in glows {
                 let c = CGPoint(x: rng.next(in: xr) * w, y: rng.next(in: yr) * h)

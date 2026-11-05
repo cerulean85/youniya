@@ -55,8 +55,34 @@ struct SettingsView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.openURL) private var openURL
     var onBack: () -> Void
-    /// Sub-pages not built yet (68, 91–94, 43–46).
+    /// Pages without a design yet (나눈 성운).
     var onOpen: (String) -> Void
+    /// → 68 우주의 색
+    var onSky: () -> Void = {}
+    /// → 43–46
+    var onPolicy: (PolicyDoc) -> Void = { _ in }
+
+    /// 91–94 bottom sheets over Settings.
+    private enum Sheet: Identifiable {
+        case deleteAccount, withdrawShares, export, sound
+        var id: Self { self }
+    }
+    @State private var sheet: Sheet?
+    @State private var sheetHeight: CGFloat = 346
+    /// Run after the sheet is gone (e.g. 91 → 93, or signing out).
+    @State private var afterDismiss: (() -> Void)?
+    @State private var showPolicies = false
+    @State private var toast: String?
+
+    /// Figma note under 소리 고르기 (written for 밤바람).
+    private var soundNote: String {
+        model.settings.sound == Self.sounds[0]
+            ? "밤바람, 미세한 성간 주파수처럼 마음을 가라앉히는 소리예요."
+            : "\(model.settings.sound)처럼 마음을 가라앉히는 소리예요."
+    }
+
+    /// The sound choices in 94. TODO: Play them once ambient audio exists.
+    static let sounds = ["밤바람", "미세한 성간 주파수"]
 
     var body: some View {
         @Bindable var model = model
@@ -77,16 +103,16 @@ struct SettingsView: View {
                     .accessibilityAddTraits(.isHeader)
 
                     SettingsSection("화면과 움직임") {
-                        SettingsRow(icon: .iconMoon, title: "우주의 색") { onOpen("우주의 색") }
+                        SettingsRow(icon: .iconMoon, title: "우주의 색") { onSky() }
                         SettingsToggleRow(icon: .iconStar, title: "애니메이션 줄이기", isOn: $model.settings.reduceAnimations)
                         // TODO: Haptics are not used anywhere yet.
                         SettingsToggleRow(icon: .iconPhone, title: "진동", isOn: $model.settings.haptics)
                     }
 
-                    SettingsSection("소리", note: "\(model.settings.sound), 미세한 성간 주파수처럼 마음을 가라앉히는 소리예요.") {
+                    SettingsSection("소리", note: soundNote) {
                         // TODO: Ambient audio playback.
                         SettingsToggleRow(icon: .iconMoon, title: "앰비언스 사운드", isOn: $model.settings.ambience)
-                        SettingsRow(icon: .iconHeart, title: "소리 고르기", value: model.settings.sound) { onOpen("소리 고르기") }
+                        SettingsRow(icon: .iconHeart, title: "소리 고르기", value: model.settings.sound) { sheet = .sound }
                     }
 
                     SettingsSection("알림", note: "연속 기록이나 재촉하는 알림은 보내지 않아요.") {
@@ -97,19 +123,19 @@ struct SettingsView: View {
                     SettingsSection("우주 광장") {
                         SettingsRow(icon: .iconNebula, title: "나눈 성운",
                                     value: "\(model.stars.filter(\.isShared).count)개") { onOpen("나눈 성운") }
-                        SettingsRow(icon: .iconLock, title: "모든 공유 거두기") { onOpen("모든 공유 거두기") }
+                        SettingsRow(icon: .iconLock, title: "모든 공유 거두기") { sheet = .withdrawShares }
                     }
 
                     SettingsSection("데이터") {
-                        SettingsRow(icon: .iconExport, title: "데이터 내보내기") { onOpen("데이터 내보내기") }
-                        SettingsRow(icon: .iconTrash, title: "계정 영구 삭제") { onOpen("계정 영구 삭제") }
+                        SettingsRow(icon: .iconExport, title: "데이터 내보내기") { sheet = .export }
+                        SettingsRow(icon: .iconTrash, title: "계정 영구 삭제") { sheet = .deleteAccount }
                     }
 
                     SettingsSection("도움") {
                         SettingsRow(icon: .iconPhone, title: "24시간 위기 상담", value: "109") {
                             if let url = URL(string: "tel://109") { openURL(url) }
                         }
-                        SettingsRow(icon: .iconFile, title: "약관 및 정책") { onOpen("약관 및 정책") }
+                        SettingsRow(icon: .iconFile, title: "약관 및 정책") { showPolicies = true }
                         SettingsRow(icon: .iconLogout, title: "로그아웃") { model.signOut() }
                     }
                 }
@@ -118,6 +144,79 @@ struct SettingsView: View {
             .scrollIndicators(.hidden)
         }
         .background { StarField() }
+        .toast($toast)
+        // No Figma page lists the documents; a dialog keeps it to one tap.
+        .confirmationDialog("약관 및 정책", isPresented: $showPolicies, titleVisibility: .visible) {
+            ForEach(PolicyDoc.allCases) { doc in
+                Button(doc.title) { onPolicy(doc) }
+            }
+        }
+        .sheet(item: $sheet, onDismiss: {
+            afterDismiss?()
+            afterDismiss = nil
+        }) { which in
+            sheetContent(which)
+                .fixedSize(horizontal: false, vertical: true)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { sheetHeight = $0 }
+                .presentationDetents([.height(sheetHeight)])
+                .presentationDragIndicator(.hidden)
+                .presentationCornerRadius(Radius.xl)
+                .presentationBackground { SheetBackground(seed: "settings-sheet") }
+        }
+    }
+
+    @ViewBuilder
+    private func sheetContent(_ which: Sheet) -> some View {
+        switch which {
+        case .deleteAccount: // 91
+            ActionSheetContent(
+                title: "계정을 영구 삭제할까요?",
+                message: "별과 성운, 은하수, 계정 정보가 모두 흔적 없이 사라지고 되돌릴 수 없어요. 먼저 내 데이터를 내보내 둘 수 있어요.",
+                primary: ("영구 삭제", { close { model.deleteAccount() } }),
+                secondary: ("먼저 내보내기", { close { sheet = .export } }),
+                ghost: ("취소", { close() }),
+                destructive: true
+            )
+        case .withdrawShares: // 92
+            ActionSheetContent(
+                title: "나눈 성운을 모두 거둘까요?",
+                message: "우주 광장에서 내 성운 \(model.stars.filter(\.isShared).count)개를 거둬요. 그동안 받은 공명과 별빛 한 줄은 그대로 간직돼요. 언제든 다시 나눌 수 있어요.",
+                primary: ("모두 거두기", { close { model.withdrawAllShares() } }),
+                secondary: ("그대로 두기", { close() }),
+                ghost: nil
+            )
+        case .export: // 93
+            ActionSheetContent(
+                title: "어떤 형식으로 내보낼까요?",
+                message: "쓴 별과 성운 이야기를 모두 파일로 내려받아요. 파일은 내 기기에만 저장돼요.",
+                primary: ("텍스트 파일로", { close { export(.text) } }),
+                secondary: ("PDF로", { close { export(.pdf) } }),
+                ghost: ("닫기", { close() })
+            )
+        case .sound: // 94
+            ActionSheetContent(
+                title: "어떤 소리와 함께할까요?",
+                message: "마음을 가라앉히는 앰비언스예요. 설정에서 언제든 끌 수 있어요.",
+                primary: (Self.sounds[0], { close { model.settings.sound = Self.sounds[0] } }),
+                secondary: (Self.sounds[1], { close { model.settings.sound = Self.sounds[1] } }),
+                ghost: ("닫기", { close() })
+            )
+        }
+    }
+
+    /// Closes the sheet, then runs `then` once it is gone.
+    private func close(then: (() -> Void)? = nil) {
+        afterDismiss = then
+        sheet = nil
+    }
+
+    private func export(_ format: DataExport.Format) {
+        do {
+            _ = try DataExport.write(model.exportText(), as: format)
+            toast = "파일로 내보냈어요"
+        } catch {
+            toast = "내보내지 못했어요. 다시 시도해 주세요"
+        }
     }
 }
 
@@ -275,7 +374,9 @@ struct InquiryView: View {
                             Text("내용")
                                 .textStyle(.labelM)
                                 .foregroundStyle(Color.textPrimary)
-                            TextField("여기에 적어 주세요", text: $message, axis: .vertical)
+                            TextField("", text: $message,
+                                      prompt: Text("여기에 적어 주세요").foregroundStyle(Color.textSecondary),
+                                      axis: .vertical)
                                 .textStyle(.bodyS)
                                 .foregroundStyle(Color.textPrimary)
                                 .lineLimit(1...10)

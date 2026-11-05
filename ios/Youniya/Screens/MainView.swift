@@ -32,6 +32,8 @@ struct MainView: View {
         case coinHistory // 33
         case settings  // 87
         case inquiry   // 32
+        case sky       // 68
+        case policy(PolicyDoc) // 43–46
         case page(String)
     }
 
@@ -174,17 +176,24 @@ struct MainView: View {
             ReportListView(onBack: pop, onOpen: { push(.report($0.id)) })
                 .edgeSwipeBack(onBack: pop)
         case .coins:
-            CoinChargeView(onBack: pop, onPolicy: { push(.page("결제·환불 정책")) },
+            CoinChargeView(onBack: pop, onPolicy: { push(.policy(.payment)) },
                            onHistory: { push(.coinHistory) })
                 .edgeSwipeBack(onBack: pop)
         case .coinHistory:
             CoinHistoryView(onBack: pop)
                 .edgeSwipeBack(onBack: pop)
         case .settings:
-            SettingsView(onBack: pop, onOpen: { push(.page($0)) })
+            SettingsView(onBack: pop, onOpen: { push(.page($0)) },
+                         onSky: { push(.sky) }, onPolicy: { push(.policy($0)) })
                 .edgeSwipeBack(onBack: pop)
         case .inquiry:
             InquiryView(onBack: pop)
+                .edgeSwipeBack(onBack: pop)
+        case .sky:
+            SkyColorView(onBack: pop)
+                .edgeSwipeBack(onBack: pop)
+        case .policy(let doc):
+            PolicyDocView(doc: doc, onBack: pop)
                 .edgeSwipeBack(onBack: pop)
         case .page(let title):
             PlaceholderPage(title: title, onBack: pop)

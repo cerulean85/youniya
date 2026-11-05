@@ -167,7 +167,7 @@ struct NebulaCard: View {
                         .opacity(resonated ? 1 : 0.6)
                     Text(resonated ? "공명했어요" : "공명")
                         .textStyle(.labelS)
-                        .foregroundStyle(Color.brandPrimary)
+                        .foregroundStyle(Color.brandPrimaryText)
                 }
                 .contentShape(.rect)
             }

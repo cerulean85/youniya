@@ -144,7 +144,10 @@ struct ActionSheetContent: View {
     var message: String
     var primary: (String, () -> Void)
     var secondary: (String, () -> Void)
-    var ghost: (String, () -> Void)
+    /// 92 has no third action.
+    var ghost: (String, () -> Void)?
+    /// 91 uses the Danger button for an irreversible primary action.
+    var destructive = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.lg) {
@@ -165,12 +168,19 @@ struct ActionSheetContent: View {
             }
 
             VStack(spacing: Space.md) {
-                Button(primary.0, action: primary.1)
-                    .buttonStyle(.primary)
+                if destructive {
+                    Button(primary.0, action: primary.1)
+                        .buttonStyle(.danger)
+                } else {
+                    Button(primary.0, action: primary.1)
+                        .buttonStyle(.primary)
+                }
                 Button(secondary.0, action: secondary.1)
                     .buttonStyle(.secondary)
-                Button(ghost.0, action: ghost.1)
-                    .buttonStyle(.ghost)
+                if let ghost {
+                    Button(ghost.0, action: ghost.1)
+                        .buttonStyle(.ghost)
+                }
             }
         }
         .padding(.horizontal, Space.xl)
