@@ -175,6 +175,8 @@ struct CoinChargeView: View {
 
     @State private var selected: CoinPackage = CoinPackage.all[1]
     @State private var charged: Int?
+    /// 38 결제 미완료
+    @State private var paymentFailed = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -250,10 +252,29 @@ struct CoinChargeView: View {
             .padding(.bottom, Space.xl)
         }
         .background { StarField() }
+        .overlay {
+            if paymentFailed {
+                StatusView(icon: .iconLock, title: "결제가 끝나지 않았어요",
+                           message: "코인은 차감되거나 지급되지 않았어요.",
+                           actions: [
+                               .init(title: "다시 결제하기", style: .primary) { charge() },
+                               .init(title: "닫기", style: .ghost) {
+                                   withAnimation(.easeInOut(duration: 0.3)) { paymentFailed = false }
+                               },
+                           ])
+                    .transition(.opacity)
+            }
+        }
     }
 
     private func charge() {
         // TODO: StoreKit purchase; on success the server credits the coins.
+        // Cancelled or pending purchases show 38 and change nothing.
+        if model.simulatedFailure == .payment {
+            withAnimation(.easeInOut(duration: 0.3)) { paymentFailed = true }
+            return
+        }
+        withAnimation(.easeInOut(duration: 0.3)) { paymentFailed = false }
         withAnimation(.snappy) {
             model.addCoins(selected.coins)
             charged = selected.coins

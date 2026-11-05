@@ -3,10 +3,11 @@ import SwiftUI
 /// Side drawer with the items from Figma `Menu Popup` (67 Home · Menu Open).
 /// Slides in from the right edge.
 struct DrawerMenu: View {
+    @Environment(AppModel.self) private var model
     var onSelect: (_ title: String) -> Void
     var onDev: (_ action: DevAction) -> Void
 
-    enum DevAction { case fillSamples, clearStars, signOut }
+    enum DevAction { case fillSamples, clearStars, signOut, cycleFailure, notice(AppNotice) }
 
     private struct Item: Identifiable {
         var title: String
@@ -42,6 +43,12 @@ struct DrawerMenu: View {
                 devButton("샘플 별 채우기") { onDev(.fillSamples) }
                 devButton("별 모두 비우기") { onDev(.clearStars) }
                 devButton("로그아웃") { onDev(.signOut) }
+                devButton("실패 흉내: \(model.simulatedFailure?.rawValue ?? "없음")") { onDev(.cycleFailure) }
+                HStack(spacing: Space.lg) {
+                    devButton("39") { onDev(.notice(.loginExpired)) }
+                    devButton("40") { onDev(.notice(.updateRequired)) }
+                    devButton("41") { onDev(.notice(.maintenance("11월 4일 02:00~04:00"))) }
+                }
             }
             .padding(.horizontal, Space.md)
             .padding(.bottom, Space.lg)

@@ -13,6 +13,8 @@ struct MainView: View {
         var route: Route
     }
     @State private var drawerOpen = false
+    /// 42 toast shown over whatever page is on top.
+    @State private var toast: ToastCardMessage?
 
     /// Pages that slide in over the tabs.
     enum Route: Equatable {
@@ -77,6 +79,7 @@ struct MainView: View {
                 .zIndex(0.5)
             }
         }
+        .toastCard($toast)
     }
 
     // MARK: Tabs
@@ -133,7 +136,11 @@ struct MainView: View {
                 starID: id,
                 onBack: pop,
                 onRewrite: { replace(with: .compose(rewriteOf: id)) },
-                onReviewShare: { push(.privacy(id)) }
+                onReviewShare: { push(.privacy(id)) },
+                onDeleted: {
+                    pop()
+                    toast = ToastCardMessage(title: "삭제되었어요", detail: "되돌릴 수 없어요")
+                }
             )
             .edgeSwipeBack(onBack: pop)
         case .report(let id):
@@ -244,6 +251,16 @@ struct MainView: View {
         case .fillSamples: model.fillSampleStars()
         case .clearStars: model.stars = []
         case .signOut: model.signOut()
+        case .cycleFailure:
+            // 없음 → 연결 끊김 → 분석 실패 → 결제 미완료 → 없음
+            let all = SimulatedFailure.allCases
+            if let f = model.simulatedFailure, let i = all.firstIndex(of: f) {
+                model.simulatedFailure = i + 1 < all.count ? all[i + 1] : nil
+            } else {
+                model.simulatedFailure = all.first
+            }
+            drawerOpen = true
+        case .notice(let notice): model.appNotice = notice
         }
     }
 }

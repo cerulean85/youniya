@@ -39,7 +39,15 @@ struct RootView: View {
                 LoginView()
                     .transition(.opacity)
             }
+
+            // 39–41 cover everything until handled.
+            if let notice = model.appNotice {
+                AppNoticeView(notice: notice)
+                    .transition(.opacity)
+                    .zIndex(10)
+            }
         }
+        .animation(.easeInOut(duration: 0.4), value: model.appNotice?.id)
         .animation(.easeInOut(duration: 0.6), value: showSplash)
         .animation(.easeInOut(duration: 0.6), value: model.isSignedIn)
         .environment(\.motionReduced, systemReduceMotion || model.settings.reduceAnimations)

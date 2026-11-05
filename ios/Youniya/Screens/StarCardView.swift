@@ -84,7 +84,11 @@ struct ComposeFlowView: View {
         case kept(StarItem)
         /// 37 Crisis Care, then the step that would have come next.
         case crisis(StarItem, floated: Bool)
+        /// 35 (network) or 36 (analysis) after 06 could not finish.
+        case failed(StarItem, SimulatedFailure)
     }
+
+    @State private var toast: ToastCardMessage?
 
     @State private var step: Step = .writing
 
@@ -107,7 +111,10 @@ struct ComposeFlowView: View {
             case .analyzing(let star):
                 PrismAnalysisView(analysis: star.analysis!) {
                     withAnimation(.easeInOut(duration: 0.6)) {
-                        if let previous = rewriteOf {
+                        // TODO: The analysis request decides this; for now the dev switch does.
+                        if let failure = model.simulatedFailure, failure != .payment {
+                            step = .failed(star, failure)
+                        } else if let previous = rewriteOf {
                             step = .compare(previous: previous, current: star)
                         } else {
                             step = .card(star)
@@ -131,8 +138,22 @@ struct ComposeFlowView: View {
                     }
                 }
                 .transition(.opacity)
+            case .failed(let star, .network):
+                StatusView(icon: .iconWifiOff, title: "연결이 잠시 끊겼어요",
+                           message: "쓰던 글은 이 기기에 안전하게 있어요.",
+                           actions: [.init(title: "다시 시도", style: .primary) { retry(star) }])
+                    .transition(.opacity)
+            case .failed(let star, _):
+                StatusView(icon: .iconWarning, title: "별을 읽지 못했어요",
+                           message: "글은 그대로 보관되고, 코인도 차감되지 않았어요.",
+                           actions: [
+                               .init(title: "다시 시도", style: .primary) { retry(star) },
+                               .init(title: "조용히 품기", style: .secondary) { keepInstead(star) },
+                           ])
+                    .transition(.opacity)
             }
         }
+        .toastCard($toast)
         .edgeSwipeBack(enabled: !isAnalyzing, onBack: onClose)
     }
 
@@ -144,6 +165,21 @@ struct ComposeFlowView: View {
                 step = floated ? .analyzing(star) : .kept(star)
             }
         }
+    }
+
+    /// 35/36 "다시 시도": analyze again, or say the connection is still down.
+    private func retry(_ star: StarItem) {
+        if model.simulatedFailure == .network {
+            toast = ToastCardMessage(title: "연결을 확인해 주세요")
+        } else {
+            withAnimation(.easeInOut(duration: 0.5)) { step = .analyzing(star) }
+        }
+    }
+
+    /// 36 "조용히 품기": keep the star without analysis, then 13.
+    private func keepInstead(_ star: StarItem) {
+        guard let kept = model.keepInstead(star.id) else { return }
+        withAnimation(.easeInOut(duration: 0.5)) { step = .kept(kept) }
     }
 
     private var isAnalyzing: Bool {

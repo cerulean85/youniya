@@ -11,6 +11,9 @@ struct StarMakingView: View {
     @State private var draft = StarDraft()
     @State private var isSaved = false
     @State private var didPublish = false
+    /// 34 작성 중 나가기
+    @State private var askLeave = false
+    @State private var leaveSheetHeight: CGFloat = 320
     @FocusState private var focus: Field?
 
     private enum Field { case title, body }
@@ -71,6 +74,19 @@ struct StarMakingView: View {
             isSaved = !model.draft.isEmpty
             if draft.isEmpty { focus = .body }
         }
+        .sheet(isPresented: $askLeave) {
+            LeaveDraftSheet(
+                onSaveAndLeave: { askLeave = false; close() },
+                onKeepWriting: { askLeave = false },
+                onDiscard: { askLeave = false; discard() }
+            )
+            .fixedSize(horizontal: false, vertical: true)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { leaveSheetHeight = $0 }
+            .presentationDetents([.height(leaveSheetHeight)])
+            .presentationDragIndicator(.hidden)
+            .presentationCornerRadius(Radius.xl)
+            .presentationBackground { SheetBackground(seed: "leave-sheet") }
+        }
         // Covers leaving by back swipe before the autosave fires.
         .onDisappear { if !didPublish { model.saveDraft(draft) } }
         // Autosave shortly after typing stops.
@@ -85,7 +101,7 @@ struct StarMakingView: View {
     }
 
     private var topBar: some View {
-        FlowTopBar(title: "별 만들기", onClose: close) {
+        FlowTopBar(title: "별 만들기", onClose: closeTapped) {
             Text("임시저장됨")
                 .textStyle(.caption)
                 .foregroundStyle(Color.textTertiary)
@@ -114,9 +130,27 @@ struct StarMakingView: View {
             .frame(maxHeight: .infinity)
     }
 
+    /// "닫기": with something written, ask first (34).
+    private func closeTapped() {
+        if draft.isEmpty {
+            close()
+        } else {
+            focus = nil
+            askLeave = true
+        }
+    }
+
     /// Saves the draft and asks the parent to close. Also used by the back swipe.
     func close() {
         model.saveDraft(draft)
+        onClose()
+    }
+
+    /// 34 "버리기": clear the draft and leave without saving it again.
+    private func discard() {
+        didPublish = true
+        draft = StarDraft()
+        model.saveDraft(StarDraft())
         onClose()
     }
 

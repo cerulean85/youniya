@@ -264,6 +264,13 @@ struct CoinEntry: Codable, Identifiable, Hashable {
 }
 
 /// 87 Settings values. New fields need defaults so old saves still decode.
+/// Dev-only failure modes, to see 35, 36 and 38 without a server.
+enum SimulatedFailure: String, CaseIterable {
+    case network = "연결 끊김"   // 35
+    case analysis = "분석 실패"  // 36
+    case payment = "결제 미완료" // 38
+}
+
 struct AppSettings: Codable, Equatable {
     var reduceAnimations = false
     var haptics = true
@@ -325,6 +332,10 @@ final class AppModel {
     var savedLines: [String] {
         didSet { UserDefaults.standard.set(savedLines, forKey: "savedLines") }
     }
+    /// 39–41: a notice covering the whole app. Not saved.
+    var appNotice: AppNotice?
+    /// Dev only: makes analysis or payment fail until turned off (35, 36, 38).
+    var simulatedFailure: SimulatedFailure?
     /// Plaza nebulae this user left a resonance on (09, 22).
     /// TODO: Send to the plaza API; kept in memory for now.
     var resonated: Set<String> = []
@@ -418,6 +429,15 @@ final class AppModel {
 
     func signOut() {
         isSignedIn = false
+    }
+
+    /// 36 "조용히 품기": the star stays, without starlight or analysis.
+    func keepInstead(_ id: StarItem.ID) -> StarItem? {
+        guard let i = stars.firstIndex(where: { $0.id == id }) else { return nil }
+        stars[i].state = .kept
+        stars[i].analysis = nil
+        stars[i].sharedToPlaza = nil
+        return stars[i]
     }
 
     /// 92: takes every star back from the plaza. Resonance and lines received stay.

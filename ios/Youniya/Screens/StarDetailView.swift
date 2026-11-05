@@ -9,6 +9,8 @@ struct StarDetailView: View {
     var onRewrite: () -> Void
     /// "내용 먼저 확인" on 19 → 20 Privacy Check.
     var onReviewShare: () -> Void
+    /// After 15 "영구 삭제"; the parent closes the page and shows a 42 toast.
+    var onDeleted: (() -> Void)? = nil
 
     @State private var confirmDelete = false
     @State private var confirmShare = false
@@ -93,7 +95,7 @@ struct StarDetailView: View {
                 onDelete: {
                     confirmDelete = false
                     model.deleteStar(starID)
-                    onBack()
+                    (onDeleted ?? onBack)()
                 }
             )
             // Size the sheet to its content, like the Figma bottom sheet.
