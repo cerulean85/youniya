@@ -42,6 +42,7 @@ struct MainView: View {
         case galaxyZoom // 76
         case myNebulaZoom // 77
         case nebulaStory // 83
+        case drawNebula  // 51–55, 84, 85
         case page(String)
     }
 
@@ -227,7 +228,11 @@ struct MainView: View {
                 .edgeSwipeBack(onBack: pop)
         case .myNebulaZoom:
             MyNebulaZoomView(onBack: pop, onOpenStar: openStar, onOpen: { title in
-                push(title == "성운 이야기" ? .nebulaStory : .page(title))
+                switch title {
+                case "성운 이야기": push(.nebulaStory)
+                case "성운 그리기": push(.drawNebula)
+                default: push(.page(title))
+                }
             })
             .edgeSwipeBack(onBack: pop)
         case .nebulaStory:
@@ -238,6 +243,19 @@ struct MainView: View {
                             },
                             onNeedCoins: { push(.coins) })
                 .edgeSwipeBack(onBack: pop)
+        case .drawNebula:
+            NebulaDrawingFlow(
+                onClose: pop,
+                onHome: {
+                    withAnimation(.easeInOut(duration: 0.32)) { stack.removeAll() }
+                    tab = .sky
+                },
+                onShare: {
+                    withAnimation(.easeInOut(duration: 0.32)) { stack.removeAll() }
+                    tab = .plaza
+                    toast = ToastCardMessage(title: "우주 광장에 나눴어요")
+                }
+            )
         case .page(let title):
             PlaceholderPage(title: title, onBack: pop)
                 .edgeSwipeBack(onBack: pop)
@@ -282,7 +300,7 @@ struct MainView: View {
     }
 
     /// 08 links: stat cards (89), 나의 은하수 (81), 모두의 은하 (76),
-    /// 자세히 보기 (77), 성운 이야기 (83). 성운 그리기 is a later screen.
+    /// 자세히 보기 (77), 성운 이야기 (83), 성운 그리기 (51).
     private func openFromNebula(_ title: String) {
         switch title {
         case "떠 있는 별": push(.nebulaStars(.floated))
@@ -292,6 +310,7 @@ struct MainView: View {
         case "모두의 은하": push(.galaxyZoom)
         case "나의 성운 확대": push(.myNebulaZoom)
         case "성운 이야기": push(.nebulaStory)
+        case "성운 그리기": push(.drawNebula)
         default: push(.page(title))
         }
     }

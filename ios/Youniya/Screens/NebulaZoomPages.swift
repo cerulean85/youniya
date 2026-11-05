@@ -128,7 +128,7 @@ struct MyNebulaZoomView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
-                    Text(AppModel.nebulaName)
+                    Text(model.nebulaName)
                         .textStyleBox(.labelS)
                         .foregroundStyle(Color.starBright)
                         .padding(.horizontal, Space.md)
@@ -488,7 +488,7 @@ struct NebulaStoryView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     VStack(alignment: .leading, spacing: Space.lg) {
-                        Text("\(AppModel.nebulaName) 이야기")
+                        Text("\(model.nebulaName) 이야기")
                             .textStyleBox(.h2)
                             .foregroundStyle(Color.textPrimary)
                         Text("별마다 고른 핵심 문장을 시간순으로 엮었어요. 원문 문장은 한 글자도 바꾸지 않아요.")

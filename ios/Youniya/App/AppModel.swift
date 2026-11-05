@@ -344,8 +344,14 @@ final class AppModel {
     var storyPolished: Bool {
         didSet { UserDefaults.standard.set(storyPolished, forKey: "storyPolished") }
     }
-    /// The user's nebula name (08, 77, 83). TODO: Comes from the backend.
-    static let nebulaName = "늦은 밤의 등대자리"
+    /// Nebulae the user drew (51–55), newest last.
+    var drawnNebulae: [DrawnNebula] {
+        didSet { UserDefaults.standard.set(try? JSONEncoder().encode(drawnNebulae), forKey: "drawnNebulae") }
+    }
+    /// Shown until the user draws and names one (08, 77, 83). TODO: From the backend.
+    static let defaultNebulaName = "늦은 밤의 등대자리"
+    /// The user's nebula name: the latest drawn one, or the default.
+    var nebulaName: String { drawnNebulae.last?.name ?? Self.defaultNebulaName }
     /// 83 "서사 다듬기"
     static let storyPolishCost = 20
     /// 39–41: a notice covering the whole app. Not saved.
@@ -373,6 +379,8 @@ final class AppModel {
         savedLines = UserDefaults.standard.stringArray(forKey: "savedLines") ?? []
         usedFreeTelescope = UserDefaults.standard.bool(forKey: "usedFreeTelescope")
         storyPolished = UserDefaults.standard.bool(forKey: "storyPolished")
+        drawnNebulae = UserDefaults.standard.data(forKey: "drawnNebulae")
+            .flatMap { try? JSONDecoder().decode([DrawnNebula].self, from: $0) } ?? []
         coinHistory = UserDefaults.standard.data(forKey: "coinHistory")
             .flatMap { try? JSONDecoder().decode([CoinEntry].self, from: $0) } ?? []
         settings = UserDefaults.standard.data(forKey: "settings")
@@ -448,6 +456,15 @@ final class AppModel {
         isSignedIn = false
     }
 
+    /// 54 저장하기
+    func saveDrawnNebula(_ n: DrawnNebula) { drawnNebulae.append(n) }
+
+    /// 55 우주 광장에 나누기. TODO: Send to the plaza API.
+    func shareDrawnNebula(_ id: DrawnNebula.ID) {
+        guard let i = drawnNebulae.firstIndex(where: { $0.id == id }) else { return }
+        drawnNebulae[i].shared = true
+    }
+
     /// 36 "조용히 품기": the star stays, without starlight or analysis.
     func keepInstead(_ id: StarItem.ID) -> StarItem? {
         guard let i = stars.firstIndex(where: { $0.id == id }) else { return nil }
@@ -476,6 +493,8 @@ final class AppModel {
         settings = AppSettings()
         coins = Self.starterCoins
         usedFreeTelescope = false
+        drawnNebulae = []
+        storyPolished = false
         hasSeenPlazaIntro = false
         marketingOptIn = false
         hasConsented = false
