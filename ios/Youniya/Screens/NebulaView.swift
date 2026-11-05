@@ -13,7 +13,7 @@ struct NebulaView: View {
                         .textStyle(.h1)
                         .foregroundStyle(Color.textPrimary)
                     // TODO: nebula name and stage come from the backend.
-                    Text("늦은 밤의 등대자리 · 2단계 따뜻한 빛줄기")
+                    Text("\(AppModel.nebulaName) · 2단계 따뜻한 빛줄기")
                         .textStyle(.bodyM)
                         .foregroundStyle(Color.starBright)
                 }

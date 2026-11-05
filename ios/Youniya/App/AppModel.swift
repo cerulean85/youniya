@@ -340,6 +340,14 @@ final class AppModel {
     var savedLines: [String] {
         didSet { UserDefaults.standard.set(savedLines, forKey: "savedLines") }
     }
+    /// 83: the story was polished once (coins spent); keeps the bridging lines.
+    var storyPolished: Bool {
+        didSet { UserDefaults.standard.set(storyPolished, forKey: "storyPolished") }
+    }
+    /// The user's nebula name (08, 77, 83). TODO: Comes from the backend.
+    static let nebulaName = "늦은 밤의 등대자리"
+    /// 83 "서사 다듬기"
+    static let storyPolishCost = 20
     /// 39–41: a notice covering the whole app. Not saved.
     var appNotice: AppNotice?
     /// Dev only: makes analysis or payment fail until turned off (35, 36, 38).
@@ -364,6 +372,7 @@ final class AppModel {
         coins = UserDefaults.standard.object(forKey: "coins") == nil ? Self.starterCoins : UserDefaults.standard.integer(forKey: "coins")
         savedLines = UserDefaults.standard.stringArray(forKey: "savedLines") ?? []
         usedFreeTelescope = UserDefaults.standard.bool(forKey: "usedFreeTelescope")
+        storyPolished = UserDefaults.standard.bool(forKey: "storyPolished")
         coinHistory = UserDefaults.standard.data(forKey: "coinHistory")
             .flatMap { try? JSONDecoder().decode([CoinEntry].self, from: $0) } ?? []
         settings = UserDefaults.standard.data(forKey: "settings")
