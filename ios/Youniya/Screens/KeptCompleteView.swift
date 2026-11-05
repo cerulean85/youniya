@@ -8,7 +8,8 @@ struct KeptCompleteView: View {
     var body: some View {
         VStack(spacing: Space.xl) {
             Circle()
-                .strokeBorder(Color.borderDefault, style: StrokeStyle(lineWidth: 1, dash: [2, 2]))
+                .strokeBorder(Color.borderDefault, style: StrokeStyle(lineWidth: 1, dash: [3, 6]))
+                .cosmos("kept-mark", in: Circle())
                 .frame(width: 112, height: 112)
                 .overlay {
                     Image(.iconArchive)

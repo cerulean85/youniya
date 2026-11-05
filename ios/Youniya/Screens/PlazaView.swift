@@ -107,6 +107,7 @@ struct PlazaView: View {
             }
         }
         .padding(Space.xs)
+        .cosmos("segment", in: Capsule())
         .background(Color.bgSurfaceRaised, in: .capsule)
         .overlay(Capsule().strokeBorder(Color.borderDefault, lineWidth: 1))
     }

@@ -56,6 +56,7 @@ struct StarCardView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Space.lg)
+        .cosmos("teaser", in: RoundedRectangle(cornerRadius: Radius.lg))
         .background(Color.bgSurfaceRaised, in: .rect(cornerRadius: Radius.lg))
         .overlay(RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(Color.borderDefault, lineWidth: 1))
         .accessibilityElement(children: .combine)

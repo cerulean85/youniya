@@ -142,7 +142,7 @@ private struct SettingsSection<Rows: View>: View {
             rows
             if let note {
                 Text(note)
-                    .textStyle(.caption)
+                    .textStyle(.captionTab)
                     .foregroundStyle(Color.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, Space.xs)
@@ -250,7 +250,7 @@ struct InquiryView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
-                    VStack(alignment: .leading, spacing: Space.xs) {
+                    VStack(alignment: .leading, spacing: Space.lg) {
                         Text("무엇이 궁금하세요?")
                             .textStyle(.h1)
                             .foregroundStyle(Color.textPrimary)

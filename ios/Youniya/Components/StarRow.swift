@@ -32,6 +32,8 @@ struct StarRow: View {
             }
         }
         .padding(Space.lg)
+        // Figma `Star Row`: 78pt tall
+        .frame(minHeight: 78)
         .cosmos(star.id.uuidString, in: RoundedRectangle(cornerRadius: Radius.lg))
         .background(Color.bgSurface, in: .rect(cornerRadius: Radius.lg))
         .overlay(RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(Color.borderDefault, lineWidth: 1))

@@ -182,7 +182,7 @@ struct CoinChargeView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
-                    VStack(alignment: .leading, spacing: Space.xs) {
+                    VStack(alignment: .leading, spacing: Space.lg) {
                         Text("코인 충전")
                             .textStyle(.h1)
                             .foregroundStyle(Color.textPrimary)

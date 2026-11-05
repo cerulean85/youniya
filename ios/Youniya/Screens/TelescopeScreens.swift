@@ -15,7 +15,7 @@ struct StarlightLineView: View {
             TopAppBar(title: "별빛 한 줄", onBack: onClose)
 
             VStack(alignment: .leading, spacing: Space.lg) {
-                VStack(alignment: .leading, spacing: Space.xs) {
+                VStack(alignment: .leading, spacing: Space.lg) {
                     Text("오늘의 한 줄")
                         .textStyle(.h1)
                         .foregroundStyle(Color.textPrimary)
@@ -71,7 +71,7 @@ struct TelescopeConfirmView: View {
         VStack(spacing: 0) {
             TopAppBar(title: "마음 망원경", onBack: onLater)
 
-            VStack(alignment: .leading, spacing: Space.xs) {
+            VStack(alignment: .leading, spacing: Space.lg) {
                 Text("더 멀리 들여다볼까요?")
                     .textStyle(.h1)
                     .foregroundStyle(Color.textPrimary)

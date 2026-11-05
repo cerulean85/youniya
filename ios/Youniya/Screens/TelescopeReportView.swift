@@ -124,6 +124,7 @@ struct TelescopeReportView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Space.lg)
+        .cosmos("report-question", in: RoundedRectangle(cornerRadius: Radius.lg))
         .background(Color.bgSurfaceRaised, in: .rect(cornerRadius: Radius.lg))
         .overlay(RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(Color.borderDefault, lineWidth: 1))
         .accessibilityElement(children: .combine)
@@ -140,6 +141,7 @@ struct TelescopeReportView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Space.lg)
+        .cosmos("report-" + title, in: RoundedRectangle(cornerRadius: Radius.lg))
         .background(Color.bgSurface, in: .rect(cornerRadius: Radius.lg))
         .overlay(RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(Color.borderDefault, lineWidth: 1))
     }

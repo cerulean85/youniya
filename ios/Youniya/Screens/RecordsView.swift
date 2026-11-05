@@ -6,6 +6,8 @@ struct RecordsView: View {
     @Environment(AppModel.self) private var model
     var onBack: (() -> Void)?
     var onOpenStar: (StarItem) -> Void
+    /// "밝기 흐름 보기" → 82 별빛 기록 · 밝기 흐름
+    var onBrightness: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 0) {
@@ -21,6 +23,8 @@ struct RecordsView: View {
                     Text("쓴 마음이 별이 되어 모이는 곳이에요.")
                         .textStyle(.bodyM)
                         .foregroundStyle(Color.textSecondary)
+
+                    LinkChip(title: "밝기 흐름 보기 ›", action: onBrightness)
 
                     RecordsHero()
 

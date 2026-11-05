@@ -15,7 +15,7 @@ struct PrivacyCheckView: View {
             TopAppBar(title: "공유 전 확인", onBack: onBack)
 
             VStack(alignment: .leading, spacing: Space.lg) {
-                VStack(alignment: .leading, spacing: Space.xs) {
+                VStack(alignment: .leading, spacing: Space.lg) {
                     Text("이름이나 장소가 있나요?")
                         .textStyle(.h1)
                         .foregroundStyle(Color.textPrimary)
@@ -131,7 +131,6 @@ struct PlazaWelcomeView: View {
     var body: some View {
         VStack(spacing: Space.lg) {
             PlazaHero()
-                .padding(.top, Space.xxl)
 
             VStack(spacing: Space.sm) {
                 Text("우주 광장에 오신 걸\n환영해요")
@@ -229,7 +228,7 @@ struct OtherNebulaView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
-                    VStack(alignment: .leading, spacing: Space.xs) {
+                    VStack(alignment: .leading, spacing: Space.lg) {
                         Text(nebula.name)
                             .textStyle(.h1)
                             .foregroundStyle(Color.textPrimary)

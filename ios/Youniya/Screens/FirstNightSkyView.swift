@@ -37,7 +37,8 @@ struct FirstNightSkyView: View {
 
     private var emptySlot: some View {
         Circle()
-            .strokeBorder(Color.brandPrimary, style: StrokeStyle(lineWidth: 1, dash: [2, 2]))
+            .strokeBorder(Color.brandPrimary, style: StrokeStyle(lineWidth: 1, dash: [4, 6]))
+            .cosmos("empty-slot", in: Circle())
             .frame(width: 160, height: 160)
             .overlay {
                 // 8:64: 2s, scale 1↔0.7, opacity 1↔0.3

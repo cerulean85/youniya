@@ -87,6 +87,7 @@ struct PrismAnalysisView: View {
             AxisMeter(label: "마음의 무게", value: analysis.weight * fill)
         }
         .padding(Space.lg)
+        .cosmos("measuring", in: RoundedRectangle(cornerRadius: Radius.lg))
         .background(
             LinearGradient(
                 stops: [.init(color: .bgSurfaceRaised, location: 0), .init(color: .bgSurface, location: 0.714)],

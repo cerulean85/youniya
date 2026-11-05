@@ -15,6 +15,8 @@ struct PrimaryButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity)
             .padding(.horizontal, Space.xl)
             .padding(.vertical, Space.md)
+            // Figma `Button`: 48pt tall
+            .frame(minHeight: 48)
             .background(
                 LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom),
                 in: .rect(cornerRadius: Radius.md)
@@ -38,6 +40,8 @@ struct SecondaryButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity)
             .padding(.horizontal, Space.xl)
             .padding(.vertical, Space.md)
+            // Figma `Button`: 48pt tall
+            .frame(minHeight: 48)
             // Figma: Secondary buttons carry a faint Cosmos BG (about half strength).
             .cosmos("secondary", in: shape, intensity: 0.55)
             .background(configuration.isPressed ? Color.tintPrimary : .clear, in: shape)
@@ -56,6 +60,8 @@ struct GhostButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity)
             .padding(.horizontal, Space.xl)
             .padding(.vertical, Space.md)
+            // Figma `Button`: 48pt tall
+            .frame(minHeight: 48)
             .opacity(configuration.isPressed ? 0.6 : 1)
             .contentShape(.rect)
     }
@@ -129,6 +135,34 @@ extension FlowTopBar where Trailing == EmptyView {
 
 extension ButtonStyle where Self == PrimaryButtonStyle {
     static var primary: PrimaryButtonStyle { .init() }
+}
+
+/// Figma `Button` · Style=Danger: red gradient (#F98B8B → #E35D5D) with a red glow.
+/// For irreversible actions such as "영구 삭제".
+struct DangerButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        let top = Color(red: 0xF9 / 255, green: 0x8B / 255, blue: 0x8B / 255)
+        let bottom = Color(red: 0xE3 / 255, green: 0x5D / 255, blue: 0x5D / 255)
+        configuration.label
+            .textStyle(.labelM)
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, Space.xl)
+            .padding(.vertical, Space.md)
+            .frame(minHeight: 48)
+            .background(LinearGradient(colors: [top, bottom], startPoint: .top, endPoint: .bottom),
+                        in: .rect(cornerRadius: Radius.md))
+            // #F87171 @ 40%, blur 24
+            .shadow(color: Color(red: 0xF8 / 255, green: 0x71 / 255, blue: 0x71 / 255).opacity(0.4), radius: 12)
+            .opacity(isEnabled ? (configuration.isPressed ? 0.85 : 1) : 0.4)
+            .contentShape(.rect(cornerRadius: Radius.md))
+    }
+}
+
+extension ButtonStyle where Self == DangerButtonStyle {
+    static var danger: DangerButtonStyle { .init() }
 }
 
 extension ButtonStyle where Self == SecondaryButtonStyle {

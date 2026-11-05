@@ -93,7 +93,7 @@ struct MainView: View {
             case .plaza:
                 PlazaView(onOpen: { push(.otherNebula($0)) })
             case .records:
-                RecordsView(onOpenStar: openStar)
+                RecordsView(onOpenStar: openStar, onBrightness: { push(.page("밝기 흐름")) })
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -140,7 +140,8 @@ struct MainView: View {
             }
             .edgeSwipeBack(onBack: pop)
         case .records:
-            RecordsView(onBack: pop, onOpenStar: { push(.detail($0.id)) })
+            RecordsView(onBack: pop, onOpenStar: { push(.detail($0.id)) },
+                        onBrightness: { push(.page("밝기 흐름")) })
                 .background { StarField() }
                 .edgeSwipeBack(onBack: pop)
         case .kept:

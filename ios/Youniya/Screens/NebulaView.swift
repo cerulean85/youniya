@@ -49,6 +49,7 @@ struct NebulaView: View {
                 HStack(spacing: Space.sm) {
                     linkChip("성운 그리기")
                     linkChip("성운 이야기")
+                    linkChip("나의 은하수")
                 }
             }
             .padding(.horizontal, Space.xl)
@@ -64,34 +65,37 @@ struct NebulaView: View {
             : "다음 단계까지 깊은 별 \(need)개가 더 필요해요. 서두르지 않아도 괜찮아요."
     }
 
+    /// Figma `Stat`: tappable count card with a "›" label row.
     private func stat(_ value: Int, _ label: String) -> some View {
-        VStack(spacing: Space.xs) {
-            Text("\(value)")
-                .textStyle(.h2)
-                .foregroundStyle(Color.textPrimary)
-            Text(label)
-                .textStyle(.caption)
-                .foregroundStyle(Color.textSecondary)
+        Button { onOpen(label) } label: {
+            VStack(spacing: Space.xs) {
+                Text("\(value)")
+                    .textStyle(.h2)
+                    .foregroundStyle(Color.textPrimary)
+                HStack(spacing: 2) {
+                    Text(label)
+                        .textStyle(.caption)
+                        .foregroundStyle(Color.textSecondary)
+                    Image(.iconChevronRight)
+                        .renderingMode(.template)
+                        .resizable()
+                        .frame(width: 14, height: 14)
+                        .foregroundStyle(Color.textSecondary)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(Space.md)
+            .cosmos("stat-\(label)", in: RoundedRectangle(cornerRadius: Radius.lg))
+            .background(Color.bgSurface, in: .rect(cornerRadius: Radius.lg))
+            .overlay(RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(Color.borderDefault, lineWidth: 1))
+            .contentShape(.rect)
         }
-        .frame(maxWidth: .infinity)
-        .padding(Space.md)
-        .background(Color.bgSurface, in: .rect(cornerRadius: Radius.lg))
-        .overlay(RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(Color.borderDefault, lineWidth: 1))
+        .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
     }
 
-    /// Figma `Link Chip`
     private func linkChip(_ title: String) -> some View {
-        Button { onOpen(title) } label: {
-            Text(title)
-                .textStyle(.labelS)
-                .foregroundStyle(Color.textSecondary)
-                .padding(.horizontal, Space.md)
-                .padding(.vertical, Space.xs)
-                .background(Color.bgSurfaceRaised, in: .capsule)
-                .overlay(Capsule().strokeBorder(Color.borderDefault, lineWidth: 1))
-        }
-        .buttonStyle(.plain)
+        LinkChip(title: title) { onOpen(title) }
     }
 }
 

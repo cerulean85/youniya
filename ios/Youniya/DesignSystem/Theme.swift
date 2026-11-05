@@ -24,14 +24,14 @@ enum Radius {
 /// Pretendard in place of Figma's Noto Sans KR for UI text.
 /// Each style scales with Dynamic Type via `relativeTo:`.
 enum TextStyle {
-    case display, metric, h1, h2, h3, journalBody, observation, bodyM, bodyS, labelM, labelS, caption
+    case display, metric, h1, h2, h3, journalBody, observation, bodyM, bodyS, labelM, labelS, caption, captionTab
 
     private var spec: (font: String, size: CGFloat, lineHeight: CGFloat, tracking: CGFloat, relativeTo: Font.TextStyle) {
         switch self {
         case .display: ("NotoSerifKR-SemiBold", 40, 52, 3.2, .largeTitle)
         case .metric: ("Pretendard-Light", 56, 64, -1, .largeTitle)
         case .observation: ("NotoSerifKR-Regular", 15, 24, 0, .callout)
-        case .bodyS: ("Pretendard-Regular", 12, 18, 0, .caption)
+        case .bodyS: ("Pretendard-Regular", 13, 20, 0, .footnote)
         case .h1: ("NotoSerifKR-SemiBold", 28, 38, -0.3, .title)
         case .h2: ("NotoSerifKR-Medium", 22, 32, -0.2, .title2)
         case .h3: ("NotoSerifKR-Medium", 18, 28, 0, .title3)
@@ -39,7 +39,9 @@ enum TextStyle {
         case .bodyM: ("Pretendard-Regular", 14, 22, 0, .subheadline)
         case .labelM: ("Pretendard-Medium", 14, 20, 0, .subheadline)
         case .labelS: ("Pretendard-Medium", 12, 16, 0.2, .caption)
-        case .caption: ("Pretendard-Regular", 11, 16, 0.2, .caption2)
+        case .caption: ("Pretendard-Regular", 12, 18, 0.2, .caption)
+        // Figma `Caption/Tab`: tab bar labels and small notes.
+        case .captionTab: ("Pretendard-Regular", 11, 16, 0.2, .caption2)
         }
     }
 

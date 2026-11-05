@@ -81,13 +81,9 @@ struct RewriteView: View {
 
 private extension View {
     /// Raised card with the focus border used on 14 (gradient surface → raised).
+    /// Now the shared Figma item card (Cosmos BG + violet→slate border).
     func focusCard(angle start: UnitPoint, end: UnitPoint) -> some View {
-        background(
-            LinearGradient(stops: [.init(color: .bgSurfaceRaised, location: 0), .init(color: .bgSurface, location: 0.714)],
-                           startPoint: start, endPoint: end),
-            in: .rect(cornerRadius: Radius.lg)
-        )
-        .overlay(RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(Color.borderFocus, lineWidth: 1))
+        itemCard(seed: "focus-\(start.x)-\(end.y)", minHeight: 0)
     }
 }
 
@@ -148,6 +144,7 @@ struct RematchCompareView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(Space.lg)
+        .cosmos("compare-\(color)", in: RoundedRectangle(cornerRadius: Radius.lg))
         .background(Color.bgSurface, in: .rect(cornerRadius: Radius.lg))
         .overlay(RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(Color.borderDefault, lineWidth: 1))
         .accessibilityElement(children: .combine)
@@ -183,7 +180,7 @@ struct DeleteStarSheet: View {
                 ShareLink(item: exportText) { Text("내보내기") }
                     .buttonStyle(.secondary)
                 Button("영구 삭제", action: onDelete)
-                    .buttonStyle(.ghost)
+                    .buttonStyle(.danger)
             }
         }
         .padding(.horizontal, Space.xl)

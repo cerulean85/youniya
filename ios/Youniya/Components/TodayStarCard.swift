@@ -76,7 +76,11 @@ struct TodayStarCard: View {
             ),
             in: .rect(cornerRadius: Radius.xl)
         )
-        .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Color.borderFocus, lineWidth: 1))
+        // Figma: violet → slate border along (0.6, 0.8), like the list items
+        .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(
+            LinearGradient(colors: [.borderFocus, .borderDefault],
+                           startPoint: .zero, endPoint: UnitPoint(x: 0.6, y: 0.8)),
+            lineWidth: 1))
         // Elevation/Card: #000 @ 40%, y 8, blur 24
         .shadow(color: .black.opacity(0.4), radius: 12, y: 8)
     }
