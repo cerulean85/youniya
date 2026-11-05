@@ -20,6 +20,8 @@ struct DrawerMenu: View {
         Item(title: "별빛 기록", subtitle: "지나온 별들", icon: .iconStar),
         Item(title: "보관함", subtitle: "조용히 품은 마음", icon: .iconArchive),
         Item(title: "마음 망원경", subtitle: "리포트 모아보기", icon: .iconNebula),
+        // 79·80: not in the 67 drawer; this is where the collection opens.
+        Item(title: "컬렉션", subtitle: "모인 별과 성운", icon: .iconStar),
         Item(title: "코인", subtitle: "충전 · 사용 내역", icon: .iconMoon),
         Item(title: "설정", subtitle: "알림 · 데이터 · 약관", icon: .iconPencil),
         // Not in the 67 drawer; 30 Menu lists it. Reaches 32 Inquiry.

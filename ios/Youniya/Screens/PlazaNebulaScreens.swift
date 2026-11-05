@@ -204,7 +204,7 @@ struct MiniConstellation: View {
 }
 
 /// Figma `Chip` with a leading dot (09 sort, 72 filter).
-private struct DotChip: View {
+struct DotChip: View {
     var title: String
     var isSelected: Bool
     var action: () -> Void

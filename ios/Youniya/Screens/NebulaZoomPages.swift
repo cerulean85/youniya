@@ -110,6 +110,46 @@ private struct ZoomPanCanvas<Content: View>: View {
     }
 }
 
+/// Figma 69 `Stat`: a gold number over a small label.
+private struct GalaxyStat: View {
+    var value: Int
+    var label: String
+
+    var body: some View {
+        VStack(spacing: Space.sm) {
+            Text("\(value)").textStyleBox(.h2).foregroundStyle(Color.starBright)
+                .contentTransition(.numericText())
+            Text(label).textStyleBox(.caption).foregroundStyle(Color.textTertiary)
+                .lineLimit(1).minimumScaleFactor(0.85)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, Space.xs)
+        .padding(.vertical, Space.lg)
+        .itemCard(seed: "stat-\(label)", minHeight: 0, flatBorder: true)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// Figma 70 `Info`: key on the left, value on the right.
+private struct NebulaInfoTable: View {
+    var rows: [(String, String)]
+
+    var body: some View {
+        VStack(spacing: Space.sm) {
+            ForEach(rows, id: \.0) { k, v in
+                HStack {
+                    Text(k).textStyleBox(.bodyS).foregroundStyle(Color.textTertiary)
+                    Spacer()
+                    Text(v).textStyleBox(.labelS).foregroundStyle(Color.textPrimary)
+                }
+                .accessibilityElement(children: .combine)
+            }
+        }
+        .padding(Space.lg)
+        .itemCard(seed: "nebula-info", minHeight: 0, flatBorder: true)
+    }
+}
+
 // MARK: - 77 My nebula, zoomed
 
 /// 77 나의 성운 (확대): my stars as shapes, joined into petals around one star.
@@ -156,7 +196,7 @@ struct MyNebulaZoomView: View {
                         }
                         ZoomControls(level: $level, range: 1...3.2)
                             .padding(.top, 4)
-                        Text("별의 모양은 쓴 글의 결로 정해져요")
+                        Text(selectedID == nil ? "두 손가락으로 확대 · 별을 눌러 보기" : "별의 모양은 쓴 글의 결로 정해져요")
                             .textStyle(.caption)
                             .foregroundStyle(Color.textTertiary)
                             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
@@ -165,8 +205,11 @@ struct MyNebulaZoomView: View {
                     }
                     .frame(height: 280)
 
-                    if let selected {
+                    // 70 Info by default; tapping a star shows its card (77).
+                    if selectedID != nil, let selected {
                         StarTooltip(star: selected) { onOpenStar(selected) }
+                    } else {
+                        NebulaInfoTable(rows: infoRows(layout))
                     }
 
                     HStack(spacing: Space.sm) {
@@ -207,6 +250,21 @@ struct MyNebulaZoomView: View {
             .presentationCornerRadius(Radius.xl)
             .presentationBackground { SheetBackground(seed: "float-sheet") }
         }
+    }
+
+    /// Figma 70 `Info`: 별 수 · 꽃잎 수 · 꽃잎 길이 · 빛깔.
+    private func infoRows(_ layout: PetalLayout) -> [(String, String)] {
+        let deep = floated.compactMap { $0.analysis?.depth }
+        // Depth 0…1 shown on the 1–5 stage scale.
+        let avg = deep.isEmpty ? 0 : 1 + deep.reduce(0, +) / Double(deep.count) * 4
+        let rewrites = Set(model.stars.compactMap(\.rewriteOf)).count
+        let moods = Mood.allCases.filter { m in floated.contains { $0.mood == m } }.map(\.label)
+        return [
+            ("별 수", "\(floated.count) · 기록한 글"),
+            ("꽃잎 수", "\(layout.petals.count) · 다시 쓴 주제 \(rewrites)"),
+            ("꽃잎 길이", String(format: "평균 깊이 %.1f단계", avg)),
+            ("빛깔", moods.isEmpty ? "-" : moods.joined(separator: " · ")),
+        ]
     }
 
     /// Saves the whole nebula (zoomed out) to Photos, then T2.
@@ -317,6 +375,7 @@ struct GalaxyZoomView: View {
     var onPlaza: () -> Void
 
     @State private var level: CGFloat = 2.6
+    @State private var showMine = false
 
     /// TODO: Tonight's count comes from the plaza API.
     private let tonight = 1284
@@ -344,12 +403,14 @@ struct GalaxyZoomView: View {
 
             ZStack(alignment: .topTrailing) {
                 ZoomPanCanvas(level: $level, range: 1...3.4) { level in
-                    GalaxyField(mine: mine, level: level)
+                    GalaxyField(mine: mine, level: level) {
+                        withAnimation(.snappy) { showMine.toggle() }
+                    }
                 }
                 ZoomControls(level: $level, range: 1...3.4)
                     .padding(.top, 8)
                     .padding(.trailing, 4)
-                Text("별의 모양은 쓴 글의 결로 정해져요")
+                Text(showMine ? "별의 모양은 쓴 글의 결로 정해져요" : "두 손가락으로 확대 · 별을 눌러 보기")
                     .textStyle(.caption)
                     .foregroundStyle(Color.textTertiary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
@@ -358,8 +419,15 @@ struct GalaxyZoomView: View {
             }
             .frame(height: 300)
 
-            if let first = mine.first {
+            // 69 Stats by default; tapping my star in the middle shows its card (76).
+            if showMine, let first = mine.first {
                 StarTooltip(star: first) { onOpenStar(first) }
+            } else {
+                HStack(spacing: Space.md) {
+                    GalaxyStat(value: 86, label: "오늘 떠오른 별")
+                    GalaxyStat(value: model.resonated.filter { $0.hasPrefix("nebula:") }.count, label: "내가 곁에 둔 성운")
+                    GalaxyStat(value: 312, label: "모인 성운")
+                }
             }
 
             Spacer(minLength: 0)
@@ -383,6 +451,7 @@ struct GalaxyZoomView: View {
 private struct GalaxyField: View {
     var mine: [StarItem]
     var level: CGFloat
+    var onTapMine: () -> Void = {}
 
     private struct Other: Identifiable {
         var id: Int
@@ -458,8 +527,11 @@ private struct GalaxyField: View {
                             .frame(width: 76, height: 76)
                     }
                     .position(c)
+                    .onTapGesture(perform: onTapMine)
                     .accessibilityElement()
                     .accessibilityLabel("내 별, \(hero.title)")
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityAction { onTapMine() }
                 }
             }
         }

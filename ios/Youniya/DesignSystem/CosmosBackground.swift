@@ -94,7 +94,8 @@ extension View {
 extension View {
     /// Figma list `Item` card (17, 18, 20, 22, 26, 28): Cosmos BG on a
     /// raised→surface gradient, with a violet→slate gradient border.
-    func itemCard(seed: String, minHeight: CGFloat = 78) -> some View {
+    /// `flatBorder`: Figma 69/70/79/80 cards keep the raised fill with a plain slate border.
+    func itemCard(seed: String, minHeight: CGFloat = 78, flatBorder: Bool = false) -> some View {
         let shape = RoundedRectangle(cornerRadius: Radius.lg)
         // Figma gradientTransform [[0.6, 0.8, 0], …]: runs from the top-left
         // corner along (0.6, 0.8).
@@ -104,7 +105,8 @@ extension View {
             .frame(minHeight: minHeight)
             .cosmos(seed, in: shape)
             .background(LinearGradient(colors: [.bgSurfaceRaised, .bgSurface], startPoint: start, endPoint: end), in: shape)
-            .overlay(shape.strokeBorder(LinearGradient(colors: [.borderFocus, .borderDefault], startPoint: start, endPoint: end), lineWidth: 1))
+            .overlay(shape.strokeBorder(LinearGradient(colors: [flatBorder ? .borderDefault : .borderFocus, .borderDefault],
+                                                       startPoint: start, endPoint: end), lineWidth: 1))
             .contentShape(shape)
     }
 }

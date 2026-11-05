@@ -49,6 +49,7 @@ struct MainView: View {
         case growth     // 65
         case moments    // 66
         case stages     // 86
+        case collection // 79·80
         case page(String)
     }
 
@@ -68,6 +69,8 @@ struct MainView: View {
                             push(.inquiry)
                         } else if title == "별빛 기록" {
                             push(.records)
+                        } else if title == "컬렉션" {
+                            push(.collection)
                         } else if title == "보관함" {
                             push(.kept)
                         } else {
@@ -299,6 +302,16 @@ struct MainView: View {
         case .stages:
             GrowthStagesView(onBack: pop)
                 .edgeSwipeBack(onBack: pop)
+        case .collection:
+            CollectionView(
+                onBack: pop,
+                onOpenStar: openStar,
+                onOpenOtherStar: { push(.galaxyStar(nebula: $0, star: $1)) },
+                onOpenMyNebula: { push(.myNebulaZoom) },
+                onOpenOtherNebula: { push(.galaxyNebula($0.name)) },
+                onDraw: { push(.drawNebula) }
+            )
+            .edgeSwipeBack(onBack: pop)
         case .page(let title):
             PlaceholderPage(title: title, onBack: pop)
                 .edgeSwipeBack(onBack: pop)
