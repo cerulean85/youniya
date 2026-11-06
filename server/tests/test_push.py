@@ -173,3 +173,10 @@ def test_apns_client_request_and_results():
     import json
     assert json.loads(first.content) == {"aps": {"alert": {"title": "제목", "body": "본문"}, "sound": "default"},
                                          "kind": "report_result"}
+
+
+def test_operator_status_shows_what_is_set_up(make_app):
+    app, client = _app(make_app, FakeApns())
+    r = client.get("/v1/admin/status", headers=OP).json()
+    assert r["push"] is True and r["storekit"] is False and r["trust_purchases"] is True
+    assert client.get("/v1/admin/status").status_code == 404

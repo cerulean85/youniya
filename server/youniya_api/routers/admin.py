@@ -31,6 +31,23 @@ def _log(db: Session, action: str, target_id: str | None = None) -> None:
     db.commit()
 
 
+@router.get("/status")
+def status(request: Request):
+    """Which outside services this deployment is set up for. No secrets, only whether each is on."""
+    state, settings = request.app.state, request.app.state.settings
+    return {
+        "push": state.push is not None,
+        "storekit": state.storekit is not None,
+        "refund_answers": state.appstore is not None,
+        "real_model": bool(settings.gemini_api_key),
+        "apple_sign_in": bool(settings.apple_client_ids),
+        "google_sign_in": bool(settings.google_client_ids),
+        "dev_login": settings.dev_login,
+        "trust_purchases": settings.trust_purchases,
+        "min_app_version": settings.min_app_version,
+    }
+
+
 @router.get("/reports")
 def reported_lines(db: Session = Depends(get_db)):
     """Lines with at least one report, most reported first."""
