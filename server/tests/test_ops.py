@@ -10,11 +10,35 @@ from .conftest import CALM_BODY, float_star, sign_in
 from .test_storekit import BUNDLE, FakeApple
 
 
-def test_rate_limiter_window():
-    limiter = RateLimiter()
-    assert [limiter.hit("k", 2, 60) for _ in range(3)][:2] == [None, None]
-    assert limiter.hit("k", 2, 60) > 0
-    assert limiter.hit("other", 2, 60) is None
+def test_rate_limiter_window(make_app):
+    limiter = RateLimiter(make_app().state.sessions)
+    assert [limiter.hit("k", 2, 60, now=1000) for _ in range(2)] == [None, None]
+    assert limiter.hit("k", 2, 60, now=1010) == 51  # the first hit leaves the window at 1060
+    assert limiter.hit("other", 2, 60, now=1010) is None
+    assert limiter.hit("k", 2, 60, now=1061) is None  # both early hits have expired
+
+
+def test_limits_are_shared_between_instances(make_app):
+    """Vercel runs several instances on one database: they count together."""
+    a, b = make_app(), make_app()
+    a.state.sessions = b.state.sessions
+    one, two = RateLimiter(a.state.sessions), RateLimiter(b.state.sessions)
+    assert one.hit("k", 2, 60) is None and two.hit("k", 2, 60) is None
+    assert one.hit("k", 2, 60) > 0
+
+
+def test_forwarded_ip_only_behind_a_proxy(make_app):
+    from starlette.requests import Request
+
+    from youniya_api.ratelimit import client_ip
+
+    def ip(trust):
+        app = make_app(trust_proxy=trust)
+        return client_ip(Request({"type": "http", "app": app, "client": ("10.0.0.1", 1),
+                                  "headers": [(b"x-forwarded-for", b"1.2.3.4, 10.0.0.1")]}))
+
+    assert ip(True) == "1.2.3.4"
+    assert ip(False) == "10.0.0.1"
 
 
 def test_inquiries_are_limited(client):

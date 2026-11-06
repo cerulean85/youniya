@@ -3,7 +3,8 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, Boolean, CheckConstraint, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (JSON, Boolean, CheckConstraint, DateTime, Float, ForeignKey, Index, Integer, String, Text,
+                        UniqueConstraint)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -223,3 +224,14 @@ class AdminLog(Base):
     action: Mapped[str] = mapped_column(String(40))
     target_id: Mapped[str | None] = mapped_column(String(36))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+
+
+class RateHit(Base):
+    """One counted request for the rate limits. Shared by every server instance (Vercel runs many)."""
+
+    __tablename__ = "rate_hits"
+    __table_args__ = (Index("ix_rate_hits_key_at", "key", "at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    key: Mapped[str] = mapped_column(String(200))
+    at: Mapped[float] = mapped_column(Float)  # epoch seconds

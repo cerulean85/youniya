@@ -21,3 +21,13 @@ def test_postgres_urls_use_psycopg():
 
     assert normalize_url("postgresql://u:p@h/db?sslmode=require").startswith("postgresql+psycopg://u:p@h/db")
     assert normalize_url("sqlite:///x.db") == "sqlite:///x.db"
+
+
+def test_vercel_requirements_match_pyproject():
+    import tomllib
+    from pathlib import Path
+
+    root = Path(__file__).parent.parent
+    deps = tomllib.loads((root / "pyproject.toml").read_text())["project"]["dependencies"]
+    lines = [l for l in (root / "requirements.txt").read_text().splitlines() if l and not l.startswith("#")]
+    assert lines == deps

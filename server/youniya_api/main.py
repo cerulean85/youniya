@@ -37,7 +37,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.sessions = sessionmaker(engine, expire_on_commit=False)
     app.state.cipher = Cipher(settings.data_key)
-    app.state.limiter = RateLimiter()
+    app.state.limiter = RateLimiter(app.state.sessions)
     app.state.verifier = IdTokenVerifier({"apple": settings.apple_client_ids, "google": settings.google_client_ids})
     app.state.storekit = (StoreKitVerifier(settings.apple_bundle_id, settings.allow_sandbox_purchases)
                           if settings.apple_bundle_id else None)

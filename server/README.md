@@ -63,6 +63,26 @@ For the app on another machine, `./dev.sh` serves on every interface at port 800
 - With `DEV_LOGIN=1`, `POST /v1/auth/dev {"name": "…"}` signs in without Apple or Google. The same name is always the same account.
 - To keep it running across reboots, install `deploy/youniya-api.service` as a systemd user service. The steps are in the file.
 
+### Development and production
+
+The two never share a database or secrets.
+
+| | Development (this Linux machine) | Production (Vercel) |
+| :--- | :--- | :--- |
+| Settings | `server/.env` | `server/.env.production`, copied into Vercel's environment variables |
+| Database | Neon `dev` branch | Neon main branch |
+| `DEV_LOGIN`, `TRUST_PURCHASES` | on | never |
+| `MIN_APP_VERSION` | `0.1` | `1.0.0` |
+
+Both files are gitignored. Keep a copy of the production `DATA_ENCRYPTION_KEY` somewhere safe.
+
+### Deploying to Vercel
+
+- **Project:** Set the Vercel project's root directory to `server`. `api/index.py` is the entry point and `vercel.json` sends every path to it. Dependencies come from `requirements.txt`, which a test keeps equal to `pyproject.toml`.
+- **Environment:** Copy every variable from `.env.production` into the Vercel project. `APPSTORE_PRIVATE_KEY_PATH` is not needed there.
+- **Migrations:** Vercel never runs them. Before a deploy that adds a migration, run `deploy/migrate-production.sh` here.
+- **Time limit:** `maxDuration` is 120 seconds, for the three model calls per star once the real model is on.
+
 The same spec is checked in as [`openapi.json`](openapi.json) for the iOS side. A test fails when it falls behind the code; refresh it with `.venv/bin/python -m tests.dump_openapi`.
 
 Run the tests with `.venv/bin/python -m pytest`. They need no API key or network.
@@ -86,6 +106,7 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
 | `APPSTORE_PRIVATE_KEY_BASE64` | (none) | The same `.p8` file (whole PEM) as one base64 line (`base64 -w0 AuthKey_XXX.p8`), for hosts without files such as Vercel. Used instead of `APPSTORE_PRIVATE_KEY_PATH` when set |
 | `ALLOW_SANDBOX_PURCHASES` | `1` | Accept sandbox transactions. App Review and TestFlight buy in the sandbox, so keep this on in production |
 | `ADMIN_TOKEN` | (none) | `X-Admin-Token` for `/v1/admin`. Without it the operator API answers 404 |
+| `TRUST_PROXY` | on when `VERCEL=1` | Take the caller's IP from `X-Forwarded-For` for per-IP limits. Only behind a proxy that sets it |
 | `TRUST_PURCHASES` | off | `1` adds coins from `product_id` + `transaction_id` without a store. **Development only** |
 
 ## Conventions
@@ -139,11 +160,10 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
   - Others never see scores, ranks or 공명 counts. Owners see their counts in `GET /v1/me/shares`.
   - A line someone reports disappears for them at once. Three reports hide it for everyone.
 - **Refunds:** A REFUND notification takes that purchase's coins back once, even below zero (the coins were already spent).
-- **Rate limits:** `429 rate_limited` with `retry_after` seconds. Limits per user, per hour: floating a star 30, telescope 10, story polish 10, lines 30, reports 30, purchases 30, inquiries 5. The privacy scan allows 60 per minute, and sign-in allows 30 per minute per IP. Counters live in memory, so they are per process.
+- **Rate limits:** `429 rate_limited` with `retry_after` seconds. Limits per user, per hour: floating a star 30, telescope 10, story polish 10, lines 30, reports 30, purchases 30, inquiries 5. The privacy scan allows 60 per minute, and sign-in allows 30 per minute per IP. Counters live in the database (`rate_hits`), so every server instance counts together.
 - **Operator API:** Every operator read or action is written to `admin_logs` (Protoss 3장).
 - **PDF:** The export embeds NanumGothic (SIL OFL, `youniya_api/fonts/OFL.txt`), so Korean renders anywhere.
 
 ## Not done yet
 
 - **Real model:** The server has not been connected to the real model (`GEMINI_API_KEY`). The Protoss reliability protocol (`design.md` 6장) has not been run yet.
-- **Shared rate limits:** Rate limits are kept in memory. With several server processes they need a shared store.

@@ -55,6 +55,8 @@ class Settings:
     admin_token: str | None = field(default_factory=lambda: os.getenv("ADMIN_TOKEN") or None)
     # POST /v1/auth/dev signs in by name, without Apple or Google. Development only.
     dev_login: bool = field(default_factory=lambda: os.getenv("DEV_LOGIN") == "1")
+    # Behind a proxy that sets X-Forwarded-For (Vercel sets VERCEL=1 itself). Per-IP limits use that address.
+    trust_proxy: bool = field(default_factory=lambda: os.getenv("TRUST_PROXY", os.getenv("VERCEL", "")) == "1")
     # Accept purchases without store verification. Development only.
     trust_purchases: bool = field(default_factory=lambda: os.getenv("TRUST_PURCHASES") == "1")
 
