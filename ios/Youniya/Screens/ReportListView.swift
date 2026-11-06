@@ -2,49 +2,6 @@ import SwiftUI
 
 // MARK: - 26 Report List
 
-/// One week of floated stars that has at least one telescope report.
-struct ReportWeek: Identifiable {
-    var id: Date { start }
-    /// Monday of the week
-    var start: Date
-    var stars: [StarItem]
-    /// The newest star in the week that has a report; opened on tap.
-    var latestReport: StarItem
-
-    /// "11월 첫째 주", or "10월 마지막 주" for the last Monday of a month.
-    var title: String {
-        let cal = Calendar.koreanWeeks
-        let month = cal.component(.month, from: start)
-        let ordinal = (cal.component(.day, from: start) - 1) / 7
-        let isLast = cal.component(.month, from: cal.date(byAdding: .day, value: 7, to: start)!) != month
-        let names = ["첫째", "둘째", "셋째", "넷째", "다섯째"]
-        return "\(month)월 \(isLast && ordinal > 0 ? "마지막" : names[min(ordinal, 4)]) 주"
-    }
-
-    /// "별 6개 · 11월 3일"
-    var detail: String {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "ko_KR")
-        f.dateFormat = "M월 d일"
-        return "별 \(stars.count)개 · \(f.string(from: start))"
-    }
-
-    /// Groups floated stars by week (Monday start); keeps weeks with a report.
-    static func weeks(from stars: [StarItem]) -> [ReportWeek] {
-        let cal = Calendar.koreanWeeks
-        let floated = stars.filter(\.isFloated)
-        let groups = Dictionary(grouping: floated) { star -> Date in
-            let d = star.date ?? .now
-            return cal.dateInterval(of: .weekOfYear, for: d)?.start ?? cal.startOfDay(for: d)
-        }
-        return groups.compactMap { start, stars in
-            let sorted = stars.sorted { ($0.date ?? .distantPast) > ($1.date ?? .distantPast) }
-            guard let latest = sorted.first(where: { $0.report != nil }) else { return nil }
-            return ReportWeek(start: start, stars: sorted, latestReport: latest)
-        }
-    }
-}
-
 extension Calendar {
     /// Gregorian weeks that start on Monday, in Korea.
     static var koreanWeeks: Calendar {
@@ -68,12 +25,12 @@ extension StarItem {
     }
 }
 
-/// 26 Report List (망원경 리포트): reports grouped by week, with 27 sort.
+/// 26 Report List (망원경 리포트): one row per report, with 27 sort.
 struct ReportListView: View {
     @Environment(AppModel.self) private var model
     var onBack: () -> Void
     var onOpen: (StarItem) -> Void
-    /// 98 "마음 망원경 켜기": to the latest floated star without a report.
+    /// 98 "최근 별 보러 가기": to the latest floated star (or 05 when there is none).
     var onTurnOn: () -> Void = {}
 
     enum Order { case newest, oldest }
@@ -84,25 +41,28 @@ struct ReportListView: View {
     private var isLoading: Bool { model.simulateLoading && !loaded }
     @State private var sheetHeight: CGFloat = 314
 
-    private var weeks: [ReportWeek] {
-        ReportWeek.weeks(from: model.stars).sorted {
-            order == .newest ? $0.start > $1.start : $0.start < $1.start
+    /// 26: one row per report (one star each), by the star's date.
+    private var reported: [StarItem] {
+        model.stars.filter { $0.report != nil }.sorted {
+            let (a, b) = ($0.date ?? .distantPast, $1.date ?? .distantPast)
+            return order == .newest ? a > b : a < b
         }
     }
 
     /// 26 list, or 98 when there's nothing yet.
     @ViewBuilder private var reportList: some View {
-        if weeks.isEmpty {
+        if reported.isEmpty {
             // 98
             EmptyStateView(title: "아직 받은 리포트가 없어요",
-                           message: "마음 망원경을 켜면 일주일 동안의 별을\n모아 리포트로 보여 드려요.")
+                           message: "오늘의 별 카드에서 마음 망원경을 켜면\n그 별의 리포트가 여기에 모여요.")
                 .padding(.top, Space.sm)
         } else {
             VStack(spacing: Space.md) {
-                ForEach(weeks) { week in
-                    Button { onOpen(week.latestReport) } label: {
-                        InfoCard(seed: "week\(week.start.timeIntervalSince1970)",
-                                 title: week.title, detail: week.detail)
+                ForEach(reported) { star in
+                    Button { onOpen(star) } label: {
+                        // Figma 26: the report's star name, then "원래 별 제목 · 날짜".
+                        InfoCard(seed: "report\(star.id)", title: star.report?.starName ?? star.title,
+                                 detail: "\(star.title) · \(star.shortDateText)")
                             .contentShape(.rect)
                     }
                     .buttonStyle(.plain)
@@ -134,9 +94,9 @@ struct ReportListView: View {
                     .padding(.horizontal, Space.xl)
                     .padding(.bottom, Space.xl)
                     .disabled(true)
-            } else if weeks.isEmpty {
+            } else if reported.isEmpty {
                 // Figma 98: always on; with nothing floated yet it starts a new star.
-                Button("마음 망원경 켜기", action: onTurnOn)
+                Button("최근 별 보러 가기", action: onTurnOn)
                     .buttonStyle(.primary)
                     .padding(.horizontal, Space.xl)
                     .padding(.bottom, Space.xl)
@@ -145,7 +105,7 @@ struct ReportListView: View {
                     .buttonStyle(.ghost)
                     .padding(.horizontal, Space.xl)
                     .padding(.bottom, Space.xl)
-                    .disabled(weeks.count < 2)
+                    .disabled(reported.count < 2)
             }
         }
         .background { StarField() }

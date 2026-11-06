@@ -252,6 +252,7 @@ struct MainView: View {
                 .edgeSwipeBack(onBack: pop)
         case .telescopeConfirm(let id):
             TelescopeConfirmView(
+                starID: id,
                 onStart: { replace(with: .scanning(id)) },
                 onCharge: { replace(with: .coins) },
                 onLater: pop
@@ -262,8 +263,9 @@ struct MainView: View {
         case .reports:
             ReportListView(onBack: pop, onOpen: { push(.report($0.id)) },
                            onTurnOn: {
-                               if let star = model.stars.first(where: { $0.isFloated && $0.report == nil }) {
-                                   openReport(star)
+                               // 98 "최근 별 보러 가기": the telescope is turned on from a star.
+                               if let star = model.stars.filter(\.isFloated).max(by: { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }) {
+                                   replace(with: .detail(star.id))
                                } else {
                                    replace(with: .compose())
                                }

@@ -56,6 +56,8 @@ struct StarlightLineView: View {
 /// that asks to spend coins before a report is made.
 struct TelescopeConfirmView: View {
     @Environment(AppModel.self) private var model
+    /// The star the telescope looks into (one star per report).
+    var starID: StarItem.ID? = nil
     var onStart: () -> Void
     var onCharge: () -> Void
     var onLater: () -> Void
@@ -72,12 +74,17 @@ struct TelescopeConfirmView: View {
             TopAppBar(title: "마음 망원경", onBack: onLater)
 
             VStack(alignment: .leading, spacing: Space.lg) {
-                Text("더 멀리 들여다볼까요?")
+                Text("이 별을 더 들여다볼까요?")
                     .textStyle(.h1)
                     .foregroundStyle(Color.textPrimary)
-                Text("모아둔 별을 함께 읽어 흐름을 보여줘요.")
+                Text("망원경 빛이 이 별의 문장을 하나씩 비추며 숨은 마음의 결을 보여줘요.")
                     .textStyle(.bodyM)
                     .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                // Figma 24: the clearest grain first, the star's one-line observation (07).
+                if let teaser = model.stars.first(where: { $0.id == starID })?.analysis?.telescopeTeaser {
+                    NoticeBanner(message: "가장 또렷한 결: \(teaser)")
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Space.xl)
@@ -226,7 +233,7 @@ struct TelescopeScanView: View {
                 .padding(.top, Space.sm)
 
             VStack(spacing: Space.lg) {
-                Text("별들을 바라보는 중이에요")
+                Text("별을 들여다보는 중이에요")
                     .textStyle(.h1)
                     .foregroundStyle(Color.textPrimary)
                 Text("조금만 기다려 주세요.\n잠시 나가도 괜찮아요.")
