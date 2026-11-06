@@ -79,11 +79,35 @@ struct ReportListView: View {
     enum Order { case newest, oldest }
     @State private var order: Order = .newest
     @State private var showSort = false
+    /// 111 skeleton while the reports load.
+    @State private var loaded = false
+    private var isLoading: Bool { model.simulateLoading && !loaded }
     @State private var sheetHeight: CGFloat = 314
 
     private var weeks: [ReportWeek] {
         ReportWeek.weeks(from: model.stars).sorted {
             order == .newest ? $0.start > $1.start : $0.start < $1.start
+        }
+    }
+
+    /// 26 list, or 98 when there's nothing yet.
+    @ViewBuilder private var reportList: some View {
+        if weeks.isEmpty {
+            // 98
+            EmptyStateView(title: "아직 받은 리포트가 없어요",
+                           message: "마음 망원경을 켜면 일주일 동안의 별을\n모아 리포트로 보여 드려요.")
+                .padding(.top, Space.sm)
+        } else {
+            VStack(spacing: Space.md) {
+                ForEach(weeks) { week in
+                    Button { onOpen(week.latestReport) } label: {
+                        InfoCard(seed: "week\(week.start.timeIntervalSince1970)",
+                                 title: week.title, detail: week.detail)
+                            .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
         }
     }
 
@@ -95,23 +119,7 @@ struct ReportListView: View {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     KeptHero()
 
-                    if weeks.isEmpty {
-                        // 98
-                        EmptyStateView(title: "아직 받은 리포트가 없어요",
-                                       message: "마음 망원경을 켜면 일주일 동안의 별을\n모아 리포트로 보여 드려요.")
-                            .padding(.top, Space.sm)
-                    } else {
-                        VStack(spacing: Space.md) {
-                            ForEach(weeks) { week in
-                                Button { onOpen(week.latestReport) } label: {
-                                    InfoCard(seed: "week\(week.start.timeIntervalSince1970)",
-                                             title: week.title, detail: week.detail)
-                                        .contentShape(.rect)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
+                    if isLoading { ReportListSkeleton() } else { reportList }
                 }
                 .padding(.horizontal, Space.xl)
                 .padding(.top, Space.sm)
@@ -119,7 +127,14 @@ struct ReportListView: View {
             }
             .scrollIndicators(.hidden)
 
-            if weeks.isEmpty {
+            if isLoading {
+                // Figma 111: a disabled ghost button until the list arrives.
+                Button("정렬") {}
+                    .buttonStyle(.ghost)
+                    .padding(.horizontal, Space.xl)
+                    .padding(.bottom, Space.xl)
+                    .disabled(true)
+            } else if weeks.isEmpty {
                 // Figma 98: always on; with nothing floated yet it starts a new star.
                 Button("마음 망원경 켜기", action: onTurnOn)
                     .buttonStyle(.primary)
@@ -134,6 +149,7 @@ struct ReportListView: View {
             }
         }
         .background { StarField() }
+        .simulatedLoad($loaded)
         // 27 Sort Sheet
         .sheet(isPresented: $showSort) {
             ActionSheetContent(

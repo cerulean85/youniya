@@ -166,6 +166,9 @@ struct MyNebulaZoomView: View {
     /// 71 하늘에 띄우기
     @State private var askFloat = false
     @State private var floatSheetHeight: CGFloat = 640
+    /// 112 skeleton while the nebula loads.
+    @State private var loaded = false
+    private var isLoading: Bool { model.simulateLoading && !loaded }
 
     private var floated: [StarItem] { model.stars.filter(\.isFloated) }
     private var selected: StarItem? {
@@ -178,6 +181,11 @@ struct MyNebulaZoomView: View {
             TopAppBar(title: "나의 성운", onBack: onBack)
 
             ScrollView {
+                if isLoading {
+                    NebulaDetailSkeleton()
+                        .padding(.horizontal, Space.xl)
+                        .padding(.top, Space.sm)
+                } else {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     Text(model.nebulaName)
                         .textStyle(.labelS)
@@ -221,6 +229,8 @@ struct MyNebulaZoomView: View {
                 .padding(.horizontal, Space.xl)
                 .padding(.top, Space.sm)
                 .padding(.bottom, Space.lg)
+                .transition(.opacity)
+                }
             }
             .scrollIndicators(.hidden)
 
@@ -230,10 +240,13 @@ struct MyNebulaZoomView: View {
                 Button("이미지로 저장") { saveImage(layout) }
                     .buttonStyle(.ghost)
             }
+            // Figma 112: both disabled until the nebula arrives.
+            .disabled(isLoading)
             .padding(.horizontal, Space.xl)
             .padding(.bottom, Space.xl)
         }
         .background { StarField() }
+        .simulatedLoad($loaded)
         .toast($toast)
         .sheet(isPresented: $askFloat) {
             FloatNebulaSheet(

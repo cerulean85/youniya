@@ -382,6 +382,14 @@ final class AppModel {
     var appNotice: AppNotice?
     /// Dev only: makes analysis or payment fail until turned off (35, 36, 38).
     var simulatedFailure: SimulatedFailure?
+    /// Dev only: screens show their 47–50, 110–112 skeletons for a moment before content.
+    /// Also on with the `-simulateLoading YES` launch argument. Not saved.
+    var simulateLoading = UserDefaults.standard.bool(forKey: "simulateLoading")
+    /// How long the simulated load lasts; `-simulateLoadingSeconds 5` to hold it longer.
+    static var simulatedLoadSeconds: Double {
+        let s = UserDefaults.standard.double(forKey: "simulateLoadingSeconds")
+        return s > 0 ? s : 1.5
+    }
     /// Plaza nebulae this user left a resonance on (09, 22).
     /// TODO: Send to the plaza API; kept in memory for now.
     var resonated: Set<String> = []

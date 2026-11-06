@@ -22,13 +22,18 @@ struct StarDetailView: View {
             TopAppBar(title: "별 상세", onBack: onBack)
 
             if let star = model.stars.first(where: { $0.id == starID }) {
-                ScrollView {
-                    content(star)
-                        .padding(.horizontal, Space.xl)
-                        .padding(.top, Space.sm)
-                        .padding(.bottom, Space.xxxl)
+                LoadingGate {
+                    ScrollView {
+                        content(star)
+                            .padding(.horizontal, Space.xl)
+                            .padding(.top, Space.sm)
+                            .padding(.bottom, Space.xxxl)
+                    }
+                    .scrollIndicators(.hidden)
+                } placeholder: {
+                    StarDetailSkeleton()
                 }
-                .scrollIndicators(.hidden)
+                .frame(maxHeight: .infinity, alignment: .top)
             } else {
                 ComingSoonView(title: "별을 찾을 수 없어요")
             }

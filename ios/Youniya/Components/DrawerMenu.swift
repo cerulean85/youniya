@@ -7,7 +7,7 @@ struct DrawerMenu: View {
     var onSelect: (_ title: String) -> Void
     var onDev: (_ action: DevAction) -> Void
 
-    enum DevAction { case fillSamples, clearStars, signOut, cycleFailure, notice(AppNotice) }
+    enum DevAction { case fillSamples, clearStars, signOut, cycleFailure, toggleLoading, notice(AppNotice) }
 
     private struct Item: Identifiable {
         var title: String
@@ -74,6 +74,7 @@ struct DrawerMenu: View {
                 devButton("별 모두 비우기") { onDev(.clearStars) }
                 devButton("로그아웃") { onDev(.signOut) }
                 devButton("실패 흉내: \(model.simulatedFailure?.rawValue ?? "없음")") { onDev(.cycleFailure) }
+                devButton("로딩 흉내: \(model.simulateLoading ? "켬" : "끔")") { onDev(.toggleLoading) }
                 HStack(spacing: Space.lg) {
                     devButton("39") { onDev(.notice(.loginExpired)) }
                     devButton("40") { onDev(.notice(.updateRequired)) }

@@ -121,17 +121,23 @@ struct MainView: View {
                 if model.stars.isEmpty {
                     FirstNightSkyView(onCompose: { push(.compose()) })
                 } else {
-                    HomeView(onCompose: { push(.compose()) }, onOpenStar: openStar,
-                             onSeeAll: { recordsFilter = .all; tab = .records })
+                    LoadingGate {
+                        HomeView(onCompose: { push(.compose()) }, onOpenStar: openStar,
+                                 onSeeAll: { recordsFilter = .all; tab = .records })
+                    } placeholder: { HomeSkeleton() }
                 }
             case .nebula:
                 NebulaView(onOpen: openFromNebula)
             case .plaza:
-                PlazaView(onOpen: { push(.otherNebula($0)) },
-                          onOpenNebula: { push(.galaxyNebula($0.name)) })
+                LoadingGate {
+                    PlazaView(onOpen: { push(.otherNebula($0)) },
+                              onOpenNebula: { push(.galaxyNebula($0.name)) })
+                } placeholder: { ListSkeleton(titleWidth: 160, rowHeight: 100, rows: 3) }
             case .records:
-                RecordsView(onOpenStar: openStar, onBrightness: { push(.brightness) },
-                            onCompose: { push(.compose()) }, filter: $recordsFilter)
+                LoadingGate {
+                    RecordsView(onOpenStar: openStar, onBrightness: { push(.brightness) },
+                                onCompose: { push(.compose()) }, filter: $recordsFilter)
+                } placeholder: { ListSkeleton(titleWidth: 180, rowHeight: 76, rows: 4) }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -419,6 +425,9 @@ struct MainView: View {
             } else {
                 model.simulatedFailure = all.first
             }
+            drawerOpen = true
+        case .toggleLoading:
+            model.simulateLoading.toggle()
             drawerOpen = true
         case .notice(let notice): model.appNotice = notice
         }

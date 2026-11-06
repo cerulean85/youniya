@@ -32,6 +32,10 @@ struct CollectionView: View {
         }
     }
 
+    /// 110 skeleton while the collection loads.
+    @State private var loaded = false
+    private var isLoading: Bool { model.simulateLoading && !loaded }
+
     private var myStars: [Tile] {
         model.stars.filter(\.isFloated).map { Tile.mine($0) }
     }
@@ -76,6 +80,7 @@ struct CollectionView: View {
             .scrollIndicators(.hidden)
         }
         .background { StarField() }
+        .simulatedLoad($loaded)
     }
 
     // MARK: 79
@@ -84,7 +89,10 @@ struct CollectionView: View {
         let mine = myStars, kept = keptStars
         filters(all: mine.count + kept.count, mine: ("내가 띄운", mine.count), kept: kept.count)
         let tiles = filter == .mine ? mine : filter == .kept ? kept : mine + kept
-        if tiles.isEmpty {
+        if isLoading {
+            // 110
+            CollectionGridSkeleton()
+        } else if tiles.isEmpty {
             if filter == .kept {
                 // 97
                 EmptyStateView(title: "곁에 둔 별이 아직 없어요",
@@ -145,6 +153,10 @@ struct CollectionView: View {
         // My nebula is always there, drawn or not.
         let mineCount = drawn.count
         filters(all: mineCount + kept.count, mine: ("내가 그린", mineCount), kept: kept.count)
+        if isLoading {
+            // 110
+            CollectionGridSkeleton()
+        } else {
         let showsEmpty = (filter == .mine && drawn.isEmpty) || (filter == .all && drawn.isEmpty && kept.isEmpty)
         if showsEmpty {
             // 96
@@ -183,6 +195,7 @@ struct CollectionView: View {
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)
+        }
     }
 
     private func nebulaCard(name: String, detail: String, seed: String, kept: Bool = false,
