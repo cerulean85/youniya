@@ -114,3 +114,22 @@ def test_refund_granted_only_if_the_balance_stays_at_zero_or_more():
     declined = consumption_info(_purchase(120), balance=119, now=now)
     assert (declined["refundPreference"], declined["consumptionPercentage"]) == ("DECLINE", 833)
     assert consumption_info(_purchase(120, days_ago=8), balance=500, now=now)["refundPreference"] == "DECLINE"
+
+
+def test_private_key_from_base64_or_path(tmp_path):
+    import base64
+
+    from youniya_api.config import Settings
+
+    pem = ec.generate_private_key(ec.SECP256R1()).private_bytes(
+        serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()).decode()
+    path = tmp_path / "AuthKey.p8"
+    path.write_text(pem)
+    encoded = base64.b64encode(pem.encode()).decode()
+
+    assert Settings(appstore_private_key_base64=encoded).appstore_private_key() == pem
+    assert Settings(appstore_private_key_path=str(path)).appstore_private_key() == pem
+    # Base64 wins when both are set, and line breaks pasted into the value are ignored.
+    assert Settings(appstore_private_key_base64=encoded[:40] + "\n" + encoded[40:],
+                    appstore_private_key_path="/nowhere").appstore_private_key() == pem
+    assert Settings().appstore_private_key() is None

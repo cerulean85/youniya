@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -42,11 +41,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.verifier = IdTokenVerifier({"apple": settings.apple_client_ids, "google": settings.google_client_ids})
     app.state.storekit = (StoreKitVerifier(settings.apple_bundle_id, settings.allow_sandbox_purchases)
                           if settings.apple_bundle_id else None)
+    appstore_key = settings.appstore_private_key()
     app.state.appstore = (
-        AppStoreClient(settings.appstore_issuer_id, settings.appstore_key_id,
-                       Path(settings.appstore_private_key_path).read_text(), settings.apple_bundle_id)
-        if settings.apple_bundle_id and settings.appstore_issuer_id and settings.appstore_key_id
-        and settings.appstore_private_key_path else None)
+        AppStoreClient(settings.appstore_issuer_id, settings.appstore_key_id, appstore_key, settings.apple_bundle_id)
+        if settings.apple_bundle_id and settings.appstore_issuer_id and settings.appstore_key_id and appstore_key
+        else None)
     app.state.prism = PrismEngine(settings.gemini_api_key, settings.prism_model, settings.prism_samples)
 
     @app.exception_handler(ApiError)

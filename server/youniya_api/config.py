@@ -1,6 +1,8 @@
+import base64
 import os
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 
@@ -45,6 +47,9 @@ class Settings:
     appstore_issuer_id: str | None = field(default_factory=lambda: os.getenv("APPSTORE_ISSUER_ID") or None)
     appstore_key_id: str | None = field(default_factory=lambda: os.getenv("APPSTORE_KEY_ID") or None)
     appstore_private_key_path: str | None = field(default_factory=lambda: os.getenv("APPSTORE_PRIVATE_KEY_PATH") or None)
+    # The same .p8 (whole PEM) as one base64 line, for hosts with no files to read (Vercel). Wins over the path.
+    appstore_private_key_base64: str | None = field(
+        default_factory=lambda: os.getenv("APPSTORE_PRIVATE_KEY_BASE64") or None)
     allow_sandbox_purchases: bool = field(default_factory=lambda: os.getenv("ALLOW_SANDBOX_PURCHASES", "1") == "1")
     # X-Admin-Token for /v1/admin. Without it the operator API does not exist.
     admin_token: str | None = field(default_factory=lambda: os.getenv("ADMIN_TOKEN") or None)
@@ -52,3 +57,11 @@ class Settings:
     dev_login: bool = field(default_factory=lambda: os.getenv("DEV_LOGIN") == "1")
     # Accept purchases without store verification. Development only.
     trust_purchases: bool = field(default_factory=lambda: os.getenv("TRUST_PURCHASES") == "1")
+
+    def appstore_private_key(self) -> str | None:
+        """The .p8 PEM: from APPSTORE_PRIVATE_KEY_BASE64 if set, else read from APPSTORE_PRIVATE_KEY_PATH."""
+        if self.appstore_private_key_base64:
+            return base64.b64decode("".join(self.appstore_private_key_base64.split()), validate=True).decode()
+        if self.appstore_private_key_path:
+            return Path(self.appstore_private_key_path).read_text()
+        return None

@@ -83,6 +83,7 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
 | `MAINTENANCE_START`, `MAINTENANCE_END` | (none) | ISO times; without an offset they are read as KST. Every request gets 503 in between (41) |
 | `APPLE_BUNDLE_ID` | (none) | The app's bundle id. Required for verified coin purchases; without it purchases are refused |
 | `APPSTORE_ISSUER_ID`, `APPSTORE_KEY_ID`, `APPSTORE_PRIVATE_KEY_PATH` | (none) | App Store Server API key (`.p8`). Used to answer CONSUMPTION_REQUEST refund requests. Without it they go unanswered, and Apple decides alone |
+| `APPSTORE_PRIVATE_KEY_BASE64` | (none) | The same `.p8` file (whole PEM) as one base64 line (`base64 -w0 AuthKey_XXX.p8`), for hosts without files such as Vercel. Used instead of `APPSTORE_PRIVATE_KEY_PATH` when set |
 | `ALLOW_SANDBOX_PURCHASES` | `1` | Accept sandbox transactions. App Review and TestFlight buy in the sandbox, so keep this on in production |
 | `ADMIN_TOKEN` | (none) | `X-Admin-Token` for `/v1/admin`. Without it the operator API answers 404 |
 | `TRUST_PURCHASES` | off | `1` adds coins from `product_id` + `transaction_id` without a store. **Development only** |
