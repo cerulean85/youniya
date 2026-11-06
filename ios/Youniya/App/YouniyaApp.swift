@@ -24,6 +24,7 @@ struct RootView: View {
     @State private var showSplash = true
 
     var body: some View {
+        @Bindable var model = model
         ZStack {
             if showSplash {
                 SplashView()
@@ -53,6 +54,18 @@ struct RootView: View {
         .environment(\.motionReduced, systemReduceMotion || model.settings.reduceAnimations)
         .environment(\.skyTheme, model.settings.sky)
         .animation(.easeInOut(duration: 0.4), value: model.hasConsented)
+        // Network and server messages (live API).
+        .toast($model.apiMessage)
+        .task {
+            #if DEBUG
+            // `-autoDevSignIn YES`: sign in to the live API on launch (for testing without taps).
+            if model.useLiveAPI && !model.isSignedIn && UserDefaults.standard.bool(forKey: "autoDevSignIn") {
+                model.signIn()
+                return
+            }
+            #endif
+            await model.refreshMe()
+        }
         .task {
             try? await Task.sleep(for: .seconds(2))
             showSplash = false

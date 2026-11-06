@@ -46,7 +46,8 @@ struct StarAnalysis: Hashable, Codable {
 
     var isDeep: Bool { depth >= 0.7 }
     /// Figma 90: "별빛이 700을 넘어 크게 빛난 별".
-    var isSupernova: Bool { starlight >= 700 }
+    /// Figma and the API both count 900+ starlight as a supernova.
+    var isSupernova: Bool { starlight >= 900 }
 
     /// TODO: Replace with the real analysis API. This mock is deterministic per text
     /// so the same draft always gives the same card.
@@ -385,6 +386,17 @@ final class AppModel {
     /// Dev only: screens show their 47–50, 110–112 skeletons for a moment before content.
     /// Also on with the `-simulateLoading YES` launch argument. Not saved.
     var simulateLoading = UserDefaults.standard.bool(forKey: "simulateLoading")
+    /// Dev: talk to the API server (`APIConfig.baseURL`) instead of the on-device
+    /// mock. Saved; also `-useLiveAPI YES`. Features move over to it step by step.
+    var useLiveAPI: Bool = UserDefaults.standard.bool(forKey: "useLiveAPI") {
+        didSet { UserDefaults.standard.set(useLiveAPI, forKey: "useLiveAPI") }
+    }
+    /// A server or network message for the root toast.
+    var apiMessage: String?
+    /// The dev sign-in name; the same name is the same server account.
+    static var devLoginName: String {
+        UserDefaults.standard.string(forKey: "devLoginName") ?? "ios-dev"
+    }
     /// How long the simulated load lasts; `-simulateLoadingSeconds 5` to hold it longer.
     static var simulatedLoadSeconds: Double {
         let s = UserDefaults.standard.double(forKey: "simulateLoadingSeconds")
@@ -434,11 +446,95 @@ final class AppModel {
         }
     }
 
-    func signIn() { isSignedIn = true }
+    /// 02 로그인. Live: the dev sign-in until Sign in with Apple / Google is wired up.
+    func signIn() {
+        guard useLiveAPI else { isSignedIn = true; return }
+        Task { @MainActor in
+            do {
+                let session = try await APIClient.shared.devSignIn(name: Self.devLoginName)
+                hasConsented = !session.needsConsent
+                isSignedIn = true
+                await refreshMe()
+            } catch {
+                handle(error)
+            }
+        }
+    }
 
+    /// 11 가입 동의
     func acceptConsent(marketing: Bool) {
-        marketingOptIn = marketing
-        hasConsented = true
+        guard useLiveAPI else {
+            marketingOptIn = marketing
+            hasConsented = true
+            return
+        }
+        Task { @MainActor in
+            do {
+                let r: ConsentResult = try await APIClient.shared.post("/v1/me/consent", body: ConsentBody(marketing: marketing))
+                marketingOptIn = r.marketingOptIn
+                hasConsented = !r.needsConsent
+            } catch {
+                handle(error)
+            }
+        }
+    }
+
+    /// Live: pulls the account (consent, marketing choice, coins) from the server.
+    @MainActor func refreshMe() async {
+        guard useLiveAPI, isSignedIn else { return }
+        do {
+            let me: MeResponse = try await APIClient.shared.get("/v1/me")
+            hasConsented = !me.needsConsent
+            marketingOptIn = me.marketingOptIn
+            coins = me.coins
+            usedFreeTelescope = !me.freeTelescopeAvailable
+        } catch {
+            handle(error)
+        }
+    }
+
+    /// Dev drawer: switches between the mock and the API server. Going live
+    /// without a server session goes back to 02 Login.
+    func setLiveAPI(_ on: Bool) {
+        useLiveAPI = on
+        guard on else { return }
+        Task { @MainActor in
+            if await APIClient.shared.isSignedIn {
+                await refreshMe()
+            } else {
+                isSignedIn = false
+            }
+        }
+    }
+
+    /// Turns an API failure into the screen that fits: 39 for an expired session,
+    /// 40 for an old app, 41 for maintenance, otherwise a toast with the server's copy.
+    @MainActor func handle(_ error: Error) {
+        guard let e = error as? APIError else {
+            apiMessage = APIError.offline.message
+            return
+        }
+        switch e.code {
+        case "token_expired", "signed_out":
+            appNotice = .loginExpired
+        case "update_required":
+            appNotice = .updateRequired
+        case "maintenance":
+            appNotice = .maintenance(e.until.map(Self.maintenanceText) ?? "곧 다시 열어요")
+        case "consent_required":
+            hasConsented = false
+        default:
+            apiMessage = e.message
+        }
+    }
+
+    /// e.g. "11월 4일 04:00까지" in Korean time.
+    private static func maintenanceText(_ until: Date) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "ko_KR")
+        f.timeZone = TimeZone(identifier: "Asia/Seoul")
+        f.dateFormat = "M월 d일 HH:mm까지"
+        return f.string(from: until)
     }
 
     /// 19: share to / withdraw from the plaza.
@@ -491,6 +587,7 @@ final class AppModel {
 
     func signOut() {
         isSignedIn = false
+        if useLiveAPI { Task { await APIClient.shared.signOut() } }
     }
 
     /// 54 저장하기
@@ -519,9 +616,22 @@ final class AppModel {
         }
     }
 
-    /// 91: removes everything on this device and goes back to 02 Login.
-    /// TODO: Also delete the server account once there is one.
+    /// 91: live, deletes the server account first; then removes everything on
+    /// this device and goes back to 02 Login.
     func deleteAccount() {
+        guard useLiveAPI else { clearLocalAccount(); return }
+        Task { @MainActor in
+            do {
+                try await APIClient.shared.delete("/v1/me")
+                await APIClient.shared.forget()
+                clearLocalAccount()
+            } catch {
+                handle(error)
+            }
+        }
+    }
+
+    private func clearLocalAccount() {
         stars = []
         saveDraft(StarDraft())
         coinHistory = []
@@ -665,4 +775,28 @@ final class AppModel {
         f.dateFormat = "M월 d일 · HH:mm"
         return f.string(from: date)
     }
+}
+
+// MARK: - API payloads (account)
+
+private struct ConsentBody: Encodable {
+    var terms = true
+    var privacy = true
+    var sensitive = true
+    var marketing: Bool
+}
+
+private struct ConsentResult: Decodable {
+    var needsConsent: Bool
+    var marketingOptIn: Bool
+}
+
+/// GET /v1/me
+struct MeResponse: Decodable {
+    var id: String
+    var provider: String
+    var needsConsent: Bool
+    var marketingOptIn: Bool
+    var coins: Int
+    var freeTelescopeAvailable: Bool
 }

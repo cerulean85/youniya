@@ -429,6 +429,8 @@ struct MainView: View {
                 model.simulatedFailure = all.first
             }
             drawerOpen = true
+        case .toggleLiveAPI:
+            model.setLiveAPI(!model.useLiveAPI)
         case .toggleLoading:
             model.simulateLoading.toggle()
             drawerOpen = true

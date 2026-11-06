@@ -74,22 +74,30 @@ struct PrivacyScan {
             .joined(separator: " · ")
     }
 
+    /// The same patterns as the API (`server/youniya_api/privacy.py`), which masks
+    /// again before anything is published. NSRegularExpression because Swift
+    /// `Regex` has no lookbehind.
     private static let patterns: [(KeyPath<PrivacyScan, Int>, String)] = [
-        // Phone numbers and email addresses
-        (\.contacts, #"\b0\d{1,2}[-. ]?\d{3,4}[-. ]?\d{4}\b|[\w.+-]+@[\w-]+\.[\w.]+"#),
+        // Phone numbers and email addresses. Digit lookarounds, not \b: Hangul counts
+        // as a word character, so "010-1234-5678로" has no \b after the number.
+        (\.contacts, #"(?<!\d)0\d{1,2}[-. ]?\d{3,4}[-. ]?\d{4}(?!\d)|[\w.+-]+@[\w-]+\.[A-Za-z.]+"#),
         // A Korean name followed by a title or honorific (민지 씨, 지훈이 형)
         (\.names, #"[가-힣]{2,3}(?=\s?(?:씨|님|선배|후배|언니|오빠|누나|형|선생님)(?:이랑|에게|한테|[이가은는을를랑과와도의께])?(?![가-힣]))"#),
-        // Place names by their suffix (강남역, 망원시장, 연남동 카페)
-        (\.places, #"[가-힣]{2,8}(?:역|구청|공원|학교|대학교|병원|카페|시장|해변|터미널)(?![가-힣])"#),
+        // Place names by their suffix (강남역, 망원시장, 연남동 카페), also with a particle (강남역에서)
+        (\.places, #"[가-힣]{2,8}(?:역|구청|공원|학교|대학교|병원|카페|시장|해변|터미널)(?=(?:에서|에|으로|로|은|는|이|가|을|를|과|와|의|도)?(?![가-힣]))"#),
     ]
 
     init(_ text: String) {
         var out = text
         var counts: [KeyPath<PrivacyScan, Int>: Int] = [:]
         for (kind, pattern) in Self.patterns {
-            guard let regex = try? Regex(pattern) else { continue }
-            counts[kind] = out.matches(of: regex).count
-            out = out.replacing(regex, with: "●●●")
+            guard let regex = try? NSRegularExpression(pattern: pattern) else {
+                assertionFailure("Bad privacy pattern: \(pattern)")
+                continue
+            }
+            let range = NSRange(out.startIndex..., in: out)
+            counts[kind] = regex.numberOfMatches(in: out, range: range)
+            out = regex.stringByReplacingMatches(in: out, range: range, withTemplate: "●●●")
         }
         masked = out
         names = counts[\.names] ?? 0
