@@ -64,6 +64,7 @@ struct SettingsView: View {
     /// 91–94 bottom sheets over Settings.
     private enum Sheet: Identifiable {
         case deleteAccount, withdrawShares, export, sound
+        case notificationsOff // iOS notifications are turned off for the app
         case exporting(DataExport.Format) // 114
         var id: String { "\(self)" }
     }
@@ -117,10 +118,12 @@ struct SettingsView: View {
                     }
 
                     SettingsSection("알림", note: "연속 기록이나 재촉하는 알림은 보내지 않아요.") {
-                        // TODO: Ask for notification permission and schedule it.
-                        SettingsToggleRow(icon: .iconBell, title: "별 만들기 알림", isOn: $model.settings.starReminder)
+                        // TODO: Schedule the reminder once its time and copy are decided.
+                        SettingsToggleRow(icon: .iconBell, title: "별 만들기 알림",
+                                          isOn: notificationToggle($model.settings.starReminder))
                         // 11 (선택) 새 기능·혜택 알림: the same consent, changeable here.
-                        SettingsToggleRow(icon: .iconInfo, title: "새 기능·혜택 알림", isOn: $model.marketingOptIn)
+                        SettingsToggleRow(icon: .iconInfo, title: "새 기능·혜택 알림",
+                                          isOn: notificationToggle($model.marketingOptIn))
                     }
 
                     SettingsSection("우주 광장") {
@@ -211,6 +214,14 @@ struct SettingsView: View {
                 }
                 close { export(format) }
             }
+        case .notificationsOff:
+            ActionSheetContent(
+                title: "알림이 꺼져 있어요",
+                message: "알림을 받으려면 iPhone 설정에서 YOUNIYA 알림을 켜 주세요.",
+                primary: ("설정 열기", { close { NotificationAccess.openSettings() } }),
+                secondary: ("닫기", { close() }),
+                ghost: nil
+            )
         case .sound: // 94
             ActionSheetContent(
                 title: "어떤 소리와 함께할까요?",
@@ -220,6 +231,24 @@ struct SettingsView: View {
                 ghost: ("닫기", { close() })
             )
         }
+    }
+
+    /// A notification toggle: turning it on asks iOS for permission first, and
+    /// stays off (with a way to the Settings app) when notifications are not allowed.
+    private func notificationToggle(_ value: Binding<Bool>) -> Binding<Bool> {
+        Binding(
+            get: { value.wrappedValue },
+            set: { on in
+                guard on else { value.wrappedValue = false; return }
+                Task {
+                    if await NotificationAccess.request() {
+                        withAnimation(.snappy(duration: 0.2)) { value.wrappedValue = true }
+                    } else {
+                        sheet = .notificationsOff
+                    }
+                }
+            }
+        )
     }
 
     /// Closes the sheet, then runs `then` once it is gone.

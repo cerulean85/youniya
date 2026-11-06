@@ -53,7 +53,10 @@ struct StarMakingView: View {
 
             bodyEditor
 
-            Text("\(draft.body.count.formatted()) / \(AppModel.minFloatLength.formatted())자")
+            // Figma 05 "1,248자"; 104 "14자 · 986자 더 쓰면 띄울 수 있어요".
+            Text(canFloat
+                 ? "\(draft.body.count.formatted())자"
+                 : "\(draft.body.count.formatted())자 · \((AppModel.minFloatLength - draft.body.count).formatted())자 더 쓰면 띄울 수 있어요")
                 .textStyle(.caption)
                 .foregroundStyle(Color.textTertiary)
                 .frame(maxWidth: .infinity, alignment: .trailing)

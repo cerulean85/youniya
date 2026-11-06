@@ -55,7 +55,7 @@ struct PrismAnalysisView: View {
 
             measuring(p: p)
 
-            Text("쓴 글은 암호화되어 안전하게 보존돼요")
+            Text("쓴 글은 암호화되어 안전하게 보관돼요")
                 .textStyle(.caption)
                 .foregroundStyle(Color.textTertiary)
                 .rise(Anim.ramp(p, 1.0, 1.2))

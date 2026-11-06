@@ -7,7 +7,7 @@ struct DrawerMenu: View {
     var onSelect: (_ title: String) -> Void
     var onDev: (_ action: DevAction) -> Void
 
-    enum DevAction { case fillSamples, clearStars, signOut, cycleFailure, toggleLoading, notice(AppNotice) }
+    enum DevAction { case fillSamples, longDraft, clearStars, signOut, cycleFailure, toggleLoading, notice(AppNotice) }
 
     private struct Item: Identifiable {
         var title: String
@@ -21,7 +21,7 @@ struct DrawerMenu: View {
         Item(title: "간직한 별", subtitle: "조용히 품은 마음", icon: .iconArchive),
         Item(title: "마음 망원경", subtitle: "리포트 모아보기", icon: .iconNebula),
         // 79·80: not in the 67 drawer; this is where the collection opens.
-        Item(title: "컬렉션", subtitle: "모인 별과 성운", icon: .iconStar),
+        Item(title: "컬렉션", subtitle: "모인 별과 성운", icon: .iconGrid),
         Item(title: "코인", subtitle: "충전 · 사용 내역", icon: .iconMoon),
         Item(title: "설정", subtitle: "알림 · 데이터 · 약관", icon: .iconPencil),
         // Not in the 67 drawer; 30 Menu lists it. Reaches 32 Inquiry.
@@ -58,6 +58,8 @@ struct DrawerMenu: View {
 
     private var list: some View {
         VStack(alignment: .leading, spacing: 2) {
+            header
+
             ForEach(items) { item in
                 Button { onSelect(item.title) } label: { row(item) }
                     .buttonStyle(.plain)
@@ -71,6 +73,7 @@ struct DrawerMenu: View {
                     .textStyle(.caption)
                     .foregroundStyle(Color.textTertiary)
                 devButton("샘플 별 채우기") { onDev(.fillSamples) }
+                devButton("긴 예시 글 쓰기") { onDev(.longDraft) }
                 devButton("별 모두 비우기") { onDev(.clearStars) }
                 devButton("로그아웃") { onDev(.signOut) }
                 devButton("실패 흉내: \(model.simulatedFailure?.rawValue ?? "없음")") { onDev(.cycleFailure) }
@@ -85,7 +88,41 @@ struct DrawerMenu: View {
             .padding(.bottom, Space.lg)
         }
         .padding(.horizontal, Space.sm)
-        .padding(.top, 60)
+        .padding(.top, Space.lg)
+    }
+
+    /// Figma 67-1: logo mark, wordmark and slogan above the items, then a divider.
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 12) {
+                // Figma 67-1 uses the splash mark scaled to 40pt.
+                LogoMark(size: .large)
+                    .scaleEffect(40 / 112)
+                    .frame(width: 40, height: 40)
+                VStack(alignment: .leading, spacing: 2) {
+                    // The splash wordmark (Display, 8% tracking) at 20pt.
+                    Text("YOUNIYA")
+                        .font(.custom("NotoSerifKR-SemiBold", size: 20, relativeTo: .title3))
+                        .tracking(1.6)
+                        .foregroundStyle(Color.textPrimary)
+                    Text("텍스트로 시각화한 우리 모두의 우주")
+                        .textStyle(.caption)
+                        .foregroundStyle(Color.textSecondary)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 4)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("YOUNIYA, 텍스트로 시각화한 우리 모두의 우주")
+
+            Rectangle()
+                .fill(Color.borderDefault)
+                .frame(height: 1)
+                .padding(.horizontal, 12)
+                .padding(.top, Space.xl - 4)
+                .padding(.bottom, Space.md - 2)
+                .accessibilityHidden(true)
+        }
     }
 
     private func row(_ item: Item) -> some View {

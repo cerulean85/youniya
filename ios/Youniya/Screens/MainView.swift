@@ -415,6 +415,9 @@ struct MainView: View {
         drawerOpen = false
         switch action {
         case .fillSamples: model.fillSampleStars()
+        case .longDraft:
+            model.fillLongDraft()
+            push(.compose())
         case .clearStars: model.stars = []
         case .signOut: model.signOut()
         case .cycleFailure:
