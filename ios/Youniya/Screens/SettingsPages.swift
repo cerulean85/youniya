@@ -348,8 +348,19 @@ struct SharedStarsView: View {
     var onPlaza: () -> Void
 
     @State private var toast: ToastCardMessage?
+    /// Live: GET /v1/me/shares → stars, newest share first.
+    @State private var liveShares: [SharedStar] = []
 
-    private var shared: [StarItem] { model.stars.filter(\.isShared) }
+    private var shared: [StarItem] {
+        guard model.useLiveAPI else { return model.stars.filter(\.isShared) }
+        return liveShares.compactMap { s in
+            guard let id = UUID(uuidString: s.starId) else { return nil }
+            // Figma 17 row: title · written_at (KST) · starlight
+            return model.stars.first { $0.id == id } ?? StarItem(
+                id: id, title: s.title, dateText: StarItem.dateText(s.writtenAt),
+                state: .floated(starlight: s.starlight), createdAt: s.writtenAt, sharedToPlaza: true)
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -389,16 +400,23 @@ struct SharedStarsView: View {
         .background { StarField() }
         .toastCard($toast)
         .animation(.snappy, value: shared.map(\.id))
+        .task { await loadLive() }
+    }
+
+    private func loadLive() async {
+        guard model.useLiveAPI else { return }
+        do {
+            liveShares = try await model.loadSharedStars()
+        } catch {
+            model.handle(error)
+        }
     }
 
     private func row(_ star: StarItem) -> some View {
         VStack(alignment: .trailing, spacing: Space.xs) {
             Button { onOpenStar(star) } label: { StarRow(star: star) }
                 .buttonStyle(.plain)
-            Button("광장에서 거두기") {
-                model.setShared(false, for: star.id)
-                toast = .init(title: "광장에서 거뒀어요", detail: "언제든 다시 나눌 수 있어요")
-            }
+            Button("광장에서 거두기") { withdraw(star) }
             .textStyle(.labelS)
             .foregroundStyle(Color.textSecondary)
             .buttonStyle(.plain)
@@ -407,5 +425,22 @@ struct SharedStarsView: View {
             .accessibilityLabel("\(star.title) 광장에서 거두기")
         }
         .transition(.opacity)
+    }
+
+    private func withdraw(_ star: StarItem) {
+        guard model.useLiveAPI else {
+            model.setShared(false, for: star.id)
+            toast = .init(title: "광장에서 거뒀어요", detail: "언제든 다시 나눌 수 있어요")
+            return
+        }
+        Task { @MainActor in
+            do {
+                try await model.withdrawShareLive(starID: star.id.apiID)
+                liveShares.removeAll { $0.starId == star.id.apiID }
+                toast = .init(title: "광장에서 거뒀어요", detail: "언제든 다시 나눌 수 있어요")
+            } catch {
+                model.handle(error)
+            }
+        }
     }
 }

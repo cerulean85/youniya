@@ -23,7 +23,7 @@ struct CoinHistoryView: View {
                     } else {
                         LazyVStack(spacing: Space.md) {
                             ForEach(model.coinHistory) { entry in
-                                InfoCard(seed: entry.id.uuidString, title: entry.title, detail: detail(entry))
+                                InfoCard(seed: entry.id.uuidString, title: entry.displayTitle, detail: detail(entry))
                             }
                         }
                     }
@@ -35,6 +35,7 @@ struct CoinHistoryView: View {
             .scrollIndicators(.hidden)
         }
         .background { StarField() }
+        .task { await model.loadCoins() }
     }
 
     /// "−30 · 11월 3일" / "+120 · 11월 1일"

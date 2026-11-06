@@ -283,6 +283,7 @@ struct CoinChargeView: View {
             .padding(.bottom, Space.xl)
         }
         .background { StarField() }
+        .task { await model.loadCoins() }
         .overlay {
             if let charged {
                 StatusView(icon: .iconCheck, title: "충전이 끝났어요",
@@ -311,8 +312,11 @@ struct CoinChargeView: View {
 
     private func charge() {
         guard agreed else { return }
-        // TODO: StoreKit purchase; on success the server credits the coins
-        // (POST /v1/coins/purchases with consumption_consent: true).
+        if model.useLiveAPI {
+            chargeLive()
+            return
+        }
+        // Mock: the balance just grows.
         // Cancelled or pending purchases show 38 and change nothing.
         if model.simulatedFailure == .payment {
             withAnimation(.easeInOut(duration: 0.3)) { paymentFailed = true }
@@ -323,6 +327,26 @@ struct CoinChargeView: View {
         withAnimation(.easeInOut(duration: 0.3)) {
             model.addCoins(selected.coins)
             charged = selected.coins
+        }
+    }
+}
+
+extension CoinChargeView {
+    /// Live 28: the server credits the purchase (with consumption_consent).
+    /// 102 when it does; 38 when it can't confirm the payment.
+    fileprivate func chargeLive() {
+        Task { @MainActor in
+            do {
+                let added = try await model.purchaseCoinsLive(selected.coins)
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    paymentFailed = false
+                    charged = added
+                }
+            } catch let e as APIError where ["purchase_unverified", "purchase_invalid", "offline"].contains(e.code) {
+                withAnimation(.easeInOut(duration: 0.3)) { paymentFailed = true }
+            } catch {
+                model.handle(error)
+            }
         }
     }
 }

@@ -270,6 +270,11 @@ struct CoinEntry: Codable, Identifiable, Hashable {
     /// +charged / −spent
     var delta: Int
     var date: Date = .now
+    /// The server's purchase · spend · refund (121). Nil for mock entries.
+    var kind: String? = nil
+
+    /// 121: a refund takes coins back; shown as "충전 취소 · App Store 환불".
+    var displayTitle: String { kind == "refund" ? "충전 취소 · App Store 환불" : title }
 }
 
 /// 87 Settings values. New fields need defaults so old saves still decode.
@@ -333,13 +338,13 @@ final class AppModel {
     var hasSeenPlazaIntro: Bool {
         didSet { UserDefaults.standard.set(hasSeenPlazaIntro, forKey: "hasSeenPlazaIntro") }
     }
-    /// Coin balance. TODO: Comes from the store/server; mocked on device.
+    /// Coin balance: mocked on device, or the server's when live (kept apart).
     var coins: Int {
-        didSet { UserDefaults.standard.set(coins, forKey: "coins") }
+        didSet { UserDefaults.standard.set(coins, forKey: useLiveAPI ? "coins-live" : "coins") }
     }
     /// 33 Coin history, newest first. Not sensitive, so kept in UserDefaults.
     var coinHistory: [CoinEntry] {
-        didSet { UserDefaults.standard.set(try? JSONEncoder().encode(coinHistory), forKey: "coinHistory") }
+        didSet { UserDefaults.standard.set(try? JSONEncoder().encode(coinHistory), forKey: useLiveAPI ? "coinHistory-live" : "coinHistory") }
     }
     /// 87 Settings
     var settings: AppSettings {
@@ -422,7 +427,8 @@ final class AppModel {
         marketingOptIn = UserDefaults.standard.bool(forKey: "marketingOptIn")
         hasSeenPlazaIntro = UserDefaults.standard.bool(forKey: "hasSeenPlazaIntro")
         hasSeenNebulaStory = UserDefaults.standard.bool(forKey: "hasSeenNebulaStory")
-        coins = UserDefaults.standard.object(forKey: "coins") == nil ? Self.starterCoins : UserDefaults.standard.integer(forKey: "coins")
+        let live = UserDefaults.standard.bool(forKey: "useLiveAPI")
+        coins = Self.savedCoins(live: live)
         savedLines = UserDefaults.standard.stringArray(forKey: "savedLines") ?? []
         usedFreeTelescope = UserDefaults.standard.bool(forKey: "usedFreeTelescope")
         storyPolished = UserDefaults.standard.bool(forKey: "storyPolished")
@@ -432,8 +438,7 @@ final class AppModel {
             .flatMap { try? JSONDecoder().decode(NebulaSkyShare.self, from: $0) }
         drawnNebulae = UserDefaults.standard.data(forKey: "drawnNebulae")
             .flatMap { try? JSONDecoder().decode([DrawnNebula].self, from: $0) } ?? []
-        coinHistory = UserDefaults.standard.data(forKey: "coinHistory")
-            .flatMap { try? JSONDecoder().decode([CoinEntry].self, from: $0) } ?? []
+        coinHistory = Self.savedCoinHistory(live: live)
         settings = UserDefaults.standard.data(forKey: "settings")
             .flatMap { try? JSONDecoder().decode(AppSettings.self, from: $0) } ?? AppSettings()
         draft = store.load(StarDraft.self, from: "draft") ?? StarDraft()
@@ -496,14 +501,28 @@ final class AppModel {
         }
         await loadStars()
         await loadDraft()
+        await loadCoins()
+    }
+
+    private static func savedCoins(live: Bool) -> Int {
+        let key = live ? "coins-live" : "coins"
+        if UserDefaults.standard.object(forKey: key) == nil { return live ? 0 : starterCoins }
+        return UserDefaults.standard.integer(forKey: key)
+    }
+
+    private static func savedCoinHistory(live: Bool) -> [CoinEntry] {
+        UserDefaults.standard.data(forKey: live ? "coinHistory-live" : "coinHistory")
+            .flatMap { try? JSONDecoder().decode([CoinEntry].self, from: $0) } ?? []
     }
 
     /// Dev drawer: switches between the mock and the API server. Going live
     /// without a server session goes back to 02 Login.
     func setLiveAPI(_ on: Bool) {
         useLiveAPI = on
-        // Each side keeps its own stars on this device.
+        // Each side keeps its own stars and coins on this device.
         stars = store.load([StarItem].self, from: starsFile) ?? []
+        coins = Self.savedCoins(live: on)
+        coinHistory = Self.savedCoinHistory(live: on)
         guard on else { return }
         Task { @MainActor in
             if await APIClient.shared.isSignedIn {
