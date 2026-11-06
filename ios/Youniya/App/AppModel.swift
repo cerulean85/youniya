@@ -370,7 +370,7 @@ final class AppModel {
     }
     /// 71: my nebula floated to the sky, and what goes with it. TODO: Plaza API.
     var skyShare: NebulaSkyShare? {
-        didSet { UserDefaults.standard.set(try? JSONEncoder().encode(skyShare), forKey: "skyShare") }
+        didSet { UserDefaults.standard.set(try? JSONEncoder().encode(skyShare), forKey: useLiveAPI ? "skyShare-live" : "skyShare") }
     }
     /// 74: my one line per plaza nebula, by nebula name. TODO: Plaza API.
     var nebulaLines: [String: String] {
@@ -378,7 +378,7 @@ final class AppModel {
     }
     /// Nebulae the user drew (51–55), newest last.
     var drawnNebulae: [DrawnNebula] {
-        didSet { UserDefaults.standard.set(try? JSONEncoder().encode(drawnNebulae), forKey: "drawnNebulae") }
+        didSet { UserDefaults.standard.set(try? JSONEncoder().encode(drawnNebulae), forKey: useLiveAPI ? "drawnNebulae-live" : "drawnNebulae") }
     }
     /// Shown until the user draws and names one (08, 77, 83). TODO: From the backend.
     static let defaultNebulaName = "늦은 밤의 등대자리"
@@ -421,6 +421,8 @@ final class AppModel {
     var plazaStarsLive: [PlazaNebula] = []
     var plazaNebulaeLive: [GalaxyNebula] = []
     var liveLines: [String: [GalaxyNebula.Line]] = [:]
+    /// Live 54 → 55/71: nebula creations still on their way to the server.
+    var nebulaCreates: [DrawnNebula.ID: Task<String?, Never>] = [:]
     /// Live: the server's account id (/v1/me), used as StoreKit's appAccountToken.
     var accountID: String?
     /// Live: stars whose telescope report is being made on the server (25 → 10).
@@ -461,10 +463,8 @@ final class AppModel {
         storyPolished = UserDefaults.standard.bool(forKey: "storyPolished")
         nebulaLines = UserDefaults.standard.dictionary(forKey: "nebulaLines") as? [String: String] ?? [:]
         reportedLines = Set(UserDefaults.standard.stringArray(forKey: "reportedLines") ?? [])
-        skyShare = UserDefaults.standard.data(forKey: "skyShare")
-            .flatMap { try? JSONDecoder().decode(NebulaSkyShare.self, from: $0) }
-        drawnNebulae = UserDefaults.standard.data(forKey: "drawnNebulae")
-            .flatMap { try? JSONDecoder().decode([DrawnNebula].self, from: $0) } ?? []
+        skyShare = Self.savedSkyShare(live: live)
+        drawnNebulae = Self.savedDrawnNebulae(live: live)
         coinHistory = Self.savedCoinHistory(live: live)
         settings = UserDefaults.standard.data(forKey: "settings")
             .flatMap { try? JSONDecoder().decode(AppSettings.self, from: $0) } ?? AppSettings()
@@ -543,6 +543,7 @@ final class AppModel {
         }
         await loadStars()
         await loadReports()
+        await loadNebulae()
         await loadDraft()
         await loadCoins()
         await PushRegistration.refresh(signedIn: isSignedIn)
@@ -552,6 +553,16 @@ final class AppModel {
         let key = live ? "coins-live" : "coins"
         if UserDefaults.standard.object(forKey: key) == nil { return live ? 0 : starterCoins }
         return UserDefaults.standard.integer(forKey: key)
+    }
+
+    private static func savedSkyShare(live: Bool) -> NebulaSkyShare? {
+        UserDefaults.standard.data(forKey: live ? "skyShare-live" : "skyShare")
+            .flatMap { try? JSONDecoder().decode(NebulaSkyShare.self, from: $0) }
+    }
+
+    private static func savedDrawnNebulae(live: Bool) -> [DrawnNebula] {
+        UserDefaults.standard.data(forKey: live ? "drawnNebulae-live" : "drawnNebulae")
+            .flatMap { try? JSONDecoder().decode([DrawnNebula].self, from: $0) } ?? []
     }
 
     private static func savedCoinHistory(live: Bool) -> [CoinEntry] {
@@ -570,6 +581,8 @@ final class AppModel {
         stars = store.load([StarItem].self, from: starsFile) ?? []
         coins = Self.savedCoins(live: on)
         coinHistory = Self.savedCoinHistory(live: on)
+        drawnNebulae = Self.savedDrawnNebulae(live: on)
+        skyShare = Self.savedSkyShare(live: on)
         guard on else { return }
         Task { @MainActor in
             if await APIClient.shared.isSignedIn {
@@ -682,10 +695,28 @@ final class AppModel {
     }
 
     /// 54 저장하기
-    func saveDrawnNebula(_ n: DrawnNebula) { drawnNebulae.append(n) }
+    func saveDrawnNebula(_ n: DrawnNebula) {
+        drawnNebulae.append(n)
+        if useLiveAPI { Task { @MainActor in createNebulaLive(n) } }
+    }
 
-    /// 55 우주 광장에 나누기. TODO: Send to the plaza API.
+    /// 71 하늘에 띄우기: floats my newest nebula. Live: on the server, and only
+    /// once it is there; without a drawn nebula there is nothing to float yet.
+    func floatMyNebula(receiveLines: Bool, showQuote: Bool) {
+        let share = NebulaSkyShare(name: nebulaName, receiveLines: receiveLines, showQuote: showQuote)
+        guard useLiveAPI else { skyShare = share; return }
+        guard let latest = drawnNebulae.last else {
+            apiMessage = "먼저 성운을 그려 주세요. 그린 성운을 하늘에 띄울 수 있어요."
+            return
+        }
+        Task { @MainActor in
+            if await shareNebulaLive(latest.id, receiveLines: receiveLines, withQuote: showQuote) { skyShare = share }
+        }
+    }
+
+    /// 55 우주 광장에 나누기
     func shareDrawnNebula(_ id: DrawnNebula.ID) {
+        if useLiveAPI { Task { @MainActor in _ = await shareNebulaLive(id) }; return }
         guard let i = drawnNebulae.firstIndex(where: { $0.id == id }) else { return }
         drawnNebulae[i].shared = true
     }

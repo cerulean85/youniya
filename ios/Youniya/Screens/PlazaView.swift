@@ -38,7 +38,13 @@ struct PlazaView: View {
     private enum Segment: String, CaseIterable { case star = "별", nebula = "성운" }
     private enum Sort: String, CaseIterable { case newest = "새로 뜬 것", similar = "나와 결이 비슷한" }
 
-    @State private var segment: Segment = .star
+    @State private var segment: Segment = {
+        #if DEBUG
+        UserDefaults.standard.string(forKey: "debugRoute") == "plazaNebula" ? .nebula : .star  // 72 for review
+        #else
+        .star
+        #endif
+    }()
     @State private var sort: Sort = .newest
     @Environment(AppModel.self) private var model
 

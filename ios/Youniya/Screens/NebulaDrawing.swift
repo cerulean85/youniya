@@ -15,6 +15,8 @@ struct DrawnNebula: Codable, Identifiable, Equatable {
     var guests: [String] = []
     var shared = false
     var createdAt = Date.now
+    /// Live: the server's nebula id, set once it is saved there.
+    var serverID: String? = nil
 }
 
 /// 84 silhouettes: Figma `Mini` outlines, drawn in their own box.
@@ -429,7 +431,6 @@ struct NebulaDrawingFlow: View {
             Spacer(minLength: 0)
             actions {
                 Button("우주 광장에 나누기") {
-                    // TODO: Send to the plaza API.
                     if let s = saved { model.shareDrawnNebula(s.id) }
                     onShare()
                 }

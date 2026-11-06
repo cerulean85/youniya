@@ -166,6 +166,7 @@ struct MyNebulaZoomView: View {
     /// 71 하늘에 띄우기
     @State private var askFloat = false
     @State private var floatSheetHeight: CGFloat = 640
+    @State private var isShortScreen = false
     /// 112 skeleton while the nebula loads.
     @State private var loaded = false
     private var isLoading: Bool { model.simulateLoading && !loaded }
@@ -211,7 +212,8 @@ struct MyNebulaZoomView: View {
                             .padding(.leading, 4)
                             .allowsHitTesting(false)
                     }
-                    .frame(height: 280)
+                    // iPhone SE: a shorter canvas so the 70 info table shows above the buttons.
+                    .frame(height: isShortScreen ? 200 : 280)
 
                     // 70 Info by default; tapping a star shows its card (77).
                     if selectedID != nil, let selected {
@@ -252,6 +254,7 @@ struct MyNebulaZoomView: View {
             .padding(.horizontal, Space.xl)
             .padding(.bottom, Space.xl)
         }
+        .onGeometryChange(for: Bool.self) { $0.size.height < 700 } action: { isShortScreen = $0 }
         .background { StarField() }
         .simulatedLoad($loaded)
         .toast($toast)

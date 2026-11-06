@@ -119,7 +119,7 @@ struct MainView: View {
             case "settings": push(.settings)
             case "reports": push(.reports)
             case "collection": push(.collection)
-            case "plaza": tab = .plaza                    // 09
+            case "plaza", "plazaNebula": tab = .plaza     // 09 / 72
             case "compose": push(.compose())              // 05
             case "myNebula": push(.myNebulaZoom)          // 77
             case "missingReport": push(.report(UUID()))   // 122-1

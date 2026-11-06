@@ -44,7 +44,7 @@ struct FloatNebulaSheet: View {
 
             VStack(spacing: Space.md) {
                 Button("띄우기") {
-                    model.skyShare = NebulaSkyShare(name: model.nebulaName, receiveLines: receiveLines, showQuote: showQuote)
+                    model.floatMyNebula(receiveLines: receiveLines, showQuote: showQuote)
                     onFloat()
                 }
                 .buttonStyle(.primary)
