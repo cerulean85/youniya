@@ -58,6 +58,15 @@ struct RootView: View {
         .toast($model.apiMessage)
         .task {
             #if DEBUG
+            // `-debugNotice 39|40|41|113|120`: show a status screen on launch (for checking it).
+            switch UserDefaults.standard.string(forKey: "debugNotice") {
+            case "39": model.appNotice = .loginExpired
+            case "40": model.appNotice = .updateRequired
+            case "41": model.appNotice = .maintenance("11월 4일 02:00~04:00")
+            case "113": model.appNotice = .accountDeleted
+            case "120": model.appNotice = .rateLimited
+            default: break
+            }
             // `-autoDevSignIn YES`: sign in to the live API on launch (for testing without taps).
             if model.useLiveAPI && !model.isSignedIn && UserDefaults.standard.bool(forKey: "autoDevSignIn") {
                 model.signIn()

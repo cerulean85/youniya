@@ -201,6 +201,9 @@ struct CoinChargeView: View {
     @State private var charged: Int?
     /// 38 결제 미완료
     @State private var paymentFailed = false
+    /// 28 "(필수) 결제·환불 정책에 동의해요". Asked again for each charge; the server
+    /// keeps it with the purchase (`consumption_consent`) for App Store refund requests.
+    @State private var agreed = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -261,16 +264,20 @@ struct CoinChargeView: View {
             }
             .scrollIndicators(.hidden)
 
+            // Figma 28 / 28-1: refund note, the required consent, then the button.
             VStack(spacing: Space.lg) {
-                Button(action: onPolicy) {
-                    Text("결제·환불 정책 보기")
-                        .textStyle(.caption)
-                        .underline()
-                        .foregroundStyle(Color.textSecondary)
-                }
-                .frame(maxWidth: .infinity)
+                Text("충전한 코인만큼 남아 있을 때만 환불할 수 있어요.\n환불을 요청하면 코인 사용 내역이 앱 스토어에 전달돼요.")
+                    .textStyle(.caption)
+                    .foregroundStyle(Color.textTertiary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity)
+                CheckboxRow(label: "(필수) 결제·환불 정책에 동의해요", isChecked: agreed,
+                            onToggle: { withAnimation(.snappy(duration: 0.2)) { agreed.toggle() } },
+                            onOpen: onPolicy)
                 Button("충전하기") { charge() }
                     .buttonStyle(.primary)
+                    .disabled(!agreed)
             }
             .padding(.horizontal, Space.xl)
             .padding(.bottom, Space.xl)
@@ -303,7 +310,9 @@ struct CoinChargeView: View {
     }
 
     private func charge() {
-        // TODO: StoreKit purchase; on success the server credits the coins.
+        guard agreed else { return }
+        // TODO: StoreKit purchase; on success the server credits the coins
+        // (POST /v1/coins/purchases with consumption_consent: true).
         // Cancelled or pending purchases show 38 and change nothing.
         if model.simulatedFailure == .payment {
             withAnimation(.easeInOut(duration: 0.3)) { paymentFailed = true }

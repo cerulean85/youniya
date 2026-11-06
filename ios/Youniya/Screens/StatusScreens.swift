@@ -104,6 +104,7 @@ enum AppNotice: Identifiable {
     case updateRequired    // 40
     case maintenance(String) // 41, e.g. "11월 4일 02:00~04:00"
     case accountDeleted    // 113
+    case rateLimited       // 120: the server's 429 rate_limited
 
     var id: String {
         switch self {
@@ -111,6 +112,7 @@ enum AppNotice: Identifiable {
         case .updateRequired: "40"
         case .maintenance: "41"
         case .accountDeleted: "113"
+        case .rateLimited: "120"
         }
     }
 }
@@ -144,7 +146,27 @@ struct AppNoticeView: View {
             StatusView(icon: .iconMoon, title: "계정을 삭제했어요",
                        message: "그동안 띄운 별과 성운이 모두 사라졌어요.\n언제든 다시 첫 별을 띄울 수 있어요.",
                        actions: [.init(title: "처음 화면으로", style: .primary) { model.appNotice = nil }])
+        case .rateLimited:
+            // "다시 시도하기" returns to the screen underneath, where the action can be tried again.
+            StatusView(icon: .iconMoon, title: "잠시 숨을 고르고 있어요",
+                       message: "요청이 한꺼번에 몰렸어요. 쓰던 글은 그대로 있고 코인도 차감되지 않았어요. 조금 뒤에 다시 시도해 주세요.",
+                       actions: [.init(title: "다시 시도하기", style: .primary) { model.appNotice = nil }])
         }
+    }
+}
+
+// MARK: - 122 Not found
+
+/// 122 별을 찾을 수 없어요 (also the report, with its own title): the star was
+/// deleted, or tidied away on another device.
+struct NotFoundView: View {
+    var title = "별을 찾을 수 없어요"
+    var onBack: () -> Void
+
+    var body: some View {
+        StatusView(icon: .iconStar, title: title,
+                   message: "이미 지웠거나 다른 기기에서 정리한 별이에요.",
+                   actions: [.init(title: "밤하늘로 돌아가기", style: .primary, run: onBack)])
     }
 }
 

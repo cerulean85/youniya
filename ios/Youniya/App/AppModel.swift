@@ -530,6 +530,8 @@ final class AppModel {
             appNotice = .maintenance(e.until.map(Self.maintenanceText) ?? "곧 다시 열어요")
         case "consent_required":
             hasConsented = false
+        case "rate_limited":
+            appNotice = .rateLimited
         default:
             apiMessage = e.message
         }

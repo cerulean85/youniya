@@ -110,6 +110,18 @@ struct MainView: View {
             }
         }
         .toastCard($toast)
+        #if DEBUG
+        // `-debugRoute coins|settings|reports|collection`: open a page on launch (for checking it).
+        .task {
+            switch UserDefaults.standard.string(forKey: "debugRoute") {
+            case "coins": push(.coins)
+            case "settings": push(.settings)
+            case "reports": push(.reports)
+            case "collection": push(.collection)
+            default: break
+            }
+        }
+        #endif
     }
 
     // MARK: Tabs

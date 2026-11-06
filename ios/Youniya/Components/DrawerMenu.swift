@@ -83,6 +83,7 @@ struct DrawerMenu: View {
                     devButton("39") { onDev(.notice(.loginExpired)) }
                     devButton("40") { onDev(.notice(.updateRequired)) }
                     devButton("41") { onDev(.notice(.maintenance("11월 4일 02:00~04:00"))) }
+                    devButton("120") { onDev(.notice(.rateLimited)) }
                 }
             }
             .padding(.horizontal, Space.md)

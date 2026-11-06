@@ -10,6 +10,15 @@ struct TelescopeReportView: View {
     var onRewrite: () -> Void
 
     var body: some View {
+        if model.report(for: starID) == nil {
+            // 122, with the report's title
+            NotFoundView(title: "리포트를 찾을 수 없어요", onBack: onClose)
+        } else {
+            reportBody
+        }
+    }
+
+    private var reportBody: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Space.lg) {
                 FlowTopBar(title: "마음 망원경 리포트", onClose: onClose)
@@ -28,9 +37,6 @@ struct TelescopeReportView: View {
                     }
                     .buttonStyle(.ghost)
                     .disabled(report.isSaved)
-                } else {
-                    ComingSoonView(title: "리포트를 찾을 수 없어요")
-                        .frame(height: 300)
                 }
             }
             .padding(.horizontal, Space.xl)

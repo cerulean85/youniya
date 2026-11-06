@@ -222,7 +222,7 @@ struct ComposeFlowView: View {
                 }
             } catch let e as APIError where e.code == "offline" {
                 withAnimation(.easeInOut(duration: 0.5)) { step = .sendFailed(draft, floated: floated) }
-            } catch let e as APIError where e.status == 422 || e.status == 429 {
+            } catch let e as APIError where e.status == 422 {
                 toast = ToastCardMessage(title: e.message)
             } catch {
                 model.handle(error)
@@ -249,7 +249,7 @@ struct ComposeFlowView: View {
                     withAnimation(.easeInOut(duration: 0.5)) { step = .analyzing(floated) }
                 } catch let e as APIError where e.code == "offline" {
                     toast = ToastCardMessage(title: "연결을 확인해 주세요")
-                } catch let e as APIError where e.code == "analysis_failed" || e.status == 429 {
+                } catch let e as APIError where e.code == "analysis_failed" {
                     toast = ToastCardMessage(title: e.message)
                 } catch {
                     model.handle(error)

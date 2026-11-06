@@ -18,25 +18,30 @@ struct StarDetailView: View {
     @State private var sheetHeight: CGFloat = 336
 
     var body: some View {
+        if let star = model.stars.first(where: { $0.id == starID }) {
+            detail(star)
+        } else {
+            // 122
+            NotFoundView(onBack: onBack)
+        }
+    }
+
+    private func detail(_ star: StarItem) -> some View {
         VStack(spacing: 0) {
             TopAppBar(title: "별 상세", onBack: onBack)
 
-            if let star = model.stars.first(where: { $0.id == starID }) {
-                LoadingGate {
-                    ScrollView {
-                        content(star)
-                            .padding(.horizontal, Space.xl)
-                            .padding(.top, Space.sm)
-                            .padding(.bottom, Space.xxxl)
-                    }
-                    .scrollIndicators(.hidden)
-                } placeholder: {
-                    StarDetailSkeleton()
+            LoadingGate {
+                ScrollView {
+                    content(star)
+                        .padding(.horizontal, Space.xl)
+                        .padding(.top, Space.sm)
+                        .padding(.bottom, Space.xxxl)
                 }
-                .frame(maxHeight: .infinity, alignment: .top)
-            } else {
-                ComingSoonView(title: "별을 찾을 수 없어요")
+                .scrollIndicators(.hidden)
+            } placeholder: {
+                StarDetailSkeleton()
             }
+            .frame(maxHeight: .infinity, alignment: .top)
         }
         .background { StarField() }
     }
