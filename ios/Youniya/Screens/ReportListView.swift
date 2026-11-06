@@ -337,12 +337,12 @@ extension CoinChargeView {
     fileprivate func chargeLive() {
         Task { @MainActor in
             do {
-                let added = try await model.purchaseCoinsLive(selected.coins)
+                guard let added = try await model.purchaseCoinsLive(selected.coins) else { return }
                 withAnimation(.easeInOut(duration: 0.3)) {
                     paymentFailed = false
                     charged = added
                 }
-            } catch let e as APIError where ["purchase_unverified", "purchase_invalid", "offline"].contains(e.code) {
+            } catch let e as APIError where ["purchase_unverified", "purchase_invalid", "offline", "product_unavailable"].contains(e.code) {
                 withAnimation(.easeInOut(duration: 0.3)) { paymentFailed = true }
             } catch {
                 model.handle(error)

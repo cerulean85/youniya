@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 02 Login. Sign-in is mocked: both buttons sign in locally.
+/// 02 Login. Live: Sign in with Apple (Google is still to come); mock: signs in locally.
 struct LoginView: View {
     @Environment(AppModel.self) private var model
 
@@ -19,9 +19,8 @@ struct LoginView: View {
             Spacer(minLength: 0)
 
             VStack(spacing: Space.md) {
-                // TODO: Replace with Sign in with Apple / Google SDK.
-                SocialButton(provider: .apple) { model.signIn() }
-                SocialButton(provider: .google) { model.signIn() }
+                SocialButton(provider: .apple) { model.signIn(with: .apple) }
+                SocialButton(provider: .google) { model.signIn(with: .google) }
                 Text("계속하면 이용약관과 개인정보처리방침,\n민감정보 처리에 동의하게 돼요.")
                     .textStyle(.caption)
                     .foregroundStyle(Color.textTertiary)

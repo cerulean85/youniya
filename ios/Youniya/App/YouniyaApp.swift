@@ -23,6 +23,8 @@ struct RootView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @State private var showSplash = true
+    /// StoreKit purchases paid but not credited yet (live, StoreKit builds).
+    @State private var transactions: Task<Void, Never>?
 
     var body: some View {
         @Bindable var model = model
@@ -75,6 +77,11 @@ struct RootView: View {
             }
             #endif
             await model.refreshMe()
+        }
+        .task {
+            if model.useLiveAPI && AppModel.usesStoreKit && transactions == nil {
+                transactions = StoreKitCoins.listenForTransactions()
+            }
         }
         .task {
             try? await Task.sleep(for: .seconds(2))

@@ -395,11 +395,30 @@ final class AppModel {
     var simulateLoading = UserDefaults.standard.bool(forKey: "simulateLoading")
     /// Dev: talk to the API server (`APIConfig.baseURL`) instead of the on-device
     /// mock. Saved; also `-useLiveAPI YES`. Features move over to it step by step.
-    var useLiveAPI: Bool = UserDefaults.standard.bool(forKey: "useLiveAPI") {
+    /// Release/TestFlight builds always use the API.
+    var useLiveAPI: Bool = AppModel.savedLiveAPI {
         didSet { UserDefaults.standard.set(useLiveAPI, forKey: "useLiveAPI") }
+    }
+    private static var savedLiveAPI: Bool {
+        #if DEBUG
+        UserDefaults.standard.bool(forKey: "useLiveAPI")
+        #else
+        true
+        #endif
+    }
+    /// Debug builds sign in with the dev server's `/v1/auth/dev` (no Apple ID on the
+    /// simulator needed); `-realSignIn YES` uses Sign in with Apple instead.
+    static var usesDevSignIn: Bool {
+        #if DEBUG
+        !UserDefaults.standard.bool(forKey: "realSignIn")
+        #else
+        false
+        #endif
     }
     /// A server or network message for the root toast.
     var apiMessage: String?
+    /// Live: the server's account id (/v1/me), used as StoreKit's appAccountToken.
+    var accountID: String?
     /// Live: stars whose telescope report is being made on the server (25 → 10).
     var pendingReports: Set<StarItem.ID> = []
     /// The dev sign-in name; the same name is the same server account.
@@ -431,7 +450,7 @@ final class AppModel {
         marketingOptIn = UserDefaults.standard.bool(forKey: "marketingOptIn")
         hasSeenPlazaIntro = UserDefaults.standard.bool(forKey: "hasSeenPlazaIntro")
         hasSeenNebulaStory = UserDefaults.standard.bool(forKey: "hasSeenNebulaStory")
-        let live = UserDefaults.standard.bool(forKey: "useLiveAPI")
+        let live = Self.savedLiveAPI
         coins = Self.savedCoins(live: live)
         savedLines = UserDefaults.standard.stringArray(forKey: "savedLines") ?? []
         usedFreeTelescope = UserDefaults.standard.bool(forKey: "usedFreeTelescope")
@@ -446,7 +465,7 @@ final class AppModel {
         settings = UserDefaults.standard.data(forKey: "settings")
             .flatMap { try? JSONDecoder().decode(AppSettings.self, from: $0) } ?? AppSettings()
         draft = store.load(StarDraft.self, from: "draft") ?? StarDraft()
-        stars = store.load([StarItem].self, from: useLiveAPI ? "stars-live" : "stars") ?? []
+        stars = store.load([StarItem].self, from: live ? "stars-live" : "stars") ?? []
 
         // One-time move of a draft saved by older builds in UserDefaults.
         if let data = UserDefaults.standard.data(forKey: "starDraft") {
@@ -457,15 +476,29 @@ final class AppModel {
         }
     }
 
-    /// 02 로그인. Live: the dev sign-in until Sign in with Apple / Google is wired up.
-    func signIn() {
+    enum SignInProvider { case apple, google }
+
+    /// 02 로그인. Live: Sign in with Apple (or the dev sign-in in Debug builds).
+    func signIn(with provider: SignInProvider = .apple) {
         guard useLiveAPI else { isSignedIn = true; return }
         Task { @MainActor in
             do {
-                let session = try await APIClient.shared.devSignIn(name: Self.devLoginName)
+                let session: AuthSession
+                if Self.usesDevSignIn {
+                    session = try await APIClient.shared.devSignIn(name: Self.devLoginName)
+                } else if provider == .apple {
+                    let token = try await AppleSignIn().identityToken()
+                    session = try await APIClient.shared.signIn(provider: "apple", idToken: token)
+                } else {
+                    // TODO: Google Sign-In SDK and an OAuth client id (server GOOGLE_CLIENT_IDS).
+                    apiMessage = "Google 로그인은 곧 열려요. 지금은 Apple로 계속해 주세요."
+                    return
+                }
                 hasConsented = !session.needsConsent
                 isSignedIn = true
                 await refreshMe()
+            } catch is AppleSignIn.Cancelled {
+                // Closed the Apple sheet: stay on 02.
             } catch {
                 handle(error)
             }
@@ -495,6 +528,7 @@ final class AppModel {
         guard useLiveAPI, isSignedIn else { return }
         do {
             let me: MeResponse = try await APIClient.shared.get("/v1/me")
+            accountID = me.id
             hasConsented = !me.needsConsent
             marketingOptIn = me.marketingOptIn
             coins = me.coins
@@ -524,6 +558,9 @@ final class AppModel {
     /// Dev drawer: switches between the mock and the API server. Going live
     /// without a server session goes back to 02 Login.
     func setLiveAPI(_ on: Bool) {
+        #if !DEBUG
+        return
+        #endif
         useLiveAPI = on
         // Each side keeps its own stars and coins on this device.
         stars = store.load([StarItem].self, from: starsFile) ?? []
@@ -653,8 +690,15 @@ final class AppModel {
     /// 92: takes every star back from the plaza. Resonance and lines received stay.
     /// TODO: Send to the plaza API.
     func withdrawAllShares() {
+        if useLiveAPI {
+            Task { @MainActor in await withdrawAllSharesLive() }
+            return
+        }
         for i in stars.indices where stars[i].isShared {
             stars[i].sharedToPlaza = false
+        }
+        for i in drawnNebulae.indices where drawnNebulae[i].shared {
+            drawnNebulae[i].shared = false
         }
     }
 

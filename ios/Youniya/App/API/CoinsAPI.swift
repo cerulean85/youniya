@@ -45,7 +45,9 @@ struct SharedStar: Decodable, Identifiable {
 }
 
 private struct MyShares: Decodable {
+    struct Nebula: Decodable { var id: String }
     var stars: [SharedStar]
+    var nebulae: [Nebula]
 }
 
 // MARK: - AppModel (live coins and shares)
@@ -69,27 +71,62 @@ extension AppModel {
         }
     }
 
-    /// Live 28: credits a purchase on the server, with the refund-policy consent.
-    /// Returns the coins added. Debug builds use the dev server's trusted purchase;
-    /// release builds need StoreKit 2 (TODO), so they fail as 38 for now.
-    @MainActor func purchaseCoinsLive(_ amount: Int) async throws -> Int {
+    /// Debug builds charge through the dev server's trusted purchase (no App Store);
+    /// `-realPurchases YES` uses StoreKit like release builds.
+    static var usesStoreKit: Bool {
         #if DEBUG
-        let body = PurchaseIn(productId: "coin_\(amount)", transactionId: "ios-dev-\(UUID().apiID)")
+        UserDefaults.standard.bool(forKey: "realPurchases")
         #else
-        // TODO: StoreKit 2 purchase with appAccountToken = /v1/me id, send
-        // `transaction.jwsRepresentation`, and `finish()` after the server answers 200.
-        let body = PurchaseIn(signedTransaction: nil)
+        true
         #endif
-        let r: PurchaseResult = try await APIClient.shared.post("/v1/coins/purchases", body: body)
-        coins = r.coins
+    }
+
+    /// Live 28: buys and has the server credit it, with the refund-policy consent.
+    /// Returns the coins added, or nil when the user closed the App Store sheet.
+    /// Throws `purchase_unverified` (38) when the payment is pending or unconfirmed.
+    @MainActor func purchaseCoinsLive(_ amount: Int) async throws -> Int? {
+        let added: Int
+        if Self.usesStoreKit {
+            switch try await StoreKitCoins.buy(coins: amount, accountID: accountID) {
+            case .credited(let balance, let n):
+                coins = balance
+                added = n
+            case .cancelled:
+                return nil
+            case .pending:
+                throw APIError(status: 0, code: "purchase_unverified", message: "결제를 확인하지 못했어요. 코인은 지급되지 않았어요.")
+            }
+        } else {
+            let body = PurchaseIn(productId: "coin_\(amount)", transactionId: "ios-dev-\(UUID().apiID)")
+            let r: PurchaseResult = try await APIClient.shared.post("/v1/coins/purchases", body: body)
+            coins = r.coins
+            added = r.added
+        }
         await loadCoins()
-        return r.added
+        return added
     }
 
     /// Live 17: the stars this user shared to the plaza, newest share first.
     @MainActor func loadSharedStars() async throws -> [SharedStar] {
         let r: MyShares = try await APIClient.shared.get("/v1/me/shares")
         return r.stars
+    }
+
+    /// Live 92: how many stars and nebulae are shared now.
+    @MainActor func shareCounts() async throws -> (stars: Int, nebulae: Int) {
+        let r: MyShares = try await APIClient.shared.get("/v1/me/shares")
+        return (r.stars.count, r.nebulae.count)
+    }
+
+    /// Live 92 "모두 거두기": every star and nebula leaves the plaza.
+    @MainActor func withdrawAllSharesLive() async {
+        do {
+            try await APIClient.shared.delete("/v1/me/shares")
+            for i in stars.indices where stars[i].isShared { stars[i].sharedToPlaza = false }
+            skyShare = nil
+        } catch {
+            handle(error)
+        }
     }
 
     /// Live 17 "광장에서 거두기"

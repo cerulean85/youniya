@@ -76,6 +76,8 @@ struct SettingsView: View {
     @State private var showPolicies = false
     @State private var exportProgress = 0.0
     @State private var toast: String?
+    /// Live 92: GET /v1/me/shares counts.
+    @State private var liveShareCounts: (stars: Int, nebulae: Int)?
 
     /// Figma note under 소리 고르기 (written for 밤바람).
     private var soundNote: String {
@@ -152,6 +154,10 @@ struct SettingsView: View {
         }
         .background { StarField() }
         .toast($toast)
+        .task(id: sheet?.id) {
+            guard model.useLiveAPI, case .withdrawShares = sheet else { return }
+            liveShareCounts = try? await model.shareCounts()
+        }
         // No Figma page lists the documents; a dialog keeps it to one tap.
         .confirmationDialog("약관 및 정책", isPresented: $showPolicies, titleVisibility: .visible) {
             ForEach(PolicyDoc.allCases.filter { $0 != .marketing }) { doc in
@@ -186,8 +192,8 @@ struct SettingsView: View {
             )
         case .withdrawShares: // 92
             ActionSheetContent(
-                title: "나눈 성운을 모두 거둘까요?",
-                message: "우주 광장에서 내 성운 \(model.stars.filter(\.isShared).count)개를 거둬요. 그동안 받은 공명과 별빛 한 줄은 그대로 간직돼요. 언제든 다시 나눌 수 있어요.",
+                title: "나눈 별과 성운을 모두 거둘까요?",
+                message: withdrawMessage,
                 primary: ("모두 거두기", { close { model.withdrawAllShares() } }),
                 secondary: ("그대로 두기", { close() }),
                 ghost: nil
@@ -250,6 +256,21 @@ struct SettingsView: View {
                 }
             }
         )
+    }
+
+    /// 92 body (Figma 154:336): "나눈 별 2개와 성운 1개", leaving out a kind with none.
+    private var withdrawMessage: String {
+        let (stars, nebulae) = model.useLiveAPI
+            ? (liveShareCounts?.stars ?? 0, liveShareCounts?.nebulae ?? 0)
+            : (model.stars.filter(\.isShared).count, model.drawnNebulae.filter(\.shared).count)
+        let what: String
+        switch (stars, nebulae) {
+        case (0, 0): what = "나눈 별과 성운을"
+        case (_, 0): what = "나눈 별 \(stars)개를"
+        case (0, _): what = "성운 \(nebulae)개를"
+        default: what = "나눈 별 \(stars)개와 성운 \(nebulae)개를"
+        }
+        return "우주 광장에서 \(what) 거둬요. 그동안 받은 공명과 별빛 한 줄은 그대로 간직돼요. 언제든 다시 나눌 수 있어요."
     }
 
     /// Closes the sheet, then runs `then` once it is gone.

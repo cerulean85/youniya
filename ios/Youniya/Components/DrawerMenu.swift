@@ -67,6 +67,7 @@ struct DrawerMenu: View {
 
             Spacer()
 
+            #if DEBUG
             // Temporary dev tools until real settings exist.
             VStack(alignment: .leading, spacing: Space.sm) {
                 Text("개발용")
@@ -88,6 +89,7 @@ struct DrawerMenu: View {
             }
             .padding(.horizontal, Space.md)
             .padding(.bottom, Space.lg)
+            #endif
         }
         .padding(.horizontal, Space.sm)
         .padding(.top, Space.lg)
