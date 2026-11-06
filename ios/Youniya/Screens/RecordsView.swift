@@ -216,6 +216,7 @@ struct RecordsView: View {
             StarGlyph(floated: true)
                 .scaleEffect(40 / 18.14)
                 .frame(width: 40, height: 40)
+                .opacity(0.55)
                 .padding(.bottom, Space.sm)
             Text(title).textStyle(.h3).foregroundStyle(Color.textPrimary)
             Text(message).textStyle(.bodyS).foregroundStyle(Color.textSecondary)
@@ -228,7 +229,7 @@ struct RecordsView: View {
         }
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
-        .padding(.top, 72)
+        .padding(.top, 48)
     }
 
     // MARK: Calendar (116)
@@ -393,8 +394,7 @@ struct RecordsHero: View {
                     .position(s.center)
             }
         }
-        .frame(width: 342, height: 130)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .fitCanvas(width: 342, height: 130)
         .accessibilityHidden(true)
     }
 }
@@ -478,8 +478,7 @@ struct KeptHero: View {
                     .position(s.center)
             }
         }
-        .frame(width: 342, height: 150)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .fitCanvas(width: 342, height: 150)
         .accessibilityHidden(true)
     }
 }

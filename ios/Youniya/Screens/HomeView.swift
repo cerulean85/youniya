@@ -81,6 +81,13 @@ private struct HeroConstellation: View {
     ]
 
     var body: some View {
+        // A 342pt Figma canvas, scaled down on narrower phones (SE).
+        canvas
+            .fitCanvas(width: 342, height: 150)
+            .accessibilityHidden(true)
+    }
+
+    private var canvas: some View {
         ZStack(alignment: .topLeading) {
             Image(.heroLine)
                 .resizable()
@@ -96,8 +103,6 @@ private struct HeroConstellation: View {
             }
         }
         .frame(width: 342, height: 150, alignment: .topLeading)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityHidden(true)
     }
 }
 

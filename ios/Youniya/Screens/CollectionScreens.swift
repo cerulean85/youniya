@@ -90,10 +90,10 @@ struct CollectionView: View {
                 EmptyStateView(title: "곁에 둔 별이 아직 없어요",
                                message: "우주 광장에서 마음이 닿은 별을 곁에 두면\n여기에 모여요.",
                                action: ("우주 광장 둘러보기", .outline, onPlaza))
-                    .padding(.top, 72)
+                    .padding(.top, 48)
             } else {
                 EmptyStateView(title: "아직 띄운 별이 없어요", message: "별을 띄우면 이곳에 모여요.")
-                    .padding(.top, 72)
+                    .padding(.top, 48)
             }
         } else {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Space.md), count: 3), spacing: Space.md) {
@@ -150,7 +150,7 @@ struct CollectionView: View {
             // 96
             EmptyStateView(title: "아직 그린 성운이 없어요",
                            message: "별이 3개 이상 모이면 이어서\n나만의 성운을 그릴 수 있어요.")
-                .padding(.top, 72)
+                .padding(.top, 48)
         }
         LazyVGrid(columns: [GridItem(.flexible(), spacing: Space.md), GridItem(.flexible(), spacing: Space.md)], spacing: Space.md) {
             if filter != .kept {

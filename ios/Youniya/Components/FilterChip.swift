@@ -23,24 +23,3 @@ struct FilterChip: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
-
-/// Figma `Tag` used as a small segmented choice (82 range): solid violet when on.
-struct RangeTag: View {
-    var title: String
-    var isSelected: Bool
-    var action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .textStyle(.labelS)
-                .foregroundStyle(isSelected ? Color.white : Color.textSecondary)
-                .padding(.horizontal, Space.md)
-                .padding(.vertical, Space.xs)
-                .background(isSelected ? Color.hex(0x8555EF) : Color.bgSurfaceRaised, in: .capsule)
-                .contentShape(.capsule)
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
-}

@@ -29,6 +29,34 @@ struct DrawerMenu: View {
     ]
 
     var body: some View {
+        // Scrolls when the list is taller than the screen (iPhone SE), so the
+        // drawer never grows the layout and pushes the tab bar down.
+        GeometryReader { geo in
+            ScrollView {
+                list.frame(minHeight: geo.size.height, alignment: .topLeading)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollIndicators(.hidden)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background {
+            UnevenRoundedRectangle(topLeadingRadius: Radius.xl, bottomLeadingRadius: Radius.xl)
+                .fill(Color.bgSurfaceRaised)
+                .overlay {
+                    CosmosBackground(seed: "menu")
+                        .clipShape(UnevenRoundedRectangle(topLeadingRadius: Radius.xl, bottomLeadingRadius: Radius.xl))
+                }
+                .overlay(
+                    UnevenRoundedRectangle(topLeadingRadius: Radius.xl, bottomLeadingRadius: Radius.xl)
+                        .strokeBorder(Color.borderDefault, lineWidth: 1)
+                )
+                // Elevation/Card
+                .shadow(color: .black.opacity(0.4), radius: 12, y: 8)
+                .ignoresSafeArea()
+        }
+    }
+
+    private var list: some View {
         VStack(alignment: .leading, spacing: 2) {
             ForEach(items) { item in
                 Button { onSelect(item.title) } label: { row(item) }
@@ -57,22 +85,6 @@ struct DrawerMenu: View {
         }
         .padding(.horizontal, Space.sm)
         .padding(.top, 60)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background {
-            UnevenRoundedRectangle(topLeadingRadius: Radius.xl, bottomLeadingRadius: Radius.xl)
-                .fill(Color.bgSurfaceRaised)
-                .overlay {
-                    CosmosBackground(seed: "menu")
-                        .clipShape(UnevenRoundedRectangle(topLeadingRadius: Radius.xl, bottomLeadingRadius: Radius.xl))
-                }
-                .overlay(
-                    UnevenRoundedRectangle(topLeadingRadius: Radius.xl, bottomLeadingRadius: Radius.xl)
-                        .strokeBorder(Color.borderDefault, lineWidth: 1)
-                )
-                // Elevation/Card
-                .shadow(color: .black.opacity(0.4), radius: 12, y: 8)
-                .ignoresSafeArea()
-        }
     }
 
     private func row(_ item: Item) -> some View {

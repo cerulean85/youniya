@@ -220,6 +220,8 @@ struct MainView: View {
                            onTurnOn: {
                                if let star = model.stars.first(where: { $0.isFloated && $0.report == nil }) {
                                    openReport(star)
+                               } else {
+                                   replace(with: .compose())
                                }
                            })
                 .edgeSwipeBack(onBack: pop)

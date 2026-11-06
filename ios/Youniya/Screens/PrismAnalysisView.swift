@@ -37,7 +37,7 @@ struct PrismAnalysisView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             PrismStage(p: p, now: now)
-                .frame(width: 342, height: 300)
+                .fitCanvas(width: 342, height: 300, alignment: .center)
                 .accessibilityHidden(true)
 
             VStack(spacing: Space.sm) {

@@ -113,7 +113,7 @@ struct PlazaNebulaField: View {
                                action: ("나와 비슷한 결 둘러보기", .outline, {
                                    withAnimation(.snappy) { filter = .similar; selected = nil }
                                }))
-                    .padding(.top, 72)
+                    .padding(.top, 48)
             } else {
             ZStack(alignment: .topTrailing) {
                 GeometryReader { geo in

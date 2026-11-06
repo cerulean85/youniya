@@ -49,7 +49,8 @@ struct RewriteView: View {
                         }
                     }
                     .padding(Space.lg)
-                    .frame(minHeight: 260, maxHeight: .infinity, alignment: .top)
+                    // Figma 14/105: a 260pt editor; the buttons stay at the bottom.
+                    .frame(height: 260, alignment: .top)
                     .focusCard(angle: .init(x: 0.25, y: 0), end: .init(x: 0.75, y: 1))
 
                 Text("\(text.count.formatted()) / \(AppModel.minFloatLength.formatted())자")
@@ -61,6 +62,8 @@ struct RewriteView: View {
                 if canPublish && text.count < AppModel.minFloatLength {
                     NoticeBanner(message: "\(AppModel.minFloatLength.formatted())자부터 별로 띄울 수 있어요")
                 }
+
+                Spacer(minLength: 0)
 
                 HStack(spacing: Space.md) {
                     Button("조용히 품기") { publish(floated: false) }

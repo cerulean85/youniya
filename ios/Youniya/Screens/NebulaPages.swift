@@ -178,7 +178,8 @@ struct BrightnessFlowView: View {
 
                     HStack(spacing: Space.sm) {
                         ForEach(Range.allCases, id: \.self) { r in
-                            RangeTag(title: r.rawValue, isSelected: r == range) {
+                            // Figma 82/109: dot chips, like the plaza filters.
+                            DotChip(title: r.rawValue, isSelected: r == range) {
                                 withAnimation(.snappy) { range = r }
                             }
                         }
@@ -188,7 +189,7 @@ struct BrightnessFlowView: View {
                         // 109
                         EmptyStateView(title: "흐름을 그리기엔 별이 조금 적어요",
                                        message: "지금은 별이 \(points.count)개예요. 별이 더 모이면\n흐름을 선으로 이어 보여 드릴게요.")
-                            .padding(.top, Space.xxl)
+                            .padding(.top, Space.xxxl)
                     } else {
                         trendCard
                         if !monthly.isEmpty { monthlyCard }

@@ -205,7 +205,7 @@ struct PlazaHero: View {
                 .twinkle(Twinkle(duration: 2, keys: [(0, 1), (0.155, 0.3), (0.705, 1), (1, 0.3)]), scale: StarScale.dim)
                 .position(x: 171, y: 70)
         }
-        .frame(width: 342, height: 140)
+        .fitCanvas(width: 342, height: 140)
         .accessibilityHidden(true)
     }
 }

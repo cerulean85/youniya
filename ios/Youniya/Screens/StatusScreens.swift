@@ -263,9 +263,11 @@ struct EmptyStateView: View {
 
     var body: some View {
         VStack(spacing: Space.md) {
+            // Figma empty states: the violet glyph, dimmed.
             StarGlyph(floated: true)
                 .scaleEffect(40 / 18.14)
                 .frame(width: 40, height: 40)
+                .opacity(0.55)
                 .padding(.bottom, Space.sm)
                 .accessibilityHidden(true)
             Text(title).textStyle(.h3).foregroundStyle(Color.textPrimary)

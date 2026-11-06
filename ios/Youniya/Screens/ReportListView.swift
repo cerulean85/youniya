@@ -99,7 +99,7 @@ struct ReportListView: View {
                         // 98
                         EmptyStateView(title: "아직 받은 리포트가 없어요",
                                        message: "마음 망원경을 켜면 일주일 동안의 별을\n모아 리포트로 보여 드려요.")
-                            .padding(.top, Space.xxl)
+                            .padding(.top, Space.sm)
                     } else {
                         VStack(spacing: Space.md) {
                             ForEach(weeks) { week in
@@ -120,9 +120,9 @@ struct ReportListView: View {
             .scrollIndicators(.hidden)
 
             if weeks.isEmpty {
+                // Figma 98: always on; with nothing floated yet it starts a new star.
                 Button("마음 망원경 켜기", action: onTurnOn)
                     .buttonStyle(.primary)
-                    .disabled(!model.stars.contains(where: \.isFloated))
                     .padding(.horizontal, Space.xl)
                     .padding(.bottom, Space.xl)
             } else {
@@ -326,8 +326,7 @@ struct CoinHero: View {
                 .position(c)
             }
         }
-        .frame(width: 342, height: 120)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .fitCanvas(width: 342, height: 120)
         .accessibilityHidden(true)
     }
 }
