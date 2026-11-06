@@ -44,6 +44,9 @@ class FakeApple:
     def jws(self, sign_with=None, chain=None, **overrides):
         payload = {"bundleId": BUNDLE, "productId": "coin_120", "transactionId": str(uuid.uuid4().int)[:16],
                    "quantity": 1, "type": "Consumable", "environment": "Production"} | overrides
+        return self.sign(payload, sign_with, chain)
+
+    def sign(self, payload, sign_with=None, chain=None):
         x5c = [base64.b64encode(c.public_bytes(serialization.Encoding.DER)).decode()
                for c in (chain or (self.leaf, self.inter, self.root))]
         return jwt.encode(payload, sign_with or self.leaf_key, algorithm="ES256", headers={"x5c": x5c})
@@ -59,7 +62,7 @@ def test_bundled_root_is_apple_g3():
 
 
 def test_valid_transaction(apple):
-    tx = StoreKitVerifier(BUNDLE, root=apple.root).verify(apple.jws())
+    tx = StoreKitVerifier(BUNDLE, root=apple.root).verify_transaction(apple.jws())
     assert tx["productId"] == "coin_120"
 
 
@@ -79,13 +82,13 @@ def test_rejected_transactions(apple, case):
         "garbage": lambda: "not.a.jws",
     }[case]()
     with pytest.raises(PurchaseInvalid):
-        v.verify(jws)
+        v.verify_transaction(jws)
 
 
 def test_sandbox_can_be_refused(apple):
-    assert StoreKitVerifier(BUNDLE, root=apple.root).verify(apple.jws(environment="Sandbox"))
+    assert StoreKitVerifier(BUNDLE, root=apple.root).verify_transaction(apple.jws(environment="Sandbox"))
     with pytest.raises(PurchaseInvalid):
-        StoreKitVerifier(BUNDLE, allow_sandbox=False, root=apple.root).verify(apple.jws(environment="Sandbox"))
+        StoreKitVerifier(BUNDLE, allow_sandbox=False, root=apple.root).verify_transaction(apple.jws(environment="Sandbox"))
 
 
 def test_purchase_endpoint(make_app, apple):

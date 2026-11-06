@@ -11,6 +11,7 @@ from ..models import CoinEntry, User
 from ..rules import COIN_PACKAGES
 from ..storekit import PurchaseInvalid
 from ..views import iso
+from ..ratelimit import per_user
 
 router = APIRouter(prefix="/v1/coins", tags=["coins"])
 
@@ -40,13 +41,13 @@ def history(user: User = Depends(consented_user), db: Session = Depends(get_db))
                       for r in rows]}
 
 
-@router.post("/purchases")
+@router.post("/purchases", dependencies=[per_user("purchase", 30, 3600)])
 def purchase(body: PurchaseIn, request: Request, user: User = Depends(consented_user),
              db: Session = Depends(get_db)):
     verifier = request.app.state.storekit
     if body.signed_transaction and verifier:
         try:
-            tx = verifier.verify(body.signed_transaction)
+            tx = verifier.verify_transaction(body.signed_transaction)
         except PurchaseInvalid:
             raise ApiError(422, "purchase_invalid", "결제를 확인하지 못했어요. 코인은 지급되지 않았어요.")
         token = tx.get("appAccountToken")
@@ -72,3 +73,41 @@ def purchase(body: PurchaseIn, request: Request, user: User = Depends(consented_
     coins.add(db, user, added, "코인 충전", transaction_id=transaction_id)
     db.commit()
     return {"coins": user.coins, "added": added, "already_processed": False}
+
+
+notifications = APIRouter(prefix="/v1/storekit", tags=["coins"])
+
+
+class NotificationIn(BaseModel):
+    signedPayload: str = Field(..., max_length=50000)
+
+
+@notifications.post("/notifications")
+def app_store_notification(body: NotificationIn, request: Request, db: Session = Depends(get_db)):
+    """App Store Server Notifications V2 (set this URL in App Store Connect).
+    REFUND takes the purchase's coins back, even below zero: coins already spent were used."""
+    verifier = request.app.state.storekit
+    if verifier is None:
+        raise ApiError(404, "not_found", "찾지 못했어요.")
+    try:
+        note = verifier.verify_signed(body.signedPayload)
+        data = note.get("data") or {}
+        if data.get("bundleId") != verifier.bundle_id:
+            raise PurchaseInvalid("another app's notification")
+        if note.get("notificationType") != "REFUND":
+            return {"handled": False}  # 200 so Apple stops resending
+        tx = verifier.verify_signed(data["signedTransactionInfo"])
+    except (PurchaseInvalid, KeyError):
+        raise ApiError(400, "invalid_notification", "알림을 확인하지 못했어요.")
+
+    transaction_id = str(tx["transactionId"])
+    purchase = db.scalar(select(CoinEntry).where(CoinEntry.transaction_id == transaction_id))
+    if purchase is None:
+        return {"handled": False}
+    refund_id = f"refund:{transaction_id}"
+    if db.scalar(select(CoinEntry.id).where(CoinEntry.transaction_id == refund_id)) is None:
+        user = db.get(User, purchase.user_id)
+        if user is not None:
+            coins.add(db, user, -purchase.delta, "환불", transaction_id=refund_id)
+            db.commit()
+    return {"handled": True}

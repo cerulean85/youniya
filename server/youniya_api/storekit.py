@@ -38,8 +38,8 @@ class StoreKitVerifier:
         self.allow_sandbox = allow_sandbox
         self.root = root or _apple_root()
 
-    def verify(self, jws: str) -> dict:
-        """Returns the transaction payload, or raises PurchaseInvalid."""
+    def verify_signed(self, jws: str) -> dict:
+        """Any App Store JWS (transaction or server notification): chain and signature only."""
         try:
             header = jwt.get_unverified_header(jws)
             if header.get("alg") != "ES256" or len(header.get("x5c", [])) != 3:
@@ -55,11 +55,15 @@ class StoreKitVerifier:
                                            ec.ECDSA(cert.signature_hash_algorithm))
             leaf.extensions.get_extension_for_oid(LEAF_OID)
             intermediate.extensions.get_extension_for_oid(INTERMEDIATE_OID)
-            payload = jwt.decode(jws, leaf.public_key(), algorithms=["ES256"])
+            return jwt.decode(jws, leaf.public_key(), algorithms=["ES256"])
         except PurchaseInvalid:
             raise
         except (jwt.InvalidTokenError, InvalidSignature, x509.ExtensionNotFound, ValueError, TypeError, KeyError) as e:
             raise PurchaseInvalid(str(e) or type(e).__name__) from e
+
+    def verify_transaction(self, jws: str) -> dict:
+        """A purchase to pay out: signed, this app's, not refunded, a consumable."""
+        payload = self.verify_signed(jws)
 
         if payload.get("bundleId") != self.bundle_id:
             raise PurchaseInvalid("another app's transaction")

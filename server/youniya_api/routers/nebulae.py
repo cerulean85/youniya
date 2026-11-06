@@ -12,6 +12,7 @@ from ..rules import MAX_GUEST_STARS, MIN_NEBULA_STARS, NEBULA_SILHOUETTES, STORY
 from ..security import Cipher
 from ..telescope import story_bridges
 from ..views import iso
+from ..ratelimit import per_user
 
 router = APIRouter(prefix="/v1/nebulae", tags=["nebulae"])
 
@@ -159,7 +160,7 @@ def story(nebula_id: str, user: User = Depends(consented_user), db: Session = De
     return _story(n, _stars(db, n), cipher)
 
 
-@router.post("/{nebula_id}/story/polish")
+@router.post("/{nebula_id}/story/polish", dependencies=[per_user("polish", 10, 3600)])
 def polish(nebula_id: str, request: Request, user: User = Depends(consented_user),
            db: Session = Depends(get_db), cipher: Cipher = Depends(get_cipher)):
     """83 서사 다듬기 · 코인 20: adds lines only at the ✦ places."""

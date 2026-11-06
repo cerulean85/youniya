@@ -404,8 +404,29 @@
           "account"
         ],
         "summary": "Export",
-        "description": "93 텍스트 파일로: every star and nebula, as plain text. The file stays on the device.",
+        "description": "93 텍스트 파일로 · PDF로: every star and nebula. The file stays on the device.",
         "operationId": "export_v1_me_export_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "text",
+                "pdf"
+              ],
+              "type": "string",
+              "default": "text",
+              "title": "Format"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -414,13 +435,18 @@
                 "schema": {}
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
+        }
       }
     },
     "/v1/inquiries": {
@@ -1271,6 +1297,46 @@
             "HTTPBearer": []
           }
         ]
+      }
+    },
+    "/v1/storekit/notifications": {
+      "post": {
+        "tags": [
+          "coins"
+        ],
+        "summary": "App Store Notification",
+        "description": "App Store Server Notifications V2 (set this URL in App Store Connect).\nREFUND takes the purchase's coins back, even below zero: coins already spent were used.",
+        "operationId": "app_store_notification_v1_storekit_notifications_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/nebulae": {
@@ -2364,6 +2430,217 @@
           }
         ]
       }
+    },
+    "/v1/admin/reports": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Reported Lines",
+        "description": "Lines with at least one report, most reported first.",
+        "operationId": "reported_lines_v1_admin_reports_get",
+        "parameters": [
+          {
+            "name": "x-admin-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/lines/{line_id}/{action}": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Moderate Line",
+        "operationId": "moderate_line_v1_admin_lines__line_id___action__post",
+        "parameters": [
+          {
+            "name": "line_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Line Id"
+            }
+          },
+          {
+            "name": "action",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "hide",
+                "restore"
+              ],
+              "type": "string",
+              "title": "Action"
+            }
+          },
+          {
+            "name": "x-admin-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/inquiries": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Inquiries",
+        "operationId": "inquiries_v1_admin_inquiries_get",
+        "parameters": [
+          {
+            "name": "x-admin-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/logs": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Logs",
+        "operationId": "logs_v1_admin_logs_get",
+        "parameters": [
+          {
+            "name": "x-admin-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2563,6 +2840,20 @@
           "star_ids"
         ],
         "title": "NebulaIn"
+      },
+      "NotificationIn": {
+        "properties": {
+          "signedPayload": {
+            "type": "string",
+            "maxLength": 50000,
+            "title": "Signedpayload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "signedPayload"
+        ],
+        "title": "NotificationIn"
       },
       "PurchaseIn": {
         "properties": {

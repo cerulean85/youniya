@@ -13,6 +13,7 @@ from ..deps import ApiError, get_db
 from ..models import RefreshToken, User
 from ..security import REFRESH_TTL, hash_token, issue_access_token, new_refresh_token
 from ..views import aware
+from ..ratelimit import per_ip
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
 
@@ -42,7 +43,7 @@ def _tokens(db: Session, user: User, secret: str) -> dict:
     }
 
 
-@router.post("/refresh")
+@router.post("/refresh", dependencies=[per_ip("auth", 30, 60)])
 def refresh(body: Refresh, request: Request, db: Session = Depends(get_db)):
     """Rotates the refresh token: the old one stops working."""
     row = db.get(RefreshToken, hash_token(body.refresh_token))
@@ -59,7 +60,7 @@ def logout(body: Refresh, db: Session = Depends(get_db)):
     db.commit()
 
 
-@router.post("/dev")
+@router.post("/dev", dependencies=[per_ip("auth", 30, 60)])
 def dev_sign_in(body: DevSignIn, request: Request, db: Session = Depends(get_db)):
     """Development only (DEV_LOGIN=1): the same name is always the same account."""
     if not request.app.state.settings.dev_login:
@@ -77,7 +78,7 @@ def _session_for(db: Session, provider: str, sub: str, secret: str) -> dict:
 
 
 # Registered last so /refresh, /logout and /dev are matched first.
-@router.post("/{provider}")
+@router.post("/{provider}", dependencies=[per_ip("auth", 30, 60)])
 def sign_in(provider: Literal["apple", "google"], body: SignIn, request: Request, db: Session = Depends(get_db)):
     try:
         sub = request.app.state.verifier.verify(provider, body.id_token)

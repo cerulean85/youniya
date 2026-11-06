@@ -16,6 +16,7 @@ from ..rules import TELESCOPE_COST
 from ..security import Cipher
 from ..telescope import StarText, build_report
 from ..views import iso, local
+from ..ratelimit import per_user
 
 router = APIRouter(prefix="/v1/telescope", tags=["telescope"])
 
@@ -46,7 +47,7 @@ def offer(user: User = Depends(consented_user)):
             "enough": free or user.coins >= TELESCOPE_COST}
 
 
-@router.post("/reports", status_code=201)
+@router.post("/reports", status_code=201, dependencies=[per_user("telescope", 10, 3600)])
 def create_report(body: ReportIn, request: Request, user: User = Depends(consented_user),
                   db: Session = Depends(get_db), cipher: Cipher = Depends(get_cipher)):
     stmt = select(Star).where(Star.user_id == user.id, Star.state == "floated")

@@ -71,6 +71,7 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
 | `MAINTENANCE_START`, `MAINTENANCE_END` | (none) | ISO times; without an offset they are read as KST. Every request gets 503 in between (41) |
 | `APPLE_BUNDLE_ID` | (none) | The app's bundle id. Required for verified coin purchases; without it purchases are refused |
 | `ALLOW_SANDBOX_PURCHASES` | `1` | Accept sandbox transactions. App Review and TestFlight buy in the sandbox, so keep this on in production |
+| `ADMIN_TOKEN` | (none) | `X-Admin-Token` for `/v1/admin`. Without it the operator API answers 404 |
 | `TRUST_PURCHASES` | off | `1` adds coins from `product_id` + `transaction_id` without a store. **Development only** |
 
 ## Conventions
@@ -86,13 +87,15 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
 | :--- | :--- | :--- |
 | App | `GET /v1/app/status` | 40, 41 |
 | Auth | `POST /v1/auth/{apple,google}`, `/refresh`, `/logout` | 02, 39 |
-| Account | `GET /v1/me`, `POST /v1/me/consent`, `PATCH /v1/me/settings`, `DELETE /v1/me`, `GET /v1/me/export`, `GET·DELETE /v1/me/shares`, `POST /v1/inquiries` | 11, 87, 91–94, 113, 114, 32 |
+| Account | `GET /v1/me`, `POST /v1/me/consent`, `PATCH /v1/me/settings`, `DELETE /v1/me`, `GET /v1/me/export?format=text\|pdf`, `GET·DELETE /v1/me/shares`, `POST /v1/inquiries` | 11, 87, 91–94, 113, 114, 32 |
 | Stars | `POST /v1/stars` (`mode: float \| keep`), `GET /v1/stars` (`state`, `mood`, `q`, `month`, `before`), `GET /v1/stars/summary`, `GET·DELETE /v1/stars/{id}`, `POST /v1/stars/{id}/float` | 05, 07, 12–16, 36, 104, 105, 115–119 |
 | Draft | `GET·PUT·DELETE /v1/drafts/current` | 34 |
 | Growth | `GET /v1/starlight/trend`, `GET /v1/growth` | 08, 65, 66, 82, 86, 109 |
 | Telescope | `GET /v1/telescope/offer`, `POST·GET /v1/telescope/reports`, `GET /v1/telescope/reports/{id}`, `POST …/save` | 10, 24–27, 29, 88, 98 |
 | Coins | `GET /v1/coins`, `GET /v1/coins/history`, `POST /v1/coins/purchases` | 28, 33, 38, 102, 108 |
 | Nebulae | `POST·GET /v1/nebulae`, `GET /v1/nebulae/guest-candidates`, `GET /v1/nebulae/{id}`, `GET /v1/nebulae/{id}/story`, `POST …/story/polish`, `PUT·DELETE …/share` | 51–55, 70, 71, 80, 83–85, 96 |
+| Refunds | `POST /v1/storekit/notifications` (App Store Server Notifications V2 URL) | — |
+| Operator | `GET /v1/admin/reports`, `POST /v1/admin/lines/{id}/hide·restore`, `GET /v1/admin/inquiries`, `GET /v1/admin/logs` | — |
 | Plaza | `POST /v1/plaza/privacy-scan`, `PUT·DELETE /v1/stars/{id}/share`, `GET /v1/plaza/stars[/{id}]`, `GET /v1/plaza/nebulae[/{id}]`, `PUT·DELETE /v1/plaza/{star\|nebula}/{id}/resonance` and `…/beside`, `GET·POST /v1/plaza/nebulae/{id}/lines`, `POST /v1/plaza/lines/{id}/report`, `GET /v1/plaza/tonight` | 09, 19–22, 55, 69, 72–75, 79, 99–101, 103, 106, 107 |
 
 ### Behaviour worth knowing
@@ -113,11 +116,12 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
   - A shared star carries only the one masked sentence its owner chose. A shared nebula carries only its outline, colours, depth and an optional masked sentence.
   - Others never see scores, ranks or 공명 counts. Owners see their counts in `GET /v1/me/shares`.
   - A line someone reports disappears for them at once. Three reports hide it for everyone.
+- **Refunds:** A REFUND notification takes that purchase's coins back once, even below zero (the coins were already spent).
+- **Rate limits:** `429 rate_limited` with `retry_after` seconds. Limits per user, per hour: floating a star 30, telescope 10, story polish 10, lines 30, reports 30, purchases 30, inquiries 5. The privacy scan allows 60 per minute, and sign-in allows 30 per minute per IP. Counters live in memory, so they are per process.
+- **Operator API:** Every operator read or action is written to `admin_logs` (Protoss 3장).
+- **PDF:** The export embeds NanumGothic (SIL OFL, `youniya_api/fonts/OFL.txt`), so Korean renders anywhere.
 
 ## Not done yet
 
-- **Refund notifications:** App Store Server Notifications (REFUND) are not received yet, so coins from a refunded purchase are not taken back.
-- **PDF export (93):** Not done. Only the text file is.
-- **Rate limiting:** Not done.
-- **Operator tooling:** There are no tools for reported lines, inquiries, or the access log for viewing writing (Protoss 3장).
-- **Model scoring check:** The Protoss reliability protocol (`design.md` 6장) has not been run against the real model. The tests use the offline evaluator.
+- **Real model:** The server has not been connected to the real model (`GEMINI_API_KEY`). The Protoss reliability protocol (`design.md` 6장) has not been run yet.
+- **Shared rate limits:** Rate limits are kept in memory. With several server processes they need a shared store.

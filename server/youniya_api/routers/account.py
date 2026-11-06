@@ -9,10 +9,12 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from ..deps import current_user, get_cipher, get_db
+from ..export import StarEntry, as_pdf, as_text
 from ..models import Inquiry, Nebula, NebulaShare, Resonance, Star, StarlightLine, StarShare, User
 from ..rules import INQUIRY_KINDS, MOOD_LABELS, SKY_THEMES, SOUNDS
 from ..security import Cipher
 from ..views import iso, local
+from ..ratelimit import per_user
 
 router = APIRouter(prefix="/v1", tags=["account"])
 
@@ -126,27 +128,27 @@ def withdraw_all(user: User = Depends(current_user), db: Session = Depends(get_d
 
 
 @router.get("/me/export")
-def export(user: User = Depends(current_user), db: Session = Depends(get_db),
-           cipher: Cipher = Depends(get_cipher)):
-    """93 텍스트 파일로: every star and nebula, as plain text. The file stays on the device."""
-    lines = ["YOUNIYA 기록 내보내기", ""]
-    stars = db.scalars(select(Star).where(Star.user_id == user.id).order_by(Star.created_at)).all()
-    for s in stars:
+def export(format: Literal["text", "pdf"] = "text", user: User = Depends(current_user),
+           db: Session = Depends(get_db), cipher: Cipher = Depends(get_cipher)):
+    """93 텍스트 파일로 · PDF로: every star and nebula. The file stays on the device."""
+    rows = db.scalars(select(Star).where(Star.user_id == user.id).order_by(Star.created_at)).all()
+    stars = []
+    for s in rows:
         when = local(s.created_at).strftime("%Y년 %-m월 %-d일 %H:%M")
         state = f"별빛 {s.starlight}" if s.starlight is not None else "간직한 별"
-        lines += [f"■ {cipher.dec(s.title_enc)}", f"{when} · {MOOD_LABELS[s.mood]} · {state}", "",
-                  cipher.dec(s.body_enc), ""]
-    nebulae = db.scalars(select(Nebula).where(Nebula.user_id == user.id).order_by(Nebula.created_at)).all()
-    if nebulae:
-        lines += ["", "성운", ""]
-        titles = {s.id: cipher.dec(s.title_enc) for s in stars}
-        for n in nebulae:
-            lines.append(f"✦ {n.name}: " + ", ".join(titles.get(i, "") for i in n.star_ids if i in titles))
-    return Response("\n".join(lines), media_type="text/plain; charset=utf-8",
+        stars.append(StarEntry(cipher.dec(s.title_enc), f"{when} · {MOOD_LABELS[s.mood]} · {state}",
+                               cipher.dec(s.body_enc)))
+    titles = {s.id: cipher.dec(s.title_enc) for s in rows}
+    nebulae = [f"- {n.name}: " + ", ".join(titles[i] for i in n.star_ids if i in titles)
+               for n in db.scalars(select(Nebula).where(Nebula.user_id == user.id).order_by(Nebula.created_at))]
+    if format == "pdf":
+        return Response(as_pdf(stars, nebulae), media_type="application/pdf",
+                        headers={"Content-Disposition": 'attachment; filename="youniya-export.pdf"'})
+    return Response(as_text(stars, nebulae), media_type="text/plain; charset=utf-8",
                     headers={"Content-Disposition": 'attachment; filename="youniya-export.txt"'})
 
 
-@router.post("/inquiries", status_code=201)
+@router.post("/inquiries", status_code=201, dependencies=[per_user("inquiry", 5, 3600)])
 def inquire(body: InquiryIn, user: User = Depends(current_user), db: Session = Depends(get_db),
             cipher: Cipher = Depends(get_cipher)):
     row = Inquiry(user_id=user.id, kind=body.kind, email=body.email, body_enc=cipher.enc(body.body))

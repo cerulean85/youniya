@@ -10,7 +10,8 @@ from .config import Settings
 from .deps import ApiError
 from .models import Base
 from .prism import PrismEngine
-from .routers import account, auth, coins, nebulae, plaza, stars, telescope
+from .ratelimit import RateLimiter
+from .routers import account, admin, auth, coins, nebulae, plaza, stars, telescope
 from .security import Cipher, IdTokenVerifier
 from .storekit import StoreKitVerifier
 
@@ -42,6 +43,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.sessions = sessionmaker(engine, expire_on_commit=False)
     app.state.cipher = Cipher(settings.data_key)
+    app.state.limiter = RateLimiter()
     app.state.verifier = IdTokenVerifier({"apple": settings.apple_client_ids, "google": settings.google_client_ids})
     app.state.storekit = (StoreKitVerifier(settings.apple_bundle_id, settings.allow_sandbox_purchases)
                           if settings.apple_bundle_id else None)
@@ -83,8 +85,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "in_maintenance": in_maintenance(settings),
         }
 
-    for router in (auth.router, account.router, stars.router, telescope.router, coins.router, nebulae.router,
-                   plaza.router):
+    for router in (auth.router, account.router, stars.router, telescope.router, coins.router, coins.notifications,
+                   nebulae.router, plaza.router, admin.router):
         app.include_router(router)
     return app
 

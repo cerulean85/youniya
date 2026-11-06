@@ -15,6 +15,7 @@ from ..models import Beside, LineReport, NebulaShare, Resonance, Star, Starlight
 from ..rules import LINE_LIFETIME_HOURS, LINE_MAX_LENGTH, LINE_REPORT_REASONS
 from ..security import Cipher
 from ..views import KST, iso
+from ..ratelimit import per_user
 from .stars import owned_star
 
 router = APIRouter(prefix="/v1", tags=["plaza"])
@@ -41,7 +42,7 @@ class ReportIn(BaseModel):
     reason: Literal[LINE_REPORT_REASONS]  # type: ignore[valid-type]
 
 
-@router.post("/plaza/privacy-scan")
+@router.post("/plaza/privacy-scan", dependencies=[per_user("scan", 60, 60)])
 def privacy_scan(body: ScanIn, user: User = Depends(consented_user)):
     """20 공유 전 확인: "가려진 항목 2개 · 이름 1 · 장소 1"."""
     return privacy.scan(body.text)
@@ -215,7 +216,7 @@ def lines(share_id: str, user: User = Depends(consented_user), db: Session = Dep
             "max_length": LINE_MAX_LENGTH}
 
 
-@router.post("/plaza/nebulae/{share_id}/lines", status_code=201)
+@router.post("/plaza/nebulae/{share_id}/lines", status_code=201, dependencies=[per_user("lines", 30, 3600)])
 def leave_line(share_id: str, body: LineIn, user: User = Depends(consented_user), db: Session = Depends(get_db)):
     share = _nebula_share(db, share_id)
     if share.user_id == user.id:
@@ -237,7 +238,7 @@ def leave_line(share_id: str, body: LineIn, user: User = Depends(consented_user)
     return {"id": row.id, "text": row.text, "created_at": iso(row.created_at), "mine": True}
 
 
-@router.post("/plaza/lines/{line_id}/report")
+@router.post("/plaza/lines/{line_id}/report", dependencies=[per_user("report", 30, 3600)])
 def report_line(line_id: str, body: ReportIn, user: User = Depends(consented_user), db: Session = Depends(get_db)):
     """100 신고하기 → 101 신고를 받았어요. The reporter is never told to anyone."""
     line = db.get(StarlightLine, line_id)

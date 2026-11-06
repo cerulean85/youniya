@@ -15,6 +15,7 @@ from ..prism.filters import CRISIS_GUIDANCE, has_crisis_signal
 from ..rules import DEEP_DEPTH_SCORE, STAGE_NAMES, SUPERNOVA_STARLIGHT, growth_stage
 from ..security import Cipher
 from ..views import aware, iso, local, shared_star_ids, star_view
+from ..ratelimit import per_user
 
 router = APIRouter(prefix="/v1", tags=["stars"])
 
@@ -72,7 +73,7 @@ def _response(db: Session, star: Star, cipher: Cipher, crisis: bool) -> dict:
     return out
 
 
-@router.post("/stars", status_code=201)
+@router.post("/stars", status_code=201, dependencies=[per_user("prism", 30, 3600)])
 def create_star(body: StarIn, request: Request, user: User = Depends(consented_user),
                 db: Session = Depends(get_db), cipher: Cipher = Depends(get_cipher)):
     if body.rewrite_of:
@@ -93,7 +94,7 @@ def create_star(body: StarIn, request: Request, user: User = Depends(consented_u
     return _response(db, star, cipher, crisis)
 
 
-@router.post("/stars/{star_id}/float")
+@router.post("/stars/{star_id}/float", dependencies=[per_user("prism", 30, 3600)])
 def float_star(star_id: str, request: Request, user: User = Depends(consented_user),
                db: Session = Depends(get_db), cipher: Cipher = Depends(get_cipher)):
     """36 다시 시도, or floating a kept star later."""
