@@ -44,8 +44,11 @@ def balance(user: User = Depends(consented_user)):
 def history(user: User = Depends(consented_user), db: Session = Depends(get_db)):
     rows = db.scalars(select(CoinEntry).where(CoinEntry.user_id == user.id)
                       .order_by(CoinEntry.created_at.desc())).all()
+    # A refund that found no coins left to take stays in the DB (it stops a second take-back)
+    # but isn't shown: there is nothing to tell the user.
     return {"items": [{"id": r.id, "kind": _kind(r), "title": r.title, "delta": r.delta,
-                       "created_at": iso(r.created_at)} for r in rows]}
+                       "created_at": iso(r.created_at)} for r in rows
+                      if not (_kind(r) == "refund" and r.delta == 0)]}
 
 
 def _kind(entry: CoinEntry) -> str:

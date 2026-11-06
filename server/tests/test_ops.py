@@ -121,3 +121,34 @@ def test_balance_constraint_and_startup_fix(make_app):
         with pytest.raises(IntegrityError):
             db.execute(text("UPDATE users SET coins = -1"))
             db.commit()
+
+
+def test_empty_refund_row_is_hidden_but_kept(make_app):
+    """Nothing left to take back: no −0 row in the history, yet a second REFUND still changes nothing."""
+    apple = FakeApple()
+    app = make_app(trust_purchases=False, apple_bundle_id=BUNDLE)
+    app.state.storekit = StoreKitVerifier(BUNDLE, root=apple.root)
+    client = TestClient(app)
+    h = sign_in(client)
+    client.post("/v1/coins/purchases", json={"signed_transaction": apple.jws(transactionId="88", productId="coin_50")},
+                headers=h)
+    float_star(client, h)
+    client.post("/v1/telescope/reports", json={}, headers=h)  # free
+    client.post("/v1/telescope/reports", json={}, headers=h)  # 30 spent → 20 left
+    with app.state.sessions() as db:  # spend the rest some other way
+        from sqlalchemy import update
+
+        from youniya_api.models import User
+        db.execute(update(User).values(coins=0))
+        db.commit()
+
+    for _ in range(2):
+        client.post("/v1/storekit/notifications", json={"signedPayload": _refund_note(apple, "88")})
+    kinds = [e["kind"] for e in client.get("/v1/coins/history", headers=h).json()["items"]]
+    assert "refund" not in kinds
+    with app.state.sessions() as db:
+        from sqlalchemy import select
+
+        from youniya_api.models import CoinEntry
+        rows = db.scalars(select(CoinEntry).where(CoinEntry.transaction_id == "refund:88")).all()
+        assert [r.delta for r in rows] == [0]
