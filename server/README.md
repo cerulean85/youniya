@@ -125,10 +125,11 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
   - The App Store Connect product ids must be the package keys: `coin_50`, `coin_120` and `coin_300`. `quantity` multiplies the coins.
   - The same transaction never pays twice. A retry answers `already_processed: true`.
   - Send `"consumption_consent": true` when the buyer saw and accepted the 28 notice ("쓴 코인은 환불되지 않아요. 환불을 요청하면 코인 사용 내역이 앱 스토어에 전달돼요."). It is stored per purchase.
-- **Refund requests** (CONSUMPTION_REQUEST, Figma 46 policy: spent coins aren't refunded):
+- **Refund requests** (CONSUMPTION_REQUEST, Figma 46 policy):
+  - A refund can be asked within 7 days of purchase. It is granted only if taking back the purchase's coins leaves the balance at 0 or more.
   - For a purchase with consent, the server sends Send Consumption Information V2 to Apple.
-  - `consumptionPercentage` is spent ÷ received, in milli-percent. Spent means received − min(received, balance).
-  - `refundPreference` is `DECLINE` when any coin was spent. With nothing spent, it is `GRANT_FULL` within 7 days of purchase and `DECLINE` after that.
+  - `refundPreference` is `GRANT_FULL` within 7 days when balance ≥ coins received, and `DECLINE` otherwise.
+  - `consumptionPercentage` is the share actually used, in milli-percent: received − min(received, balance), divided by received.
   - Without consent, nothing is sent; Apple requires that.
   - If Apple refunds anyway, the REFUND rule applies: the coins left are taken back, and the balance stops at 0.
 - **Quotes:** Every sentence shown back to the user (impact quote, evidence, signals, story) is checked to appear unchanged in their writing.

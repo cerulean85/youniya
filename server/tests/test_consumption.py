@@ -100,3 +100,17 @@ def test_api_token_claims():
     assert jwt.get_unverified_header(token) == {"alg": "ES256", "kid": "KEY123", "typ": "JWT"}
     claims = jwt.decode(token, key.public_key(), algorithms=["ES256"], audience="appstoreconnect-v1")
     assert claims["iss"] == "issuer-1" and claims["bid"] == BUNDLE and claims["exp"] - claims["iat"] <= 3600
+
+
+def _purchase(coins, days_ago=1):
+    return CoinEntry(delta=coins, created_at=datetime.now(timezone.utc) - timedelta(days=days_ago))
+
+
+def test_refund_granted_only_if_the_balance_stays_at_zero_or_more():
+    """Figma 46: 50 + 120 bought, 30 spent (balance 140): refunding the 120 leaves 20 → granted."""
+    now = datetime.now(timezone.utc)
+    assert consumption_info(_purchase(120), balance=140, now=now)["refundPreference"] == "GRANT_FULL"
+    assert consumption_info(_purchase(120), balance=120, now=now)["refundPreference"] == "GRANT_FULL"
+    declined = consumption_info(_purchase(120), balance=119, now=now)
+    assert (declined["refundPreference"], declined["consumptionPercentage"]) == ("DECLINE", 833)
+    assert consumption_info(_purchase(120, days_ago=8), balance=500, now=now)["refundPreference"] == "DECLINE"

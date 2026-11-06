@@ -137,8 +137,9 @@ def app_store_notification(body: NotificationIn, request: Request, db: Session =
 
 
 def consumption_info(purchase: CoinEntry, balance: int, now: datetime) -> dict:
-    """Policy (Figma 46): spent coins are not refunded; unspent coins within 7 days of purchase are.
-    Spent = received − min(received, balance), the same measure the REFUND take-back uses."""
+    """Policy (Figma 46): a refund may be asked within 7 days of purchase, and is granted only if
+    taking back this purchase's coins leaves the balance at 0 or more.
+    consumptionPercentage reports what was actually used: received − min(received, balance)."""
     received = purchase.delta
     spent = received - min(received, max(balance, 0))
     within_week = now - aware(purchase.created_at) <= timedelta(days=REFUND_WINDOW_DAYS)
@@ -146,7 +147,7 @@ def consumption_info(purchase: CoinEntry, balance: int, now: datetime) -> dict:
         "customerConsented": True,
         "consumptionPercentage": round(spent * 100000 / received),  # milli-percent: 25% = 25000
         "deliveryStatus": "DELIVERED",
-        "refundPreference": "GRANT_FULL" if spent == 0 and within_week else "DECLINE",
+        "refundPreference": "GRANT_FULL" if within_week and balance >= received else "DECLINE",
         "sampleContentProvided": False,
     }
 
