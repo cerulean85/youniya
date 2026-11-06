@@ -1,0 +1,118 @@
+# YOUNIYA API
+
+The server behind the YOUNIYA iOS app: stars, the starlight prism, the mind telescope, nebulae, coins and the plaza.
+
+The screens come from the Figma `YOUNIYA` file (Mobile page). The scoring engine, data policy and coin rules come from the Protoss specs (`~/apps/protoss`).
+
+## How YOUNIYA maps to Protoss
+
+| YOUNIYA (screen) | Protoss (spec) |
+| :--- | :--- |
+| 별 띄우기 → 별빛 프리즘 (06, 07) | 심리 펀칭 머신 (`psy-punch-machine/design.md`) |
+| 별빛 0–999 | 타격 점수 0–999 |
+| 별의 깊이 · 빛의 선명함 · 마음의 무게 | 직면 깊이(400) · 명명 정확도(300) · 귀인 소유권(300) |
+| 깊이 N단계 | 경험 깊이 7단계 |
+| 초신성 (별빛 900 이상) | CRITICAL HIT (900–999) |
+| 조용히 간직하기 | 드롭 모드 |
+| 마음 망원경 (10, 24–27, 88) | 인지 레이더 (`psy-cognitive-radar`) |
+| 성운 · 성운 이야기 (51–55, 70, 83) | 서사 돔 (`psy-narrative-dome`) |
+| 우주 광장 · 공명 | 광장 · 공명(Echo) |
+
+The prism keeps the Protoss pipeline:
+
+1. Pre-validation
+2. Safety interlock
+3. Three independent model calls
+4. The median of each measure
+5. `min(999, D + N + O)`
+
+YOUNIYA-only rules come from the screens and `ios/Youniya/App/AppModel.swift`:
+
+- 1,000 characters to float a star.
+- Floating a star is free.
+- The telescope costs 30 coins, and the first one is free.
+- Story polish costs 20 coins.
+- 별빛 한 줄 is 60 characters, one per nebula, and fades after a day.
+
+## Run
+
+```sh
+uv venv .venv && uv pip install --python .venv/bin/python -r pyproject.toml --extra dev
+
+export JWT_SECRET=$(python -c "import secrets; print(secrets.token_urlsafe(48))")
+export DATA_ENCRYPTION_KEY=$(python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
+.venv/bin/uvicorn --factory youniya_api.main:create_app --reload
+```
+
+The API docs are served at `http://localhost:8000/docs`.
+
+The same spec is checked in as [`openapi.json`](openapi.json) for the iOS side. A test fails when it falls behind the code; refresh it with `.venv/bin/python -m tests.dump_openapi`.
+
+Run the tests with `.venv/bin/python -m pytest`. They need no API key or network.
+
+### Environment
+
+| Variable | Default | Meaning |
+| :--- | :--- | :--- |
+| `JWT_SECRET` | (required, 32+ chars) | Signs access tokens |
+| `DATA_ENCRYPTION_KEY` | (required) | Fernet key. Writing, analyses and inquiries are encrypted at rest. **Losing it loses every star.** |
+| `DATABASE_URL` | `sqlite:///./youniya.db` | Any SQLAlchemy URL (e.g. Postgres) |
+| `GEMINI_API_KEY` | (none) | Without it, a deterministic offline evaluator stands in (Protoss mock mode) |
+| `PRISM_MODEL` | `gemini-2.5-flash` | Star scoring (fast, called 3× per star) |
+| `TELESCOPE_MODEL` | `gemini-2.5-pro` | Telescope reports and story polish |
+| `PRISM_SAMPLES` | `3` | Independent scoring calls per star |
+| `APPLE_CLIENT_IDS`, `GOOGLE_CLIENT_IDS` | (none) | Comma-separated audiences for Sign in with Apple / Google |
+| `MIN_APP_VERSION` | `1.0.0` | Below this, requests with `X-App-Version` get 426 (40) |
+| `MAINTENANCE_START`, `MAINTENANCE_END` | (none) | ISO times; without an offset they are read as KST. Every request gets 503 in between (41) |
+| `APPLE_BUNDLE_ID` | (none) | The app's bundle id. Required for verified coin purchases; without it purchases are refused |
+| `ALLOW_SANDBOX_PURCHASES` | `1` | Accept sandbox transactions. App Review and TestFlight buy in the sandbox, so keep this on in production |
+| `TRUST_PURCHASES` | off | `1` adds coins from `product_id` + `transaction_id` without a store. **Development only** |
+
+## Conventions
+
+- **Authentication:** `Authorization: Bearer <access token>`. Access tokens last 1 hour. Refresh tokens last 30 days and rotate on every use.
+- **Consent:** Every endpoint that stores or reads writing requires the 11 consent first (`403 consent_required`).
+- **Errors:** `{"error": {"code": "...", "message": "..."}}`. The message is Korean copy the app can show as is.
+- **Times:** ISO 8601 in UTC. Months, calendar days and "tonight" follow Korean time.
+
+## Endpoints
+
+| Area | Endpoints | Screens |
+| :--- | :--- | :--- |
+| App | `GET /v1/app/status` | 40, 41 |
+| Auth | `POST /v1/auth/{apple,google}`, `/refresh`, `/logout` | 02, 39 |
+| Account | `GET /v1/me`, `POST /v1/me/consent`, `PATCH /v1/me/settings`, `DELETE /v1/me`, `GET /v1/me/export`, `GET·DELETE /v1/me/shares`, `POST /v1/inquiries` | 11, 87, 91–94, 113, 114, 32 |
+| Stars | `POST /v1/stars` (`mode: float \| keep`), `GET /v1/stars` (`state`, `mood`, `q`, `month`, `before`), `GET /v1/stars/summary`, `GET·DELETE /v1/stars/{id}`, `POST /v1/stars/{id}/float` | 05, 07, 12–16, 36, 104, 105, 115–119 |
+| Draft | `GET·PUT·DELETE /v1/drafts/current` | 34 |
+| Growth | `GET /v1/starlight/trend`, `GET /v1/growth` | 08, 65, 66, 82, 86, 109 |
+| Telescope | `GET /v1/telescope/offer`, `POST·GET /v1/telescope/reports`, `GET /v1/telescope/reports/{id}`, `POST …/save` | 10, 24–27, 29, 88, 98 |
+| Coins | `GET /v1/coins`, `GET /v1/coins/history`, `POST /v1/coins/purchases` | 28, 33, 38, 102, 108 |
+| Nebulae | `POST·GET /v1/nebulae`, `GET /v1/nebulae/guest-candidates`, `GET /v1/nebulae/{id}`, `GET /v1/nebulae/{id}/story`, `POST …/story/polish`, `PUT·DELETE …/share` | 51–55, 70, 71, 80, 83–85, 96 |
+| Plaza | `POST /v1/plaza/privacy-scan`, `PUT·DELETE /v1/stars/{id}/share`, `GET /v1/plaza/stars[/{id}]`, `GET /v1/plaza/nebulae[/{id}]`, `PUT·DELETE /v1/plaza/{star\|nebula}/{id}/resonance` and `…/beside`, `GET·POST /v1/plaza/nebulae/{id}/lines`, `POST /v1/plaza/lines/{id}/report`, `GET /v1/plaza/tonight` | 09, 19–22, 55, 69, 72–75, 79, 99–101, 103, 106, 107 |
+
+### Behaviour worth knowing
+
+- **Floating a star** (`POST /v1/stars`, `mode: float`):
+  - Text under 1,000 characters gets `422 too_short` and nothing is stored, so the app keeps the draft (104).
+  - If the model fails, the star is stored as kept with `analysis_failed: true`, and `POST /v1/stars/{id}/float` retries it (36).
+- **Crisis signals:** The writing is saved as written, but it is never scored or shared. The response carries `crisis` with the 109 line (37).
+- **Coins:** Charged only after a result exists. A failed report or polish charges nothing (Protoss 4.4). The balance never goes below zero, even with requests racing.
+- **Buying coins** (`POST /v1/coins/purchases`):
+  - Send `{"signed_transaction": transaction.jwsRepresentation}` after a verified StoreKit 2 purchase, then call `transaction.finish()` once the server answers 200.
+  - Buy with `appAccountToken` set to the user id from `GET /v1/me`. A transaction bought for another account is refused.
+  - The server checks the certificate chain up to the pinned Apple Root CA - G3, the Apple purpose OIDs, the signature, the bundle id, revocation, and that the product is a consumable.
+  - The App Store Connect product ids must be the package keys: `coin_50`, `coin_120` and `coin_300`. `quantity` multiplies the coins.
+  - The same transaction never pays twice. A retry answers `already_processed: true`.
+- **Quotes:** Every sentence shown back to the user (impact quote, evidence, signals, story) is checked to appear unchanged in their writing.
+- **Plaza:**
+  - A shared star carries only the one masked sentence its owner chose. A shared nebula carries only its outline, colours, depth and an optional masked sentence.
+  - Others never see scores, ranks or 공명 counts. Owners see their counts in `GET /v1/me/shares`.
+  - A line someone reports disappears for them at once. Three reports hide it for everyone.
+
+## Not done yet
+
+- **Refund notifications:** App Store Server Notifications (REFUND) are not received yet, so coins from a refunded purchase are not taken back.
+- **PDF export (93):** Not done. Only the text file is.
+- **Rate limiting:** Not done.
+- **Operator tooling:** There are no tools for reported lines, inquiries, or the access log for viewing writing (Protoss 3장).
+- **Model scoring check:** The Protoss reliability protocol (`design.md` 6장) has not been run against the real model. The tests use the offline evaluator.
