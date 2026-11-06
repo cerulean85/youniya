@@ -1,0 +1,18 @@
+# Development server as a systemd user service, so it comes back after a reboot.
+#   cp deploy/youniya-api.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now youniya-api
+#   loginctl enable-linger "$USER"   # start at boot, without logging in
+# Edit WorkingDirectory if the repo lives elsewhere.
+[Unit]
+Description=YOUNIYA API (development)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=%h/apps/youniya/server
+ExecStart=%h/apps/youniya/server/dev.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

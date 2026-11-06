@@ -41,15 +41,27 @@ uv venv .venv && uv pip install --python .venv/bin/python -r pyproject.toml --ex
 
 export JWT_SECRET=$(python -c "import secrets; print(secrets.token_urlsafe(48))")
 export DATA_ENCRYPTION_KEY=$(python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
+.venv/bin/alembic upgrade head
 .venv/bin/uvicorn --factory youniya_api.main:create_app --reload
 ```
 
 The API docs are served at `http://localhost:8000/docs`.
 
+### Database and migrations
+
+- **Schema:** The schema comes only from the Alembic migrations in `migrations/`. The server does not create tables.
+- **Upgrading:** Run `.venv/bin/alembic upgrade head` before starting. `dev.sh` does this for you.
+- **Changing a model:** Add a migration with `.venv/bin/alembic revision --autogenerate -m "…"` and review it. A test fails when the models and the migrations disagree.
+- **Postgres URLs:** `postgresql://` URLs (Neon gives these) use psycopg 3. Prepared statements are off and connections are pinged, so a transaction pooler like Neon's works.
+- **Quoting:** In `.env`, quote a URL that contains `&`.
+
+### Development server
+
 For the app on another machine, `./dev.sh` serves on every interface at port 8000.
 - On its first run it writes `server/.env` with fresh secrets. Keep that file: without it the stored stars can't be read.
 - It turns on `DEV_LOGIN` and `TRUST_PURCHASES`.
 - With `DEV_LOGIN=1`, `POST /v1/auth/dev {"name": "…"}` signs in without Apple or Google. The same name is always the same account.
+- To keep it running across reboots, install `deploy/youniya-api.service` as a systemd user service. The steps are in the file.
 
 The same spec is checked in as [`openapi.json`](openapi.json) for the iOS side. A test fails when it falls behind the code; refresh it with `.venv/bin/python -m tests.dump_openapi`.
 
@@ -61,7 +73,7 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
 | :--- | :--- | :--- |
 | `JWT_SECRET` | (required, 32+ chars) | Signs access tokens |
 | `DATA_ENCRYPTION_KEY` | (required) | Fernet key. Writing, analyses and inquiries are encrypted at rest. **Losing it loses every star.** |
-| `DATABASE_URL` | `sqlite:///./youniya.db` | Any SQLAlchemy URL (e.g. Postgres) |
+| `DATABASE_URL` | `sqlite:///./youniya.db` | SQLite or Postgres (`postgresql://…`, e.g. Neon) |
 | `GEMINI_API_KEY` | (none) | Without it, a deterministic offline evaluator stands in (Protoss mock mode) |
 | `PRISM_MODEL` | `gemini-2.5-flash` | Star scoring (fast, called 3× per star) |
 | `TELESCOPE_MODEL` | `gemini-2.5-pro` | Telescope reports and story polish |

@@ -3,12 +3,11 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import sessionmaker
 
 from .config import Settings
+from .db import make_engine
 from .deps import ApiError
-from .models import Base
 from .prism import PrismEngine
 from .ratelimit import RateLimiter
 from .routers import account, admin, auth, coins, nebulae, plaza, stars, telescope
@@ -31,17 +30,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     if len(settings.jwt_secret) < 32 or not settings.data_key:
         raise RuntimeError("JWT_SECRET (32+ characters) and DATA_ENCRYPTION_KEY must be set")
 
-    engine = create_engine(
-        settings.database_url,
-        connect_args={"check_same_thread": False} if settings.database_url.startswith("sqlite") else {},
-    )
-    if engine.dialect.name == "sqlite":
-        event.listen(engine, "connect", lambda conn, _: conn.execute("PRAGMA foreign_keys=ON"))
-    Base.metadata.create_all(engine)
-    # Balances never go below 0 (refund policy). Tables made before the CHECK constraint
-    # don't have it, so clear any negative balance left from the old refund rule.
-    with engine.begin() as conn:
-        conn.execute(text("UPDATE users SET coins = 0 WHERE coins < 0"))
+    # The schema comes from the migrations (`alembic upgrade head`), not from here.
+    engine = make_engine(settings.database_url)
 
     app = FastAPI(title="YOUNIYA API", version="0.1.0")
     app.state.settings = settings

@@ -5,6 +5,8 @@ from fastapi.testclient import TestClient
 from youniya_api.config import Settings
 from youniya_api.main import create_app
 
+from .migrate import upgrade
+
 # 1,000+ characters that reach a new understanding (Protoss ex_955, made longer).
 DEEP_BODY = (
     "걔 소식 듣고 축하한다고 말하면서 속이 쓰렸다. 정리해 보면 나는 걔가 나랑 비슷한 자리에 있어야 안심이 됐던 것 같다. "
@@ -33,8 +35,10 @@ class FakeVerifier:
 @pytest.fixture
 def make_app(tmp_path):
     def build(**overrides):
+        url = f"sqlite:///{tmp_path}/test.db"
+        upgrade(url)  # the schema always comes from the migrations
         settings = Settings(**{
-            "database_url": f"sqlite:///{tmp_path}/test.db",
+            "database_url": url,
             "jwt_secret": "test-secret-at-least-32-bytes-long!!",
             "data_key": Fernet.generate_key().decode(),
             "gemini_api_key": None,

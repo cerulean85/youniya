@@ -21,4 +21,5 @@ fi
 set -a
 . ./.env
 set +a
+.venv/bin/alembic upgrade head
 exec .venv/bin/uvicorn --factory youniya_api.main:create_app --host 0.0.0.0 --port "${PORT:-8000}"
