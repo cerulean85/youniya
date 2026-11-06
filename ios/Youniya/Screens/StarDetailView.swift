@@ -12,8 +12,8 @@ struct StarDetailView: View {
     /// After 15 "영구 삭제"; the parent closes the page and shows a 42 toast.
     var onDeleted: (() -> Void)? = nil
 
-    @State private var confirmDelete = false
-    @State private var confirmShare = false
+    @State private var confirmDelete = DebugScreen.is("15")
+    @State private var confirmShare = DebugScreen.is("19")
     @State private var shareSheetHeight: CGFloat = 336
     @State private var sheetHeight: CGFloat = 336
 

@@ -12,7 +12,7 @@ struct StarMakingView: View {
     @State private var isSaved = false
     @State private var didPublish = false
     /// 34 작성 중 나가기
-    @State private var askLeave = false
+    @State private var askLeave = DebugScreen.is("34")
     @State private var leaveSheetHeight: CGFloat = 320
     @FocusState private var focus: Field?
 

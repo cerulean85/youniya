@@ -16,8 +16,8 @@ struct RecordsView: View {
     @Binding var filter: RecordsFilter
 
     private enum Mode { case list, calendar }
-    @State private var mode: Mode = .list
-    @State private var query = ""
+    @State private var mode: Mode = DebugScreen.is("116") ? .calendar : .list
+    @State private var query = DebugScreen.is("117") ? "은하수 아래 고래" : ""
     @FocusState private var searching: Bool
     @State private var month = Calendar.current.dateInterval(of: .month, for: .now)!.start
     @State private var day: Date?

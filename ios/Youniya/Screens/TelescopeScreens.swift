@@ -60,9 +60,9 @@ struct TelescopeConfirmView: View {
     var onCharge: () -> Void
     var onLater: () -> Void
 
-    @State private var showSheet = false
+    @State private var showSheet = DebugScreen.is("29")
     /// 29 Coin Shortage replaces the 24 content inside the same sheet.
-    @State private var short = false
+    @State private var short = DebugScreen.is("29")
     @State private var sheetHeight: CGFloat = 314
     /// What closed the sheet, run once it is gone.
     @State private var next: (() -> Void)?

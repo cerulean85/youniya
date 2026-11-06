@@ -61,6 +61,7 @@ struct RootView: View {
         .toast($model.apiMessage)
         .task {
             #if DEBUG
+            DebugScreen.prepare(model)
             // `-debugNotice 39|40|41|113|120`: show a status screen on launch (for checking it).
             switch UserDefaults.standard.string(forKey: "debugNotice") {
             case "39": model.appNotice = .loginExpired
@@ -85,6 +86,7 @@ struct RootView: View {
         }
         .task {
             try? await Task.sleep(for: .seconds(2))
+            if DebugScreen.is("1") { return }  // `-debugScreen 01` stays on the splash
             showSplash = false
         }
     }

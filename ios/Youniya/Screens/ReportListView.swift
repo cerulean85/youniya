@@ -78,7 +78,7 @@ struct ReportListView: View {
 
     enum Order { case newest, oldest }
     @State private var order: Order = .newest
-    @State private var showSort = false
+    @State private var showSort = DebugScreen.is("27")
     /// 111 skeleton while the reports load.
     @State private var loaded = false
     private var isLoading: Bool { model.simulateLoading && !loaded }
@@ -198,16 +198,16 @@ struct CoinChargeView: View {
     var onHistory: () -> Void = {}
 
     @State private var selected: CoinPackage = CoinPackage.all[1]
-    @State private var charged: Int?
+    @State private var charged: Int? = DebugScreen.is("102") ? 120 : nil
     /// 38 결제 미완료
-    @State private var paymentFailed = false
+    @State private var paymentFailed = DebugScreen.is("38")
     /// 28 "(필수) 결제·환불 정책에 동의해요". Asked again for each charge; the server
     /// keeps it with the purchase (`consumption_consent`) for App Store refund requests.
     /// iPhone SE and other short screens.
     @State private var isShortScreen = false
     @State private var agreed: Bool = {
         #if DEBUG
-        UserDefaults.standard.string(forKey: "debugRoute") == "coinsAgreed"  // 28-1 for visual review
+        UserDefaults.standard.string(forKey: "debugRoute") == "coinsAgreed" || DebugScreen.is("28-1", "102")  // 28-1 for visual review
         #else
         false
         #endif

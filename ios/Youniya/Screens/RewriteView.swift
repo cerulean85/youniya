@@ -7,7 +7,7 @@ struct RewriteView: View {
     var onBack: () -> Void
     var onPublish: (_ body: String, _ floated: Bool) -> Void
 
-    @State private var text = ""
+    @State private var text = DebugScreen.is("105") ? "조금 더 써 보고 싶은 마음." : ""
     @FocusState private var focused: Bool
 
     private var canPublish: Bool { !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }

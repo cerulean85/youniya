@@ -198,7 +198,7 @@ struct StarBirthView: View {
     @Environment(\.motionReduced) private var reduceMotion
     var onShow: () -> Void
 
-    @State private var phase = 0
+    @State private var phase = DebugScreen.is("62") ? 1 : 0
 
     private static let titles = ["마음을 모으는 중", "빛이 번져요", "별이 모양을 이뤄요", "별이 떴어요"]
 

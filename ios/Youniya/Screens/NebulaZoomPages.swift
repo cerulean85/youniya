@@ -164,7 +164,7 @@ struct MyNebulaZoomView: View {
     @State private var selectedID: StarItem.ID?
     @State private var toast: String?
     /// 71 하늘에 띄우기
-    @State private var askFloat = false
+    @State private var askFloat = DebugScreen.is("71")
     @State private var floatSheetHeight: CGFloat = 640
     @State private var isShortScreen = false
     /// 112 skeleton while the nebula loads.

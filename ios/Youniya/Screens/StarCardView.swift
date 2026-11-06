@@ -193,6 +193,20 @@ struct ComposeFlowView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: sending)
+        #if DEBUG
+        // `-debugScreen 06|07|13|16|35|36|37|61|62`
+        .onAppear {
+            guard let star = DebugScreen.floatedStar(model) else { return }
+            if DebugScreen.is("6") { step = .analyzing(star) }
+            if DebugScreen.is("7") { step = .card(star) }
+            if DebugScreen.is("13"), let kept = DebugScreen.keptStar(model) { step = .kept(kept) }
+            if DebugScreen.is("16"), let previous = rewriteOf { step = .compare(previous: previous, current: star) }
+            if DebugScreen.is("35") { step = .failed(star, .network) }
+            if DebugScreen.is("36") { step = .failed(star, .analysis) }
+            if DebugScreen.is("37") { step = .crisis(star, floated: true) }
+            if DebugScreen.is("61", "62") { step = .birth(star) }
+        }
+        #endif
         .toastCard($toast)
         .edgeSwipeBack(enabled: !isAnalyzing && !sending, onBack: onClose)
     }

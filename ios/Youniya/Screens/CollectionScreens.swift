@@ -16,8 +16,8 @@ struct CollectionView: View {
     private enum Segment: String, CaseIterable { case star = "별", nebula = "성운" }
     private enum Filter { case all, mine, kept }
 
-    @State private var segment: Segment = .star
-    @State private var filter: Filter = .all
+    @State private var segment: Segment = DebugScreen.is("80", "96") ? .nebula : .star
+    @State private var filter: Filter = DebugScreen.is("97") ? .kept : .all
 
     /// A tile in 79: my floated star, or someone's star I kept close.
     private enum Tile: Identifiable {

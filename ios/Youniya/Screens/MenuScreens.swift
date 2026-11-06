@@ -162,6 +162,13 @@ struct SettingsView: View {
             case "notificationsOff": sheet = .notificationsOff
             default: break
             }
+            // `-debugScreen 91…95, 114`
+            if DebugScreen.is("91") { sheet = .deleteAccount }
+            if DebugScreen.is("92") { sheet = .withdrawShares }
+            if DebugScreen.is("93") { sheet = .export }
+            if DebugScreen.is("94") { sheet = .sound }
+            if DebugScreen.is("95") { sheet = .notificationsOff }
+            if DebugScreen.is("114") { exportProgress = 0.62; sheet = .exporting(.text) }
         }
         #endif
         .task(id: sheet?.id) {

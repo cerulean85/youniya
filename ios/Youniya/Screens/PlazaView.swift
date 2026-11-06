@@ -40,7 +40,7 @@ struct PlazaView: View {
 
     @State private var segment: Segment = {
         #if DEBUG
-        UserDefaults.standard.string(forKey: "debugRoute") == "plazaNebula" ? .nebula : .star  // 72 for review
+        UserDefaults.standard.string(forKey: "debugRoute") == "plazaNebula" || DebugScreen.is("72") ? .nebula : .star  // 72 for review
         #else
         .star
         #endif

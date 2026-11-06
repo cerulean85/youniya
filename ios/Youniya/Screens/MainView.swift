@@ -113,6 +113,7 @@ struct MainView: View {
         #if DEBUG
         // `-debugRoute <name>`: open a page on launch, for checking screens without taps
         // (names in the switch below).
+        .task { openDebugScreen() }
         .task {
             switch UserDefaults.standard.string(forKey: "debugRoute") {
             case "coins": push(.coins)
@@ -391,6 +392,68 @@ struct MainView: View {
                 .edgeSwipeBack(onBack: pop)
         }
     }
+
+    #if DEBUG
+    /// `-debugScreen <Figma frame>`: the tab or page for that frame (see `DebugScreen`).
+    private func openDebugScreen() {
+        guard let screen = DebugScreen.current, DebugScreen.supported.contains(screen) else { return }
+        let floated = DebugScreen.floatedStar(model)
+        let fresh = model.stars.first { $0.isFloated && $0.report == nil }
+        let nebula = GalaxyNebula.samples[0]
+        switch screen {
+        case "3", "4", "47": tab = .sky
+        case "8", "56": tab = .nebula
+        case "9", "21", "50", "72": tab = .plaza
+        case "115", "116", "117", "49": tab = .records
+        case "118", "119": recordsFilter = .kept; tab = .records
+        case "67-1": drawerOpen = true
+        case "5", "6", "7", "13", "35", "36", "37", "61", "62", "34":
+            if screen == "34" { model.saveDraft(StarDraft(mood: .calm, title: "쓰던 글", body: "오늘은 마음이 조금 느리게 흘렀어요.")) }
+            push(.compose())
+        case "104":
+            model.saveDraft(StarDraft(mood: .calm, title: "", body: "오늘은 조금 느렸다."))
+            push(.compose())
+        case "14", "16", "105": if let floated { push(.compose(rewriteOf: floated.id)) }
+        case "10": if let floated { push(.report(floated.id)) }
+        case "12", "15", "19", "48": if let floated { push(.detail(floated.id)) }
+        case "20": if let floated { push(.privacy(floated.id)) }
+        case "24", "29": if let s = fresh ?? floated { push(.telescopeConfirm(s.id)) }
+        case "25": if let s = fresh ?? floated { push(.scanning(s.id)) }
+        case "26", "27", "98", "111": push(.reports)
+        case "17", "18": push(.sharedStars)
+        case "22": push(.otherNebula(PlazaNebula.samples[0].name))
+        case "23": push(.starlightLine("그런 마음이 어둠 속에서도 조용히 빛나고 있어요."))
+        case "28", "28-1", "38", "102": push(.coins)
+        case "33", "108", "121": push(.coinHistory)
+        case "31": push(.policy(.marketing))
+        case "43": push(.policy(.terms))
+        case "44": push(.policy(.privacy))
+        case "45": push(.policy(.sensitive))
+        case "46": push(.policy(.payment))
+        case "32": push(.inquiry)
+        case "51": push(.drawNebula)
+        case "65": push(.growth)
+        case "66": push(.moments)
+        case "86": push(.stages)
+        case "68": push(.sky)
+        case "69", "76": push(.galaxyZoom)
+        case "70", "71", "77", "112": push(.myNebulaZoom)
+        case "81": push(.milkyWay)
+        case "82", "109": push(.brightness)
+        case "83": push(.nebulaStory)
+        case "89": push(.nebulaStars(.floated))
+        case "90": push(.nebulaStars(.supernova))
+        case "73", "78": push(.galaxyNebula(nebula.name))
+        case "74", "99", "100", "101", "106", "107": push(.galaxyLines(nebula.name))
+        case "75": push(.galaxyStar(nebula: nebula.name, star: nebula.stars[0].title))
+        case "79", "80", "96", "97", "110": push(.collection)
+        case "87", "91", "92", "93", "94", "95", "114": push(.settings)
+        case "122": push(.detail(UUID()))
+        case "122-1": push(.report(UUID()))
+        default: break
+        }
+    }
+    #endif
 
     private func push(_ r: Route) {
         withAnimation(.easeInOut(duration: 0.32)) { stack.append(Entry(route: r)) }

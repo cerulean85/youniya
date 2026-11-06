@@ -445,10 +445,10 @@ struct GalaxyLinesView: View {
     var nebula: GalaxyNebula
     var onBack: () -> Void
 
-    @State private var draft = ""
+    @State private var draft = DebugScreen.is("99") ? "그런 생각은 한심해요." : DebugScreen.is("106") ? String(repeating: "오늘의 별빛이 참 따뜻해서 오래 머물렀어요. ", count: 3) : ""
     @State private var toast: ToastCardMessage?
     /// 99: the last line was held back by the filter.
-    @State private var rejected = false
+    @State private var rejected = DebugScreen.is("99")
     /// 100: the line being reported.
     @State private var reporting: GalaxyNebula.Line?
     @State private var reportSheetHeight: CGFloat = 420
@@ -538,6 +538,11 @@ struct GalaxyLinesView: View {
         }
         .background { StarField() }
         .task { await model.loadLines(for: nebula) }
+        .task {
+            #if DEBUG
+            if DebugScreen.is("100") { reporting = model.lines(for: nebula).first }
+            #endif
+        }
         .toastCard($toast)
         .sheet(item: $reporting) { line in
             ReportLineSheet(
