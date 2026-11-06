@@ -46,6 +46,11 @@ export DATA_ENCRYPTION_KEY=$(python -c "from cryptography.fernet import Fernet; 
 
 The API docs are served at `http://localhost:8000/docs`.
 
+For the app on another machine, `./dev.sh` serves on every interface at port 8000.
+- On its first run it writes `server/.env` with fresh secrets. Keep that file: without it the stored stars can't be read.
+- It turns on `DEV_LOGIN` and `TRUST_PURCHASES`.
+- With `DEV_LOGIN=1`, `POST /v1/auth/dev {"name": "…"}` signs in without Apple or Google. The same name is always the same account.
+
 The same spec is checked in as [`openapi.json`](openapi.json) for the iOS side. A test fails when it falls behind the code; refresh it with `.venv/bin/python -m tests.dump_openapi`.
 
 Run the tests with `.venv/bin/python -m pytest`. They need no API key or network.

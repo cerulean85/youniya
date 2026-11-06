@@ -41,5 +41,7 @@ class Settings:
     # StoreKit 2 verification (28 코인 충전). Without a bundle id, purchases are refused.
     apple_bundle_id: str | None = field(default_factory=lambda: os.getenv("APPLE_BUNDLE_ID") or None)
     allow_sandbox_purchases: bool = field(default_factory=lambda: os.getenv("ALLOW_SANDBOX_PURCHASES", "1") == "1")
+    # POST /v1/auth/dev signs in by name, without Apple or Google. Development only.
+    dev_login: bool = field(default_factory=lambda: os.getenv("DEV_LOGIN") == "1")
     # Accept purchases without store verification. Development only.
     trust_purchases: bool = field(default_factory=lambda: os.getenv("TRUST_PURCHASES") == "1")

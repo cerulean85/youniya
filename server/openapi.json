@@ -126,6 +126,46 @@
         }
       }
     },
+    "/v1/auth/dev": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Dev Sign In",
+        "description": "Development only (DEV_LOGIN=1): the same name is always the same account.",
+        "operationId": "dev_sign_in_v1_auth_dev_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DevSignIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/auth/{provider}": {
       "post": {
         "tags": [
@@ -2358,6 +2398,21 @@
           "sensitive"
         ],
         "title": "Consent"
+      },
+      "DevSignIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "DevSignIn"
       },
       "DraftIn": {
         "properties": {

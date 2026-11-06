@@ -278,3 +278,11 @@ def test_settings_and_inquiry(client):
     r = client.post("/v1/inquiries", json={"kind": "payment", "email": "a@b.co", "body": "결제가 안 돼요"}, headers=h)
     assert r.status_code == 201
     assert client.post("/v1/inquiries", json={"kind": "payment", "email": "x", "body": "b"}, headers=h).status_code == 422
+
+
+def test_dev_login_only_when_enabled(make_app):
+    assert TestClient(make_app()).post("/v1/auth/dev", json={"name": "a"}).status_code == 404
+    client = TestClient(make_app(dev_login=True))
+    first = client.post("/v1/auth/dev", json={"name": "zhkim"}).json()
+    again = client.post("/v1/auth/dev", json={"name": "zhkim"}).json()
+    assert first["user_id"] == again["user_id"] and first["needs_consent"] is True
