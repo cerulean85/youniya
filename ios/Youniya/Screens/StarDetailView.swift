@@ -70,7 +70,7 @@ struct StarDetailView: View {
             if let analysis = star.analysis {
                 TodayStarCard(analysis: analysis)
             } else if !star.isFloated {
-                Text("조용히 품은 별이에요. 분석 없이 그대로 간직하고 있어요.")
+                Text("조용히 간직한 별이에요. 분석 없이 그대로 남겨 두었어요.")
                     .textStyle(.bodyS)
                     .foregroundStyle(Color.textTertiary)
             }

@@ -399,7 +399,7 @@ struct RecordsHero: View {
     }
 }
 
-/// 18 Kept (보관함 · 조용히 품은 마음): stars kept without analysis.
+/// 18 Kept (조용히 간직한 마음): stars kept without analysis.
 struct KeptView: View {
     @Environment(AppModel.self) private var model
     var onBack: () -> Void
@@ -409,7 +409,7 @@ struct KeptView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            TopAppBar(title: "조용히 품은 마음", onBack: onBack)
+            TopAppBar(title: "조용히 간직한 마음", onBack: onBack)
 
             VStack(alignment: .leading, spacing: Space.lg) {
                 Text("분석 없이 간직한 글이에요. 언제든 별로 띄울 수 있어요.")
@@ -419,7 +419,7 @@ struct KeptView: View {
                 KeptHero()
 
                 if kept.isEmpty {
-                    Text("아직 조용히 품은 마음이 없어요.")
+                    Text("아직 조용히 간직한 마음이 없어요.")
                         .textStyle(.bodyM)
                         .foregroundStyle(Color.textTertiary)
                         .frame(maxWidth: .infinity)
@@ -500,7 +500,7 @@ struct ShareConsentSheet: View {
                 Text("우주 광장에 나눌까요?")
                     .textStyle(.h3)
                     .foregroundStyle(Color.textPrimary)
-                Text("글은 익명으로 올라가고, 다른 사람은 '공명'만 남길 수 있어요. 언제든 거둘 수 있어요.")
+                Text("고른 한 문장만 익명으로 올라가고, 글 전체는 나가지 않아요. 다른 사람은 '공명'만 남길 수 있고, 언제든 거둘 수 있어요.")
                     .textStyle(.bodyM)
                     .foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)

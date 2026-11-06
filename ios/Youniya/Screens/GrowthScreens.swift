@@ -39,7 +39,7 @@ struct FloatNebulaSheet: View {
             optionRow("별빛 한 줄 받기", "다른 사람이 짧은 한 줄을 건넬 수 있어요", isOn: $receiveLines)
             optionRow("가린 한 문장 함께 보이기", "직접 골라 가린 한 줄만 보여요", isOn: $showQuote)
 
-            Text("띄운 성운은 보관함에서 언제든 거둘 수 있어요.")
+            Text("띄운 성운은 설정 › 모든 공유 거두기에서 언제든 거둘 수 있어요.")
                 .textStyle(.caption).foregroundStyle(Color.textTertiary)
 
             VStack(spacing: Space.md) {
@@ -267,7 +267,7 @@ struct GrowthMomentsView: View {
         let byDate = model.stars.sorted { ($0.date ?? .now) < ($1.date ?? .now) }
         var out: [Moment] = []
         if let s = byDate.first(where: \.isFloated), let d = s.date { out.append(.init(title: "첫 별을 띄웠어요", date: d)) }
-        if let s = byDate.first(where: { !$0.isFloated }), let d = s.date { out.append(.init(title: "처음 조용히 품었어요", date: d)) }
+        if let s = byDate.first(where: { !$0.isFloated }), let d = s.date { out.append(.init(title: "처음 조용히 간직했어요", date: d)) }
         for n in [10, 30, 50, 100] where byDate.count >= n {
             if let d = byDate[n - 1].date { out.append(.init(title: "별 \(n)개가 모였어요", date: d)) }
         }

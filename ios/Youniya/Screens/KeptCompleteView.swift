@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 13 Kept Complete: after "조용히 품기" (kept without analysis).
+/// 13 Kept Complete: after "조용히 간직하기" (kept without analysis).
 struct KeptCompleteView: View {
     var onHome: () -> Void
     var onOpenStar: () -> Void
@@ -21,10 +21,10 @@ struct KeptCompleteView: View {
                 .accessibilityHidden(true)
 
             VStack(spacing: Space.sm) {
-                Text("조용히 품었어요")
+                Text("조용히 간직했어요")
                     .textStyle(.h2)
                     .foregroundStyle(Color.textPrimary)
-                Text("분석 없이 마음을 있는 그대로 간직했어요.\n언제든 다시 꺼내볼 수 있어요.")
+                Text("분석 없이 마음을 있는 그대로 남겨 두었어요.\n언제든 다시 꺼내볼 수 있어요.")
                     .textStyle(.bodyM)
                     .foregroundStyle(Color.textSecondary)
             }

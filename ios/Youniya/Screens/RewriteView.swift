@@ -66,7 +66,7 @@ struct RewriteView: View {
                 Spacer(minLength: 0)
 
                 HStack(spacing: Space.md) {
-                    Button("조용히 품기") { publish(floated: false) }
+                    Button("조용히 간직하기") { publish(floated: false) }
                         .buttonStyle(.secondary)
                         .disabled(!canPublish)
                     Button("별 띄우기") { publish(floated: true) }
@@ -134,9 +134,9 @@ struct RematchCompareView: View {
     private var note: String {
         let before = previous.analysis?.starlight, after = current.analysis?.starlight
         if let before, let after, after < before {
-            return "점수가 낮아진 것은 좋고 나쁨이 아니에요. 이번에는 다른 결의 마음을 마주했다는 뜻이에요."
+            return "별빛이 낮아진 것은 좋고 나쁨이 아니에요. 이번에는 다른 결의 마음을 마주했다는 뜻이에요."
         }
-        return "점수가 오른 것은 좋고 나쁨이 아니에요. 다시 쓰며 마음이 조금 더 또렷해졌다는 뜻이에요."
+        return "별빛이 밝아진 것은 좋고 나쁨이 아니에요. 다시 쓰며 마음이 조금 더 또렷해졌다는 뜻이에요."
     }
 
     private func metric(_ label: String, _ value: Int?, color: Color) -> some View {

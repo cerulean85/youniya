@@ -721,7 +721,7 @@ final class AppModel {
         drawnNebulae[i].shared = true
     }
 
-    /// 36 "조용히 품기": the star stays, without starlight or analysis.
+    /// 36 "조용히 간직하기": the star stays, without starlight or analysis.
     func keepInstead(_ id: StarItem.ID) -> StarItem? {
         guard let i = stars.firstIndex(where: { $0.id == id }) else { return nil }
         stars[i].state = .kept

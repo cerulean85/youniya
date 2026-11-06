@@ -21,7 +21,7 @@ struct LoginView: View {
             VStack(spacing: Space.md) {
                 SocialButton(provider: .apple) { model.signIn(with: .apple) }
                 SocialButton(provider: .google) { model.signIn(with: .google) }
-                Text("계속하면 이용약관과 개인정보처리방침,\n민감정보 처리에 동의하게 돼요.")
+                Text("처음이라면 다음 화면에서\n이용약관과 개인정보 처리 동의를 받아요.")
                     .textStyle(.caption)
                     .foregroundStyle(Color.textTertiary)
                     .multilineTextAlignment(.center)

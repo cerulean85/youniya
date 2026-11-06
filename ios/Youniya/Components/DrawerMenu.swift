@@ -18,7 +18,7 @@ struct DrawerMenu: View {
 
     private let items: [Item] = [
         Item(title: "별빛 기록", subtitle: "지나온 별들", icon: .iconStar),
-        Item(title: "간직한 별", subtitle: "조용히 품은 마음", icon: .iconArchive),
+        Item(title: "간직한 별", subtitle: "조용히 간직한 마음", icon: .iconArchive),
         Item(title: "마음 망원경", subtitle: "리포트 모아보기", icon: .iconNebula),
         // 79·80: not in the 67 drawer; this is where the collection opens.
         Item(title: "컬렉션", subtitle: "모인 별과 성운", icon: .iconGrid),

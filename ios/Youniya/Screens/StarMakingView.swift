@@ -68,7 +68,7 @@ struct StarMakingView: View {
             }
 
             HStack(spacing: Space.md) {
-                Button("조용히 품기") { publish(floated: false) }
+                Button("조용히 간직하기") { publish(floated: false) }
                     .buttonStyle(.secondary)
                     .disabled(!canPublish)
                 Button("별 띄우기") { publish(floated: true) }
@@ -114,7 +114,7 @@ struct StarMakingView: View {
 
     private var topBar: some View {
         FlowTopBar(title: "별 만들기", onClose: closeTapped) {
-            Text("임시저장됨")
+            Text("임시 저장됨")
                 .textStyle(.caption)
                 .foregroundStyle(Color.textTertiary)
                 .opacity(isSaved ? 1 : 0)

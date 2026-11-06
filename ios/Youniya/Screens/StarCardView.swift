@@ -177,7 +177,7 @@ struct ComposeFlowView: View {
                            message: "글은 그대로 보관되고, 코인도 차감되지 않았어요.",
                            actions: [
                                .init(title: "다시 시도", style: .primary) { retry(star) },
-                               .init(title: "조용히 품기", style: .secondary) { keepInstead(star) },
+                               .init(title: "조용히 간직하기", style: .secondary) { keepInstead(star) },
                            ])
                     .transition(.opacity)
             }
@@ -276,7 +276,7 @@ struct ComposeFlowView: View {
         }
     }
 
-    /// 36 "조용히 품기": keep the star without analysis, then 13.
+    /// 36 "조용히 간직하기": keep the star without analysis, then 13.
     private func keepInstead(_ star: StarItem) {
         guard let kept = model.keepInstead(star.id) else { return }
         withAnimation(.easeInOut(duration: 0.5)) { step = .kept(kept) }
