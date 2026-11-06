@@ -1305,7 +1305,7 @@
           "coins"
         ],
         "summary": "App Store Notification",
-        "description": "App Store Server Notifications V2 (set this URL in App Store Connect).\nREFUND takes back the purchase's coins that are left; the balance never goes below 0.",
+        "description": "App Store Server Notifications V2 (set this URL in App Store Connect).\n- CONSUMPTION_REQUEST: a refund was requested; tell Apple how much of the purchase was used.\n- REFUND: take back the purchase's coins that are left; the balance never goes below 0.",
         "operationId": "app_store_notification_v1_storekit_notifications_post",
         "requestBody": {
           "content": {
@@ -2868,6 +2868,11 @@
               }
             ],
             "title": "Signed Transaction"
+          },
+          "consumption_consent": {
+            "type": "boolean",
+            "title": "Consumption Consent",
+            "default": false
           },
           "product_id": {
             "anyOf": [

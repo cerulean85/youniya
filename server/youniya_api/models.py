@@ -195,6 +195,9 @@ class CoinEntry(Base):
     title: Mapped[str] = mapped_column(String(40))
     delta: Mapped[int] = mapped_column(Integer)
     transaction_id: Mapped[str | None] = mapped_column(String(128), unique=True)
+    # 28 코인 충전: "쓴 코인은 환불되지 않아요 …" agreed at purchase. Only then may a refund
+    # request be answered with this purchase's consumption (Apple requires the consent).
+    refund_consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
 
 

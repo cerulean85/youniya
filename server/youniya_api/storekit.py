@@ -74,3 +74,27 @@ class StoreKitVerifier:
         if payload.get("type") != "Consumable":
             raise PurchaseInvalid("not a consumable")
         return payload
+
+
+class AppStoreClient:
+    """App Store Server API calls signed with the In-App Purchase key (ES256 JWT, ≤ 60 minutes)."""
+
+    BASE = {"Production": "https://api.storekit.apple.com", "Sandbox": "https://api.storekit-sandbox.apple.com"}
+
+    def __init__(self, issuer_id: str, key_id: str, private_key_pem: str, bundle_id: str):
+        self.issuer_id, self.key_id, self.key, self.bundle_id = issuer_id, key_id, private_key_pem, bundle_id
+
+    def _token(self) -> str:
+        now = int(datetime.now(timezone.utc).timestamp())
+        claims = {"iss": self.issuer_id, "iat": now, "exp": now + 300, "aud": "appstoreconnect-v1",
+                  "bid": self.bundle_id}
+        return jwt.encode(claims, self.key, algorithm="ES256", headers={"kid": self.key_id, "typ": "JWT"})
+
+    def send_consumption(self, transaction_id: str, environment: str, body: dict) -> None:
+        """Send Consumption Information V2. Raises unless Apple answers 202."""
+        import httpx
+
+        url = f"{self.BASE[environment]}/inApps/v2/transactions/consumption/{transaction_id}"
+        resp = httpx.put(url, json=body, headers={"Authorization": f"Bearer {self._token()}"}, timeout=30)
+        if resp.status_code != 202:
+            raise RuntimeError(f"consumption info rejected: {resp.status_code} {resp.text[:200]}")

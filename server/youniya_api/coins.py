@@ -26,11 +26,13 @@ def use_free_telescope(db: Session, user: User) -> bool:
     return bool(done)
 
 
-def add(db: Session, user: User, amount: int, title: str, transaction_id: str | None = None) -> None:
+def add(db: Session, user: User, amount: int, title: str, transaction_id: str | None = None,
+        refund_consent_at=None) -> None:
     if amount < 0:
         raise ValueError("use take_back to remove coins")
     db.execute(update(User).where(User.id == user.id).values(coins=User.coins + amount))
-    db.add(CoinEntry(user_id=user.id, title=title, delta=amount, transaction_id=transaction_id))
+    db.add(CoinEntry(user_id=user.id, title=title, delta=amount, transaction_id=transaction_id,
+                     refund_consent_at=refund_consent_at))
     db.refresh(user)
 
 

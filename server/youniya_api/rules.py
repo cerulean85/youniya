@@ -18,6 +18,9 @@ COIN_PACKAGES = {
     "coin_300": {"coins": 300, "price": 14900},
 }
 
+# 46 결제·환불 정책: unspent coins can be refunded within 7 days of purchase; spent coins can't.
+REFUND_WINDOW_DAYS = 7
+
 # 90 초신성: starlight over 900 (Protoss CRITICAL_HIT).
 SUPERNOVA_STARLIGHT = 900
 # A "깊은 별": depth score ≥ 0.7 of 400 (iOS StarAnalysis.isDeep).

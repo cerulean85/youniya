@@ -40,6 +40,11 @@ class Settings:
 
     # StoreKit 2 verification (28 코인 충전). Without a bundle id, purchases are refused.
     apple_bundle_id: str | None = field(default_factory=lambda: os.getenv("APPLE_BUNDLE_ID") or None)
+    # App Store Server API key (App Store Connect › Users and Access › Integrations › In-App Purchase).
+    # Needed to answer CONSUMPTION_REQUEST refund notifications.
+    appstore_issuer_id: str | None = field(default_factory=lambda: os.getenv("APPSTORE_ISSUER_ID") or None)
+    appstore_key_id: str | None = field(default_factory=lambda: os.getenv("APPSTORE_KEY_ID") or None)
+    appstore_private_key_path: str | None = field(default_factory=lambda: os.getenv("APPSTORE_PRIVATE_KEY_PATH") or None)
     allow_sandbox_purchases: bool = field(default_factory=lambda: os.getenv("ALLOW_SANDBOX_PURCHASES", "1") == "1")
     # X-Admin-Token for /v1/admin. Without it the operator API does not exist.
     admin_token: str | None = field(default_factory=lambda: os.getenv("ADMIN_TOKEN") or None)

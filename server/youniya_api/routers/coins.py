@@ -1,5 +1,8 @@
 """28 코인 충전, 102 충전 완료, 38 결제 미완료, 33/108 코인 사용 내역."""
 
+import logging
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -8,17 +11,21 @@ from sqlalchemy.orm import Session
 from .. import coins
 from ..deps import ApiError, consented_user, get_db
 from ..models import CoinEntry, User
-from ..rules import COIN_PACKAGES
+from ..rules import COIN_PACKAGES, REFUND_WINDOW_DAYS
 from ..storekit import PurchaseInvalid
-from ..views import iso
+from ..views import aware, iso
 from ..ratelimit import per_user
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1/coins", tags=["coins"])
 
 
 class PurchaseIn(BaseModel):
     # StoreKit 2 `Transaction.jwsRepresentation`. Buy with `appAccountToken` = the user id.
     signed_transaction: str | None = Field(None, max_length=20000)
+    # 28: the buyer agreed that spent coins aren't refunded and that this purchase's coin use
+    # goes to the App Store when a refund is requested. Stored per purchase.
+    consumption_consent: bool = False
     # Development only (TRUST_PURCHASES=1), without a store.
     product_id: str | None = None
     transaction_id: str | None = Field(None, max_length=128)
@@ -77,7 +84,8 @@ def purchase(body: PurchaseIn, request: Request, user: User = Depends(consented_
             raise ApiError(409, "transaction_used", "이미 처리된 결제예요.")
         return {"coins": user.coins, "added": 0, "already_processed": True}
     added = package["coins"] * quantity
-    coins.add(db, user, added, "코인 충전", transaction_id=transaction_id)
+    coins.add(db, user, added, "코인 충전", transaction_id=transaction_id,
+              refund_consent_at=datetime.now(timezone.utc) if body.consumption_consent else None)
     db.commit()
     return {"coins": user.coins, "added": added, "already_processed": False}
 
@@ -92,7 +100,8 @@ class NotificationIn(BaseModel):
 @notifications.post("/notifications")
 def app_store_notification(body: NotificationIn, request: Request, db: Session = Depends(get_db)):
     """App Store Server Notifications V2 (set this URL in App Store Connect).
-    REFUND takes back the purchase's coins that are left; the balance never goes below 0."""
+    - CONSUMPTION_REQUEST: a refund was requested; tell Apple how much of the purchase was used.
+    - REFUND: take back the purchase's coins that are left; the balance never goes below 0."""
     verifier = request.app.state.storekit
     if verifier is None:
         raise ApiError(404, "not_found", "찾지 못했어요.")
@@ -101,7 +110,8 @@ def app_store_notification(body: NotificationIn, request: Request, db: Session =
         data = note.get("data") or {}
         if data.get("bundleId") != verifier.bundle_id:
             raise PurchaseInvalid("another app's notification")
-        if note.get("notificationType") != "REFUND":
+        kind = note.get("notificationType")
+        if kind not in ("REFUND", "CONSUMPTION_REQUEST"):
             return {"handled": False}  # 200 so Apple stops resending
         tx = verifier.verify_signed(data["signedTransactionInfo"])
     except (PurchaseInvalid, KeyError):
@@ -111,6 +121,9 @@ def app_store_notification(body: NotificationIn, request: Request, db: Session =
     purchase = db.scalar(select(CoinEntry).where(CoinEntry.transaction_id == transaction_id))
     if purchase is None:
         return {"handled": False}
+    if kind == "CONSUMPTION_REQUEST":
+        return _answer_consumption_request(request, db, purchase, transaction_id,
+                                           data.get("environment") or tx.get("environment") or "Production")
     refund_id = f"refund:{transaction_id}"
     if db.scalar(select(CoinEntry.id).where(CoinEntry.transaction_id == refund_id)) is None:
         user = db.get(User, purchase.user_id)
@@ -118,3 +131,39 @@ def app_store_notification(body: NotificationIn, request: Request, db: Session =
             coins.take_back(db, user, purchase.delta, "환불", transaction_id=refund_id)
             db.commit()
     return {"handled": True}
+
+
+def consumption_info(purchase: CoinEntry, balance: int, now: datetime) -> dict:
+    """Policy (Figma 46): spent coins are not refunded; unspent coins within 7 days of purchase are.
+    Spent = received − min(received, balance), the same measure the REFUND take-back uses."""
+    received = purchase.delta
+    spent = received - min(received, max(balance, 0))
+    within_week = now - aware(purchase.created_at) <= timedelta(days=REFUND_WINDOW_DAYS)
+    return {
+        "customerConsented": True,
+        "consumptionPercentage": round(spent * 100000 / received),  # milli-percent: 25% = 25000
+        "deliveryStatus": "DELIVERED",
+        "refundPreference": "GRANT_FULL" if spent == 0 and within_week else "DECLINE",
+        "sampleContentProvided": False,
+    }
+
+
+def _answer_consumption_request(request: Request, db: Session, purchase: CoinEntry, transaction_id: str,
+                                environment: str) -> dict:
+    # Apple: without the customer's consent, don't respond at all.
+    if purchase.refund_consent_at is None:
+        return {"handled": False, "reason": "no_consent"}
+    client = request.app.state.appstore
+    if client is None:
+        logger.warning("CONSUMPTION_REQUEST for %s left unanswered: App Store API key not configured",
+                       transaction_id)
+        return {"handled": False, "reason": "not_configured"}
+    user = db.get(User, purchase.user_id)
+    info = consumption_info(purchase, user.coins if user else 0, datetime.now(timezone.utc))
+    try:
+        client.send_consumption(transaction_id, environment, info)
+    except Exception:
+        logger.exception("sending consumption info for %s failed", transaction_id)
+        # Not 200: Apple sends the notification again, inside the 12-hour window.
+        raise ApiError(502, "consumption_not_sent", "사용 정보를 보내지 못했어요.")
+    return {"handled": True, "sent": info}

@@ -82,6 +82,7 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
 | `MIN_APP_VERSION` | `1.0.0` | Below this, requests with `X-App-Version` get 426 (40) |
 | `MAINTENANCE_START`, `MAINTENANCE_END` | (none) | ISO times; without an offset they are read as KST. Every request gets 503 in between (41) |
 | `APPLE_BUNDLE_ID` | (none) | The app's bundle id. Required for verified coin purchases; without it purchases are refused |
+| `APPSTORE_ISSUER_ID`, `APPSTORE_KEY_ID`, `APPSTORE_PRIVATE_KEY_PATH` | (none) | App Store Server API key (`.p8`). Used to answer CONSUMPTION_REQUEST refund requests. Without it they go unanswered, and Apple decides alone |
 | `ALLOW_SANDBOX_PURCHASES` | `1` | Accept sandbox transactions. App Review and TestFlight buy in the sandbox, so keep this on in production |
 | `ADMIN_TOKEN` | (none) | `X-Admin-Token` for `/v1/admin`. Without it the operator API answers 404 |
 | `TRUST_PURCHASES` | off | `1` adds coins from `product_id` + `transaction_id` without a store. **Development only** |
@@ -123,6 +124,13 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
   - The server checks the certificate chain up to the pinned Apple Root CA - G3, the Apple purpose OIDs, the signature, the bundle id, revocation, and that the product is a consumable.
   - The App Store Connect product ids must be the package keys: `coin_50`, `coin_120` and `coin_300`. `quantity` multiplies the coins.
   - The same transaction never pays twice. A retry answers `already_processed: true`.
+  - Send `"consumption_consent": true` when the buyer saw and accepted the 28 notice ("쓴 코인은 환불되지 않아요. 환불을 요청하면 코인 사용 내역이 앱 스토어에 전달돼요."). It is stored per purchase.
+- **Refund requests** (CONSUMPTION_REQUEST, Figma 46 policy: spent coins aren't refunded):
+  - For a purchase with consent, the server sends Send Consumption Information V2 to Apple.
+  - `consumptionPercentage` is spent ÷ received, in milli-percent. Spent means received − min(received, balance).
+  - `refundPreference` is `DECLINE` when any coin was spent. With nothing spent, it is `GRANT_FULL` within 7 days of purchase and `DECLINE` after that.
+  - Without consent, nothing is sent; Apple requires that.
+  - If Apple refunds anyway, the REFUND rule applies: the coins left are taken back, and the balance stops at 0.
 - **Quotes:** Every sentence shown back to the user (impact quote, evidence, signals, story) is checked to appear unchanged in their writing.
 - **Plaza:**
   - A shared star carries only the one masked sentence its owner chose. A shared nebula carries only its outline, colours, depth and an optional masked sentence.
