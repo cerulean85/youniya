@@ -1,4 +1,4 @@
-"""Vercel entry point. vercel.json sends every path here; settings come from the project's environment variables.
+"""Vercel entry point. Vercel detects it and routes every request to `app`; settings come from the project's environment variables.
 
 The schema is not created here: run the migrations before each deploy (see README › 운영 배포)."""
 

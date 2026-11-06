@@ -78,7 +78,7 @@ Both files are gitignored. Keep a copy of the production `DATA_ENCRYPTION_KEY` s
 
 ### Deploying to Vercel
 
-- **Project:** Set the Vercel project's root directory to `server`. `api/index.py` is the entry point and `vercel.json` sends every path to it. Dependencies come from `requirements.txt`, which a test keeps equal to `pyproject.toml`.
+- **Project:** Set the Vercel project's root directory to `server`. `index.py` is the entry point; Vercel detects it and routes every request to its `app`, with the path unchanged (no rewrites). Dependencies come from `requirements.txt`, which a test keeps equal to `pyproject.toml`.
 - **Environment:** Copy every variable from `.env.production` into the Vercel project. `APPSTORE_PRIVATE_KEY_PATH` is not needed there.
 - **Migrations:** Vercel never runs them. Before a deploy that adds a migration, run `deploy/migrate-production.sh` here.
 - **Time limit:** `maxDuration` is 120 seconds, for the three model calls per star once the real model is on.
