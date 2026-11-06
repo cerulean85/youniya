@@ -150,8 +150,8 @@ def test_telescope_first_free_then_30_coins(client):
 
     paid = client.post("/v1/telescope/reports", json={}, headers=h).json()
     assert paid["charged"] == 30 and paid["coins"] == 20
-    history = [e["delta"] for e in client.get("/v1/coins/history", headers=h).json()["items"]]
-    assert history == [-30, 50]
+    history = [(e["kind"], e["delta"]) for e in client.get("/v1/coins/history", headers=h).json()["items"]]
+    assert history == [("spend", -30), ("purchase", 50)]
     titles = [r["title"] for r in client.get("/v1/telescope/reports", headers=h).json()["items"]]
     assert len(titles) == 2
 

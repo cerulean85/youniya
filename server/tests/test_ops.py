@@ -24,6 +24,7 @@ def test_inquiries_are_limited(client):
     assert codes == [201] * 5 + [429]
     r = client.post("/v1/inquiries", json=body, headers=h).json()["error"]
     assert r["code"] == "rate_limited" and r["retry_after"] > 0
+    assert int(client.post("/v1/inquiries", json=body, headers=h).headers["Retry-After"]) > 0
 
 
 def _refund_note(apple, transaction_id, bundle=BUNDLE, kind="REFUND"):
@@ -46,7 +47,8 @@ def test_refund_takes_coins_back(make_app):
     # Apple may send the same notification again: refunded once.
     client.post(url, json={"signedPayload": _refund_note(apple, "900")})
     assert client.get("/v1/coins", headers=h).json()["coins"] == 0
-    assert [e["title"] for e in client.get("/v1/coins/history", headers=h).json()["items"]] == ["환불", "코인 충전"]
+    history = client.get("/v1/coins/history", headers=h).json()["items"]
+    assert [(e["kind"], e["delta"]) for e in history] == [("refund", -120), ("purchase", 120)]
 
     assert client.post(url, json={"signedPayload": _refund_note(apple, "unknown")}).json()["handled"] is False
     assert client.post(url, json={"signedPayload": _refund_note(apple, "900", kind="TEST")}).json()["handled"] is False

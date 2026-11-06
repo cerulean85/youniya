@@ -37,8 +37,15 @@ def balance(user: User = Depends(consented_user)):
 def history(user: User = Depends(consented_user), db: Session = Depends(get_db)):
     rows = db.scalars(select(CoinEntry).where(CoinEntry.user_id == user.id)
                       .order_by(CoinEntry.created_at.desc())).all()
-    return {"items": [{"id": r.id, "title": r.title, "delta": r.delta, "created_at": iso(r.created_at)}
-                      for r in rows]}
+    return {"items": [{"id": r.id, "kind": _kind(r), "title": r.title, "delta": r.delta,
+                       "created_at": iso(r.created_at)} for r in rows]}
+
+
+def _kind(entry: CoinEntry) -> str:
+    """purchase (충전) · spend (사용) · refund (App Store 환불로 거둔 코인)"""
+    if entry.transaction_id and entry.transaction_id.startswith("refund:"):
+        return "refund"
+    return "purchase" if entry.transaction_id else "spend"
 
 
 @router.post("/purchases", dependencies=[per_user("purchase", 30, 3600)])
