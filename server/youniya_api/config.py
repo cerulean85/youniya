@@ -50,6 +50,12 @@ class Settings:
     # The same .p8 (whole PEM) as one base64 line, for hosts with no files to read (Vercel). Wins over the path.
     appstore_private_key_base64: str | None = field(
         default_factory=lambda: os.getenv("APPSTORE_PRIVATE_KEY_BASE64") or None)
+    # APNs auth key (Certificates, IDs & Profiles › Keys, with Apple Push Notifications service).
+    # A different key from the In-App Purchase one. Without it no remote notification is sent.
+    apns_team_id: str | None = field(default_factory=lambda: os.getenv("APNS_TEAM_ID") or None)
+    apns_key_id: str | None = field(default_factory=lambda: os.getenv("APNS_KEY_ID") or None)
+    apns_private_key_base64: str | None = field(default_factory=lambda: os.getenv("APNS_PRIVATE_KEY_BASE64") or None)
+    apns_private_key_path: str | None = field(default_factory=lambda: os.getenv("APNS_PRIVATE_KEY_PATH") or None)
     allow_sandbox_purchases: bool = field(default_factory=lambda: os.getenv("ALLOW_SANDBOX_PURCHASES", "1") == "1")
     # X-Admin-Token for /v1/admin. Without it the operator API does not exist.
     admin_token: str | None = field(default_factory=lambda: os.getenv("ADMIN_TOKEN") or None)
@@ -62,8 +68,15 @@ class Settings:
 
     def appstore_private_key(self) -> str | None:
         """The .p8 PEM: from APPSTORE_PRIVATE_KEY_BASE64 if set, else read from APPSTORE_PRIVATE_KEY_PATH."""
-        if self.appstore_private_key_base64:
-            return base64.b64decode("".join(self.appstore_private_key_base64.split()), validate=True).decode()
-        if self.appstore_private_key_path:
-            return Path(self.appstore_private_key_path).read_text()
-        return None
+        return _pem(self.appstore_private_key_base64, self.appstore_private_key_path)
+
+    def apns_private_key(self) -> str | None:
+        return _pem(self.apns_private_key_base64, self.apns_private_key_path)
+
+
+def _pem(b64: str | None, path: str | None) -> str | None:
+    if b64:
+        return base64.b64decode("".join(b64.split()), validate=True).decode()
+    if path:
+        return Path(path).read_text()
+    return None

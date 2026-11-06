@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from ..deps import current_user, get_cipher, get_db
 from ..export import StarEntry, as_pdf, as_text
-from ..models import Inquiry, Nebula, NebulaShare, Resonance, Star, StarlightLine, StarShare, User
+from ..models import DeviceToken, Inquiry, Nebula, NebulaShare, Resonance, Star, StarlightLine, StarShare, User
 from ..rules import INQUIRY_KINDS, MOOD_LABELS, SKY_THEMES, SOUNDS
 from ..security import Cipher
 from ..views import iso, local
@@ -48,6 +48,12 @@ class Consent(BaseModel):
     privacy: Literal[True]
     sensitive: Literal[True]
     marketing: bool = False
+
+
+class DeviceIn(BaseModel):
+    token: str = Field(..., pattern=r"^[0-9a-fA-F]{64,200}$", description="APNs device token, hex")
+    environment: Literal["production", "sandbox"] = Field(
+        ..., description="sandbox for Xcode debug builds, production for TestFlight and the App Store")
 
 
 class InquiryIn(BaseModel):
@@ -96,6 +102,24 @@ def delete_account(user: User = Depends(current_user), db: Session = Depends(get
     """91: stars, nebulae, the milky way and the account go, with no way back.
     Everything hangs off users.id with ON DELETE CASCADE."""
     db.delete(user)
+    db.commit()
+
+
+@router.put("/me/devices", status_code=204)
+def register_device(body: DeviceIn, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """After the user allows notifications: remember where to reach them. Call it again whenever iOS hands
+    the app a token (it can change). A device moves to whoever signed in on it last."""
+    token = body.token.lower()
+    row = db.get(DeviceToken, token) or DeviceToken(token=token)
+    row.user_id, row.environment = user.id, body.environment
+    db.add(row)
+    db.commit()
+
+
+@router.delete("/me/devices/{token}", status_code=204)
+def unregister_device(token: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Before signing out, or when the user turns notifications off in iOS settings."""
+    db.execute(delete(DeviceToken).where(DeviceToken.token == token.lower(), DeviceToken.user_id == user.id))
     db.commit()
 
 

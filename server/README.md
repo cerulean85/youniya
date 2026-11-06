@@ -104,6 +104,7 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
 | `APPLE_BUNDLE_ID` | (none) | The app's bundle id. Required for verified coin purchases; without it purchases are refused |
 | `APPSTORE_ISSUER_ID`, `APPSTORE_KEY_ID`, `APPSTORE_PRIVATE_KEY_PATH` | (none) | App Store Server API key (`.p8`). Used to answer CONSUMPTION_REQUEST refund requests. Without it they go unanswered, and Apple decides alone |
 | `APPSTORE_PRIVATE_KEY_BASE64` | (none) | The same `.p8` file (whole PEM) as one base64 line (`base64 -w0 AuthKey_XXX.p8`), for hosts without files such as Vercel. Used instead of `APPSTORE_PRIVATE_KEY_PATH` when set |
+| `APNS_TEAM_ID`, `APNS_KEY_ID`, `APNS_PRIVATE_KEY_BASE64` (or `_PATH`) | (none) | APNs auth key (Keys › Apple Push Notifications service), a different key from the In-App Purchase one. Topic is `APPLE_BUNDLE_ID`. Without it no remote notification is sent, and everything else works |
 | `ALLOW_SANDBOX_PURCHASES` | `1` | Accept sandbox transactions. App Review and TestFlight buy in the sandbox, so keep this on in production |
 | `ADMIN_TOKEN` | (none) | `X-Admin-Token` for `/v1/admin`. Without it the operator API answers 404 |
 | `TRUST_PROXY` | on when `VERCEL=1` | Take the caller's IP from `X-Forwarded-For` for per-IP limits. Only behind a proxy that sets it |
@@ -122,7 +123,7 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
 | :--- | :--- | :--- |
 | App | `GET /v1/app/status` | 40, 41 |
 | Auth | `POST /v1/auth/{apple,google}`, `/refresh`, `/logout` | 02, 39 |
-| Account | `GET /v1/me`, `POST /v1/me/consent`, `PATCH /v1/me/settings`, `DELETE /v1/me`, `GET /v1/me/export?format=text\|pdf`, `GET·DELETE /v1/me/shares`, `POST /v1/inquiries` | 11, 87, 91–94, 113, 114, 32 |
+| Account | `GET /v1/me`, `POST /v1/me/consent`, `PATCH /v1/me/settings`, `PUT /v1/me/devices`, `DELETE /v1/me/devices/{token}`, `DELETE /v1/me`, `GET /v1/me/export?format=text\|pdf`, `GET·DELETE /v1/me/shares`, `POST /v1/inquiries` | 11, 87, 91–94, 113, 114, 32 |
 | Stars | `POST /v1/stars` (`mode: float \| keep`), `GET /v1/stars` (`state`, `mood`, `q`, `month`, `before`), `GET /v1/stars/summary`, `GET·DELETE /v1/stars/{id}`, `POST /v1/stars/{id}/float` | 05, 07, 12–16, 36, 104, 105, 115–119 |
 | Draft | `GET·PUT·DELETE /v1/drafts/current` | 34 |
 | Growth | `GET /v1/starlight/trend`, `GET /v1/growth` | 08, 65, 66, 82, 86, 109 |
@@ -160,6 +161,11 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
   - Others never see scores, ranks or 공명 counts. Owners see their counts in `GET /v1/me/shares`.
   - A line someone reports disappears for them at once. Three reports hide it for everyone.
 - **Refunds:** A REFUND notification takes that purchase's coins back once, even below zero (the coins were already spent).
+- **Notifications:** The server sends two kinds through APNs, and never puts writing or analyses in them.
+  - **101 신고 결과:** When an operator hides or restores a reported line (`POST /v1/admin/lines/{id}/hide|restore`), each reporter is told once. The line is not quoted.
+  - **새 기능·혜택 알림:** `POST /v1/admin/announcements` (dry run by default) goes only to users with `marketing_opt_in`. The title gets `(광고)`, the body ends with how to opt out, and nothing is sent 21:00–08:00 KST (정보통신망법 50조).
+  - **87 별 만들기 알림** is a local notification the app schedules itself; the server only keeps the `star_reminder` setting.
+  - The app registers its token with `PUT /v1/me/devices` (`environment`: `sandbox` for Xcode debug builds, `production` for TestFlight and the App Store) and removes it with `DELETE /v1/me/devices/{token}` before signing out. Payloads carry `kind` (`report_result` or `announcement`). Dead tokens are dropped when APNs says so.
 - **Rate limits:** `429 rate_limited` with `retry_after` seconds. Limits per user, per hour: floating a star 30, telescope 10, story polish 10, lines 30, reports 30, purchases 30, inquiries 5. The privacy scan allows 60 per minute, and sign-in allows 30 per minute per IP. Counters live in the database (`rate_hits`), so every server instance counts together.
 - **Operator API:** Every operator read or action is written to `admin_logs` (Protoss 3장).
 - **PDF:** The export embeds NanumGothic (SIL OFL, `youniya_api/fonts/OFL.txt`), so Korean renders anywhere.

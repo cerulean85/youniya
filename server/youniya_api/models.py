@@ -173,6 +173,8 @@ class LineReport(Base):
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     reason: Mapped[str] = mapped_column(String(16))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    # When the reporter was told the outcome (101 "결과를 알림으로 알려 드릴게요"). Told once.
+    notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class TelescopeReport(Base):
@@ -235,3 +237,14 @@ class RateHit(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     key: Mapped[str] = mapped_column(String(200))
     at: Mapped[float] = mapped_column(Float)  # epoch seconds
+
+
+class DeviceToken(Base):
+    """An APNs device token. A device belongs to whoever signed in on it last."""
+
+    __tablename__ = "device_tokens"
+
+    token: Mapped[str] = mapped_column(String(200), primary_key=True)
+    user_id: Mapped[str] = user_fk()
+    environment: Mapped[str] = mapped_column(String(16))  # "production" | "sandbox"
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)

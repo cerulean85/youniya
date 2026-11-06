@@ -3,12 +3,16 @@
 import hmac
 from typing import Literal
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, Header, Request
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..deps import ApiError, get_cipher, get_db
-from ..models import AdminLog, Inquiry, LineReport, NebulaShare, StarlightLine
+from ..models import AdminLog, Inquiry, LineReport, NebulaShare, StarlightLine, User
+from ..push import Message, is_night_kst, notify
 from ..security import Cipher
 from ..views import iso
 
@@ -45,14 +49,51 @@ def reported_lines(db: Session = Depends(get_db)):
     return {"items": sorted(items, key=lambda i: -i["reports"])}
 
 
+# 101 "살펴본 뒤 결과를 알림으로 알려 드릴게요". The line itself is never quoted.
+REPORT_RESULT = {
+    "hide": Message("신고하신 별빛을 살펴봤어요", "운영 정책에 어긋나 광장에서 내렸어요. 알려 주셔서 고마워요.", "report_result"),
+    "restore": Message("신고하신 별빛을 살펴봤어요", "운영 정책에 어긋나지 않아 그대로 두었어요. 내게는 계속 보이지 않아요.",
+                       "report_result"),
+}
+
+
 @router.post("/lines/{line_id}/{action}")
-def moderate_line(line_id: str, action: Literal["hide", "restore"], db: Session = Depends(get_db)):
+def moderate_line(line_id: str, action: Literal["hide", "restore"], request: Request,
+                  db: Session = Depends(get_db)):
+    """hide: take it down for everyone. restore: looked at, and it stays (or comes back).
+    Reporters not told yet hear the outcome once."""
     line = db.get(StarlightLine, line_id)
     if line is None:
         raise ApiError(404, "not_found", "별빛을 찾지 못했어요.")
     line.hidden = action == "hide"
+    pending = db.scalars(select(LineReport).where(LineReport.line_id == line_id,
+                                                  LineReport.notified_at.is_(None))).all()
+    for r in pending:
+        r.notified_at = datetime.now(timezone.utc)
     _log(db, f"{action}_line", line_id)
-    return {"line_id": line_id, "hidden": line.hidden}
+    sent = notify(db, request.app.state.push, [r.user_id for r in pending], REPORT_RESULT[action])
+    return {"line_id": line_id, "hidden": line.hidden, "reporters_told": len(pending), "push": sent}
+
+
+class AnnouncementIn(BaseModel):
+    title: str = Field(..., min_length=1, max_length=40, description="Without (광고): the server adds it")
+    body: str = Field(..., min_length=1, max_length=150)
+    dry_run: bool = Field(True, description="Count the recipients without sending")
+
+
+@router.post("/announcements")
+def announce(body: AnnouncementIn, request: Request, db: Session = Depends(get_db)):
+    """새 기능·혜택 알림, only to users who opted in (11, 87).
+    정보통신망법 50조: the title starts with (광고), the body ends with how to opt out,
+    and nothing goes out between 21:00 and 08:00 KST."""
+    if not body.dry_run and is_night_kst():
+        raise ApiError(409, "night_time", "밤 9시부터 아침 8시까지는 광고 알림을 보낼 수 없어요.")
+    users = list(db.scalars(select(User.id).where(User.marketing_opt_in.is_(True))))
+    message = Message(f"(광고) {body.title}", f"{body.body}\n수신거부: 설정 › 알림", "announcement")
+    if body.dry_run:
+        return {"recipients": len(users), "title": message.title, "sent": None}
+    _log(db, "announce")
+    return {"recipients": len(users), "title": message.title, "sent": notify(db, request.app.state.push, users, message)}
 
 
 @router.get("/inquiries")

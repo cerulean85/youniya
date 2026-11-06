@@ -9,6 +9,7 @@ from .config import Settings
 from .db import make_engine
 from .deps import ApiError
 from .prism import PrismEngine
+from .push import ApnsClient
 from .ratelimit import RateLimiter
 from .routers import account, admin, auth, coins, nebulae, plaza, stars, telescope
 from .security import Cipher, IdTokenVerifier
@@ -46,6 +47,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         AppStoreClient(settings.appstore_issuer_id, settings.appstore_key_id, appstore_key, settings.apple_bundle_id)
         if settings.apple_bundle_id and settings.appstore_issuer_id and settings.appstore_key_id and appstore_key
         else None)
+    apns_key = settings.apns_private_key()
+    app.state.push = (ApnsClient(settings.apns_team_id, settings.apns_key_id, apns_key, settings.apple_bundle_id)
+                      if settings.apple_bundle_id and settings.apns_team_id and settings.apns_key_id and apns_key
+                      else None)
     app.state.prism = PrismEngine(settings.gemini_api_key, settings.prism_model, settings.prism_samples)
 
     @app.exception_handler(ApiError)

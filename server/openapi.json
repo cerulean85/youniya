@@ -350,6 +350,87 @@
         ]
       }
     },
+    "/v1/me/devices": {
+      "put": {
+        "tags": [
+          "account"
+        ],
+        "summary": "Register Device",
+        "description": "After the user allows notifications: remember where to reach them. Call it again whenever iOS hands\nthe app a token (it can change). A device moves to whoever signed in on it last.",
+        "operationId": "register_device_v1_me_devices_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/me/devices/{token}": {
+      "delete": {
+        "tags": [
+          "account"
+        ],
+        "summary": "Unregister Device",
+        "description": "Before signing out, or when the user turns notifications off in iOS settings.",
+        "operationId": "unregister_device_v1_me_devices__token__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/me/shares": {
       "get": {
         "tags": [
@@ -2485,6 +2566,7 @@
           "admin"
         ],
         "summary": "Moderate Line",
+        "description": "hide: take it down for everyone. restore: looked at, and it stays (or comes back).\nReporters not told yet hear the outcome once.",
         "operationId": "moderate_line_v1_admin_lines__line_id___action__post",
         "parameters": [
           {
@@ -2526,6 +2608,64 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/announcements": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Announce",
+        "description": "새 기능·혜택 알림, only to users who opted in (11, 87).\n정보통신망법 50조: the title starts with (광고), the body ends with how to opt out,\nand nothing goes out between 21:00 and 08:00 KST.",
+        "operationId": "announce_v1_admin_announcements_post",
+        "parameters": [
+          {
+            "name": "x-admin-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnouncementIn"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -2645,6 +2785,35 @@
   },
   "components": {
     "schemas": {
+      "AnnouncementIn": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Title",
+            "description": "Without (광고): the server adds it"
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 150,
+            "minLength": 1,
+            "title": "Body"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run",
+            "description": "Count the recipients without sending",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "body"
+        ],
+        "title": "AnnouncementIn"
+      },
       "Consent": {
         "properties": {
           "terms": {
@@ -2690,6 +2859,31 @@
           "name"
         ],
         "title": "DevSignIn"
+      },
+      "DeviceIn": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{64,200}$",
+            "title": "Token",
+            "description": "APNs device token, hex"
+          },
+          "environment": {
+            "type": "string",
+            "enum": [
+              "production",
+              "sandbox"
+            ],
+            "title": "Environment",
+            "description": "sandbox for Xcode debug builds, production for TestFlight and the App Store"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "environment"
+        ],
+        "title": "DeviceIn"
       },
       "DraftIn": {
         "properties": {
