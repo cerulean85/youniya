@@ -12,6 +12,7 @@ DATA_ENCRYPTION_KEY=$(.venv/bin/python -c "from cryptography.fernet import Ferne
 DATABASE_URL=sqlite:///./youniya-dev.db
 DEV_LOGIN=1
 TRUST_PURCHASES=1
+MIN_APP_VERSION=0.1
 EOF
   chmod 600 .env
   echo "wrote server/.env"
