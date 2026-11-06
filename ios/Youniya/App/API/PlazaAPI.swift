@@ -1,0 +1,200 @@
+import Foundation
+
+// MARK: - Payloads
+
+private struct PlazaStarItem: Decodable {
+    var id: String
+    var name: String
+    var quote: String
+    var mood: Mood
+    var depthLevel: Int?
+    var resonated: Bool
+    var beside: Bool
+}
+
+private struct PlazaNebulaItem: Decodable {
+    var id: String
+    var name: String
+    var quote: String?
+    var depthLevel: Int?
+    var receiveLines: Bool
+    var resonated: Bool
+    var beside: Bool
+}
+
+private struct Items<T: Decodable>: Decodable { var items: [T] }
+
+private struct LineItem: Decodable {
+    var id: String
+    var text: String
+    var createdAt: Date
+    var mine: Bool
+}
+
+private struct LineList: Decodable {
+    var items: [LineItem]
+    var canLeave: Bool
+}
+
+private struct ShareIn: Encodable { var quote: String }
+private struct LineIn: Encodable { var text: String }
+private struct ReportIn: Encodable { var reason: String }
+
+// MARK: - Mapping
+
+private extension PlazaNebula {
+    init(_ s: PlazaStarItem, order: Int, similarity: Double) {
+        var rng = SeededRandom(seed: s.id)
+        self.init(name: s.name, line: s.quote, pattern: rng.next(in: 0...1) < 0.5 ? .a : .b,
+                  similarity: similarity, order: order, serverID: s.id)
+    }
+}
+
+private extension GalaxyNebula {
+    init(_ n: PlazaNebulaItem, order: Int, similarity: Double) {
+        var rng = SeededRandom(seed: n.id)
+        self.init(name: n.name, stage: max(1, n.depthLevel ?? 1), resonance: 0, quote: n.quote ?? "",
+                  order: order, similarity: similarity,
+                  spot: CGPoint(x: rng.next(in: 0.15...0.85), y: rng.next(in: 0.15...0.85)),
+                  serverID: n.id, receiveLines: n.receiveLines)
+    }
+}
+
+/// The server's `kind` for resonance and 곁에 두기.
+private enum PlazaKind: String { case star, nebula }
+
+// MARK: - AppModel (live plaza)
+
+extension AppModel {
+    /// 09 / 72: the plaza's stars and nebulae, mock samples or the server's.
+    var plazaStarItems: [PlazaNebula] { useLiveAPI ? plazaStarsLive : PlazaNebula.samples }
+    var galaxyNebulae: [GalaxyNebula] { useLiveAPI ? plazaNebulaeLive : GalaxyNebula.samples }
+
+    /// 73 / 74: others' lines on a nebula, newest first.
+    func lines(for nebula: GalaxyNebula) -> [GalaxyNebula.Line] {
+        useLiveAPI ? liveLines[nebula.name] ?? [] : nebula.lines
+    }
+
+    /// Live 09 / 72: loads both feeds. "새로 뜬 것" gives `order`, "나와 결이 비슷한" gives
+    /// `similarity`, so the screens keep sorting the way they do with samples.
+    @MainActor func loadPlaza() async {
+        guard useLiveAPI, isSignedIn else { return }
+        do {
+            async let newStars: Items<PlazaStarItem> = APIClient.shared.get("/v1/plaza/stars", query: ["sort": "new"])
+            async let similarStars: Items<PlazaStarItem> = APIClient.shared.get("/v1/plaza/stars", query: ["sort": "similar"])
+            async let newNebulae: Items<PlazaNebulaItem> = APIClient.shared.get("/v1/plaza/nebulae", query: ["filter": "new"])
+            async let similarNebulae: Items<PlazaNebulaItem> = APIClient.shared.get("/v1/plaza/nebulae", query: ["filter": "similar"])
+            let (ns, ss, nn, sn) = try await (newStars, similarStars, newNebulae, similarNebulae)
+
+            let starRank = Dictionary(ss.items.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { a, _ in a })
+            plazaStarsLive = ns.items.enumerated().map { i, s in
+                PlazaNebula(s, order: i, similarity: 1 - Double(starRank[s.id] ?? ss.items.count) / Double(max(1, ss.items.count)))
+            }
+            let nebulaRank = Dictionary(sn.items.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { a, _ in a })
+            plazaNebulaeLive = nn.items.enumerated().map { i, n in
+                GalaxyNebula(n, order: i, similarity: 1 - Double(nebulaRank[n.id] ?? sn.items.count) / Double(max(1, sn.items.count)))
+            }
+            // The app keeps one "resonated" set: star names, and "nebula:" keys for
+            // nebulae the user resonated with or keeps beside (80).
+            for s in ns.items where s.resonated { resonated.insert(s.name) }
+            for n in nn.items where n.resonated || n.beside { resonated.insert("nebula:" + n.name) }
+        } catch {
+            handle(error)
+        }
+    }
+
+    /// Live: sends a resonance toggle. A nebula's toggle also keeps it beside
+    /// (80 컬렉션), as the app shows both as one "곁에 둔" state.
+    @MainActor func sendResonance(key: String, on: Bool) {
+        let target: (PlazaKind, String)?
+        if key.hasPrefix("nebula:") {
+            let name = String(key.dropFirst("nebula:".count))
+            target = plazaNebulaeLive.first { $0.name == name }?.serverID.map { (.nebula, $0) }
+        } else {
+            target = plazaStarsLive.first { $0.name == key }?.serverID.map { (.star, $0) }
+        }
+        guard let (kind, id) = target else { return }  // e.g. a star inside a nebula: kept on device
+        Task { @MainActor in
+            do {
+                let method = on ? "PUT" : "DELETE"
+                try await APIClient.shared.sendRaw(method, "/v1/plaza/\(kind.rawValue)/\(id)/resonance")
+                if kind == .nebula {
+                    try await APIClient.shared.sendRaw(method, "/v1/plaza/nebula/\(id)/beside")
+                }
+            } catch {
+                if on { resonated.remove(key) } else { resonated.insert(key) }
+                handle(error)
+            }
+        }
+    }
+
+    /// Live 74: others' lines, and my own line (shown as mine on 73).
+    @MainActor func loadLines(for nebula: GalaxyNebula) async {
+        guard useLiveAPI, let id = nebula.serverID else { return }
+        do {
+            let r: LineList = try await APIClient.shared.get("/v1/plaza/nebulae/\(id)/lines")
+            liveLines[nebula.name] = r.items.filter { !$0.mine }.map {
+                GalaxyNebula.Line(hoursAgo: Date.now.timeIntervalSince($0.createdAt) / 3600, text: $0.text, serverID: $0.id)
+            }
+            if let mine = r.items.first(where: \.mine) { nebulaLines[nebula.name] = mine.text }
+        } catch {
+            handle(error)
+        }
+    }
+
+    /// Live 74 보내기. Returns the server's error code for 99/106/107, or nil when it was left.
+    @MainActor func leaveLine(_ text: String, on nebula: GalaxyNebula) async -> String? {
+        guard let id = nebula.serverID else { return "not_found" }
+        do {
+            let r: LineItem = try await APIClient.shared.post("/v1/plaza/nebulae/\(id)/lines", body: LineIn(text: text))
+            nebulaLines[nebula.name] = r.text
+            return nil
+        } catch let e as APIError where ["hurtful", "too_long", "already_left", "lines_closed", "own_share"].contains(e.code) {
+            if e.code != "hurtful" { apiMessage = e.message }
+            return e.code
+        } catch {
+            handle(error)
+            return "failed"
+        }
+    }
+
+    /// Live 100 신고하기. `reason`: hurtful · personal_info · spam · other.
+    @MainActor func reportLine(_ line: GalaxyNebula.Line, reason: String) async {
+        guard let id = line.serverID else { return }
+        do {
+            try await APIClient.shared.sendRaw("POST", "/v1/plaza/lines/\(id)/report", body: ReportIn(reason: reason))
+        } catch {
+            handle(error)
+        }
+    }
+
+    /// Live 19/20: shares a floated star with one sentence of its own text.
+    /// The server masks names, contacts and places again before it is public.
+    /// TODO: Let the user pick the sentence (Figma 75 "본인이 골라 공개한 한 문장").
+    @MainActor func shareStarLive(_ id: StarItem.ID) async -> Bool {
+        guard let star = stars.first(where: { $0.id == id }) else { return false }
+        let sentences = star.body
+            .split(whereSeparator: { ".!?\n".contains($0) })
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty && $0.count <= 300 }
+        let quote = sentences.max(by: { $0.count < $1.count }) ?? String(star.body.prefix(300))
+        do {
+            try await APIClient.shared.sendRaw("PUT", "/v1/stars/\(id.apiID)/share", body: ShareIn(quote: quote))
+            if let i = stars.firstIndex(where: { $0.id == id }) { stars[i].sharedToPlaza = true }
+            return true
+        } catch {
+            handle(error)
+            return false
+        }
+    }
+
+    /// Live: takes one star back from the plaza.
+    @MainActor func unshareStarLive(_ id: StarItem.ID) async {
+        do {
+            try await APIClient.shared.delete("/v1/stars/\(id.apiID)/share")
+            if let i = stars.firstIndex(where: { $0.id == id }) { stars[i].sharedToPlaza = false }
+        } catch {
+            handle(error)
+        }
+    }
+}

@@ -417,6 +417,10 @@ final class AppModel {
     }
     /// A server or network message for the root toast.
     var apiMessage: String?
+    /// Live plaza (09, 72, 74), loaded by `loadPlaza()` / `loadLines(for:)`.
+    var plazaStarsLive: [PlazaNebula] = []
+    var plazaNebulaeLive: [GalaxyNebula] = []
+    var liveLines: [String: [GalaxyNebula.Line]] = [:]
     /// Live: the server's account id (/v1/me), used as StoreKit's appAccountToken.
     var accountID: String?
     /// Live: stars whose telescope report is being made on the server (25 → 10).
@@ -611,6 +615,12 @@ final class AppModel {
     /// 19: share to / withdraw from the plaza.
     /// TODO: send to the plaza API; for now it's a local flag.
     func setShared(_ shared: Bool, for id: StarItem.ID) {
+        if useLiveAPI {
+            Task { @MainActor in
+                if shared { _ = await shareStarLive(id) } else { await unshareStarLive(id) }
+            }
+            return
+        }
         guard let i = stars.firstIndex(where: { $0.id == id }) else { return }
         stars[i].sharedToPlaza = shared
     }
@@ -654,7 +664,9 @@ final class AppModel {
     }
 
     func toggleResonance(_ id: String) {
-        if resonated.contains(id) { resonated.remove(id) } else { resonated.insert(id) }
+        let on = !resonated.contains(id)
+        if on { resonated.insert(id) } else { resonated.remove(id) }
+        if useLiveAPI { Task { @MainActor in sendResonance(key: id, on: on) } }
     }
 
     func signOut() {

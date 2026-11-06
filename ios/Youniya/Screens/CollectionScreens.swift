@@ -41,7 +41,7 @@ struct CollectionView: View {
     }
 
     private var keptStars: [Tile] {
-        GalaxyNebula.samples.flatMap { n in
+        model.galaxyNebulae.flatMap { n in
             n.stars.compactMap { s in
                 model.resonated.contains("star:\(n.name):\(s.title)") ? Tile.kept(nebula: n, title: s.title, spec: s.spec, color: s.color) : nil
             }
@@ -49,7 +49,7 @@ struct CollectionView: View {
     }
 
     private var keptNebulae: [GalaxyNebula] {
-        GalaxyNebula.samples.filter { model.resonated.contains(PlazaNebulaField.key($0)) }
+        model.galaxyNebulae.filter { model.resonated.contains(PlazaNebulaField.key($0)) }
     }
 
     var body: some View {

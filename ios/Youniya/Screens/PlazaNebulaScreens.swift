@@ -16,11 +16,16 @@ struct GalaxyNebula: Identifiable, Hashable {
     var similarity: Double
     /// Where the cluster sits in the 72 field (unit square).
     var spot: CGPoint
+    /// Live: the plaza share id, and whether the owner takes lines (74).
+    var serverID: String? = nil
+    var receiveLines = true
     var id: String { name }
 
     struct Line: Identifiable, Hashable {
         var hoursAgo: Double
         var text: String
+        /// Live: the line id, for 100 신고하기.
+        var serverID: String? = nil
         var id: String { text }
 
         var age: String {
@@ -85,9 +90,9 @@ struct PlazaNebulaField: View {
 
     private var items: [GalaxyNebula] {
         switch filter {
-        case .similar: GalaxyNebula.samples.sorted { $0.similarity > $1.similarity }
-        case .newest: GalaxyNebula.samples.sorted { $0.order < $1.order }
-        case .kept: GalaxyNebula.samples.filter { model.resonated.contains(Self.key($0)) }
+        case .similar: model.galaxyNebulae.sorted { $0.similarity > $1.similarity }
+        case .newest: model.galaxyNebulae.sorted { $0.order < $1.order }
+        case .kept: model.galaxyNebulae.filter { model.resonated.contains(Self.key($0)) }
         }
     }
 
@@ -161,7 +166,10 @@ struct PlazaNebulaField: View {
                             Text(current.name).textStyle(.labelM).foregroundStyle(Color.textPrimary)
                             HStack(spacing: Space.sm) {
                                 Tag(text: "\(current.stage)단계", tone: .gold)
-                                Tag(text: "공명 \(current.resonance + (model.resonated.contains(Self.key(current)) ? 1 : 0))", tone: .violet)
+                                // Live: others' resonance counts are never shown.
+                                if current.serverID == nil {
+                                    Tag(text: "공명 \(current.resonance + (model.resonated.contains(Self.key(current)) ? 1 : 0))", tone: .violet)
+                                }
                             }
                         }
                         Spacer()
@@ -413,7 +421,7 @@ struct GalaxyNebulaView: View {
                         .textStyle(.labelS)
                         .foregroundStyle(Color.textTertiary)
                     VStack(spacing: Space.md) {
-                        ForEach(nebula.lines.prefix(2)) { line in
+                        ForEach(model.lines(for: nebula).prefix(2)) { line in
                             LineCard(who: "익명의 별지기", line: line, mine: false, compact: true)
                         }
                     }
@@ -425,6 +433,7 @@ struct GalaxyNebulaView: View {
             .scrollIndicators(.hidden)
         }
         .background { StarField() }
+        .task { await model.loadLines(for: nebula) }
     }
 }
 
@@ -462,7 +471,7 @@ struct GalaxyLinesView: View {
                         .textStyle(.caption)
                         .foregroundStyle(Color.textTertiary)
                         .multilineTextAlignment(.center)
-                    ForEach(nebula.lines) { line in
+                    ForEach(model.lines(for: nebula)) { line in
                         if model.reportedLines.contains(line.text) {
                             // 101: a reported line is hidden right away.
                             HiddenLineCard()
@@ -511,7 +520,7 @@ struct GalaxyLinesView: View {
                 if mine == nil {
                     HStack(spacing: 0) {
                         Text("상처 주는 말은 별빛이 되지 못해요 · 보내기 전에 한 번 걸러요 · ")
-                        Button("신고") { reporting = nebula.lines.first { !model.reportedLines.contains($0.text) } }
+                        Button("신고") { reporting = model.lines(for: nebula).first { !model.reportedLines.contains($0.text) } }
                             .buttonStyle(.plain)
                             .underline()
                     }
@@ -528,12 +537,14 @@ struct GalaxyLinesView: View {
             .animation(.easeInOut(duration: 0.2), value: rejected)
         }
         .background { StarField() }
+        .task { await model.loadLines(for: nebula) }
         .toastCard($toast)
         .sheet(item: $reporting) { line in
             ReportLineSheet(
-                onReport: {
+                onReport: { reason in
                     reporting = nil
                     _ = withAnimation(.snappy) { model.reportedLines.insert(line.text) }
+                    if model.useLiveAPI { Task { await model.reportLine(line, reason: reason) } }
                     toast = ToastCardMessage(title: "신고를 받았어요", detail: "살펴본 뒤 결과를 알림으로 알려 드릴게요")
                 },
                 onCancel: { reporting = nil }
@@ -589,8 +600,19 @@ struct GalaxyLinesView: View {
             return
         }
         editing = false
-        withAnimation(.snappy) { model.nebulaLines[nebula.name] = t }
-        draft = ""
+        guard model.useLiveAPI else {
+            withAnimation(.snappy) { model.nebulaLines[nebula.name] = t }
+            draft = ""
+            return
+        }
+        // The server checks again (99 hurtful, 106 too long, 107 already left).
+        Task { @MainActor in
+            switch await model.leaveLine(t, on: nebula) {
+            case nil: draft = ""
+            case "hurtful": withAnimation { rejected = true }
+            default: break
+            }
+        }
     }
 }
 
@@ -611,10 +633,12 @@ private struct HiddenLineCard: View {
 
 /// 100 이 별빛을 신고할까요?: pick reasons, then report.
 private struct ReportLineSheet: View {
-    var onReport: () -> Void
+    /// The first picked reason, as the API's hurtful · personal_info · spam · other.
+    var onReport: (_ reason: String) -> Void
     var onCancel: () -> Void
 
     private static let reasons = ["상처를 주는 말이에요", "개인정보가 드러나 있어요", "광고나 스팸이에요", "그 밖의 이유가 있어요"]
+    private static let apiReasons = ["hurtful", "personal_info", "spam", "other"]
     @State private var picked: Set<String> = [reasons[0]]
 
     var body: some View {
@@ -654,7 +678,11 @@ private struct ReportLineSheet: View {
                 }
             }
             VStack(spacing: Space.md) {
-                Button("신고하기", action: onReport).buttonStyle(.primary).disabled(picked.isEmpty)
+                Button("신고하기") {
+                    let first = Self.reasons.firstIndex { picked.contains($0) } ?? 3
+                    onReport(Self.apiReasons[first])
+                }
+                .buttonStyle(.primary).disabled(picked.isEmpty)
                 Button("취소", action: onCancel).buttonStyle(.secondary)
             }
         }

@@ -13,6 +13,8 @@ struct PlazaNebula: Identifiable, Hashable {
     /// How close it is to the viewer's own tone (0...1), for "나와 결이 비슷한".
     var similarity: Double
     var order: Int
+    /// Live: the plaza share id.
+    var serverID: String? = nil
 
     static func == (l: Self, r: Self) -> Bool { l.name == r.name }
     func hash(into h: inout Hasher) { h.combine(name) }
@@ -42,8 +44,8 @@ struct PlazaView: View {
 
     private var items: [PlazaNebula] {
         switch sort {
-        case .newest: PlazaNebula.samples.sorted { $0.order < $1.order }
-        case .similar: PlazaNebula.samples.sorted { $0.similarity > $1.similarity }
+        case .newest: model.plazaStarItems.sorted { $0.order < $1.order }
+        case .similar: model.plazaStarItems.sorted { $0.similarity > $1.similarity }
         }
     }
 
@@ -88,6 +90,7 @@ struct PlazaView: View {
             .padding(.vertical, Space.lg)
         }
         .scrollIndicators(.hidden)
+        .task { await model.loadPlaza() }
     }
 
     /// Figma `Segment`: pill track, selected segment filled violet.

@@ -119,6 +119,7 @@ struct MainView: View {
             case "settings": push(.settings)
             case "reports": push(.reports)
             case "collection": push(.collection)
+            case "plaza": tab = .plaza                    // 09
             case "missingReport": push(.report(UUID()))   // 122-1
             // Visual review (mock data):
             case "coinsAgreed": push(.coins)              // 28-1
@@ -236,7 +237,7 @@ struct MainView: View {
             PrivacyCheckView(starID: id, onBack: pop)
                 .edgeSwipeBack(onBack: pop)
         case .otherNebula(let name):
-            if let nebula = PlazaNebula.samples.first(where: { $0.name == name }) {
+            if let nebula = model.plazaStarItems.first(where: { $0.name == name }) {
                 OtherNebulaView(nebula: nebula, onBack: pop, onOpenLine: { push(.starlightLine($0)) })
                     .edgeSwipeBack(onBack: pop)
             } else {
@@ -334,19 +335,19 @@ struct MainView: View {
                 }
             )
         case .galaxyNebula(let name):
-            if let n = GalaxyNebula.samples.first(where: { $0.name == name }) {
+            if let n = model.galaxyNebulae.first(where: { $0.name == name }) {
                 GalaxyNebulaView(nebula: n, onBack: pop,
                                  onLines: { push(.galaxyLines(name)) },
                                  onOpenStar: { push(.galaxyStar(nebula: name, star: $0)) })
                     .edgeSwipeBack(onBack: pop)
             }
         case .galaxyLines(let name):
-            if let n = GalaxyNebula.samples.first(where: { $0.name == name }) {
+            if let n = model.galaxyNebulae.first(where: { $0.name == name }) {
                 GalaxyLinesView(nebula: n, onBack: pop)
                     .edgeSwipeBack(onBack: pop)
             }
         case .galaxyStar(let name, let star):
-            if let n = GalaxyNebula.samples.first(where: { $0.name == name }) {
+            if let n = model.galaxyNebulae.first(where: { $0.name == name }) {
                 GalaxyStarView(nebula: n, starTitle: star, onBack: pop)
                     .edgeSwipeBack(onBack: pop)
             }
