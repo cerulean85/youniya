@@ -88,7 +88,12 @@ struct ComposeFlowView: View {
         case birth(StarItem)
         /// 35 (network) or 36 (analysis) after 06 could not finish.
         case failed(StarItem, SimulatedFailure)
+        /// Live 35: the star never reached the server; it can be sent again.
+        case sendFailed(StarDraft, floated: Bool)
     }
+
+    /// Live: waiting for the server to save (and analyse) the star.
+    @State private var sending = false
 
     @State private var toast: ToastCardMessage?
 
@@ -100,21 +105,29 @@ struct ComposeFlowView: View {
             case .writing:
                 if let previous = rewriteOf {
                     RewriteView(previous: previous, question: model.rewriteQuestion(for: previous), onBack: onClose) { body, floated in
-                        let star = model.publishRewrite(of: previous, body: body, floated: floated)
-                        advance(after: star, floated: floated)
+                        if model.useLiveAPI {
+                            send(StarDraft(mood: previous.mood, title: previous.title, body: body), floated: floated)
+                        } else {
+                            let star = model.publishRewrite(of: previous, body: body, floated: floated)
+                            advance(after: star, floated: floated)
+                        }
                     }
                     .transition(.opacity)
                 } else {
                     StarMakingView(onClose: onClose) { draft, floated in
-                        advance(after: model.publish(draft, floated: floated), floated: floated)
+                        if model.useLiveAPI {
+                            send(draft, floated: floated)
+                        } else {
+                            advance(after: model.publish(draft, floated: floated), floated: floated)
+                        }
                     }
                     .transition(.opacity)
                 }
             case .analyzing(let star):
                 PrismAnalysisView(analysis: star.analysis!) {
                     withAnimation(.easeInOut(duration: 0.6)) {
-                        // TODO: The analysis request decides this; for now the dev switch does.
-                        if let failure = model.simulatedFailure, failure != .payment {
+                        // Mock only: the dev switch stands in for a failed request.
+                        if !model.useLiveAPI, let failure = model.simulatedFailure, failure != .payment {
                             step = .failed(star, failure)
                         } else {
                             step = .birth(star)
@@ -149,6 +162,11 @@ struct ComposeFlowView: View {
                     }
                 }
                 .transition(.opacity)
+            case .sendFailed(let draft, let floated):
+                StatusView(icon: .iconWifiOff, title: "연결이 잠시 끊겼어요",
+                           message: "쓰던 글은 이 기기에 안전하게 있어요.",
+                           actions: [.init(title: "다시 시도", style: .primary) { send(draft, floated: floated) }])
+                    .transition(.opacity)
             case .failed(let star, .network):
                 StatusView(icon: .iconWifiOff, title: "연결이 잠시 끊겼어요",
                            message: "쓰던 글은 이 기기에 안전하게 있어요.",
@@ -164,8 +182,52 @@ struct ComposeFlowView: View {
                     .transition(.opacity)
             }
         }
+        .overlay {
+            if sending {
+                ZStack {
+                    Color.black.opacity(0.35).ignoresSafeArea()
+                    ProgressView().tint(.white).controlSize(.large)
+                }
+                .transition(.opacity)
+                .accessibilityLabel("별을 띄우는 중이에요")
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: sending)
         .toastCard($toast)
-        .edgeSwipeBack(enabled: !isAnalyzing, onBack: onClose)
+        .edgeSwipeBack(enabled: !isAnalyzing && !sending, onBack: onClose)
+    }
+
+    /// Live: saves the star on the server and follows its answer.
+    /// - crisis → 37, then 13 (the server keeps it unscored)
+    /// - floated → 06 with the server's analysis
+    /// - asked to float but kept → the analysis failed (36)
+    /// - not reached → 35, which can send again
+    private func send(_ draft: StarDraft, floated: Bool) {
+        guard !sending else { return }
+        sending = true
+        Task { @MainActor in
+            defer { sending = false }
+            do {
+                let (star, crisis) = try await model.publishLive(draft, floated: floated, rewriteOf: rewriteOf?.id)
+                withAnimation(.easeInOut(duration: 0.5)) {
+                    if crisis {
+                        step = .crisis(star, floated: false)
+                    } else if star.isFloated, star.analysis != nil {
+                        step = .analyzing(star)
+                    } else if floated {
+                        step = .failed(star, .analysis)
+                    } else {
+                        step = .kept(star)
+                    }
+                }
+            } catch let e as APIError where e.code == "offline" {
+                withAnimation(.easeInOut(duration: 0.5)) { step = .sendFailed(draft, floated: floated) }
+            } catch let e as APIError where e.status == 422 || e.status == 429 {
+                toast = ToastCardMessage(title: e.message)
+            } catch {
+                model.handle(error)
+            }
+        }
     }
 
     private func advance(after star: StarItem, floated: Bool) {
@@ -180,7 +242,20 @@ struct ComposeFlowView: View {
 
     /// 35/36 "다시 시도": analyze again, or say the connection is still down.
     private func retry(_ star: StarItem) {
-        if model.simulatedFailure == .network {
+        if model.useLiveAPI {
+            Task { @MainActor in
+                do {
+                    let floated = try await model.floatAgain(star.id)
+                    withAnimation(.easeInOut(duration: 0.5)) { step = .analyzing(floated) }
+                } catch let e as APIError where e.code == "offline" {
+                    toast = ToastCardMessage(title: "연결을 확인해 주세요")
+                } catch let e as APIError where e.code == "analysis_failed" || e.status == 429 {
+                    toast = ToastCardMessage(title: e.message)
+                } catch {
+                    model.handle(error)
+                }
+            }
+        } else if model.simulatedFailure == .network {
             toast = ToastCardMessage(title: "연결을 확인해 주세요")
         } else {
             withAnimation(.easeInOut(duration: 0.5)) { step = .analyzing(star) }

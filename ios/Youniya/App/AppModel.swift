@@ -406,9 +406,11 @@ final class AppModel {
     /// TODO: Send to the plaza API; kept in memory for now.
     var resonated: Set<String> = []
     /// Saved to `stars.json` on every change.
+    /// Saved to `stars.json`, or `stars-live.json` (a cache of the server's) when live.
     var stars: [StarItem] = [] {
-        didSet { store.save(stars, to: "stars") }
+        didSet { store.save(stars, to: starsFile) }
     }
+    private var starsFile: String { useLiveAPI ? "stars-live" : "stars" }
     /// Autosaved draft, saved to `draft.json`.
     private(set) var draft: StarDraft
     @ObservationIgnored private let store: LocalStore
@@ -435,7 +437,7 @@ final class AppModel {
         settings = UserDefaults.standard.data(forKey: "settings")
             .flatMap { try? JSONDecoder().decode(AppSettings.self, from: $0) } ?? AppSettings()
         draft = store.load(StarDraft.self, from: "draft") ?? StarDraft()
-        stars = store.load([StarItem].self, from: "stars") ?? []
+        stars = store.load([StarItem].self, from: useLiveAPI ? "stars-live" : "stars") ?? []
 
         // One-time move of a draft saved by older builds in UserDefaults.
         if let data = UserDefaults.standard.data(forKey: "starDraft") {
@@ -490,13 +492,18 @@ final class AppModel {
             usedFreeTelescope = !me.freeTelescopeAvailable
         } catch {
             handle(error)
+            return
         }
+        await loadStars()
+        await loadDraft()
     }
 
     /// Dev drawer: switches between the mock and the API server. Going live
     /// without a server session goes back to 02 Login.
     func setLiveAPI(_ on: Bool) {
         useLiveAPI = on
+        // Each side keeps its own stars on this device.
+        stars = store.load([StarItem].self, from: starsFile) ?? []
         guard on else { return }
         Task { @MainActor in
             if await APIClient.shared.isSignedIn {
@@ -545,7 +552,8 @@ final class AppModel {
     }
 
     func deleteStar(_ id: StarItem.ID) {
-        stars.removeAll { $0.id == id }
+        guard useLiveAPI else { stars.removeAll { $0.id == id }; return }
+        Task { @MainActor in await deleteStarLive(id) }
     }
 
     /// Stars stay on the device: there is no server copy yet, so clearing them
@@ -587,7 +595,11 @@ final class AppModel {
 
     func signOut() {
         isSignedIn = false
-        if useLiveAPI { Task { await APIClient.shared.signOut() } }
+        if useLiveAPI {
+            // The server keeps the journal; drop this device's copy.
+            stars = []
+            Task { await APIClient.shared.signOut() }
+        }
     }
 
     /// 54 저장하기
@@ -736,6 +748,7 @@ final class AppModel {
     var stageName: String { Self.stageNames[growthStage - 1] }
 
     func saveDraft(_ d: StarDraft) {
+        if d != draft { syncDraft(d) }
         draft = d
         if d.isEmpty {
             store.remove("draft")
