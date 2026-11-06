@@ -26,10 +26,13 @@ class FakeApns:
         self.gone = set(gone)
 
     def send(self, device_token, environment, message):
+        return self.send_detail(device_token, environment, message)[0]
+
+    def send_detail(self, device_token, environment, message):
         if device_token in self.gone:
-            return "gone"
+            return "gone", 400, "BadDeviceToken"
         self.sent.append((device_token, environment, message))
-        return "sent"
+        return "sent", 200, ""
 
 
 def _app(make_app, apns=None):
@@ -180,3 +183,26 @@ def test_operator_status_shows_what_is_set_up(make_app):
     r = client.get("/v1/admin/status", headers=OP).json()
     assert r["push"] is True and r["storekit"] is False and r["trust_purchases"] is True
     assert client.get("/v1/admin/status").status_code == 404
+
+
+def test_operator_test_push(make_app):
+    apns = FakeApns(gone={token(2)})
+    app, client = _app(make_app, apns)
+    h = sign_in(client, "phone")
+    user_id = client.get("/v1/me", headers=h).json()["id"]
+    assert client.post("/v1/admin/push-test", json={"user_id": user_id}, headers=OP).json() == {"devices": []}
+
+    client.put("/v1/me/devices", json={"token": token(1), "environment": "sandbox"}, headers=h)
+    client.put("/v1/me/devices", json={"token": token(2), "environment": "production"}, headers=h)
+    devices = client.post("/v1/admin/push-test", json={"user_id": user_id}, headers=OP).json()["devices"]
+    by_env = {d["environment"]: d for d in devices}
+    assert by_env["sandbox"]["result"] == "sent" and by_env["sandbox"]["token"] == token(1)[:8] + "…"
+    assert by_env["production"] | {"registered_at": None} == {
+        "token": token(2)[:8] + "…", "environment": "production", "registered_at": None,
+        "result": "gone", "status": 400, "reason": "BadDeviceToken"}
+    assert token(2) not in _devices(app) and apns.sent[0][2].kind == "test"
+
+    assert client.post("/v1/admin/push-test", json={"user_id": "nobody"}, headers=OP).status_code == 404
+    _, bare = _app(make_app, None)
+    assert bare.post("/v1/admin/push-test", json={"user_id": user_id}, headers=OP).json()["error"]["code"] \
+        == "push_not_configured"

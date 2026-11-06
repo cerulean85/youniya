@@ -7,11 +7,11 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Header, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from ..deps import ApiError, get_cipher, get_db
-from ..models import AdminLog, Inquiry, LineReport, NebulaShare, StarlightLine, User
+from ..models import AdminLog, DeviceToken, Inquiry, LineReport, NebulaShare, StarlightLine, User
 from ..push import Message, is_night_kst, notify
 from ..security import Cipher
 from ..views import iso
@@ -46,6 +46,33 @@ def status(request: Request):
         "trust_purchases": settings.trust_purchases,
         "min_app_version": settings.min_app_version,
     }
+
+
+class PushTestIn(BaseModel):
+    user_id: str = Field(..., description="GET /v1/me id of the account signed in on the phone")
+
+
+@router.post("/push-test")
+def push_test(body: PushTestIn, request: Request, db: Session = Depends(get_db)):
+    """Sends "시험 알림" to every device of one user and says what APNs answered for each.
+    With no devices listed, the app has not registered yet. A device APNs calls dead is forgotten."""
+    if db.get(User, body.user_id) is None:
+        raise ApiError(404, "not_found", "사용자를 찾지 못했어요.")
+    client = request.app.state.push
+    if client is None:
+        raise ApiError(409, "push_not_configured", "APNs 키가 설정되지 않았어요.")
+    devices = db.scalars(select(DeviceToken).where(DeviceToken.user_id == body.user_id)
+                         .order_by(DeviceToken.updated_at.desc())).all()
+    message = Message("시험 알림", "YOUNIYA 알림이 이 기기에 잘 도착했어요.", "test")
+    results = []
+    for d in devices:
+        result, status, reason = client.send_detail(d.token, d.environment, message)
+        results.append({"token": d.token[:8] + "…", "environment": d.environment,
+                        "registered_at": iso(d.updated_at), "result": result, "status": status, "reason": reason})
+        if result == "gone":
+            db.execute(delete(DeviceToken).where(DeviceToken.token == d.token))
+    _log(db, "push_test", body.user_id)
+    return {"devices": results}
 
 
 @router.get("/reports")

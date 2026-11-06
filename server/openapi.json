@@ -2560,6 +2560,64 @@
         }
       }
     },
+    "/v1/admin/push-test": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Push Test",
+        "description": "Sends \"시험 알림\" to every device of one user and says what APNs answered for each.\nWith no devices listed, the app has not registered yet. A device APNs calls dead is forgotten.",
+        "operationId": "push_test_v1_admin_push_test_post",
+        "parameters": [
+          {
+            "name": "x-admin-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushTestIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/reports": {
       "get": {
         "tags": [
@@ -3142,6 +3200,20 @@
         },
         "type": "object",
         "title": "PurchaseIn"
+      },
+      "PushTestIn": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id",
+            "description": "GET /v1/me id of the account signed in on the phone"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id"
+        ],
+        "title": "PushTestIn"
       },
       "Refresh": {
         "properties": {

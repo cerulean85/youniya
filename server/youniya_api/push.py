@@ -50,6 +50,10 @@ class ApnsClient:
 
     def send(self, device_token: str, environment: str, message: Message) -> str:
         """Returns "sent", "gone" (the token is dead: forget it) or "failed"."""
+        return self.send_detail(device_token, environment, message)[0]
+
+    def send_detail(self, device_token: str, environment: str, message: Message) -> tuple[str, int | None, str]:
+        """(result, APNs status, APNs reason), for the operator's test push."""
         payload = {"aps": {"alert": {"title": message.title, "body": message.body}, "sound": "default"},
                    "kind": message.kind}
         try:
@@ -59,14 +63,14 @@ class ApnsClient:
             })
         except httpx.HTTPError as e:
             log.warning("apns request failed: %s", e)
-            return "failed"
+            return "failed", None, type(e).__name__
         if r.status_code == 200:
-            return "sent"
+            return "sent", 200, ""
         reason = _reason(r)
         if r.status_code == 410 or reason in ("BadDeviceToken", "Unregistered", "DeviceTokenNotForTopic"):
-            return "gone"
+            return "gone", r.status_code, reason
         log.warning("apns %s %s", r.status_code, reason)
-        return "failed"
+        return "failed", r.status_code, reason
 
 
 def _reason(r: httpx.Response) -> str:
