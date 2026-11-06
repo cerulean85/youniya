@@ -233,6 +233,13 @@ struct MyNebulaZoomView: View {
                 }
             }
             .scrollIndicators(.hidden)
+            // Anything left below the fold fades out above the buttons (iPhone SE).
+            .mask {
+                VStack(spacing: 0) {
+                    Color.black
+                    LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom).frame(height: Space.lg)
+                }
+            }
 
             VStack(spacing: Space.md) {
                 Button(model.skyShare == nil ? "하늘에 띄우기" : "하늘에 떠 있어요") { askFloat = true }

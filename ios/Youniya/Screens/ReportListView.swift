@@ -203,6 +203,8 @@ struct CoinChargeView: View {
     @State private var paymentFailed = false
     /// 28 "(필수) 결제·환불 정책에 동의해요". Asked again for each charge; the server
     /// keeps it with the purchase (`consumption_consent`) for App Store refund requests.
+    /// iPhone SE and other short screens.
+    @State private var isShortScreen = false
     @State private var agreed: Bool = {
         #if DEBUG
         UserDefaults.standard.string(forKey: "debugRoute") == "coinsAgreed"  // 28-1 for visual review
@@ -248,7 +250,9 @@ struct CoinChargeView: View {
                     }
                     .buttonStyle(.plain)
 
-                    CoinHero()
+                    // Short screens (iPhone SE) drop the picture so all three packages
+                    // fit above the consent and the button.
+                    if !isShortScreen { CoinHero() }
 
                     VStack(spacing: Space.md) {
                         ForEach(CoinPackage.all) { pkg in
@@ -269,6 +273,13 @@ struct CoinChargeView: View {
                 .padding(.bottom, Space.lg)
             }
             .scrollIndicators(.hidden)
+            // Anything left below the fold fades out, so the list reads as scrollable.
+            .mask {
+                VStack(spacing: 0) {
+                    Color.black
+                    LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom).frame(height: Space.lg)
+                }
+            }
 
             // Figma 28 / 28-1: refund note, the required consent, then the button.
             VStack(spacing: Space.lg) {
@@ -288,6 +299,7 @@ struct CoinChargeView: View {
             .padding(.horizontal, Space.xl)
             .padding(.bottom, Space.xl)
         }
+        .onGeometryChange(for: Bool.self) { $0.size.height < 700 } action: { isShortScreen = $0 }
         .background { StarField() }
         .task { await model.loadCoins() }
         .overlay {
