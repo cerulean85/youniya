@@ -111,12 +111,12 @@ struct SettingsView: View {
                         SettingsRow(icon: .iconMoon, title: "우주의 색") { onSky() }
                         SettingsToggleRow(icon: .iconStar, title: "애니메이션 줄이기", isOn: $model.settings.reduceAnimations)
                         // TODO: Haptics are not used anywhere yet.
-                        SettingsToggleRow(icon: .iconPhone, title: "진동", isOn: $model.settings.haptics)
+                        SettingsToggleRow(icon: .iconVibrate, title: "진동", isOn: $model.settings.haptics)
                     }
 
                     SettingsSection("소리", note: soundNote) {
                         // TODO: Ambient audio playback.
-                        SettingsToggleRow(icon: .iconMoon, title: "앰비언스 사운드", isOn: $model.settings.ambience)
+                        SettingsToggleRow(icon: .iconSound, title: "앰비언스 사운드", isOn: $model.settings.ambience)
                         SettingsRow(icon: .iconHeart, title: "소리 고르기", value: model.settings.sound) { sheet = .sound }
                     }
 
@@ -154,6 +154,16 @@ struct SettingsView: View {
         }
         .background { StarField() }
         .toast($toast)
+        #if DEBUG
+        // Visual review: `-debugRoute withdrawShares|notificationsOff` opens 92 / 95.
+        .task {
+            switch UserDefaults.standard.string(forKey: "debugRoute") {
+            case "withdrawShares": sheet = .withdrawShares
+            case "notificationsOff": sheet = .notificationsOff
+            default: break
+            }
+        }
+        #endif
         .task(id: sheet?.id) {
             guard model.useLiveAPI, case .withdrawShares = sheet else { return }
             liveShareCounts = try? await model.shareCounts()

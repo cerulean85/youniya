@@ -203,7 +203,13 @@ struct CoinChargeView: View {
     @State private var paymentFailed = false
     /// 28 "(필수) 결제·환불 정책에 동의해요". Asked again for each charge; the server
     /// keeps it with the purchase (`consumption_consent`) for App Store refund requests.
-    @State private var agreed = false
+    @State private var agreed: Bool = {
+        #if DEBUG
+        UserDefaults.standard.string(forKey: "debugRoute") == "coinsAgreed"  // 28-1 for visual review
+        #else
+        false
+        #endif
+    }()
 
     var body: some View {
         VStack(spacing: 0) {

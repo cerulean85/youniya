@@ -111,7 +111,8 @@ struct MainView: View {
         }
         .toastCard($toast)
         #if DEBUG
-        // `-debugRoute coins|settings|reports|collection|missingReport|missingStar`: open a page on launch (for checking it).
+        // `-debugRoute <name>`: open a page on launch, for checking screens without taps
+        // (names in the switch below).
         .task {
             switch UserDefaults.standard.string(forKey: "debugRoute") {
             case "coins": push(.coins)
@@ -119,6 +120,24 @@ struct MainView: View {
             case "reports": push(.reports)
             case "collection": push(.collection)
             case "missingReport": push(.report(UUID()))   // 122-1
+            // Visual review (mock data):
+            case "coinsAgreed": push(.coins)              // 28-1
+            case "policyPayment": push(.policy(.payment))     // 46
+            case "policyMarketing": push(.policy(.marketing)) // 31
+            case "withdrawShares", "notificationsOff": push(.settings) // 92 / 95 sheet over 87
+            case "sharedStars":                           // 17 with two shared stars
+                if model.stars.filter(\.isFloated).count < 2 { model.fillSampleStars() }
+                for star in model.stars.filter(\.isFloated).prefix(2) { model.setShared(true, for: star.id) }
+                push(.sharedStars)
+            case "sharedStarsEmpty":                      // 18
+                for star in model.stars where star.isShared { model.setShared(false, for: star.id) }
+                push(.sharedStars)
+            case "coinHistoryRefund":                     // 121 with one refund row
+                if !model.coinHistory.contains(where: { $0.kind == "refund" }) {
+                    model.coinHistory.insert(CoinEntry(title: "환불", delta: -120,
+                                                       date: .now.addingTimeInterval(-86_400), kind: "refund"), at: 0)
+                }
+                push(.coinHistory)
             case "missingStar": push(.detail(UUID()))     // 122
             default: break
             }
