@@ -6,6 +6,8 @@ import SwiftUI
 /// TODO: Load the reviewed legal text from the server so it can change without a release.
 enum PolicyDoc: String, CaseIterable, Identifiable {
     case terms, privacy, sensitive, payment
+    /// The optional consent on 11. No Figma page; it follows the 43–45 layout.
+    case marketing
 
     var id: Self { self }
 
@@ -15,11 +17,18 @@ enum PolicyDoc: String, CaseIterable, Identifiable {
         case .privacy: "개인정보 처리방침"
         case .sensitive: "민감정보 수집·이용 동의"
         case .payment: "결제·환불 정책"
+        case .marketing: "새 기능·혜택 알림 수신 동의"
         }
     }
 
     /// Top app bar title; 46 uses a narrower dot.
-    var barTitle: String { self == .payment ? "결제 · 환불 정책" : title }
+    var barTitle: String {
+        switch self {
+        case .payment: "결제 · 환불 정책"
+        case .marketing: "새 기능·혜택 알림"
+        default: title
+        }
+    }
 
     var effectiveDate: String { "시행일 2026년 11월 1일" }
 
@@ -46,6 +55,13 @@ enum PolicyDoc: String, CaseIterable, Identifiable {
             ("결제", "코인은 앱 스토어 결제를 통해 충전되며 즉시 지급됩니다."),
             ("환불", "사용하지 않은 코인은 구매 후 7일 이내 환불을 요청할 수 있습니다. 사용한 코인은 환불되지 않습니다."),
             ("분석 실패 시", "분석에 실패한 경우 코인은 차감되지 않거나 자동으로 반환됩니다."),
+        ]
+        // TODO: Final wording from legal review.
+        case .marketing: [
+            ("받는 소식", "새로 생긴 기능, 코인 혜택과 이벤트 소식을 앱 알림으로 보내 드립니다. 기록을 재촉하거나 연속 기록을 요구하는 알림은 보내지 않습니다."),
+            ("이용하는 정보", "알림을 보내기 위해 기기 알림 식별자와 동의 여부만 사용합니다. 이용자가 쓴 글과 분석 결과는 사용하지 않습니다."),
+            ("보관 기간", "동의를 철회하거나 계정을 삭제할 때까지 보관하며, 그 즉시 지웁니다."),
+            ("동의 거부와 철회", "선택 항목이라 동의하지 않아도 모든 기능을 쓸 수 있습니다. 동의한 뒤에도 설정 › 알림에서 언제든 끌 수 있습니다."),
         ]
         }
     }
@@ -316,5 +332,78 @@ enum DataExport {
         }
         UIGraphicsEndPDFContext()
         return data as Data
+    }
+}
+
+// MARK: - 나눈 성운 (87 → 우주 광장)
+
+/// The stars shared to the plaza, opened from Settings › 우주 광장 › 나눈 성운.
+/// No Figma page; built from the records list (Star Row) and the empty state.
+struct SharedStarsView: View {
+    @Environment(AppModel.self) private var model
+    var onBack: () -> Void
+    var onOpenStar: (StarItem) -> Void
+    var onPlaza: () -> Void
+
+    @State private var toast: ToastCardMessage?
+
+    private var shared: [StarItem] { model.stars.filter(\.isShared) }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            TopAppBar(title: "나눈 성운", onBack: onBack)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: Space.lg) {
+                    if !shared.isEmpty {
+                        Text("우주 광장에 익명으로 나눈 별 \(shared.count)개예요. 거두면 광장에서 바로 사라지고, 받은 공명과 별빛 한 줄은 그대로 간직돼요.")
+                            .textStyle(.bodyM)
+                            .foregroundStyle(Color.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    if shared.isEmpty {
+                        EmptyStateView(
+                            title: "아직 나눈 별이 없어요",
+                            message: "띄운 별을 열어 ‘우주 광장에 나누기’를 누르면\n여기에 모여요.",
+                            action: ("우주 광장 둘러보기", .outline, onPlaza)
+                        )
+                        .padding(.top, Space.xxxl)
+                    } else {
+                        LazyVStack(spacing: Space.md) {
+                            ForEach(shared) { star in
+                                row(star)
+                            }
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, Space.xl)
+                .padding(.top, Space.sm)
+                .padding(.bottom, Space.xxxl)
+            }
+            .scrollIndicators(.hidden)
+        }
+        .background { StarField() }
+        .toastCard($toast)
+        .animation(.snappy, value: shared.map(\.id))
+    }
+
+    private func row(_ star: StarItem) -> some View {
+        VStack(alignment: .trailing, spacing: Space.xs) {
+            Button { onOpenStar(star) } label: { StarRow(star: star) }
+                .buttonStyle(.plain)
+            Button("광장에서 거두기") {
+                model.setShared(false, for: star.id)
+                toast = .init(title: "광장에서 거뒀어요", detail: "언제든 다시 나눌 수 있어요")
+            }
+            .textStyle(.labelS)
+            .foregroundStyle(Color.textSecondary)
+            .buttonStyle(.plain)
+            .padding(.vertical, Space.xs)
+            .padding(.trailing, Space.xs)
+            .accessibilityLabel("\(star.title) 광장에서 거두기")
+        }
+        .transition(.opacity)
     }
 }

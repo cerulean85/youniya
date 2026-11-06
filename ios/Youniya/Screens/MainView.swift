@@ -52,6 +52,7 @@ struct MainView: View {
         case moments    // 66
         case stages     // 86
         case collection // 79·80
+        case sharedStars // 87 › 나눈 성운
         case page(String)
     }
 
@@ -233,7 +234,7 @@ struct MainView: View {
             CoinHistoryView(onBack: pop)
                 .edgeSwipeBack(onBack: pop)
         case .settings:
-            SettingsView(onBack: pop, onOpen: { push(.page($0)) },
+            SettingsView(onBack: pop, onOpen: { _ in push(.sharedStars) },
                          onSky: { push(.sky) }, onPolicy: { push(.policy($0)) })
                 .edgeSwipeBack(onBack: pop)
         case .inquiry:
@@ -327,6 +328,16 @@ struct MainView: View {
                 onOpenMyNebula: { push(.myNebulaZoom) },
                 onOpenOtherNebula: { push(.galaxyNebula($0.name)) },
                 onDraw: { push(.drawNebula) },
+                onPlaza: {
+                    withAnimation(.easeInOut(duration: 0.32)) { stack.removeAll() }
+                    tab = .plaza
+                }
+            )
+            .edgeSwipeBack(onBack: pop)
+        case .sharedStars:
+            SharedStarsView(
+                onBack: pop,
+                onOpenStar: openStar,
                 onPlaza: {
                     withAnimation(.easeInOut(duration: 0.32)) { stack.removeAll() }
                     tab = .plaza

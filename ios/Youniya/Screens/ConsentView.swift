@@ -13,13 +13,13 @@ struct ConsentView: View {
         case marketing = "(선택) 새 기능·혜택 알림"
         var id: Self { self }
         var isRequired: Bool { self != .marketing }
-        /// The full-text page (43–45). Marketing has no document in Figma yet.
-        var document: PolicyDoc? {
+        /// The full-text page (43–45, and the marketing consent).
+        var document: PolicyDoc {
             switch self {
             case .terms: .terms
             case .privacy: .privacy
             case .sensitive: .sensitive
-            case .marketing: nil
+            case .marketing: .marketing
             }
         }
     }
@@ -66,15 +66,8 @@ struct ConsentView: View {
         }
         .background { StarField() }
         .sheet(item: $openDocument) { term in
-            Group {
-                if let doc = term.document {
-                    PolicyDocView(doc: doc, onBack: { openDocument = nil })
-                } else {
-                    // TODO: Marketing consent text.
-                    PlaceholderPage(title: "새 기능·혜택 알림", onBack: { openDocument = nil })
-                }
-            }
-            .presentationBackground(Color.bgCanvas)
+            PolicyDocView(doc: term.document, onBack: { openDocument = nil })
+                .presentationBackground(Color.bgCanvas)
         }
     }
 

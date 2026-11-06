@@ -54,7 +54,7 @@ struct SettingsView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.openURL) private var openURL
     var onBack: () -> Void
-    /// Pages without a design yet (나눈 성운).
+    /// → 나눈 성운
     var onOpen: (String) -> Void
     /// → 68 우주의 색
     var onSky: () -> Void = {}
@@ -119,6 +119,8 @@ struct SettingsView: View {
                     SettingsSection("알림", note: "연속 기록이나 재촉하는 알림은 보내지 않아요.") {
                         // TODO: Ask for notification permission and schedule it.
                         SettingsToggleRow(icon: .iconBell, title: "별 만들기 알림", isOn: $model.settings.starReminder)
+                        // 11 (선택) 새 기능·혜택 알림: the same consent, changeable here.
+                        SettingsToggleRow(icon: .iconInfo, title: "새 기능·혜택 알림", isOn: $model.marketingOptIn)
                     }
 
                     SettingsSection("우주 광장") {
@@ -148,7 +150,7 @@ struct SettingsView: View {
         .toast($toast)
         // No Figma page lists the documents; a dialog keeps it to one tap.
         .confirmationDialog("약관 및 정책", isPresented: $showPolicies, titleVisibility: .visible) {
-            ForEach(PolicyDoc.allCases) { doc in
+            ForEach(PolicyDoc.allCases.filter { $0 != .marketing }) { doc in
                 Button(doc.title) { onPolicy(doc) }
             }
         }
