@@ -8,11 +8,24 @@ struct TelescopeReportView: View {
     var onClose: () -> Void
     /// "이 주제로 다시 쓰기" → 14 Rewrite
     var onRewrite: () -> Void
+    /// 122-1 "리포트 목록으로" → 26 (defaults to closing).
+    var onReportList: (() -> Void)? = nil
 
     var body: some View {
-        if model.report(for: starID) == nil {
-            // 122, with the report's title
-            NotFoundView(title: "리포트를 찾을 수 없어요", onBack: onClose)
+        if model.report(for: starID) == nil && model.pendingReports.contains(starID) {
+            // Live: the server is still making it.
+            VStack(spacing: Space.lg) {
+                ProgressView().tint(.white).controlSize(.large)
+                Text("리포트를 만들고 있어요")
+                    .textStyle(.bodyM)
+                    .foregroundStyle(Color.textSecondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background { StarField() }
+            .accessibilityElement(children: .combine)
+        } else if model.report(for: starID) == nil {
+            // 122-1
+            NotFoundView(kind: .report, onBack: onReportList ?? onClose)
         } else {
             reportBody
         }

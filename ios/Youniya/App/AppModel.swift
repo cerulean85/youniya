@@ -97,6 +97,8 @@ struct TelescopeReport: Hashable, Codable {
     var evidence: String
     var question: String
     var isSaved = false
+    /// The server's report id (live), for 보관하기.
+    var serverID: String? = nil
 
     /// TODO: Replace with the real report API. Uses the star's analysis and quotes
     /// the longest sentence the user wrote.
@@ -398,6 +400,8 @@ final class AppModel {
     }
     /// A server or network message for the root toast.
     var apiMessage: String?
+    /// Live: stars whose telescope report is being made on the server (25 → 10).
+    var pendingReports: Set<StarItem.ID> = []
     /// The dev sign-in name; the same name is the same server account.
     static var devLoginName: String {
         UserDefaults.standard.string(forKey: "devLoginName") ?? "ios-dev"
@@ -500,8 +504,10 @@ final class AppModel {
             return
         }
         await loadStars()
+        await loadReports()
         await loadDraft()
         await loadCoins()
+        await PushRegistration.refresh(signedIn: isSignedIn)
     }
 
     private static func savedCoins(live: Bool) -> Int {
@@ -619,7 +625,10 @@ final class AppModel {
         if useLiveAPI {
             // The server keeps the journal; drop this device's copy.
             stars = []
-            Task { await APIClient.shared.signOut() }
+            Task {
+                await PushRegistration.unregister()
+                await APIClient.shared.signOut()
+            }
         }
     }
 
@@ -715,7 +724,13 @@ final class AppModel {
     @discardableResult
     func prepareReport(for id: StarItem.ID) -> Bool {
         guard let i = stars.firstIndex(where: { $0.id == id }), stars[i].isFloated else { return false }
-        if stars[i].report == nil { stars[i].report = TelescopeReport.mock(for: stars[i]) }
+        if stars[i].report == nil {
+            if useLiveAPI {
+                Task { @MainActor in requestReportLive(for: id) }
+            } else {
+                stars[i].report = TelescopeReport.mock(for: stars[i])
+            }
+        }
         return true
     }
 
@@ -726,6 +741,7 @@ final class AppModel {
     func saveReport(for id: StarItem.ID) {
         guard let i = stars.firstIndex(where: { $0.id == id }) else { return }
         stars[i].report?.isSaved = true
+        if useLiveAPI, let serverID = stars[i].report?.serverID { saveReportLive(serverID) }
     }
 
     /// The question shown on 14 Rewrite: the report's question if there is one.

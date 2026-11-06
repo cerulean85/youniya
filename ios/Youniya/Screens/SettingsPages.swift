@@ -337,9 +337,9 @@ enum DataExport {
     }
 }
 
-// MARK: - 나눈 성운 (87 → 우주 광장)
+// MARK: - 17/18 나눈 별 (87 → 우주 광장)
 
-/// The stars shared to the plaza, opened from Settings › 우주 광장 › 나눈 성운.
+/// The stars shared to the plaza, opened from Settings › 우주 광장 › 나눈 별.
 /// No Figma page; built from the records list (Star Row) and the empty state.
 struct SharedStarsView: View {
     @Environment(AppModel.self) private var model
@@ -364,7 +364,7 @@ struct SharedStarsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            TopAppBar(title: "나눈 성운", onBack: onBack)
+            TopAppBar(title: "나눈 별", onBack: onBack)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {

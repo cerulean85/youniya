@@ -130,7 +130,14 @@ struct TelescopeConfirmView: View {
     }
 
     private func start() {
-        if model.spendCoins(AppModel.telescopeCost) {
+        if model.useLiveAPI {
+            // The server charges once the report exists (25); only check the balance here.
+            if model.isTelescopeFree || model.coins >= AppModel.telescopeCost {
+                close(then: onStart)
+            } else {
+                withAnimation(.snappy) { short = true }
+            }
+        } else if model.spendCoins(AppModel.telescopeCost) {
             close(then: onStart)
         } else {
             withAnimation(.snappy) { short = true }
@@ -245,6 +252,8 @@ struct TelescopeScanView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background { StarField() }
         .task {
+            // Live: ask the server now, so the report is ready when 25 ends.
+            if model.useLiveAPI { _ = model.prepareReport(for: starID) }
             try? await Task.sleep(for: mockDuration)
             guard !Task.isCancelled else { return }
             let hasText = model.stars.first { $0.id == starID }.map { !$0.body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } ?? false

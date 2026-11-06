@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct YouniyaApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var model = AppModel()
 
     init() {

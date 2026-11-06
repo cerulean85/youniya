@@ -128,6 +128,7 @@ struct TelescopeObserveView: View {
         .background { StarField() }
         .task {
             start = .now
+            if model.useLiveAPI { _ = model.prepareReport(for: star.id) }
             try? await Task.sleep(for: .seconds(reduceMotion ? 2 : Self.pass * 3))
             guard !Task.isCancelled else { return }
             _ = model.prepareReport(for: star.id)

@@ -34,7 +34,7 @@ private struct PurchaseResult: Decodable {
     var added: Int
 }
 
-/// GET /v1/me/shares → `stars` (17 나눈 성운).
+/// GET /v1/me/shares → `stars` (17 나눈 별).
 struct SharedStar: Decodable, Identifiable {
     /// The share's id.
     var id: String

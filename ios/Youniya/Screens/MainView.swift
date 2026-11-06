@@ -52,7 +52,7 @@ struct MainView: View {
         case moments    // 66
         case stages     // 86
         case collection // 79·80
-        case sharedStars // 87 › 나눈 성운
+        case sharedStars // 87 › 나눈 별
         case page(String)
     }
 
@@ -111,13 +111,15 @@ struct MainView: View {
         }
         .toastCard($toast)
         #if DEBUG
-        // `-debugRoute coins|settings|reports|collection`: open a page on launch (for checking it).
+        // `-debugRoute coins|settings|reports|collection|missingReport|missingStar`: open a page on launch (for checking it).
         .task {
             switch UserDefaults.standard.string(forKey: "debugRoute") {
             case "coins": push(.coins)
             case "settings": push(.settings)
             case "reports": push(.reports)
             case "collection": push(.collection)
+            case "missingReport": push(.report(UUID()))   // 122-1
+            case "missingStar": push(.detail(UUID()))     // 122
             default: break
             }
         }
@@ -195,9 +197,9 @@ struct MainView: View {
             )
             .edgeSwipeBack(onBack: pop)
         case .report(let id):
-            TelescopeReportView(starID: id, onClose: pop) {
-                replace(with: .compose(rewriteOf: id))
-            }
+            TelescopeReportView(starID: id, onClose: pop,
+                                onRewrite: { replace(with: .compose(rewriteOf: id)) },
+                                onReportList: { replace(with: .reports) })
             .edgeSwipeBack(onBack: pop)
         case .records:
             // Pushed copy (older links); the tab is the main entry now.

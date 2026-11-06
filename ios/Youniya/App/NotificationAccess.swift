@@ -12,7 +12,10 @@ enum NotificationAccess {
         case .authorized, .provisional, .ephemeral:
             return true
         case .notDetermined:
-            return (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
+            let granted = (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
+            // Remote notifications (101, announcements) need the device token on the server.
+            if granted { await PushRegistration.refresh(signedIn: true) }
+            return granted
         default:
             return false
         }

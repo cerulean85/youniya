@@ -55,7 +55,7 @@ struct SettingsView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.openURL) private var openURL
     var onBack: () -> Void
-    /// → 나눈 성운
+    /// → 나눈 별
     var onOpen: (String) -> Void
     /// → 68 우주의 색
     var onSky: () -> Void = {}
@@ -128,8 +128,8 @@ struct SettingsView: View {
                     }
 
                     SettingsSection("우주 광장") {
-                        SettingsRow(icon: .iconNebula, title: "나눈 성운",
-                                    value: "\(model.stars.filter(\.isShared).count)개") { onOpen("나눈 성운") }
+                        SettingsRow(icon: .iconNebula, title: "나눈 별",
+                                    value: "\(model.stars.filter(\.isShared).count)개") { onOpen("나눈 별") }
                         SettingsRow(icon: .iconLock, title: "모든 공유 거두기") { sheet = .withdrawShares }
                     }
 
