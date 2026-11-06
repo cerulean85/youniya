@@ -216,7 +216,9 @@ def test_star_share_is_masked_and_counts_stay_private(client):
 
     client.put(f"/v1/plaza/star/{shared['share_id']}/resonance", json={}, headers=other)
     assert client.get("/v1/plaza/stars", headers=other).json()["items"][0]["resonated"] is True
-    assert client.get("/v1/me/shares", headers=owner).json()["stars"][0]["resonances"] == 1
+    mine = client.get("/v1/me/shares", headers=owner).json()["stars"][0]
+    assert mine["resonances"] == 1 and mine["title"] == "걔 소식을 들은 날"
+    assert mine["starlight"] == star["starlight"] and mine["written_at"] == star["created_at"]
     assert client.put(f"/v1/plaza/star/{shared['share_id']}/resonance", headers=owner).status_code == 422
 
 

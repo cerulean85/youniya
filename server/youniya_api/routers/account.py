@@ -100,17 +100,22 @@ def delete_account(user: User = Depends(current_user), db: Session = Depends(get
 
 
 @router.get("/me/shares")
-def my_shares(user: User = Depends(current_user), db: Session = Depends(get_db)):
-    """What I gave to the plaza, with the 공명 only I can see."""
+def my_shares(user: User = Depends(current_user), db: Session = Depends(get_db),
+              cipher: Cipher = Depends(get_cipher)):
+    """What I gave to the plaza, newest first, with the 공명 only I can see.
+    Settings › 나눈 별 (Figma 17/18): my own list, so the star's title, time and starlight are shown."""
     def resonances(kind, target_id):
         return db.scalar(select(func.count()).select_from(Resonance)
                          .where(Resonance.kind == kind, Resonance.target_id == target_id))
 
-    stars = db.scalars(select(StarShare).where(StarShare.user_id == user.id)).all()
-    nebulae = db.scalars(select(NebulaShare).where(NebulaShare.user_id == user.id)).all()
+    stars = db.execute(select(StarShare, Star).join(Star, Star.id == StarShare.star_id)
+                       .where(StarShare.user_id == user.id).order_by(StarShare.created_at.desc())).all()
+    nebulae = db.scalars(select(NebulaShare).where(NebulaShare.user_id == user.id)
+                         .order_by(NebulaShare.created_at.desc())).all()
     return {
-        "stars": [{"id": s.id, "star_id": s.star_id, "name": s.name, "created_at": iso(s.created_at),
-                   "resonances": resonances("star", s.id)} for s in stars],
+        "stars": [{"id": sh.id, "star_id": sh.star_id, "name": sh.name, "title": cipher.dec(st.title_enc),
+                   "written_at": iso(st.created_at), "starlight": st.starlight, "created_at": iso(sh.created_at),
+                   "resonances": resonances("star", sh.id)} for sh, st in stars],
         "nebulae": [{"id": n.id, "nebula_id": n.nebula_id, "name": n.name, "created_at": iso(n.created_at),
                      "resonances": resonances("nebula", n.id),
                      "lines": db.scalar(select(func.count()).select_from(StarlightLine)

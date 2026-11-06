@@ -87,3 +87,37 @@ def test_operator_api(make_app):
     assert actions == ["hide_line", "list_reports"]
     # Without ADMIN_TOKEN the operator API does not exist.
     assert TestClient(make_app()).get("/v1/admin/logs", headers=op).status_code == 404
+
+
+def test_refund_never_goes_below_zero(make_app):
+    """기획서 11.6: only the coins left are taken back; the balance stops at 0."""
+    apple = FakeApple()
+    app = make_app(trust_purchases=False, apple_bundle_id=BUNDLE)
+    app.state.storekit = StoreKitVerifier(BUNDLE, root=apple.root)
+    client = TestClient(app)
+    h = sign_in(client)
+    client.post("/v1/coins/purchases", json={"signed_transaction": apple.jws(transactionId="77")}, headers=h)
+    float_star(client, h)
+    client.post("/v1/telescope/reports", json={}, headers=h)  # free
+    for _ in range(3):
+        assert client.post("/v1/telescope/reports", json={}, headers=h).status_code == 201  # 90 spent
+    assert client.get("/v1/coins", headers=h).json()["coins"] == 30
+
+    client.post("/v1/storekit/notifications", json={"signedPayload": _refund_note(apple, "77")})
+    assert client.get("/v1/coins", headers=h).json()["coins"] == 0
+    refund = client.get("/v1/coins/history", headers=h).json()["items"][0]
+    assert (refund["kind"], refund["delta"]) == ("refund", -30)
+
+
+def test_balance_constraint_and_startup_fix(make_app):
+    import pytest
+    from sqlalchemy import text
+    from sqlalchemy.exc import IntegrityError
+
+    app = make_app()
+    client = TestClient(app)
+    sign_in(client)
+    with app.state.sessions() as db:
+        with pytest.raises(IntegrityError):
+            db.execute(text("UPDATE users SET coins = -1"))
+            db.commit()

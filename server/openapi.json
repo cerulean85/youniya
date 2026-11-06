@@ -356,7 +356,7 @@
           "account"
         ],
         "summary": "My Shares",
-        "description": "What I gave to the plaza, with the 공명 only I can see.",
+        "description": "What I gave to the plaza, newest first, with the 공명 only I can see.\nSettings › 나눈 별 (Figma 17/18): my own list, so the star's title, time and starlight are shown.",
         "operationId": "my_shares_v1_me_shares_get",
         "responses": {
           "200": {
@@ -1305,7 +1305,7 @@
           "coins"
         ],
         "summary": "App Store Notification",
-        "description": "App Store Server Notifications V2 (set this URL in App Store Connect).\nREFUND takes the purchase's coins back, even below zero: coins already spent were used.",
+        "description": "App Store Server Notifications V2 (set this URL in App Store Connect).\nREFUND takes back the purchase's coins that are left; the balance never goes below 0.",
         "operationId": "app_store_notification_v1_storekit_notifications_post",
         "requestBody": {
           "content": {

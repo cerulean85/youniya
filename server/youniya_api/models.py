@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, CheckConstraint, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -25,7 +25,8 @@ def user_fk() -> Mapped[str]:
 
 class User(Base):
     __tablename__ = "users"
-    __table_args__ = (UniqueConstraint("provider", "provider_sub"),)
+    __table_args__ = (UniqueConstraint("provider", "provider_sub"),
+                      CheckConstraint("coins >= 0", name="coins_not_negative"))
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     provider: Mapped[str] = mapped_column(String(16))  # apple | google

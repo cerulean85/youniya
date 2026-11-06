@@ -92,7 +92,7 @@ class NotificationIn(BaseModel):
 @notifications.post("/notifications")
 def app_store_notification(body: NotificationIn, request: Request, db: Session = Depends(get_db)):
     """App Store Server Notifications V2 (set this URL in App Store Connect).
-    REFUND takes the purchase's coins back, even below zero: coins already spent were used."""
+    REFUND takes back the purchase's coins that are left; the balance never goes below 0."""
     verifier = request.app.state.storekit
     if verifier is None:
         raise ApiError(404, "not_found", "찾지 못했어요.")
@@ -115,6 +115,6 @@ def app_store_notification(body: NotificationIn, request: Request, db: Session =
     if db.scalar(select(CoinEntry.id).where(CoinEntry.transaction_id == refund_id)) is None:
         user = db.get(User, purchase.user_id)
         if user is not None:
-            coins.add(db, user, -purchase.delta, "환불", transaction_id=refund_id)
+            coins.take_back(db, user, purchase.delta, "환불", transaction_id=refund_id)
             db.commit()
     return {"handled": True}

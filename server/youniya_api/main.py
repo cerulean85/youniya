@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import sessionmaker
 
 from .config import Settings
@@ -38,6 +38,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     if engine.dialect.name == "sqlite":
         event.listen(engine, "connect", lambda conn, _: conn.execute("PRAGMA foreign_keys=ON"))
     Base.metadata.create_all(engine)
+    # Balances never go below 0 (refund policy). Tables made before the CHECK constraint
+    # don't have it, so clear any negative balance left from the old refund rule.
+    with engine.begin() as conn:
+        conn.execute(text("UPDATE users SET coins = 0 WHERE coins < 0"))
 
     app = FastAPI(title="YOUNIYA API", version="0.1.0")
     app.state.settings = settings
