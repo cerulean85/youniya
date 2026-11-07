@@ -66,11 +66,27 @@ struct NebulaView: View {
         .scrollIndicators(.hidden)
     }
 
+    /// What the next stage still needs (the same rules as the server's `next.needs`).
     private var hint: String {
-        let need = max(0, AppModel.nextStageDeepStars - model.deepCount)
-        return need == 0
-            ? "다음 단계로 넘어갈 준비가 되었어요."
-            : "다음 단계까지 깊은 별 \(need)개가 더 필요해요. 서두르지 않아도 괜찮아요."
+        let calm = "서두르지 않아도 괜찮아요."
+        let deep = model.deepCount
+        switch model.growthStage {
+        case 0:
+            let need = max(0, AppModel.firstStageStars - model.stars.count)
+            return "첫 걸음까지 별 \(need)개가 더 필요해요. \(calm)"
+        case 1 where deep < 6:
+            return "다음 단계까지 깊은 별 \(6 - deep)개가 더 필요해요. \(calm)"
+        case 2 where deep < AppModel.nextStageDeepStars:
+            return "다음 단계까지 깊은 별 \(AppModel.nextStageDeepStars - deep)개가 더 필요해요. \(calm)"
+        case 2:
+            return "별빛이 한 번 900을 넘으면 다음 단계예요. \(calm)"
+        case 3 where deep < 30:
+            return "다음 단계까지 깊은 별 \(30 - deep)개가 더 필요해요. \(calm)"
+        case 3:
+            return "여러 감정의 결이 모이면 온전한 은하수가 돼요. \(calm)"
+        default:
+            return "나만의 은하수가 완성되었어요."
+        }
     }
 
     /// Figma `Stat`: tappable count card with a "›" label row.

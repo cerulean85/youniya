@@ -441,6 +441,7 @@ struct MainView: View {
         case "46": push(.policy(.payment))
         case "32": push(.inquiry)
         case "51": push(.drawNebula)
+        case "86-1": push(.stages)
         case "65": push(.growth)
         case "66": push(.moments)
         case "86": push(.stages)

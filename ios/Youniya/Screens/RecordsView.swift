@@ -17,7 +17,7 @@ struct RecordsView: View {
 
     private enum Mode { case list, calendar }
     @State private var mode: Mode = DebugScreen.is("116") ? .calendar : .list
-    @State private var query = DebugScreen.is("117") ? "은하수 아래 고래" : ""
+    @State private var query = DebugScreen.is("117") ? "하루" : ""
     @FocusState private var searching: Bool
     @State private var month = Calendar.current.dateInterval(of: .month, for: .now)!.start
     @State private var day: Date?
@@ -44,7 +44,7 @@ struct RecordsView: View {
                         .accessibilityAddTraits(.isHeader)
                     Text(filter == .kept
                          ? "분석 없이 조용히 간직한 별 \(model.stars.filter { !$0.isFloated }.count)개"
-                         : "지금까지 띄우고 품은 별 \(model.stars.count)개")
+                         : "지금까지 띄우고 간직한 별 \(model.stars.count)개")
                         .textStyle(.bodyM).foregroundStyle(Color.textSecondary)
                     LinkChip(title: "밝기 흐름 보기 ›", action: onBrightness)
                 }

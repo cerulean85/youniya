@@ -421,6 +421,8 @@ final class AppModel {
     }
     /// A server or network message for the root toast.
     var apiMessage: String?
+    /// 120-1: when a rate-limited request may be tried again.
+    var retryAvailableAt: Date?
     /// Live plaza (09, 72, 74), loaded by `loadPlaza()` / `loadLines(for:)`.
     var plazaStarsLive: [PlazaNebula] = []
     var plazaNebulaeLive: [GalaxyNebula] = []
@@ -620,6 +622,7 @@ final class AppModel {
         case "consent_required":
             hasConsented = false
         case "rate_limited":
+            retryAvailableAt = e.retryAfter.map { Date.now.addingTimeInterval(TimeInterval($0)) }
             appNotice = .rateLimited
         default:
             apiMessage = e.message
@@ -796,7 +799,7 @@ final class AppModel {
     func exportText() -> String {
         var out = "YOUNIYA 기록 내보내기\n\n"
         for s in stars {
-            out += "■ \(s.title)\n\(s.dateText) · \(s.isFloated ? "띄운 별" : "품은 별")\n"
+            out += "■ \(s.title)\n\(s.dateText) · \(s.isFloated ? "띄운 별" : "간직한 별")\n"
             if !s.body.isEmpty { out += "\n\(s.body)\n" }
             out += "\n"
         }

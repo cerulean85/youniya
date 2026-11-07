@@ -9,6 +9,7 @@ struct StatusView: View {
         enum Style { case primary, secondary, ghost }
         var title: String
         var style: Style
+        var disabled = false
         var run: () -> Void
     }
 
@@ -39,11 +40,14 @@ struct StatusView: View {
             VStack(spacing: Space.md) {
                 ForEach(actions.indices, id: \.self) { i in
                     let a = actions[i]
-                    switch a.style {
-                    case .primary: Button(a.title, action: a.run).buttonStyle(.primary)
-                    case .secondary: Button(a.title, action: a.run).buttonStyle(.secondary)
-                    case .ghost: Button(a.title, action: a.run).buttonStyle(.ghost)
+                    Group {
+                        switch a.style {
+                        case .primary: Button(a.title, action: a.run).buttonStyle(.primary)
+                        case .secondary: Button(a.title, action: a.run).buttonStyle(.secondary)
+                        case .ghost: Button(a.title, action: a.run).buttonStyle(.ghost)
+                        }
                     }
+                    .disabled(a.disabled)
                 }
             }
 
@@ -147,10 +151,20 @@ struct AppNoticeView: View {
                        message: "그동안 띄운 별과 성운이 모두 사라졌어요.\n언제든 다시 첫 별을 띄울 수 있어요.",
                        actions: [.init(title: "처음 화면으로", style: .primary) { model.appNotice = nil }])
         case .rateLimited:
-            // "다시 시도하기" returns to the screen underneath, where the action can be tried again.
-            StatusView(icon: .iconMoon, title: "잠시 숨을 고르고 있어요",
-                       message: "요청이 한꺼번에 몰렸어요. 쓰던 글은 그대로 있고 코인도 차감되지 않았어요. 조금 뒤에 다시 시도해 주세요.",
-                       actions: [.init(title: "다시 시도하기", style: .primary) { model.appNotice = nil }])
+            // 120 / 120-1: with the server's retry_after, counts down in minutes (rounded up)
+            // and keeps the button off until then. "다시 시도하기" returns to the screen underneath.
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                let left = model.retryAvailableAt.map { $0.timeIntervalSince(context.date) } ?? 0
+                let minutes = Int((left / 60).rounded(.up))
+                let base = "요청이 한꺼번에 몰렸어요. 쓰던 글은 그대로 있고 코인도 차감되지 않았어요."
+                StatusView(icon: .iconMoon, title: "잠시 숨을 고르고 있어요",
+                           message: left > 0 ? "\(base) \(minutes)분 뒤에 다시 시도할 수 있어요." : "\(base) 조금 뒤에 다시 시도해 주세요.",
+                           actions: [.init(title: left > 0 ? "\(minutes)분 뒤에 다시 시도" : "다시 시도하기",
+                                           style: .primary, disabled: left > 0) {
+                               model.retryAvailableAt = nil
+                               model.appNotice = nil
+                           }])
+            }
         }
     }
 }

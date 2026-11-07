@@ -38,6 +38,8 @@ struct APIError: Error, LocalizedError, Equatable {
     var message: String
     /// 503 maintenance: when it ends.
     var until: Date?
+    /// 429 rate_limited: seconds until it can be tried again.
+    var retryAfter: Int? = nil
 
     var errorDescription: String? { message }
 
@@ -51,6 +53,7 @@ private struct ErrorEnvelope: Decodable {
         var code: String
         var message: String
         var until: String?
+        var retryAfter: Int?
     }
     var error: Body
 }
@@ -230,11 +233,14 @@ actor APIClient {
     }
 
     private nonisolated func decodeError(_ data: Data, status: Int) -> APIError {
-        guard let env = try? JSONDecoder().decode(ErrorEnvelope.self, from: data) else {
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        guard let env = try? decoder.decode(ErrorEnvelope.self, from: data) else {
             return APIError(status: status, code: "http_\(status)", message: "요청을 처리하지 못했어요. (\(status))")
         }
         return APIError(status: status, code: env.error.code, message: env.error.message,
-                        until: env.error.until.flatMap(JSONCoding.date(from:)))
+                        until: env.error.until.flatMap(JSONCoding.date(from:)),
+                        retryAfter: env.error.retryAfter)
     }
 }
 

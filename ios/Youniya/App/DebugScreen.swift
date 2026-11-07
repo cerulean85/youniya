@@ -36,7 +36,7 @@ enum DebugScreen {
     1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 28-1 29 31 32 33 34 35 36 37 38
     39 40 41 43 44 45 46 47 48 49 50 51 56 61 62 65 66 67-1 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83
     86 87 89 90 91 92 93 94 95 96 97 98 99 100 101 102 104 105 106 107 108 109 110 111 112 113 114 115 116 117
-    118 119 120 121 122 122-1
+    118 119 120 120-1 121 122 122-1 86-1
     """.split(whereSeparator: \.isWhitespace).map(String.init))
 
     /// App-wide state for the screen, before the first page shows.
@@ -61,6 +61,22 @@ enum DebugScreen {
         case "41": model.appNotice = .maintenance("11월 4일 02:00~04:00")
         case "113": model.appNotice = .accountDeleted
         case "120": model.appNotice = .rateLimited
+        case "120-1":
+            model.retryAvailableAt = .now.addingTimeInterval(170)  // "3분 뒤"
+            model.appNotice = .rateLimited
+        case "99", "100", "106":
+            model.nebulaLines[GalaxyNebula.samples[0].name] = nil  // not left a line yet
+            model.reportedLines.remove("그 문장, 저도 오늘 쓰고 싶던 말이에요.")
+        case "118":
+            if !model.stars.contains(where: { !$0.isFloated }) { model.fillSampleStars() }
+        case "80":
+            if model.drawnNebulae.isEmpty {
+                model.drawnNebulae = [DrawnNebula(name: AppModel.defaultNebulaName, silhouette: "lighthouse",
+                                                  starIDs: model.stars.filter(\.isFloated).map(\.id))]
+            }
+        case "69":
+            model.resonated.insert("nebula:" + GalaxyNebula.samples[0].name)
+            for star in model.stars.filter(\.isFloated).prefix(2) { model.setShared(true, for: star.id) }
         case "47", "48", "49", "50", "110", "111", "112":
             UserDefaults.standard.set(600, forKey: "simulateLoadingSeconds")
             model.simulateLoading = true
