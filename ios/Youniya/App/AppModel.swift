@@ -512,8 +512,12 @@ final class AppModel {
         skyShare = Self.savedSkyShare(live: live)
         drawnNebulae = Self.savedDrawnNebulae(live: live)
         coinHistory = Self.savedCoinHistory(live: live)
-        settings = UserDefaults.standard.data(forKey: "settings")
+        var saved = UserDefaults.standard.data(forKey: "settings")
             .flatMap { try? JSONDecoder().decode(AppSettings.self, from: $0) } ?? AppSettings()
+        // v1.0 hides the membership skies: a saved one goes back to violet.
+        // (`-debugTheme` still sets any sky afterwards, in DebugScreen.prepare.)
+        if !saved.sky.isFree { saved.sky = .violet }
+        settings = saved
         draft = store.load(StarDraft.self, from: "draft") ?? StarDraft()
         stars = store.load([StarItem].self, from: live ? "stars-live" : "stars") ?? []
 

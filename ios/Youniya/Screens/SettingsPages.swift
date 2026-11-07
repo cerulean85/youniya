@@ -140,7 +140,8 @@ struct SkyColorView: View {
                     .accessibilityAddTraits(.isHeader)
 
                     VStack(spacing: Space.md) {
-                        ForEach(SkyTheme.allCases) { theme in
+                        // v1.0: only the free skies (오로라·잔불·장미 wait for the membership).
+                        ForEach(SkyTheme.free) { theme in
                             SkyOptionRow(theme: theme, isSelected: theme == selected) {
                                 withAnimation(.snappy(duration: 0.2)) { selected = theme }
                             }

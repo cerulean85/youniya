@@ -7,6 +7,10 @@ enum SkyTheme: String, CaseIterable, Identifiable, Codable {
 
     var id: Self { self }
 
+    /// v1.0: the free skies on 68. The others come with the membership (v1.1).
+    static let free: [SkyTheme] = [.violet, .ocean]
+    var isFree: Bool { Self.free.contains(self) }
+
     var name: String {
         switch self {
         case .violet: "보랏빛 별밤"
