@@ -176,3 +176,24 @@ def test_empty_refund_row_is_hidden_but_kept(make_app):
         from youniya_api.models import CoinEntry
         rows = db.scalars(select(CoinEntry).where(CoinEntry.transaction_id == "refund:88")).all()
         assert [r.delta for r in rows] == [0]
+
+
+def test_error_reports_carry_no_writing():
+    from youniya_api.monitoring import scrub
+
+    secret = "걔 소식 듣고 속이 쓰렸다"
+    event = {
+        "request": {"url": "https://api/v1/stars", "data": {"body": secret}, "query_string": f"q={secret}",
+                    "cookies": {"a": "b"}, "headers": {"Authorization": "Bearer t", "X-Admin-Token": "op",
+                                                        "User-Agent": "YOUNIYA/1.0"}},
+        "exception": {"values": [{"type": "ValidationError", "value": f"input_value='{secret}'",
+                                  "stacktrace": {"frames": [{"function": "evaluate", "vars": {"body": secret}}]}}]},
+        "logentry": {"message": "prism reading failed: %s", "params": [secret], "formatted": secret},
+        "breadcrumbs": {"values": [{"message": secret}]},
+        "extra": {"body": secret},
+    }
+    out = scrub(event)
+    assert secret not in repr(out)
+    assert out["request"]["headers"] == {"User-Agent": "YOUNIYA/1.0"}
+    assert out["exception"]["values"][0]["type"] == "ValidationError"
+    assert out["exception"]["values"][0]["stacktrace"]["frames"][0]["function"] == "evaluate"

@@ -64,7 +64,9 @@ class PrismEngine:
             return PrismSample.model_validate(
                 generate_json(self.api_key, self.model, prompt, thinking=self.thinking))
         except Exception as e:  # noqa: BLE001 — any lost reading is just one fewer sample
-            log.warning("prism reading failed: %s: %s", type(e).__name__, str(e)[:200])
+            # Only where it failed: a validation message would quote the reading, and so the writing.
+            where = [".".join(map(str, err["loc"])) for err in e.errors()] if hasattr(e, "errors") else []
+            log.warning("prism reading failed: %s %s", type(e).__name__, where)
             return None
 
 

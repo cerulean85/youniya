@@ -8,6 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from .config import Settings
 from .db import make_engine
 from .deps import ApiError
+from .monitoring import init_sentry
 from .prism import PrismEngine
 from .push import ApnsClient
 from .ratelimit import RateLimiter
@@ -30,6 +31,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings()
     if len(settings.jwt_secret) < 32 or not settings.data_key:
         raise RuntimeError("JWT_SECRET (32+ characters) and DATA_ENCRYPTION_KEY must be set")
+
+    init_sentry(settings.sentry_dsn, settings.sentry_environment)
 
     # The schema comes from the migrations (`alembic upgrade head`), not from here.
     engine = make_engine(settings.database_url)
