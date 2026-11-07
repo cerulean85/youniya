@@ -19,6 +19,9 @@ struct MainView: View {
     @State private var recordsFilter: RecordsFilter = .all
     /// 42 toast shown over whatever page is on top.
     @State private var toast: ToastCardMessage?
+    /// 03-1 환영 안내 (once, over 03).
+    @State private var showWelcome = false
+    @State private var welcomeHeight: CGFloat = 460
 
     /// Pages that slide in over the tabs.
     enum Route: Equatable {
@@ -161,6 +164,12 @@ struct MainView: View {
             case .sky:
                 if model.stars.isEmpty {
                     FirstNightSkyView(onCompose: { push(.compose()) })
+                        .onAppear {
+                            if !model.hasSeenWelcome {
+                                model.hasSeenWelcome = true
+                                showWelcome = true
+                            }
+                        }
                 } else {
                     LoadingGate {
                         HomeView(onCompose: { push(.compose()) }, onOpenStar: openStar,
@@ -196,6 +205,18 @@ struct MainView: View {
         }
         .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { bottomSafeArea = $0 }
         .background { StarField() }
+        .sheet(isPresented: $showWelcome) {
+            WelcomeSheet(
+                onCompose: { showWelcome = false; push(.compose()) },
+                onBrowse: { showWelcome = false }
+            )
+            .fixedSize(horizontal: false, vertical: true)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { welcomeHeight = $0 }
+            .presentationDetents([.height(welcomeHeight)])
+            .presentationDragIndicator(.hidden)
+            .presentationCornerRadius(Radius.xl)
+            .presentationBackground { SheetBackground(seed: "welcome-sheet") }
+        }
     }
 
     // MARK: Routes
@@ -411,6 +432,7 @@ struct MainView: View {
         let nebula = GalaxyNebula.samples[0]
         switch screen {
         case "3", "4", "47": tab = .sky
+        case "3-1": tab = .sky; showWelcome = true
         case "8", "56": tab = .nebula
         case "9", "21", "50", "72": tab = .plaza
         case "115", "116", "117", "49": tab = .records

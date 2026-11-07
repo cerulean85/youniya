@@ -343,6 +343,10 @@ final class AppModel {
     var hasSeenNebulaStory: Bool {
         didSet { UserDefaults.standard.set(hasSeenNebulaStory, forKey: "hasSeenNebulaStory") }
     }
+    /// 03-1 환영 안내: shown once on this device, the first time 03 opens.
+    var hasSeenWelcome: Bool {
+        didSet { UserDefaults.standard.set(hasSeenWelcome, forKey: "hasSeenWelcome") }
+    }
     /// 21 Plaza Welcome is shown until "둘러보기" is tapped once.
     var hasSeenPlazaIntro: Bool {
         didSet { UserDefaults.standard.set(hasSeenPlazaIntro, forKey: "hasSeenPlazaIntro") }
@@ -478,6 +482,7 @@ final class AppModel {
         hasConsented = UserDefaults.standard.bool(forKey: "hasConsented")
         marketingOptIn = UserDefaults.standard.bool(forKey: "marketingOptIn")
         hasSeenPlazaIntro = UserDefaults.standard.bool(forKey: "hasSeenPlazaIntro")
+        hasSeenWelcome = UserDefaults.standard.bool(forKey: "hasSeenWelcome")
         hasSeenNebulaStory = UserDefaults.standard.bool(forKey: "hasSeenNebulaStory")
         let live = Self.savedLiveAPI
         coins = Self.savedCoins(live: live)
