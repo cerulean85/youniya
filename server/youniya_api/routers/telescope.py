@@ -67,7 +67,7 @@ def create_report(body: ReportIn, request: Request, user: User = Depends(consent
     texts = [StarText(id=s.id, title=cipher.dec(s.title_enc), body=cipher.dec(s.body_enc),
                       created_at=iso(s.created_at), analysis=cipher.dec_json(s.analysis_enc)) for s in stars]
     try:
-        report = build_report(texts, settings.gemini_api_key, settings.telescope_model)
+        report = build_report(texts, settings.gemini_api_key, settings.telescope_model, settings.telescope_thinking)
     except Exception:
         raise ApiError(502, "analysis_failed", "별을 읽지 못했어요. 코인은 차감되지 않았어요.")
 

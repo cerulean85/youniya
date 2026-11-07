@@ -105,6 +105,7 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
 | `GEMINI_API_KEY` | (none) | Without it, a deterministic offline evaluator stands in (Protoss mock mode) |
 | `PRISM_MODEL` | `gemini-3.8-flash` | Star scoring (fast, called 3× per star; two good readings are enough) |
 | `TELESCOPE_MODEL` | `gemini-3.1-pro-preview` | Telescope reports and story polish |
+| `TELESCOPE_THINKING` | (empty) | Thinking level for telescope reports and story polish; `low` costs about a third to a half (tools/measure_ai_cost.py) |
 | `PRISM_SAMPLES` | `3` | Independent scoring calls per star |
 | `PRISM_THINKING` | `low` | Gemini 3 thinking level for scoring; empty = model default (about twice as slow) |
 | `APPLE_CLIENT_IDS`, `GOOGLE_CLIENT_IDS` | (none) | Comma-separated audiences for Sign in with Apple / Google |

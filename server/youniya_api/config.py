@@ -34,6 +34,8 @@ class Settings:
     prism_samples: int = field(default_factory=lambda: int(os.getenv("PRISM_SAMPLES", "3")))
     # Gemini 3 thinking level for scoring. "low" halves the wait (12 s → 6.6 s per call, 20261107).
     prism_thinking: str | None = field(default_factory=lambda: os.getenv("PRISM_THINKING", "low") or None)
+    # The same for telescope reports and story polish. Empty: the model's default (high for 3.1 Pro).
+    telescope_thinking: str | None = field(default_factory=lambda: os.getenv("TELESCOPE_THINKING") or None)
 
     apple_client_ids: tuple[str, ...] = field(default_factory=lambda: _list("APPLE_CLIENT_IDS"))
     google_client_ids: tuple[str, ...] = field(default_factory=lambda: _list("GOOGLE_CLIENT_IDS"))

@@ -177,7 +177,7 @@ def polish(nebula_id: str, request: Request, user: User = Depends(consented_user
     settings = request.app.state.settings
     try:
         bridges = story_bridges([e["sentence"] for e in current["entries"]], settings.gemini_api_key,
-                                settings.telescope_model)
+                                settings.telescope_model, settings.telescope_thinking)
     except Exception:
         raise ApiError(502, "analysis_failed", "이야기를 다듬지 못했어요. 코인은 차감되지 않았어요.")
     if not coins.spend(db, user, STORY_POLISH_COST, "서사 다듬기"):
