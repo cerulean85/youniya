@@ -18,7 +18,7 @@ struct CoinHistoryView: View {
                     if model.coinHistory.isEmpty {
                         // 108
                         EmptyStateView(title: "아직 쓴 코인이 없어요",
-                                       message: "마음 망원경을 켤 때 쓴 코인이\n여기에 차례로 쌓여요.")
+                                       message: "마음 망원경 등에 쓴 코인이\n여기에 차례로 쌓여요.")
                             .padding(.top, Space.md)
                     } else {
                         LazyVStack(spacing: Space.md) {
@@ -139,6 +139,9 @@ struct SettingsView: View {
                     SettingsSection("우주 광장") {
                         SettingsRow(icon: .iconNebula, title: "나눈 별",
                                     value: "\(model.stars.filter(\.isShared).count)개") { onOpen("나눈 별") }
+                        // 87-3
+                        SettingsRow(icon: .iconClose, title: "차단한 별지기",
+                                    value: "\(model.blockedKeepers.count)명") { onOpen("차단한 별지기") }
                         SettingsRow(icon: .iconLock, title: "모든 공유 거두기") { sheet = .withdrawShares }
                     }
 

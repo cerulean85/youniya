@@ -3,6 +3,9 @@ import SwiftUI
 /// 02 Login. Live: Sign in with Apple or Google; mock: signs in locally.
 struct LoginView: View {
     @Environment(AppModel.self) private var model
+    /// 02-1 초대 계정으로 로그인
+    @State private var invite = DebugScreen.is("2-1")
+    @State private var inviteHeight: CGFloat = 440
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.xl) {
@@ -26,12 +29,32 @@ struct LoginView: View {
                     .foregroundStyle(Color.textTertiary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
+                // 02-1: shown, not hidden (App Review 2.3.1).
+                Button { invite = true } label: {
+                    Text("초대 계정으로 로그인")
+                        .textStyle(.caption)
+                        .underline()
+                        .foregroundStyle(Color.hex(0xA78BFA))
+                        .frame(maxWidth: .infinity)
+                        .frame(minHeight: 32)
+                        .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, Space.xl)
         .padding(.vertical, Space.xxxl)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background { StarField() }
+        .sheet(isPresented: $invite) {
+            InviteLoginSheet(onClose: { invite = false })
+                .fixedSize(horizontal: false, vertical: true)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { inviteHeight = $0 }
+                .presentationDetents([.height(inviteHeight)])
+                .presentationDragIndicator(.hidden)
+                .presentationCornerRadius(Radius.xl)
+                .presentationBackground { SheetBackground(seed: "invite-sheet") }
+        }
     }
 }
 

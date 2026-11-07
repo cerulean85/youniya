@@ -108,6 +108,8 @@ struct FlowTopBar<Trailing: View>: View {
 struct TopAppBar: View {
     var title: String
     var onBack: () -> Void
+    /// 75-1: a "···" button on the right (plaza pages).
+    var onMore: (() -> Void)? = nil
 
     var body: some View {
         HStack(spacing: 0) {
@@ -127,7 +129,11 @@ struct TopAppBar: View {
                 .frame(maxWidth: .infinity)
                 .accessibilityAddTraits(.isHeader)
 
-            Color.clear.frame(width: 40, height: 40)
+            if let onMore {
+                MoreButton(action: onMore).frame(width: 40, height: 40)
+            } else {
+                Color.clear.frame(width: 40, height: 40)
+            }
         }
         .padding(.horizontal, Space.md)
         .frame(height: 52)

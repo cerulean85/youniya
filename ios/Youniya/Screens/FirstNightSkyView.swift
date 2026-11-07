@@ -24,7 +24,7 @@ struct FirstNightSkyView: View {
                 Button("첫 별 만들기", action: onCompose)
                     .buttonStyle(.primary)
 
-                Text("별 띄우기는 언제나 무료예요")
+                Text("별 띄우기는 하루 한 번 무료예요")
                     .textStyle(.caption)
                     .foregroundStyle(Color.starBright)
             }

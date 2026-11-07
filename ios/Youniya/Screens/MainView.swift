@@ -58,6 +58,7 @@ struct MainView: View {
         case stages     // 86
         case collection // 79·80
         case sharedStars // 87 › 나눈 별
+        case blockedKeepers // 87-3 차단한 별지기
         case page(String)
     }
 
@@ -145,7 +146,7 @@ struct MainView: View {
                 push(.sharedStars)
             case "coinHistoryRefund":                     // 121 with one refund row
                 if !model.coinHistory.contains(where: { $0.kind == "refund" }) {
-                    model.coinHistory.insert(CoinEntry(title: "환불", delta: -120,
+                    model.coinHistory.insert(CoinEntry(title: "환불", delta: -330,
                                                        date: .now.addingTimeInterval(-86_400), kind: "refund"), at: 0)
                 }
                 push(.coinHistory)
@@ -233,7 +234,8 @@ struct MainView: View {
                     pop()
                 },
                 onTelescope: { openReport($0, replacing: true) },
-                onOpenStar: { replace(with: .detail($0.id)) }
+                onOpenStar: { replace(with: .detail($0.id)) },
+                onCharge: { push(.coins) }
             )
         case .detail(let id):
             StarDetailView(
@@ -307,7 +309,7 @@ struct MainView: View {
             CoinHistoryView(onBack: pop)
                 .edgeSwipeBack(onBack: pop)
         case .settings:
-            SettingsView(onBack: pop, onOpen: { _ in push(.sharedStars) },
+            SettingsView(onBack: pop, onOpen: { push($0 == "차단한 별지기" ? .blockedKeepers : .sharedStars) },
                          onSky: { push(.sky) }, onPolicy: { push(.policy($0)) })
                 .edgeSwipeBack(onBack: pop)
         case .inquiry:
@@ -371,7 +373,8 @@ struct MainView: View {
             if let n = model.galaxyNebulae.first(where: { $0.name == name }) {
                 GalaxyNebulaView(nebula: n, onBack: pop,
                                  onLines: { push(.galaxyLines(name)) },
-                                 onOpenStar: { push(.galaxyStar(nebula: name, star: $0)) })
+                                 onOpenStar: { push(.galaxyStar(nebula: name, star: $0)) },
+                                 onBlocked: blocked)
                     .edgeSwipeBack(onBack: pop)
             }
         case .galaxyLines(let name):
@@ -381,7 +384,7 @@ struct MainView: View {
             }
         case .galaxyStar(let name, let star):
             if let n = model.galaxyNebulae.first(where: { $0.name == name }) {
-                GalaxyStarView(nebula: n, starTitle: star, onBack: pop)
+                GalaxyStarView(nebula: n, starTitle: star, onBack: pop, onBlocked: blocked)
                     .edgeSwipeBack(onBack: pop)
             }
         case .growth:
@@ -407,6 +410,9 @@ struct MainView: View {
                 }
             )
             .edgeSwipeBack(onBack: pop)
+        case .blockedKeepers:
+            BlockedKeepersView(onBack: pop)
+                .edgeSwipeBack(onBack: pop)
         case .sharedStars:
             SharedStarsView(
                 onBack: pop,
@@ -477,7 +483,8 @@ struct MainView: View {
         case "90": push(.nebulaStars(.supernova))
         case "73", "78": push(.galaxyNebula(nebula.name))
         case "74", "99", "100", "101", "106", "107": push(.galaxyLines(nebula.name))
-        case "75": push(.galaxyStar(nebula: nebula.name, star: nebula.stars[0].title))
+        case "75", "75-1", "75-2": push(.galaxyStar(nebula: nebula.name, star: nebula.stars[0].title))
+        case "87-3": push(.blockedKeepers)
         case "79", "80", "96", "97", "110": push(.collection)
         case "87", "87-1", "87-2", "91", "92", "93", "94", "95", "114": push(.settings)
         case "122": push(.detail(UUID()))
@@ -486,6 +493,20 @@ struct MainView: View {
         }
     }
     #endif
+
+    /// 75-2 차단하기: leave the blocked keeper's page (and the nebula it came
+    /// from, which is now hidden), then "차단했어요".
+    private func blocked() {
+        withAnimation(.easeInOut(duration: 0.32)) {
+            stack.removeAll {
+                switch $0.route {
+                case .galaxyStar, .galaxyNebula, .galaxyLines: true
+                default: false
+                }
+            }
+        }
+        toast = ToastCardMessage(title: "차단했어요", detail: "설정 › 차단한 별지기에서 풀 수 있어요")
+    }
 
     private func push(_ r: Route) {
         withAnimation(.easeInOut(duration: 0.32)) { stack.append(Entry(route: r)) }

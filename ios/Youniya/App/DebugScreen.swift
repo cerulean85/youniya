@@ -36,7 +36,7 @@ enum DebugScreen {
     1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 28-1 29 31 32 33 34 35 36 37 38
     39 40 41 43 44 45 46 47 48 49 50 51 56 61 62 65 66 67-1 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83
     86 87 89 90 91 92 93 94 95 96 97 98 99 100 101 102 104 105 106 107 108 109 110 111 112 113 114 115 116 117
-    118 119 120 120-1 121 122 122-1 86-1 19-1 71-1 87-1 87-2 3-1
+    118 119 120 120-1 121 122 122-1 86-1 19-1 71-1 87-1 87-2 3-1 2-1 75-1 75-2 87-3
     """.split(whereSeparator: \.isWhitespace).map(String.init))
 
     /// App-wide state for the screen, before the first page shows.
@@ -49,13 +49,14 @@ enum DebugScreen {
         guard let s = current, supported.contains(s) else { return }
         UserDefaults.standard.set(false, forKey: "useLiveAPI")
         model.useLiveAPI = false
-        model.isSignedIn = s != "2"
+        model.isSignedIn = s != "2" && s != "2-1"
         model.hasConsented = s != "11"
         model.hasSeenNebulaStory = s != "56"
         model.hasSeenPlazaIntro = s != "21"
         // 03 shows the empty sky alone; 03-1 opens the welcome over it.
         model.hasSeenWelcome = true
         model.simulatedFailure = nil
+        if s == "87-3" && model.blockedKeepers.isEmpty { model.blockedKeepers = BlockedKeeper.samples }
         if s == "3" || s == "3-1" {
             model.stars = []
         } else if model.stars.filter(\.isFloated).count < 3 || model.stars.first?.report == nil
@@ -103,7 +104,7 @@ enum DebugScreen {
             model.stars = model.stars.filter(\.isFloated)
         case "121":
             if !model.coinHistory.contains(where: { $0.kind == "refund" }) {
-                model.coinHistory.insert(CoinEntry(title: "환불", delta: -120, date: .now.addingTimeInterval(-86_400),
+                model.coinHistory.insert(CoinEntry(title: "환불", delta: -330, date: .now.addingTimeInterval(-86_400),
                                                    kind: "refund"), at: 0)
             }
         case "17", "92", "76":

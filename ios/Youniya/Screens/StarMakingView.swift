@@ -71,7 +71,7 @@ struct StarMakingView: View {
                 Button("조용히 간직하기") { publish(floated: false) }
                     .buttonStyle(.secondary)
                     .disabled(!canPublish)
-                Button("별 띄우기") { publish(floated: true) }
+                Button(model.floatButtonTitle) { publish(floated: true) }
                     .buttonStyle(.primary)
                     .disabled(!canFloat)
             }

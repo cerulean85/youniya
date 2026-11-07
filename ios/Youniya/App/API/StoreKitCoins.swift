@@ -2,7 +2,7 @@ import Foundation
 import StoreKit
 
 /// 28 코인 충전 with StoreKit 2. The App Store product ids must match the
-/// server's `COIN_PACKAGES`: coin_50, coin_120, coin_300 (consumables).
+/// server's `COIN_PACKAGES`: coin_110, coin_330, coin_1100 (consumables).
 ///
 /// Purchase → `POST /v1/coins/purchases {signed_transaction, consumption_consent}`
 /// → `finish()` only after the server credits it, so a purchase interrupted

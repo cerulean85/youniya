@@ -136,16 +136,21 @@ struct ReportListView: View {
 
 // MARK: - 28 Coin Charge
 
-/// A coin package. TODO: Load products and prices from StoreKit.
+/// A coin package (product `coin_<coins>`; 1 coin = ₩10). TODO: Prices from StoreKit.
 struct CoinPackage: Identifiable, Equatable {
     var coins: Int
     var price: String
+    /// coin_1100: 1,000 + 100 bonus.
+    var bonus = 0
     var id: Int { coins }
 
+    /// "₩9,900 · 보너스 100 포함"
+    var priceText: String { bonus > 0 ? "\(price) · 보너스 \(bonus) 포함" : price }
+
     static let all: [CoinPackage] = [
-        CoinPackage(coins: 50, price: "₩3,300"),
-        CoinPackage(coins: 120, price: "₩6,600"),
-        CoinPackage(coins: 300, price: "₩14,900"),
+        CoinPackage(coins: 110, price: "₩1,100"),
+        CoinPackage(coins: 330, price: "₩3,300"),
+        CoinPackage(coins: 1100, price: "₩9,900", bonus: 100),
     ]
 }
 
@@ -218,7 +223,7 @@ struct CoinChargeView: View {
                         ForEach(CoinPackage.all) { pkg in
                             let on = pkg == selected
                             Button { withAnimation(.snappy) { selected = pkg } } label: {
-                                InfoCard(seed: "coin\(pkg.coins)", title: "코인 \(pkg.coins)", detail: pkg.price)
+                                InfoCard(seed: "coin\(pkg.coins)", title: "코인 \(pkg.coins.formatted())", detail: pkg.priceText)
                                     .overlay(RoundedRectangle(cornerRadius: Radius.lg)
                                         .strokeBorder(Color.brandPrimary, lineWidth: on ? 2 : 0))
                                     .contentShape(.rect)

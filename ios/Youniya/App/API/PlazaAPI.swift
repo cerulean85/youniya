@@ -38,7 +38,6 @@ private struct LineList: Decodable {
 
 private struct ShareIn: Encodable { var quote: String }
 private struct LineIn: Encodable { var text: String }
-private struct ReportIn: Encodable { var reason: String }
 
 // MARK: - Mapping
 
@@ -68,7 +67,10 @@ private enum PlazaKind: String { case star, nebula }
 extension AppModel {
     /// 09 / 72: the plaza's stars and nebulae, mock samples or the server's.
     var plazaStarItems: [PlazaNebula] { useLiveAPI ? plazaStarsLive : PlazaNebula.samples }
-    var galaxyNebulae: [GalaxyNebula] { useLiveAPI ? plazaNebulaeLive : GalaxyNebula.samples }
+    /// Mock: a blocked keeper's nebula is hidden here (75-2); live, the server leaves it out.
+    var galaxyNebulae: [GalaxyNebula] {
+        useLiveAPI ? plazaNebulaeLive : GalaxyNebula.samples.filter { !blockedNebulaNames.contains($0.name) }
+    }
 
     /// 73 / 74: others' lines on a nebula, newest first.
     func lines(for nebula: GalaxyNebula) -> [GalaxyNebula.Line] {
@@ -155,16 +157,6 @@ extension AppModel {
         } catch {
             handle(error)
             return "failed"
-        }
-    }
-
-    /// Live 100 신고하기. `reason`: hurtful · personal_info · spam · other.
-    @MainActor func reportLine(_ line: GalaxyNebula.Line, reason: String) async {
-        guard let id = line.serverID else { return }
-        do {
-            try await APIClient.shared.sendRaw("POST", "/v1/plaza/lines/\(id)/report", body: ReportIn(reason: reason))
-        } catch {
-            handle(error)
         }
     }
 

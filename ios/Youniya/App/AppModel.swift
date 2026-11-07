@@ -343,6 +343,13 @@ final class AppModel {
     var hasSeenNebulaStory: Bool {
         didSet { UserDefaults.standard.set(hasSeenNebulaStory, forKey: "hasSeenNebulaStory") }
     }
+    /// 87-3 차단한 별지기 (75-2, 100). Saved on device; mock and live kept apart.
+    var blockedKeepers: [BlockedKeeper] = [] {
+        didSet {
+            UserDefaults.standard.set(try? JSONEncoder().encode(blockedKeepers),
+                                      forKey: useLiveAPI ? "blockedKeepers-live" : "blockedKeepers")
+        }
+    }
     /// 03-1 환영 안내: shown once on this device, the first time 03 opens.
     var hasSeenWelcome: Bool {
         didSet { UserDefaults.standard.set(hasSeenWelcome, forKey: "hasSeenWelcome") }
@@ -400,8 +407,15 @@ final class AppModel {
     static let defaultNebulaName = "늦은 밤의 등대자리"
     /// The user's nebula name: the latest drawn one, or the default.
     var nebulaName: String { drawnNebulae.last?.name ?? Self.defaultNebulaName }
-    /// 83 "서사 다듬기"
-    static let storyPolishCost = 20
+    /// 83 "서사 다듬기 · 코인 10" (the first one after sign-up is free).
+    static let storyPolishCost = 10
+    /// Mock: the free first 서사 다듬기 is used.
+    var usedFreePolish: Bool {
+        didSet { UserDefaults.standard.set(usedFreePolish, forKey: "usedFreePolish") }
+    }
+    /// Live: the sign-up free polish is left (`free_story`).
+    var serverFreePolish: Bool?
+    var isPolishFree: Bool { (useLiveAPI ? serverFreePolish : nil) ?? !usedFreePolish }
     /// 39–41: a notice covering the whole app. Not saved.
     var appNotice: AppNotice?
     /// Dev only: makes analysis or payment fail until turned off (35, 36, 38).
@@ -485,9 +499,13 @@ final class AppModel {
         hasSeenWelcome = UserDefaults.standard.bool(forKey: "hasSeenWelcome")
         hasSeenNebulaStory = UserDefaults.standard.bool(forKey: "hasSeenNebulaStory")
         let live = Self.savedLiveAPI
+        blockedKeepers = UserDefaults.standard.data(forKey: live ? "blockedKeepers-live" : "blockedKeepers")
+            .flatMap { try? JSONDecoder().decode([BlockedKeeper].self, from: $0) } ?? []
         coins = Self.savedCoins(live: live)
         savedLines = UserDefaults.standard.stringArray(forKey: "savedLines") ?? []
         usedFreeTelescope = UserDefaults.standard.bool(forKey: "usedFreeTelescope")
+        usedFreePolish = UserDefaults.standard.bool(forKey: "usedFreePolish")
+        monthlyFreeTelescopeMonth = UserDefaults.standard.string(forKey: "monthlyFreeTelescopeMonth")
         storyPolished = UserDefaults.standard.bool(forKey: "storyPolished")
         nebulaLines = UserDefaults.standard.dictionary(forKey: "nebulaLines") as? [String: String] ?? [:]
         reportedLines = Set(UserDefaults.standard.stringArray(forKey: "reportedLines") ?? [])
@@ -536,6 +554,13 @@ final class AppModel {
         }
     }
 
+    /// 02-1 초대 계정으로 로그인. False when the id or password is wrong.
+    /// Mock: any id and password.
+    @MainActor func inviteSignIn(username: String, password: String) async -> Bool {
+        guard useLiveAPI else { isSignedIn = true; return true }
+        return await inviteSignInLive(username: username, password: password)
+    }
+
     /// 11 가입 동의
     func acceptConsent(marketing: Bool) {
         guard useLiveAPI else {
@@ -563,7 +588,8 @@ final class AppModel {
             hasConsented = !me.needsConsent
             marketingOptIn = me.marketingOptIn
             coins = me.coins
-            usedFreeTelescope = !me.freeTelescopeAvailable
+            applyFreeUses(telescopeAvailable: me.freeTelescopeAvailable, star: me.freeStarToday,
+                          telescope: me.freeTelescope, story: me.freeStory)
         } catch {
             handle(error)
             return
@@ -574,6 +600,7 @@ final class AppModel {
         await loadGrowth()
         await loadDraft()
         await loadCoins()
+        await loadBlocks()
         await PushRegistration.refresh(signedIn: isSignedIn)
     }
 
@@ -675,8 +702,34 @@ final class AppModel {
     /// on sign-out would lose the user's journal.
     /// Mock balance for a new device.
     static let starterCoins = 120
-    /// 24 "코인 30개로 켜기"
-    static let telescopeCost = 30
+    /// 24 "코인 20개로 켜기" (first one after sign-up, and one a month, free).
+    static let telescopeCost = 20
+    /// 05: floating is free once a day; from the second star that day, 5 coins.
+    /// Keeping quietly is always free.
+    static let floatCost = 5
+
+    /// Stars floated today (Korean day on this device).
+    var floatedToday: Int {
+        stars.filter { $0.isFloated && ($0.createdAt.map(Calendar.current.isDateInToday) ?? false) }.count
+    }
+    /// Live: today's free float is left (`free_star_today`, Korean day on the server).
+    var serverFreeFloat: Bool?
+    var isFloatFree: Bool { (useLiveAPI ? serverFreeFloat : nil) ?? (floatedToday == 0) }
+    /// 05 "별 띄우기" / "별 띄우기 · 5코인"
+    var floatButtonTitle: String { isFloatFree ? "별 띄우기" : "별 띄우기 · \(Self.floatCost)코인" }
+    /// 29 from 05: floating would need coins the user doesn't have.
+    var floatNeedsCharge: Bool { !isFloatFree && coins < Self.floatCost }
+
+    /// Mock: the month ("2026-11") whose free telescope was used.
+    var monthlyFreeTelescopeMonth: String? {
+        didSet { UserDefaults.standard.set(monthlyFreeTelescopeMonth, forKey: "monthlyFreeTelescopeMonth") }
+    }
+    private static var thisMonth: String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM"
+        return f.string(from: .now)
+    }
 
     /// Takes coins if the balance allows it, and records it in 33.
     func spendCoins(_ amount: Int, for title: String = "마음 망원경") -> Bool {
@@ -692,13 +745,23 @@ final class AppModel {
         coinHistory.insert(CoinEntry(title: "코인 충전", delta: amount), at: 0)
     }
 
-    /// The first telescope is free. Users who already have a report
-    /// (from before this rule) have used it.
-    var isTelescopeFree: Bool {
-        !usedFreeTelescope && !stars.contains { $0.report != nil }
+    /// Live: free uses left, from /v1/me and /v1/coins.
+    func applyFreeUses(telescopeAvailable: Bool, star: Int?, telescope: Int?, story: Int?) {
+        usedFreeTelescope = !(telescope.map { $0 > 0 } ?? telescopeAvailable)
+        serverFreeFloat = star.map { $0 > 0 }
+        serverFreePolish = story.map { $0 > 0 }
     }
 
-    func useFreeTelescope() { usedFreeTelescope = true }
+    /// The first telescope after sign-up is free, and one each month.
+    /// Live: the server's `free_telescope_available`.
+    var isTelescopeFree: Bool {
+        if useLiveAPI { return !usedFreeTelescope }
+        return !usedFreeTelescope || monthlyFreeTelescopeMonth != Self.thisMonth
+    }
+
+    func useFreeTelescope() {
+        if useLiveAPI || !usedFreeTelescope { usedFreeTelescope = true } else { monthlyFreeTelescopeMonth = Self.thisMonth }
+    }
 
     func saveLine(_ line: String) {
         if !savedLines.contains(line) { savedLines.append(line) }
@@ -715,6 +778,7 @@ final class AppModel {
         if useLiveAPI {
             // The server keeps the journal; drop this device's copy.
             stars = []
+            blockedKeepers = []
             Task {
                 await PushRegistration.unregister()
                 await APIClient.shared.signOut()
@@ -799,6 +863,8 @@ final class AppModel {
         settings = AppSettings()
         coins = Self.starterCoins
         usedFreeTelescope = false
+        usedFreePolish = false
+        monthlyFreeTelescopeMonth = nil
         drawnNebulae = []
         storyPolished = false
         nebulaLines = [:]
@@ -987,4 +1053,7 @@ struct MeResponse: Decodable {
     var marketingOptIn: Bool
     var coins: Int
     var freeTelescopeAvailable: Bool
+    var freeStarToday: Int?
+    var freeTelescope: Int?
+    var freeStory: Int?
 }

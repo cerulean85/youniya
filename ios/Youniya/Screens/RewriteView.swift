@@ -2,6 +2,7 @@ import SwiftUI
 
 /// 14 Rewrite: write again on a previous star's question.
 struct RewriteView: View {
+    @Environment(AppModel.self) private var model
     var previous: StarItem
     var question: String
     var onBack: () -> Void
@@ -72,7 +73,7 @@ struct RewriteView: View {
                     Button("조용히 간직하기") { publish(floated: false) }
                         .buttonStyle(.secondary)
                         .disabled(!canPublish)
-                    Button("별 띄우기") { publish(floated: true) }
+                    Button(model.floatButtonTitle) { publish(floated: true) }
                         .buttonStyle(.primary)
                         .disabled(text.count < AppModel.minFloatLength)
                 }

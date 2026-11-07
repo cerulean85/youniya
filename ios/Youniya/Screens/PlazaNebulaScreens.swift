@@ -296,7 +296,10 @@ struct GalaxyNebulaView: View {
     var onBack: () -> Void
     var onLines: () -> Void
     var onOpenStar: (String) -> Void
+    /// 75-2 from the "···" menu: back with the "차단했어요" toast.
+    var onBlocked: () -> Void = {}
 
+    @State private var showMenu = false
     /// Figma 73 at 1×; 78 is the zoomed-in view.
     @State private var level: CGFloat = DebugScreen.is("78") ? 2.2 : 1
     @State private var selected = 0
@@ -309,7 +312,7 @@ struct GalaxyNebulaView: View {
     var body: some View {
         let stars = nebula.stars
         VStack(spacing: 0) {
-            TopAppBar(title: "다른 이의 성운", onBack: onBack)
+            TopAppBar(title: "다른 이의 성운", onBack: onBack, onMore: { showMenu.toggle() })
 
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
@@ -435,6 +438,8 @@ struct GalaxyNebulaView: View {
             .scrollIndicators(.hidden)
         }
         .background { StarField() }
+        .modifier(PlazaSafetyModifier(showMenu: $showMenu, target: .nebula, nebulaName: nebula.name,
+                                       serverID: nebula.serverID, onBlocked: onBlocked))
         .task { await model.loadLines(for: nebula) }
     }
 }
@@ -548,12 +553,21 @@ struct GalaxyLinesView: View {
         }
         .toastCard($toast)
         .sheet(item: $reporting) { line in
-            ReportLineSheet(
-                onReport: { reason in
+            ReportSheet(
+                onReport: { reason, alsoBlock in
                     reporting = nil
                     _ = withAnimation(.snappy) { model.reportedLines.insert(line.text) }
-                    if model.useLiveAPI { Task { await model.reportLine(line, reason: reason) } }
-                    toast = ToastCardMessage(title: "신고를 받았어요", detail: "살펴본 뒤 결과를 알림으로 알려 드릴게요")
+                    Task { @MainActor in
+                        if model.useLiveAPI, let id = line.serverID {
+                            // Reports and, when asked, blocks in one call.
+                            _ = await model.reportLive(.line(id), reason: reason, block: alsoBlock)
+                        } else if alsoBlock {
+                            _ = await model.block(.line, nebulaName: nil, target: nil)
+                        }
+                    }
+                    toast = alsoBlock
+                        ? ToastCardMessage(title: "신고하고 차단했어요", detail: "이 사람의 글이 더 보이지 않아요")
+                        : ToastCardMessage(title: "신고를 받았어요", detail: "살펴본 뒤 결과를 알림으로 알려 드릴게요")
                 },
                 onCancel: { reporting = nil }
             )
@@ -640,67 +654,6 @@ private struct HiddenLineCard: View {
         .flatCard(seed: "hidden-line")
         .opacity(0.7)
         .accessibilityElement(children: .combine)
-    }
-}
-
-/// 100 이 별빛을 신고할까요?: pick reasons, then report.
-private struct ReportLineSheet: View {
-    /// The first picked reason, as the API's hurtful · personal_info · spam · other.
-    var onReport: (_ reason: String) -> Void
-    var onCancel: () -> Void
-
-    private static let reasons = ["상처를 주는 말이에요", "개인정보가 드러나 있어요", "광고나 스팸이에요", "그 밖의 이유가 있어요"]
-    private static let apiReasons = ["hurtful", "personal_info", "spam", "other"]
-    @State private var picked: Set<String> = [reasons[0]]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Space.lg) {
-            Capsule().fill(Color.borderDefault).frame(width: 40, height: 4)
-                .frame(maxWidth: .infinity).accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: Space.sm) {
-                Text("이 별빛을 신고할까요?").textStyle(.h3).foregroundStyle(Color.textPrimary)
-                Text("신고한 별빛은 바로 가려지고 운영팀이 살펴봐요. 누가 신고했는지는 알리지 않아요.")
-                    .textStyle(.bodyS).foregroundStyle(Color.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .accessibilityElement(children: .combine)
-            .accessibilityAddTraits(.isHeader)
-            VStack(spacing: 0) {
-                ForEach(Self.reasons, id: \.self) { r in
-                    let on = picked.contains(r)
-                    Button { if on { picked.remove(r) } else { picked.insert(r) } } label: {
-                        HStack(spacing: Space.md) {
-                            ZStack {
-                                if on {
-                                    RoundedRectangle(cornerRadius: 6).fill(Color.brandPrimary)
-                                    Image(.iconCheck).resizable().frame(width: 14, height: 14)
-                                } else {
-                                    RoundedRectangle(cornerRadius: 6).strokeBorder(Color.borderDefault, lineWidth: 1.5)
-                                }
-                            }
-                            .frame(width: 22, height: 22)
-                            Text(r).textStyle(.bodyM).foregroundStyle(Color.textPrimary)
-                            Spacer()
-                        }
-                        .frame(minHeight: 46)
-                        .contentShape(.rect)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(on ? .isSelected : [])
-                }
-            }
-            VStack(spacing: Space.md) {
-                Button("신고하기") {
-                    let first = Self.reasons.firstIndex { picked.contains($0) } ?? 3
-                    onReport(Self.apiReasons[first])
-                }
-                .buttonStyle(.primary).disabled(picked.isEmpty)
-                Button("취소", action: onCancel).buttonStyle(.secondary)
-            }
-        }
-        .padding(.horizontal, Space.xl)
-        .padding(.top, Space.md)
-        .padding(.bottom, Space.xl)
     }
 }
 

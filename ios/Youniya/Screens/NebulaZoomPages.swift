@@ -676,7 +676,8 @@ struct NebulaStoryView: View {
             .scrollIndicators(.hidden)
 
             VStack(spacing: 10) {
-                Button(model.storyPolished ? "서사를 다듬었어요" : "서사 다듬기 · 코인 \(AppModel.storyPolishCost)") { polish() }
+                Button(model.storyPolished ? "서사를 다듬었어요"
+                       : model.isPolishFree ? "서사 다듬기 · 첫 1회 무료" : "서사 다듬기 · 코인 \(AppModel.storyPolishCost)") { polish() }
                     .buttonStyle(.primary)
                     .disabled(model.storyPolished || lines.count < 2)
                 // Say why it can't be pressed.
@@ -770,7 +771,10 @@ struct NebulaStoryView: View {
             }
             return
         }
-        if model.spendCoins(AppModel.storyPolishCost, for: "서사 다듬기") {
+        if model.isPolishFree {
+            model.usedFreePolish = true
+            withAnimation(.easeInOut(duration: 0.4)) { model.storyPolished = true }
+        } else if model.spendCoins(AppModel.storyPolishCost, for: "서사 다듬기") {
             withAnimation(.easeInOut(duration: 0.4)) { model.storyPolished = true }
         } else {
             toast = ToastCardMessage(title: "코인이 조금 부족해요", detail: "코인 충전에서 채울 수 있어요")

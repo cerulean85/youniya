@@ -104,6 +104,14 @@ actor APIClient {
         return s
     }
 
+    /// 02-1: an account the team handed out (App Review).
+    func inviteSignIn(login: String, password: String) async throws -> AuthSession {
+        let s: AuthSession = try await send("POST", "/v1/auth/invite",
+                                            body: ["login": login, "password": password], authorized: false)
+        store(s)
+        return s
+    }
+
     /// Ends the server session and forgets the tokens, even when offline.
     func signOut() async {
         if let refresh = tokens?.refreshToken {

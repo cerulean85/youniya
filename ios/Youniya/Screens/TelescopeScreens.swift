@@ -115,8 +115,10 @@ struct TelescopeConfirmView: View {
                 } else {
                     ActionSheetContent(
                         title: "마음 망원경 켜기",
-                        message: "코인 \(AppModel.telescopeCost)개가 사용돼요. 결과는 진단이 아니에요.",
-                        primary: ("코인 \(AppModel.telescopeCost)개로 켜기", start),
+                        message: model.isTelescopeFree
+                            ? "이번에는 무료로 켤 수 있어요. 결과는 진단이 아니에요."
+                            : "코인 \(AppModel.telescopeCost)개가 사용돼요. 결과는 진단이 아니에요.",
+                        primary: (model.isTelescopeFree ? "무료로 켜기" : "코인 \(AppModel.telescopeCost)개로 켜기", start),
                         secondary: ("코인 충전", { close(then: onCharge) }),
                         ghost: ("나중에", { close(then: onLater) })
                     )
@@ -144,6 +146,9 @@ struct TelescopeConfirmView: View {
             } else {
                 withAnimation(.snappy) { short = true }
             }
+        } else if model.isTelescopeFree {
+            model.useFreeTelescope()
+            close(then: onStart)
         } else if model.spendCoins(AppModel.telescopeCost) {
             close(then: onStart)
         } else {

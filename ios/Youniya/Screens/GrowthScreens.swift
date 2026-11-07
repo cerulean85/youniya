@@ -145,14 +145,17 @@ struct GalaxyStarView: View {
     var nebula: GalaxyNebula
     var starTitle: String
     var onBack: () -> Void
+    /// 75-2: back to the previous page with the "차단했어요" toast.
+    var onBlocked: () -> Void = {}
 
+    @State private var showMenu = DebugScreen.is("75-1")
     private var key: String { "star:\(nebula.name):\(starTitle)" }
     private var resonated: Bool { model.resonated.contains(key) }
 
     var body: some View {
         let star = nebula.stars.first { $0.title == starTitle }
         VStack(spacing: 0) {
-            TopAppBar(title: "다른 이의 별", onBack: onBack)
+            TopAppBar(title: "다른 이의 별", onBack: onBack, onMore: { showMenu.toggle() })
 
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
@@ -217,6 +220,8 @@ struct GalaxyStarView: View {
             .scrollIndicators(.hidden)
         }
         .background { StarField() }
+        .modifier(PlazaSafetyModifier(showMenu: $showMenu, target: .star, nebulaName: nebula.name,
+                                       serverID: nebula.serverID, onBlocked: onBlocked))
     }
 }
 

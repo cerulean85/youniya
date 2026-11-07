@@ -40,9 +40,9 @@ struct StarCardView: View {
                     .textStyle(.labelS)
                     .foregroundStyle(Color.brandPrimaryText)
                 Spacer()
-                // Only while the free first telescope is unused.
+                // Only while a free telescope is left (first one, or this month's).
                 if model.isTelescopeFree {
-                    Text("처음 한 번은 무료")
+                    Text("이번 달 1회 무료")
                         .textStyle(.caption)
                         .foregroundStyle(Color.starBright)
                 }
@@ -75,6 +75,13 @@ struct ComposeFlowView: View {
     var onTelescope: (StarItem) -> Void
     /// "이 별 보기" on 13 → 12 Star Detail.
     var onOpenStar: (StarItem) -> Void
+    /// 29 "코인 충전" → 28.
+    var onCharge: () -> Void = {}
+
+    /// 29 from 05: today's free float is used and coins are short.
+    @State private var showShortage = false
+    @State private var shortageKeep: (() -> Void)?
+    @State private var shortageHeight: CGFloat = 330
 
     private enum Step: Equatable {
         case writing
@@ -108,21 +115,27 @@ struct ComposeFlowView: View {
             case .writing:
                 if let previous = rewriteOf {
                     RewriteView(previous: previous, question: model.rewriteQuestion(for: previous), onBack: onClose) { body, floated in
-                        if model.useLiveAPI {
-                            send(StarDraft(mood: previous.mood, title: previous.title, body: body), floated: floated)
-                        } else {
-                            let star = model.publishRewrite(of: previous, body: body, floated: floated)
-                            advance(after: star, floated: floated)
+                        let publish = { (floated: Bool) in
+                            if model.useLiveAPI {
+                                send(StarDraft(mood: previous.mood, title: previous.title, body: body), floated: floated)
+                            } else {
+                                let star = model.publishRewrite(of: previous, body: body, floated: floated)
+                                advance(after: star, floated: floated)
+                            }
                         }
+                        if floated { float { publish(true) } keep: { publish(false) } } else { publish(false) }
                     }
                     .transition(.opacity)
                 } else {
                     StarMakingView(onClose: onClose) { draft, floated in
-                        if model.useLiveAPI {
-                            send(draft, floated: floated)
-                        } else {
-                            advance(after: model.publish(draft, floated: floated), floated: floated)
+                        let publish = { (floated: Bool) in
+                            if model.useLiveAPI {
+                                send(draft, floated: floated)
+                            } else {
+                                advance(after: model.publish(draft, floated: floated), floated: floated)
+                            }
                         }
+                        if floated { float { publish(true) } keep: { publish(false) } } else { publish(false) }
                     }
                     .transition(.opacity)
                 }
@@ -214,6 +227,22 @@ struct ComposeFlowView: View {
         }
         #endif
         .toastCard($toast)
+        // 29 코인 부족 (from 05)
+        .sheet(isPresented: $showShortage) {
+            ActionSheetContent(
+                title: "코인이 조금 부족해요",
+                message: "오늘의 무료 별 띄우기는 이미 썼어요. 다음 별은 코인 \(AppModel.floatCost)개가 필요해요. 지금 코인 \(model.coins)개예요.",
+                primary: ("코인 충전", { showShortage = false; onCharge() }),
+                secondary: ("조용히 간직하기", { showShortage = false; shortageKeep?() }),
+                ghost: ("계속 쓰기", { showShortage = false })
+            )
+            .fixedSize(horizontal: false, vertical: true)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { shortageHeight = $0 }
+            .presentationDetents([.height(shortageHeight)])
+            .presentationDragIndicator(.hidden)
+            .presentationCornerRadius(Radius.xl)
+            .presentationBackground { SheetBackground(seed: "float-shortage") }
+        }
         .edgeSwipeBack(enabled: !isAnalyzing && !sending && step != .reading, onBack: onClose)
     }
 
@@ -231,6 +260,8 @@ struct ComposeFlowView: View {
             defer { sending = false }
             do {
                 let (star, crisis) = try await model.publishLive(draft, floated: floated, rewriteOf: rewriteOf?.id)
+                // The server may have charged 5 coins and used today's free float.
+                if floated { Task { await model.loadCoins() } }
                 withAnimation(.easeInOut(duration: 0.5)) {
                     if crisis {
                         step = .crisis(star, floated: false)
@@ -244,6 +275,12 @@ struct ComposeFlowView: View {
                 }
             } catch let e as APIError where e.code == "offline" {
                 withAnimation(.easeInOut(duration: 0.5)) { step = .sendFailed(draft, floated: floated) }
+            } catch let e as APIError where e.status == 402 {
+                // 29: the server wants coins for a second float today.
+                if step == .reading { withAnimation { step = .writing } }
+                shortageKeep = { send(draft, floated: false) }
+                showShortage = true
+                await model.loadCoins()
             } catch let e as APIError where e.status == 422 {
                 if step == .reading { withAnimation { step = .writing } }
                 toast = ToastCardMessage(title: e.message)
@@ -252,6 +289,20 @@ struct ComposeFlowView: View {
                 model.handle(error)
             }
         }
+    }
+
+    /// 05 별 띄우기: free once a day, then 5 coins. Short of coins → 29, with
+    /// 충전 · 조용히 간직하기 · 계속 쓰기 side by side. Live, the server charges.
+    private func float(_ go: @escaping () -> Void, keep: @escaping () -> Void) {
+        if model.floatNeedsCharge {
+            shortageKeep = keep
+            showShortage = true
+            return
+        }
+        if !model.useLiveAPI && !model.isFloatFree {
+            _ = model.spendCoins(AppModel.floatCost, for: "별 띄우기")
+        }
+        go()
     }
 
     private func advance(after star: StarItem, floated: Bool) {
