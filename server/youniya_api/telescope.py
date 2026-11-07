@@ -164,10 +164,29 @@ MONTHLY_PROMPT = """# Role
   weight=마음의 무게(남이 아니라 내 마음으로 품어낸 정도)
 - question: 다음 달의 나에게 건네는 질문 한 문장. 답을 유도하지 않는다
 
+# 감정 표현
+- 원문의 감정 표현을 다른 말로 바꾸거나 더 강하게 말하지 않는다. 예: 원문이 "쓸모없는 사람이 될까 봐 무서웠다"이면 "버려질까 무서웠던"으로 바꾸지 않는다
+- 감정을 말할 때는 원문의 낱말을 그대로 쓰거나 더 약하게만 표현한다
+
 # 말투
 - 모든 문장은 "~어요/~해요/~나요" 체로 통일한다. 높이는 "-시-"("~셨어요")는 쓰지 않고, 사용자를 "당신"이라고 부르지 않는다
 - 점수, 숫자, 순위를 말하지 않는다
 """
+
+# What the model reads of a month (기획 확정 20261107): each star up to 1,500 characters, cut at a
+# sentence end, and at most the first 40 stars floated. The numbers still come from every star.
+MONTHLY_MAX_CHARS = 1500
+MONTHLY_MAX_STARS = 40
+
+
+def clip(text: str, limit: int = MONTHLY_MAX_CHARS) -> str:
+    """The start of the text, at most `limit` characters, ending at a sentence end when there is one."""
+    if len(text) <= limit:
+        return text
+    head = text[:limit]
+    cut = max(head.rfind(c) for c in ".!?\n")
+    return head[:cut + 1].rstrip() if cut > 0 else head
+
 
 
 def build_monthly(month: str, stars: list[StarText], api_key: str | None, model: str,
@@ -184,7 +203,8 @@ def build_monthly(month: str, stars: list[StarText], api_key: str | None, model:
             "notes": {lens["key"]: lens["note"] for lens in base["lenses"]},
             "question": brightest.analysis["rewrite_question"]}
     if api_key:
-        parts = [f"## {s.created_at[:10]} · {s.title}\n\"\"\"\n{s.body}\n\"\"\"" for s in stars]
+        parts = [f"## {s.created_at[:10]} · {s.title}\n\"\"\"\n{clip(s.body)}\n\"\"\""
+                 for s in stars[:MONTHLY_MAX_STARS]]
         prompt = MONTHLY_PROMPT + f"\n\n# {month}의 별들\n" + "\n\n".join(parts)
         for attempt in range(2):  # a malformed answer now and then (1 in 4, 20261107): ask once more
             out = generate_json(api_key, model, prompt, temperature=0.3, thinking=thinking,

@@ -131,3 +131,13 @@ def test_thinking_off_and_retries(monkeypatch):
 
     with pytest.raises(httpx.ReadTimeout):
         llm.generate_json("k", "m", "p")  # no retry by default
+
+
+def test_monthly_input_is_clipped_at_a_sentence_end():
+    from youniya_api.telescope import clip
+
+    assert clip("짧은 글.") == "짧은 글."
+    text = "가나다라. " * 400  # 2,400 characters
+    out = clip(text)
+    assert len(out) <= 1500 and out.endswith(".") and text.startswith(out)
+    assert clip("가" * 2000) == "가" * 1500  # no sentence end: a hard cut
