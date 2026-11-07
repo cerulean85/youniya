@@ -120,6 +120,10 @@ struct SkyColorView: View {
     var onBack: () -> Void
 
     @State private var selected: SkyTheme = .violet
+    /// 68-1: M1 after a locked sky's preview.
+    @State private var showMembership = false
+    /// v1.1: "아이콘도 바꿀까요?" once, when a member applies a sky.
+    @State private var askIcon = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -140,13 +144,18 @@ struct SkyColorView: View {
                     .accessibilityAddTraits(.isHeader)
 
                     VStack(spacing: Space.md) {
-                        // v1.0: only the free skies (오로라·잔불·장미 wait for the membership).
-                        ForEach(SkyTheme.free) { theme in
-                            SkyOptionRow(theme: theme, isSelected: theme == selected) {
-                                withAnimation(.snappy(duration: 0.2)) { selected = theme }
+                        // v1.0: only the free skies. v1.1 (68-1): the others follow,
+                        // with a "멤버십" tag and a lock for non-members.
+                        ForEach(model.membershipOn ? SkyTheme.free + SkyTheme.allCases.filter { !$0.isFree } : SkyTheme.free) { theme in
+                            let locked = !theme.isFree && !model.isMember
+                            SkyOptionRow(theme: theme, isSelected: theme == selected, locked: locked) {
+                                if locked { preview(theme) } else {
+                                    withAnimation(.snappy(duration: 0.2)) { selected = theme }
+                                }
                             }
                         }
                     }
+
                 }
                 .padding(.horizontal, Space.xl)
                 .padding(.top, Space.xl)
@@ -154,9 +163,40 @@ struct SkyColorView: View {
             }
             .scrollIndicators(.hidden)
 
+            // 68-1: fixed above the button so the scroll never hides it.
+            if model.membershipOn && !model.isMember {
+                HStack(alignment: .top, spacing: Space.md) {
+                    Image(.iconInfo).resizable().frame(width: 20, height: 20).accessibilityHidden(true)
+                    Text("오로라 숲, 잔불 노을, 장미빛 새벽은 별지기 멤버십으로 열 수 있어요. 눌러서 미리 볼 수 있어요.")
+                        .textStyle(.bodyS).foregroundStyle(Color.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(Space.lg)
+                .background(Color.bgSurfaceRaised, in: .rect(cornerRadius: Radius.lg))
+                .padding(.horizontal, Space.xl)
+                .padding(.bottom, Space.md)
+            }
             Button("적용하기") {
+                let changed = selected != model.settings.sky
                 withAnimation(.easeInOut(duration: 0.5)) { model.settings.sky = selected }
-                onBack()
+                if changed && model.isMember && UIApplication.shared.supportsAlternateIcons
+                    && UIApplication.shared.alternateIconName != selected.appIconName {
+                    askIcon = true
+                } else {
+                    onBack()
+                }
+            }
+            .alert("아이콘도 바꿀까요?", isPresented: $askIcon) {
+                Button("바꾸기") {
+                    Task { @MainActor in
+                        try? await UIApplication.shared.setAlternateIconName(selected.appIconName)
+                        onBack()
+                    }
+                }
+                Button("그대로 두기", role: .cancel) { onBack() }
+            } message: {
+                Text("홈 화면의 YOUNIYA 아이콘을 \(selected.name) 색으로 바꿔요.")
             }
             .buttonStyle(.primary)
             .padding(.horizontal, Space.xl)
@@ -164,6 +204,17 @@ struct SkyColorView: View {
         }
         .background { StarField() }
         .onAppear { selected = model.settings.sky }
+        .membershipSheet(isPresented: $showMembership)
+    }
+
+    /// 68-1: the whole app in that sky for 3 seconds, then M1.
+    private func preview(_ theme: SkyTheme) {
+        model.previewSky = theme
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(3))
+            model.previewSky = nil
+            showMembership = true
+        }
     }
 }
 
@@ -171,6 +222,8 @@ struct SkyColorView: View {
 private struct SkyOptionRow: View {
     var theme: SkyTheme
     var isSelected: Bool
+    /// 68-1: a membership sky for a non-member.
+    var locked = false
     var action: () -> Void
 
     var body: some View {
@@ -178,20 +231,28 @@ private struct SkyOptionRow: View {
             HStack(spacing: Space.md) {
                 SkySwatch(theme: theme)
                 VStack(alignment: .leading, spacing: Space.xs) {
-                    Text(theme.name)
-                        .textStyle(.labelM)
-                        .foregroundStyle(Color.textPrimary)
+                    HStack(spacing: Space.sm) {
+                        Text(theme.name)
+                            .textStyle(.labelM)
+                            .foregroundStyle(Color.textPrimary)
+                        if locked { Tag(text: "멤버십", tone: .gold) }
+                    }
                     Text(theme.detail)
                         .textStyle(.caption)
                         .foregroundStyle(Color.textTertiary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                // Figma `Radio`: 22pt, filled violet when selected.
-                ZStack {
-                    Circle().strokeBorder(isSelected ? Color.brandPrimary : Color.borderDefault, lineWidth: 2)
-                    if isSelected { Circle().fill(Color.brandPrimary) }
+                if locked {
+                    Image(.iconLock).resizable().frame(width: 22, height: 22)
+                        .accessibilityLabel("멤버십")
+                } else {
+                    // Figma `Radio`: 22pt, filled violet when selected.
+                    ZStack {
+                        Circle().strokeBorder(isSelected ? Color.brandPrimary : Color.borderDefault, lineWidth: 2)
+                        if isSelected { Circle().fill(Color.brandPrimary) }
+                    }
+                    .frame(width: 22, height: 22)
                 }
-                .frame(width: 22, height: 22)
             }
             .padding(Space.md)
             // Figma: surface + Cosmos BG, 1pt slate border; 2pt violet when selected.

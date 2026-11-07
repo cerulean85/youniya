@@ -7,6 +7,7 @@ struct StarField: View {
     private static let canvas = CGSize(width: 390, height: 844)
     @Environment(\.motionReduced) private var reduceMotion
     @Environment(\.skyTheme) private var sky
+    @Environment(\.skyScene) private var scene
 
     var body: some View {
         GeometryReader { geo in
@@ -32,10 +33,16 @@ struct StarField: View {
                             Circle()
                                 .fill(Color.textPrimary)
                                 .frame(width: d.size, height: d.size)
-                                .opacity(reduceMotion ? d.keys[0].1 : track.opacity(at: t))
+                                .opacity((reduceMotion ? d.keys[0].1 : track.opacity(at: t))
+                                         * (scene ? sky.sceneStarOpacity : 1))
                                 .offset(x: d.x, y: d.y)
                         }
                     }
+                }
+
+                // v1.1 member scenes, above the stars and below the content.
+                if scene && sky.hasScene {
+                    SkySceneLayer(sky: sky, still: reduceMotion)
                 }
             }
             .frame(width: Self.canvas.width, height: Self.canvas.height, alignment: .topLeading)

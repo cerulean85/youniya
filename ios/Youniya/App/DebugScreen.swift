@@ -24,7 +24,9 @@ enum DebugScreen {
 
     private static func normalized(_ s: String) -> String {
         let parts = s.split(separator: "-", maxSplits: 1)
-        let head = String(Int(parts.first ?? "") ?? 0)
+        // "M1" and other lettered frames stay as they are.
+        guard let n = Int(parts.first ?? "") else { return s }
+        let head = String(n)
         return parts.count > 1 ? head + "-" + parts[1] : head
     }
 
@@ -36,15 +38,18 @@ enum DebugScreen {
     1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 28-1 29 31 32 33 34 35 36 37 38
     39 40 41 43 44 45 46 47 48 49 50 51 56 61 62 65 66 67-1 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83
     86 87 89 90 91 92 93 94 95 96 97 98 99 100 101 102 104 105 106 107 108 109 110 111 112 113 114 115 116 117
-    118 119 120 120-1 121 122 122-1 86-1 19-1 71-1 87-1 87-2 3-1 2-1 75-1 75-2 87-3
+    118 119 120 120-1 121 122 122-1 86-1 19-1 71-1 87-1 87-2 3-1 2-1 75-1 75-2 87-3 M1 28-2 68-1 87-4 123 84-1
     """.split(whereSeparator: \.isWhitespace).map(String.init))
 
     /// App-wide state for the screen, before the first page shows.
     @MainActor static func prepare(_ model: AppModel) {
         #if DEBUG
         // `-debugTheme violet|aurora|ember|ocean|rose`: 68 우주의 색 for the review.
-        if let raw = UserDefaults.standard.string(forKey: "debugTheme"), let theme = SkyTheme(rawValue: raw) {
+        // `aurora+ / ember+ / rose+`: the v1.1 member scene too.
+        if let raw = UserDefaults.standard.string(forKey: "debugTheme"),
+           let theme = SkyTheme(rawValue: raw.hasSuffix("+") ? String(raw.dropLast()) : raw) {
             model.settings.sky = theme
+            model.debugScene = raw.hasSuffix("+")
         }
         guard let s = current, supported.contains(s) else { return }
         UserDefaults.standard.set(false, forKey: "useLiveAPI")
@@ -56,6 +61,12 @@ enum DebugScreen {
         // 03 shows the empty sky alone; 03-1 opens the welcome over it.
         model.hasSeenWelcome = true
         model.simulatedFailure = nil
+        // v1.1 membership screens: turned on for the review only.
+        if ["M1", "28-2", "68-1", "87-4", "123", "84-1"].contains(s) {
+            model.membershipAvailable = true
+            model.memberActive = s == "87-4" || s == "123"
+            model.memberRenewal = Calendar.current.date(from: DateComponents(year: 2026, month: 12, day: 7))
+        }
         if s == "87-3" && model.blockedKeepers.isEmpty { model.blockedKeepers = BlockedKeeper.samples }
         if s == "3" || s == "3-1" {
             model.stars = []

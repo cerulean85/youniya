@@ -32,6 +32,8 @@ struct ReportListView: View {
     var onOpen: (StarItem) -> Void
     /// 98 "최근 별 보러 가기": to the latest floated star (or 05 when there is none).
     var onTurnOn: () -> Void = {}
+    /// v1.1: a member's 123 월간 마음 리포트.
+    var onMonthly: (String?) -> Void = { _ in }
 
     enum Order { case newest, oldest }
     @State private var order: Order = .newest
@@ -58,6 +60,23 @@ struct ReportListView: View {
                 .padding(.top, Space.sm)
         } else {
             VStack(spacing: Space.md) {
+                // v1.1: members' monthly reports, as "월간" rows.
+                if model.isMember && model.useLiveAPI {
+                    ForEach(model.monthlyReports) { item in
+                        Button { onMonthly(item.month) } label: {
+                            InfoCard(seed: "monthly\(item.month)", title: "월간 · \(item.title)", detail: item.monthLabel)
+                                .contentShape(.rect)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                } else if model.isMember {
+                    Button { onMonthly(nil) } label: {
+                        InfoCard(seed: "monthly", title: "월간 · \(MonthlyReport.sample.name)",
+                                 detail: "\(MonthlyReport.sample.month) · 띄운 별 \(MonthlyReport.sample.floatedCount)개")
+                            .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
+                }
                 ForEach(reported) { star in
                     Button { onOpen(star) } label: {
                         // Figma 26: the report's star name, then "원래 별 제목 · 날짜".
@@ -163,6 +182,8 @@ struct CoinChargeView: View {
     var onHistory: () -> Void = {}
 
     @State private var selected: CoinPackage = CoinPackage.all[1]
+    /// M1 from the 28-2 card.
+    @State private var showMembership = DebugScreen.is("M1")
     @State private var charged: Int? = DebugScreen.is("102") ? 120 : nil
     /// 38 결제 미완료
     @State private var paymentFailed = DebugScreen.is("38")
@@ -217,7 +238,13 @@ struct CoinChargeView: View {
 
                     // Short screens (iPhone SE) drop the picture so all three packages
                     // fit above the consent and the button.
-                    if !isShortScreen { CoinHero() }
+                    if model.membershipOn {
+                        // 28-2: the membership card instead of the coin picture.
+                        MembershipCard { showMembership = true }
+                        Text("또는 필요한 만큼 코인 충전").textStyle(.labelS).foregroundStyle(Color.textSecondary)
+                    } else if !isShortScreen {
+                        CoinHero()
+                    }
 
                     VStack(spacing: Space.md) {
                         ForEach(CoinPackage.all) { pkg in
@@ -265,6 +292,7 @@ struct CoinChargeView: View {
             .padding(.bottom, Space.xl)
         }
         .onGeometryChange(for: Bool.self) { $0.size.height < 700 } action: { isShortScreen = $0 }
+        .membershipSheet(isPresented: $showMembership, onPolicy: { _ in onPolicy() })
         .background { StarField() }
         .task { await model.loadCoins() }
         .overlay {

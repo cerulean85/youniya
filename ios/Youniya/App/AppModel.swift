@@ -343,6 +343,19 @@ final class AppModel {
     var hasSeenNebulaStory: Bool {
         didSet { UserDefaults.standard.set(hasSeenNebulaStory, forKey: "hasSeenNebulaStory") }
     }
+    /// v1.1 membership: the server says it is on (TODO: GET /v1/membership; 404 = off).
+    var membershipAvailable = false
+    /// Mock, or the current StoreKit entitlement.
+    var memberActive = false
+    var memberRenewal: Date?
+    /// Live 26: a member's monthly reports (123).
+    var monthlyReports: [MonthlyReportItem] = []
+    /// 68-1: a locked sky shown for 3 seconds before M1.
+    var previewSky: SkyTheme?
+    /// Debug: `-debugTheme aurora+ / ember+ / rose+` shows the member scene.
+    var debugScene = false
+    /// v1.1: the scene behind a member's sky (or the 68-1 preview of one).
+    var showsSkyScene: Bool { (isMember || debugScene || previewSky != nil) && (previewSky ?? settings.sky).hasScene }
     /// 87-3 차단한 별지기 (75-2, 100). Saved on device; mock and live kept apart.
     var blockedKeepers: [BlockedKeeper] = [] {
         didSet {
@@ -415,7 +428,7 @@ final class AppModel {
     }
     /// Live: the sign-up free polish is left (`free_story`).
     var serverFreePolish: Bool?
-    var isPolishFree: Bool { (useLiveAPI ? serverFreePolish : nil) ?? !usedFreePolish }
+    var isPolishFree: Bool { isMember || ((useLiveAPI ? serverFreePolish : nil) ?? !usedFreePolish) }
     /// 39–41: a notice covering the whole app. Not saved.
     var appNotice: AppNotice?
     /// Dev only: makes analysis or payment fail until turned off (35, 36, 38).
@@ -515,6 +528,7 @@ final class AppModel {
         var saved = UserDefaults.standard.data(forKey: "settings")
             .flatMap { try? JSONDecoder().decode(AppSettings.self, from: $0) } ?? AppSettings()
         // v1.0 hides the membership skies: a saved one goes back to violet.
+        // TODO(v1.1): keep it for members once the membership state is known.
         // (`-debugTheme` still sets any sky afterwards, in DebugScreen.prepare.)
         if !saved.sky.isFree { saved.sky = .violet }
         settings = saved
@@ -605,6 +619,7 @@ final class AppModel {
         await loadDraft()
         await loadCoins()
         await loadBlocks()
+        await loadMembership()
         await PushRegistration.refresh(signedIn: isSignedIn)
     }
 
@@ -718,7 +733,7 @@ final class AppModel {
     }
     /// Live: today's free float is left (`free_star_today`, Korean day on the server).
     var serverFreeFloat: Bool?
-    var isFloatFree: Bool { (useLiveAPI ? serverFreeFloat : nil) ?? (floatedToday == 0) }
+    var isFloatFree: Bool { isMember || ((useLiveAPI ? serverFreeFloat : nil) ?? (floatedToday == 0)) }
     /// 05 "별 띄우기" / "별 띄우기 · 5코인"
     var floatButtonTitle: String { isFloatFree ? "별 띄우기" : "별 띄우기 · \(Self.floatCost)코인" }
     /// 29 from 05: floating would need coins the user doesn't have.
@@ -759,6 +774,8 @@ final class AppModel {
     /// The first telescope after sign-up is free, and one each month.
     /// Live: the server's `free_telescope_available`.
     var isTelescopeFree: Bool {
+        // v1.1: members get 15 a month (counted by the server).
+        if isMember { return true }
         if useLiveAPI { return !usedFreeTelescope }
         return !usedFreeTelescope || monthlyFreeTelescopeMonth != Self.thisMonth
     }

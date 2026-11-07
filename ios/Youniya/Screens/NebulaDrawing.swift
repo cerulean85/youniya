@@ -24,8 +24,14 @@ struct DrawnNebula: Codable, Identifiable, Equatable {
 /// 84 silhouettes: Figma `Mini` outlines, drawn in their own box.
 enum NebulaSilhouette: String, CaseIterable, Identifiable {
     case whale, lighthouse, tree, bird, flower
+    /// v1.1 계절 팩 (84-1), members only. Raw values are the server's ids.
+    case cherryBlossom = "cherry_blossom", wave, maple, snowflake
 
     var id: Self { self }
+
+    static let basic: [NebulaSilhouette] = [.whale, .lighthouse, .tree, .bird, .flower]
+    static let season: [NebulaSilhouette] = [.cherryBlossom, .wave, .maple, .snowflake]
+    var isSeason: Bool { Self.season.contains(self) }
 
     var name: String {
         switch self {
@@ -34,6 +40,10 @@ enum NebulaSilhouette: String, CaseIterable, Identifiable {
         case .tree: "나무"
         case .bird: "새"
         case .flower: "꽃"
+        case .cherryBlossom: "벚꽃"
+        case .wave: "파도"
+        case .maple: "단풍"
+        case .snowflake: "눈송이"
         }
     }
 
@@ -51,6 +61,21 @@ enum NebulaSilhouette: String, CaseIterable, Identifiable {
             return ([p(0, 10), p(14, 0), p(26, 8), p(38, 0), p(52, 10)], false, CGSize(width: 52, height: 10))
         case .flower:
             return ([p(13.3, 0), p(26.6, 9.7), p(21.5, 25.3), p(5.1, 25.3), p(0, 9.7)], true, CGSize(width: 26.6, height: 25.3))
+        // Figma 84-1 `Mini`. 벚꽃 and 눈송이 are spokes from the middle, drawn
+        // middle → tip → middle so the stars line up along each one.
+        case .cherryBlossom:
+            let c = p(15.2, 15.2)
+            return ([c, p(15.2, 0), c, p(30.4, 10.5), c, p(24.6, 27.5), c, p(5.8, 27.5), c, p(0, 10.5)],
+                    false, CGSize(width: 30.4, height: 27.5))
+        case .wave:
+            return ([p(0, 18), p(10, 6), p(20, 14), p(30, 0), p(40, 12), p(52, 4)], false, CGSize(width: 52, height: 18))
+        case .maple:
+            return ([p(22, 0), p(30, 10), p(44, 8), p(36, 20), p(40, 32), p(22, 26), p(4, 32), p(8, 20), p(0, 8), p(14, 10)],
+                    true, CGSize(width: 44, height: 32))
+        case .snowflake:
+            let c = p(17, 14.7)
+            return ([c, p(34, 14.7), c, p(25.5, 29.4), c, p(8.5, 29.4), c, p(0, 14.7), c, p(8.5, 0), c, p(25.5, 0)],
+                    false, CGSize(width: 34, height: 29.4))
         }
     }
 
@@ -132,8 +157,10 @@ struct NebulaDrawingFlow: View {
 
     private enum Step: Hashable { case start, shape, guests, pick, connect, name, done }
 
-    @State private var steps: [Step] = [.start]
+    @State private var steps: [Step] = DebugScreen.is("84-1") ? [.start, .shape] : [.start]
     @State private var silhouette: NebulaSilhouette? = .lighthouse
+    /// 84-1: M1 from a locked season silhouette.
+    @State private var showMembership = false
     @State private var picked: [UUID] = []
     @State private var edges: [[Int]] = []
     @State private var guests: Set<GuestStar> = []
@@ -171,6 +198,7 @@ struct NebulaDrawingFlow: View {
             .animation(.easeInOut(duration: 0.3), value: step)
         }
         .background { StarField() }
+        .membershipSheet(isPresented: $showMembership)
         .task { await model.loadGuestCandidates() }
         .edgeSwipeBack(enabled: step != .done, onBack: back)
     }
@@ -207,7 +235,7 @@ struct NebulaDrawingFlow: View {
         VStack(alignment: .leading, spacing: 14) {
             header("어떤 모양으로 모일까요?", "틀을 고르면 별들이 띄운 순서대로 자리를 잡아요.")
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Space.md), count: 3), spacing: Space.md) {
-                ForEach(NebulaSilhouette.allCases) { s in
+                ForEach(NebulaSilhouette.basic) { s in
                     tile(s.name, selected: silhouette == s) { SilhouetteMini(silhouette: s, selected: silhouette == s) }
                         .onTapGesture { withAnimation(.snappy) { silhouette = s } }
                 }
@@ -218,6 +246,30 @@ struct NebulaDrawingFlow: View {
                 .onTapGesture { withAnimation(.snappy) { silhouette = nil } }
             }
 
+            // 84-1 (v1.1): the season pack, locked for non-members (→ M1).
+            if model.membershipOn {
+                Text("계절 팩 · 별지기 멤버십").textStyle(.labelM).foregroundStyle(Color.starBright)
+                    .accessibilityAddTraits(.isHeader)
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Space.md), count: 3), spacing: Space.md) {
+                    ForEach(NebulaSilhouette.season) { s in
+                        tile(s.name, selected: silhouette == s) {
+                            SilhouetteMini(silhouette: s, selected: silhouette == s, gold: true)
+                        }
+                        .overlay(alignment: .topTrailing) {
+                            if !model.isMember {
+                                Image(.iconLock).resizable().frame(width: 16, height: 16).padding(Space.sm)
+                                    .accessibilityLabel("멤버십")
+                            }
+                        }
+                        .onTapGesture {
+                            if model.isMember { withAnimation(.snappy) { silhouette = s } } else { showMembership = true }
+                        }
+                    }
+                }
+            }
+
+            // 84-1 has no room for the preview: the pack takes its place.
+            if !model.membershipOn {
             Group {
                 if let silhouette {
                     SilhouettePreview(silhouette: silhouette, stars: placed, guests: [])
@@ -237,7 +289,9 @@ struct NebulaDrawingFlow: View {
             .cosmos("shape-preview", in: RoundedRectangle(cornerRadius: Radius.lg))
             .background(Color.bgSurface, in: .rect(cornerRadius: Radius.lg))
 
-            if silhouette != nil {
+            }
+
+            if silhouette != nil && !model.membershipOn {
                 HStack(spacing: Space.lg) {
                     HStack(spacing: 6) {
                         Circle().fill(Color.hex(0x8555EF)).frame(width: 7, height: 7)
@@ -628,15 +682,17 @@ private struct ConnectStage: View {
 private struct SilhouetteMini: View {
     var silhouette: NebulaSilhouette
     var selected: Bool
+    /// 84-1 season pack: gold lines and dots.
+    var gold = false
 
     var body: some View {
         GeometryReader { geo in
             let rect = CGRect(origin: .zero, size: geo.size).insetBy(dx: 4, dy: 4)
-            let color = selected ? Color.hex(0x8555EF) : Color.textTertiary
+            let color = selected ? Color.hex(0x8555EF) : gold ? Color.starBright.opacity(0.6) : Color.textTertiary
             ZStack(alignment: .topLeading) {
                 silhouette.path(in: rect).stroke(color, lineWidth: 1)
                 ForEach(Array(silhouette.fitted(in: rect).enumerated()), id: \.offset) { i, p in
-                    Circle().fill(selected ? Mood.allCases[i % 4].color : Color.textSecondary)
+                    Circle().fill(selected ? Mood.allCases[i % 4].color : gold ? Color.starBright : Color.textSecondary)
                         .frame(width: i % 2 == 0 ? 4 : 3, height: i % 2 == 0 ? 4 : 3)
                         .position(p)
                 }

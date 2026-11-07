@@ -56,7 +56,9 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.6), value: showSplash)
         .animation(.easeInOut(duration: 0.6), value: model.isSignedIn)
         .environment(\.motionReduced, systemReduceMotion || model.settings.reduceAnimations)
-        .environment(\.skyTheme, model.settings.sky)
+        .environment(\.skyTheme, model.previewSky ?? model.settings.sky)
+        .environment(\.skyScene, model.showsSkyScene)
+        .animation(.easeInOut(duration: 0.6), value: model.previewSky)
         .animation(.easeInOut(duration: 0.4), value: model.hasConsented)
         // Network and server messages (live API).
         .toast($model.apiMessage)

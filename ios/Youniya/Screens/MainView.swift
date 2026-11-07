@@ -59,6 +59,7 @@ struct MainView: View {
         case collection // 79·80
         case sharedStars // 87 › 나눈 별
         case blockedKeepers // 87-3 차단한 별지기
+        case monthlyReport(String?)  // 123 (v1.1): a month, or the mock sample
         case page(String)
     }
 
@@ -205,7 +206,12 @@ struct MainView: View {
                 .padding(.bottom, -min(20, bottomSafeArea))
         }
         .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { bottomSafeArea = $0 }
-        .background { StarField() }
+        // v1.1 scenes move on the night-sky tabs only (04, 성운, 광장).
+        .background {
+            StarField()
+                .environment(\.sceneMotion, tab != .records)
+                .environment(\.sceneOnHome, tab == .sky)
+        }
         .sheet(isPresented: $showWelcome) {
             WelcomeSheet(
                 onCompose: { showWelcome = false; push(.compose()) },
@@ -299,7 +305,8 @@ struct MainView: View {
                                } else {
                                    replace(with: .compose())
                                }
-                           })
+                           },
+                           onMonthly: { push(.monthlyReport($0)) })
                 .edgeSwipeBack(onBack: pop)
         case .coins:
             CoinChargeView(onBack: pop, onPolicy: { push(.policy(.payment)) },
@@ -413,6 +420,12 @@ struct MainView: View {
         case .blockedKeepers:
             BlockedKeepersView(onBack: pop)
                 .edgeSwipeBack(onBack: pop)
+        case .monthlyReport(let month):
+            MonthlyReportView(month: month, onClose: pop, onStars: {
+                withAnimation(.easeInOut(duration: 0.32)) { stack.removeAll() }
+                tab = .records
+            })
+            .edgeSwipeBack(onBack: pop)
         case .sharedStars:
             SharedStarsView(
                 onBack: pop,
@@ -485,6 +498,11 @@ struct MainView: View {
         case "74", "99", "100", "101", "106", "107": push(.galaxyLines(nebula.name))
         case "75", "75-1", "75-2": push(.galaxyStar(nebula: nebula.name, star: nebula.stars[0].title))
         case "87-3": push(.blockedKeepers)
+        case "M1", "28-2": push(.coins)
+        case "68-1": push(.sky)
+        case "84-1": push(.drawNebula)
+        case "87-4": push(.settings)
+        case "123": push(.monthlyReport(nil))
         case "79", "80", "96", "97", "110": push(.collection)
         case "87", "87-1", "87-2", "91", "92", "93", "94", "95", "114": push(.settings)
         case "122": push(.detail(UUID()))

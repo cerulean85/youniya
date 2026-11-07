@@ -75,6 +75,8 @@ struct SettingsView: View {
     /// Run after the sheet is gone (e.g. 91 → 93, or signing out).
     @State private var afterDismiss: (() -> Void)?
     @State private var showPolicies = false
+    /// M1 from 87-4 "알아보기".
+    @State private var showMembership = false
     @State private var exportProgress = 0.0
     @State private var toast: String?
     /// Live 92: GET /v1/me/shares counts.
@@ -107,6 +109,11 @@ struct SettingsView: View {
                     }
                     .accessibilityElement(children: .combine)
                     .accessibilityAddTraits(.isHeader)
+
+                    // 87-4 (v1.1, off in the release build)
+                    if model.membershipOn {
+                        MembershipSettingsSection(onLearnMore: { showMembership = true })
+                    }
 
                     SettingsSection("화면과 움직임") {
                         SettingsRow(icon: .iconMoon, title: "우주의 색") { onSky() }
@@ -197,6 +204,7 @@ struct SettingsView: View {
                 Button(doc.title) { onPolicy(doc) }
             }
         }
+        .membershipSheet(isPresented: $showMembership, onPolicy: onPolicy)
         .sheet(item: $sheet, onDismiss: {
             afterDismiss?()
             afterDismiss = nil
@@ -361,7 +369,7 @@ private struct SettingsSection<Rows: View>: View {
 }
 
 /// Figma `Settings Row` (Nav / Value): icon, title, optional value, chevron.
-private struct SettingsRow: View {
+struct SettingsRow: View {
     var icon: ImageResource
     var title: String
     var value: String?
@@ -409,7 +417,7 @@ private struct SettingsToggleRow: View {
     }
 }
 
-private struct SettingsRowLayout<Trailing: View>: View {
+struct SettingsRowLayout<Trailing: View>: View {
     var icon: ImageResource
     var title: String
     @ViewBuilder var trailing: Trailing
