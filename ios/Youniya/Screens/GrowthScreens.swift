@@ -356,11 +356,13 @@ struct GrowthStagesView: View {
     }
 
     private func stageCard(_ s: Int, current: Int) -> some View {
-        let passed = s < current, now = s == current
+        // Stage 0 (fewer than 12 stars): the first step is in progress, the rest locked.
+        let gathering = current == 0 && s == 1
+        let passed = s < current, now = s == current || gathering
         let name = AppModel.stageNames[s - 1]
         let (condition, result): (String, String) = {
             switch s {
-            case 1: ("별 \(model.floatedCount)개가 모였을 때", "점선으로 이어진 맑고 풋풋한 성운이 생겨요.")
+            case 1: ("별 \(AppModel.firstStageStars)개가 모였을 때", "점선으로 이어진 맑고 풋풋한 성운이 생겨요.")
             case 2: ("깊은 속마음을 담은 별 6개", "별들 사이에 온화한 금빛 연결선이 이어져요.")
             case 3: ("깊은 별 15개 · 별빛 900 이상 1번", "빛구름이 짙어지고 별이 찬란하게 반짝여요.")
             default: ("여러 감정의 결 · 깊은 별 30개", "나만의 은하수가 완성되고 우주를 내다볼 수 있어요.")
@@ -369,7 +371,9 @@ struct GrowthStagesView: View {
         return VStack(alignment: .leading, spacing: Space.sm) {
             HStack(spacing: Space.sm) {
                 // Figma 86: "첫 번째 걸음 · 지나옴", "두 번째 걸음 · 지금 여기", "세 번째 걸음"
-                Text(now ? "\(Self.ordinals[s - 1]) 걸음 · 지금 여기" : passed ? "\(Self.ordinals[s - 1]) 걸음 · 지나옴" : "\(Self.ordinals[s - 1]) 걸음")
+                Text(gathering ? "\(Self.ordinals[0]) 걸음 · 모으는 중"
+                     : now ? "\(Self.ordinals[s - 1]) 걸음 · 지금 여기"
+                     : passed ? "\(Self.ordinals[s - 1]) 걸음 · 지나옴" : "\(Self.ordinals[s - 1]) 걸음")
                     .textStyle(.labelS)
                     .foregroundStyle(now ? Color.white : Color.textSecondary)
                     .padding(.horizontal, Space.md)
@@ -387,7 +391,7 @@ struct GrowthStagesView: View {
                 .textStyle(.bodyS)
                 .foregroundStyle(Color.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
-            if now && s < 4 { progress(next: s + 1) }
+            if gathering { progress(next: 1) } else if now && s < 4 { progress(next: s + 1) }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Space.lg)
@@ -396,7 +400,7 @@ struct GrowthStagesView: View {
             if now { RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(Color.brandPrimary, lineWidth: 1.5) }
         }
         // Stages not reached yet are dimmed.
-        .opacity(s > current ? 0.55 : 1)
+        .opacity(s > current && !gathering ? 0.55 : 1)
         .accessibilityElement(children: .combine)
     }
 
@@ -405,12 +409,14 @@ struct GrowthStagesView: View {
         let bright = model.stars.filter { ($0.starlightValue ?? 0) >= 900 }.count
         let moods = Set(model.stars.filter(\.isFloated).map(\.mood)).count
         let rows: [(String, Int, Int)] = switch next {
+        case 1: [("별", model.stars.count, AppModel.firstStageStars)]
         case 2: [("깊은 별", model.deepCount, 6)]
         case 3: [("깊은 별", model.deepCount, 15), ("별빛 900 이상", bright, 1)]
         default: [("깊은 별", model.deepCount, 30), ("감정의 결", moods, 3)]
         }
         return VStack(alignment: .leading, spacing: Space.sm) {
-            Text("\(next)단계까지").textStyle(.caption).foregroundStyle(Color.textTertiary)
+            // Figma 86: "세 번째 걸음까지"
+            Text("\(Self.ordinals[next - 1]) 걸음까지").textStyle(.caption).foregroundStyle(Color.textTertiary)
             ForEach(rows, id: \.0) { label, value, goal in
                 HStack(spacing: Space.md) {
                     Text(label).textStyle(.caption).foregroundStyle(Color.textSecondary)

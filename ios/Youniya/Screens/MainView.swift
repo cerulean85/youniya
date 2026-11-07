@@ -13,6 +13,8 @@ struct MainView: View {
         var route: Route
     }
     @State private var drawerOpen = false
+    /// The home-indicator inset, for the tab bar (0 on iPhone SE).
+    @State private var bottomSafeArea: CGFloat = 0
     /// 115/118: the records tab filter (the menu's "간직한 별" opens it on .kept).
     @State private var recordsFilter: RecordsFilter = .all
     /// 42 toast shown over whatever page is on top.
@@ -186,8 +188,11 @@ struct MainView: View {
             .padding(.top, 2)
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
+            // Figma 84pt bar: the labels sit 20pt into the home-indicator area.
             SkyTabBar(selection: $tab) { push(.compose()) }
+                .padding(.bottom, -min(20, bottomSafeArea))
         }
+        .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { bottomSafeArea = $0 }
         .background { StarField() }
     }
 

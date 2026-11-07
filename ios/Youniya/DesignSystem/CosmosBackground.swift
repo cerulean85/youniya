@@ -125,6 +125,8 @@ struct SheetBackground: View {
 /// Floated = violet, Kept = grey.
 struct StarGlyph: View {
     var floated: Bool
+    /// Star rows turn slowly; empty states and calendar marks stay upright (Figma).
+    var spins = true
     @Environment(\.motionReduced) private var reduceMotion
 
     var body: some View {
@@ -132,7 +134,7 @@ struct StarGlyph: View {
             .resizable()
             .frame(width: 18.14, height: 18.14)
         Group {
-            if reduceMotion {
+            if reduceMotion || !spins {
                 image
             } else {
                 TimelineView(.animation) { context in

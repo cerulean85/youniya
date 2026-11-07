@@ -74,11 +74,11 @@ struct StatusHero: View {
                 .frame(width: 64, height: 64)
                 .shadow(color: Color.brandPrimary.opacity(0.4), radius: 12)
                 .offset(x: 28, y: 28)
-            // Figma: a 30pt icon slot whose 24pt glyph sits at its top-left.
+            // Figma: the 24pt icon scaled to a 30pt slot, centred in the orb.
             Image(icon)
                 .renderingMode(.template)
                 .resizable()
-                .frame(width: 24, height: 24)
+                .frame(width: 30, height: 30)
                 .foregroundStyle(Color.starBright)
                 .offset(x: 45, y: 45)
             Circle().fill(Color.starBright)
@@ -291,11 +291,13 @@ struct EmptyStateView: View {
     var title: String
     var message: String
     var action: (title: String, style: ActionStyle, run: () -> Void)? = nil
+    /// The violet floated glyph, or the grey kept one (119).
+    var floatedGlyph = true
 
     var body: some View {
         VStack(spacing: Space.md) {
             // Figma empty states: the violet glyph, dimmed.
-            StarGlyph(floated: true)
+            StarGlyph(floated: floatedGlyph, spins: false)
                 .scaleEffect(40 / 18.14)
                 .frame(width: 40, height: 40)
                 .opacity(0.55)

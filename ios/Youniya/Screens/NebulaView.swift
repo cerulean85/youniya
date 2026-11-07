@@ -13,7 +13,7 @@ struct NebulaView: View {
                         .textStyle(.h1)
                         .foregroundStyle(Color.textPrimary)
                     // TODO: nebula name and stage come from the backend.
-                    Text("\(model.nebulaName) · \(model.growthStage)단계 \(model.stageName)")
+                    Text("\(model.nebulaName) · \(model.stageLabel)")
                         .textStyle(.bodyM)
                         .foregroundStyle(Color.starBright)
                 }

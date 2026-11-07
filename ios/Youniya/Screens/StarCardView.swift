@@ -90,6 +90,9 @@ struct ComposeFlowView: View {
         case failed(StarItem, SimulatedFailure)
         /// Live 35: the star never reached the server; it can be sent again.
         case sendFailed(StarDraft, floated: Bool)
+        /// Live: the server is reading a floated star (6–12 s with the real model);
+        /// 06 plays meanwhile, then again with the real values.
+        case reading
     }
 
     /// Live: waiting for the server to save (and analyse) the star.
@@ -162,6 +165,9 @@ struct ComposeFlowView: View {
                     }
                 }
                 .transition(.opacity)
+            case .reading:
+                PrismAnalysisView(analysis: .reading) {}
+                    .transition(.opacity)
             case .sendFailed(let draft, let floated):
                 StatusView(icon: .iconWifiOff, title: "연결이 잠시 끊겼어요",
                            message: "쓰던 글은 이 기기에 안전하게 있어요.",
@@ -183,7 +189,7 @@ struct ComposeFlowView: View {
             }
         }
         .overlay {
-            if sending {
+            if sending && step != .reading {
                 ZStack {
                     Color.black.opacity(0.35).ignoresSafeArea()
                     ProgressView().tint(.white).controlSize(.large)
@@ -208,7 +214,7 @@ struct ComposeFlowView: View {
         }
         #endif
         .toastCard($toast)
-        .edgeSwipeBack(enabled: !isAnalyzing && !sending, onBack: onClose)
+        .edgeSwipeBack(enabled: !isAnalyzing && !sending && step != .reading, onBack: onClose)
     }
 
     /// Live: saves the star on the server and follows its answer.
@@ -219,6 +225,8 @@ struct ComposeFlowView: View {
     private func send(_ draft: StarDraft, floated: Bool) {
         guard !sending else { return }
         sending = true
+        // Floating waits on the model: show 06 instead of a spinner over the editor.
+        if floated { withAnimation(.easeInOut(duration: 0.5)) { step = .reading } }
         Task { @MainActor in
             defer { sending = false }
             do {
@@ -237,8 +245,10 @@ struct ComposeFlowView: View {
             } catch let e as APIError where e.code == "offline" {
                 withAnimation(.easeInOut(duration: 0.5)) { step = .sendFailed(draft, floated: floated) }
             } catch let e as APIError where e.status == 422 {
+                if step == .reading { withAnimation { step = .writing } }
                 toast = ToastCardMessage(title: e.message)
             } catch {
+                if step == .reading { withAnimation { step = .writing } }
                 model.handle(error)
             }
         }

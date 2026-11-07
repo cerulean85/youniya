@@ -418,16 +418,28 @@ private struct SettingsRowLayout<Trailing: View>: View {
 
 /// 32 Inquiry (문의하기): type and message. Sending is mocked.
 struct InquiryView: View {
+    @Environment(AppModel.self) private var model
     var onBack: () -> Void
 
     private let kinds = ["결제", "계정", "기타"]
+    /// The API's payment · account · other.
+    private let apiKinds = ["결제": "payment", "계정": "account", "기타": "other"]
     @State private var kind: String?
+    @State private var email = ""
     @State private var message = ""
     @State private var sent = false
+    @State private var sending = false
     @FocusState private var editing: Bool
+    @FocusState private var editingEmail: Bool
+
+    /// The server's check: something@something.something, at most 255 characters.
+    private var emailIsValid: Bool {
+        let e = email.trimmingCharacters(in: .whitespaces)
+        return e.count <= 255 && e.wholeMatch(of: /[^@\s]+@[^@\s]+\.[^@\s]+/) != nil
+    }
 
     private var canSend: Bool {
-        kind != nil && !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        kind != nil && emailIsValid && !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var body: some View {
@@ -457,6 +469,26 @@ struct InquiryView: View {
                         }
                         .buttonStyle(.plain)
 
+                        // Figma 32: "답장 받을 이메일" (no email is kept on the account).
+                        VStack(alignment: .leading, spacing: Space.xs) {
+                            Text("답장 받을 이메일")
+                                .textStyle(.labelM)
+                                .foregroundStyle(Color.textPrimary)
+                            TextField("", text: $email,
+                                      prompt: Text(verbatim: "name@example.com").foregroundStyle(Color.textSecondary))
+                                .textInputStyle(.bodyS)
+                                .foregroundStyle(Color.textPrimary)
+                                .keyboardType(.emailAddress)
+                                .textContentType(.emailAddress)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .focused($editingEmail)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(Space.lg)
+                        .itemCard(seed: "inquiry-email")
+                        .onTapGesture { editingEmail = true }
+
                         VStack(alignment: .leading, spacing: Space.xs) {
                             Text("내용")
                                 .textStyle(.labelM)
@@ -484,18 +516,33 @@ struct InquiryView: View {
 
             Button(sent ? "보냈어요" : "보내기") { send() }
                 .buttonStyle(.primary)
-                .disabled(!canSend || sent)
+                .disabled(!canSend || sent || sending)
                 .padding(.horizontal, Space.xl)
                 .padding(.bottom, Space.xl)
         }
         .background { StarField() }
     }
 
+    /// Live: POST /v1/inquiries {kind, email, body}.
     private func send() {
-        // TODO: Send to the support API with the account email.
         editing = false
-        withAnimation(.snappy) { sent = true }
-        Task {
+        editingEmail = false
+        Task { @MainActor in
+            if model.useLiveAPI {
+                struct Body: Encodable { var kind: String; var email: String; var body: String }
+                sending = true
+                defer { sending = false }
+                do {
+                    try await APIClient.shared.sendRaw("POST", "/v1/inquiries", body: Body(
+                        kind: apiKinds[kind ?? "기타"] ?? "other",
+                        email: email.trimmingCharacters(in: .whitespaces),
+                        body: message.trimmingCharacters(in: .whitespacesAndNewlines)))
+                } catch {
+                    model.handle(error)
+                    return
+                }
+            }
+            withAnimation(.snappy) { sent = true }
             try? await Task.sleep(for: .seconds(1.2))
             onBack()
         }

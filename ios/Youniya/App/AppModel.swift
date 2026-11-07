@@ -45,6 +45,10 @@ struct StarAnalysis: Hashable, Codable {
     var tones: [Mood]
 
     var isDeep: Bool { depth >= 0.7 }
+
+    /// 06 while the server is still reading: empty meters.
+    static let reading = StarAnalysis(starlight: 0, depth: 0, clarity: 0, weight: 0,
+                                      observation: "", telescopeTeaser: "", tones: [])
     /// Figma 90: "별빛이 700을 넘어 크게 빛난 별".
     /// Figma and the API both count 900+ starlight as a supernova.
     var isSupernova: Bool { starlight >= 900 }
@@ -425,6 +429,8 @@ final class AppModel {
     var nebulaCreates: [DrawnNebula.ID: Task<String?, Never>] = [:]
     /// Live: the server's account id (/v1/me), used as StoreKit's appAccountToken.
     var accountID: String?
+    /// Live: `GET /v1/growth` stage (0–4).
+    var serverGrowthStage: Int?
     /// Live: stars whose telescope report is being made on the server (25 → 10).
     var pendingReports: Set<StarItem.ID> = []
     /// The dev sign-in name; the same name is the same server account.
@@ -544,6 +550,7 @@ final class AppModel {
         await loadStars()
         await loadReports()
         await loadNebulae()
+        await loadGrowth()
         await loadDraft()
         await loadCoins()
         await PushRegistration.refresh(signedIn: isSignedIn)
@@ -856,10 +863,15 @@ final class AppModel {
     /// Deep stars needed to reach the next nebula stage.
     static let nextStageDeepStars = 15
 
-    /// 86 성운이 자라는 네 걸음. 1 첫 별들 · 2 따뜻한 빛줄기 (깊은 별 6) ·
+    /// Stars needed for the first stage (기획서 5.1 "별 12개가 모였을 때"), floated and kept.
+    static let firstStageStars = 12
+
+    /// 86 성운이 자라는 네 걸음. 0 아직 (별 12개 전) · 1 첫 별들 · 2 따뜻한 빛줄기 (깊은 별 6) ·
     /// 3 짙어지는 성운 (깊은 별 15 · 별빛 900 이상 1번) · 4 온전한 은하수 (깊은 별 30 · 여러 감정의 결).
-    /// TODO: The backend decides the stage.
+    /// Live: the server's `/v1/growth` stage; the stages go in order, so every one needs the 12 stars.
     var growthStage: Int {
+        if useLiveAPI, let serverGrowthStage { return serverGrowthStage }
+        guard stars.count >= Self.firstStageStars else { return 0 }
         let bright = stars.contains { ($0.starlightValue ?? 0) >= 900 }
         let moods = Set(stars.filter(\.isFloated).map(\.mood)).count
         if deepCount >= 30 && moods >= 3 { return 4 }
@@ -869,7 +881,12 @@ final class AppModel {
     }
 
     static let stageNames = ["첫 별들", "따뜻한 빛줄기", "짙어지는 성운", "온전한 은하수"]
-    var stageName: String { Self.stageNames[growthStage - 1] }
+    /// Nil at stage 0.
+    var stageName: String? { growthStage > 0 ? Self.stageNames[growthStage - 1] : nil }
+    /// "첫 별들", or "별 5/12" before the first stage.
+    var stageLabel: String {
+        stageName.map { "\(growthStage)단계 \($0)" } ?? "별 \(min(stars.count, Self.firstStageStars))/\(Self.firstStageStars)"
+    }
 
     func saveDraft(_ d: StarDraft) {
         if d != draft { syncDraft(d) }
@@ -911,6 +928,17 @@ final class AppModel {
         f.locale = Locale(identifier: "ko_KR")
         f.dateFormat = "M월 d일 · HH:mm"
         return f.string(from: date)
+    }
+}
+
+// MARK: - Growth (08, 86)
+
+extension AppModel {
+    /// Live: the server decides the stage (stage 0 below 12 stars).
+    @MainActor func loadGrowth() async {
+        guard useLiveAPI, isSignedIn else { return }
+        struct Growth: Decodable { var stage: Int }
+        if let g: Growth = try? await APIClient.shared.get("/v1/growth") { serverGrowthStage = g.stage }
     }
 }
 

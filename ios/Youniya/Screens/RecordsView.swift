@@ -179,7 +179,7 @@ struct RecordsView: View {
             if filter == .kept {
                 // 119
                 empty(title: "아직 간직한 별이 없어요", message: "분석 없이 조용히 두고 싶은 글은\n여기에 모여요.",
-                      action: ("간직할 글 쓰기", onCompose))
+                      action: ("간직할 글 쓰기", onCompose), kept: true)
             } else {
                 empty(title: "아직 별이 없어요", message: "오늘의 마음을 적으면\n이곳에 하나씩 모여요.", action: ("오늘의 별 만들기", onCompose))
             }
@@ -209,9 +209,10 @@ struct RecordsView: View {
         }
     }
 
-    private func empty(title: String, message: String, action: (String, () -> Void)?) -> some View {
+    private func empty(title: String, message: String, action: (String, () -> Void)?, kept: Bool = false) -> some View {
         VStack(spacing: Space.md) {
-            StarGlyph(floated: true)
+            // Figma 117/119: an upright glyph; grey (kept) on 119.
+            StarGlyph(floated: !kept, spins: false)
                 .scaleEffect(40 / 18.14)
                 .frame(width: 40, height: 40)
                 .opacity(0.55)
@@ -262,7 +263,7 @@ struct RecordsView: View {
                                     .textStyle(.bodyS)
                                     .foregroundStyle(has || on ? Color.textPrimary : future ? Color.textTertiary : Color.textSecondary)
                                 if has {
-                                    StarGlyph(floated: byDay[d]!.contains(where: \.isFloated)).scaleEffect(14 / 18.14).frame(width: 14, height: 14)
+                                    StarGlyph(floated: byDay[d]!.contains(where: \.isFloated), spins: false).scaleEffect(14 / 18.14).frame(width: 14, height: 14)
                                 } else {
                                     Color.clear.frame(width: 14, height: 14)
                                 }

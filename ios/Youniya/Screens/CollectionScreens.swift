@@ -170,7 +170,7 @@ struct CollectionView: View {
                     EmptyView()
                 } else {
                     ForEach(drawn.reversed()) { n in
-                        nebulaCard(name: n.name, detail: "별 \(n.starIDs.count + n.guests.count)개 · \(model.growthStage)단계",
+                        nebulaCard(name: n.name, detail: "별 \(n.starIDs.count + n.guests.count)개 · \(model.growthStage > 0 ? "\(model.growthStage)단계" : model.stageLabel)",
                                    seed: n.id.uuidString, action: onOpenMyNebula)
                     }
                 }
