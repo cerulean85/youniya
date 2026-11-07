@@ -169,7 +169,7 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
   - A shared star carries only the one masked sentence its owner chose. A shared nebula carries only its outline, colours, depth and an optional masked sentence.
   - Others never see scores, ranks or 공명 counts. Owners see their counts in `GET /v1/me/shares`.
   - A line someone reports disappears for them at once. Three reports hide it for everyone.
-- **Refunds:** A REFUND notification takes that purchase's coins back once, even below zero (the coins were already spent).
+- **Refunds:** A REFUND notification takes that purchase's coins back once. Only the coins left are taken: the balance stops at 0 (기획서 11.6).
 - **Notifications:** The server sends two kinds through APNs, and never puts writing or analyses in them.
   - **101 신고 결과:** When an operator hides or restores a reported line (`POST /v1/admin/lines/{id}/hide|restore`), each reporter is told once. The line is not quoted.
   - **새 기능·혜택 알림:** `POST /v1/admin/announcements` (dry run by default) goes only to users with `marketing_opt_in`. The title gets `(광고)`, the body ends with how to opt out, and nothing is sent 21:00–08:00 KST (정보통신망법 50조).
