@@ -82,7 +82,7 @@ enum DebugScreen {
                 model.coinHistory.insert(CoinEntry(title: "환불", delta: -120, date: .now.addingTimeInterval(-86_400),
                                                    kind: "refund"), at: 0)
             }
-        case "17", "92":
+        case "17", "92", "76":
             for star in model.stars.filter(\.isFloated).prefix(2) { model.setShared(true, for: star.id) }
         case "18":
             for star in model.stars where star.isShared { model.setShared(false, for: star.id) }

@@ -537,13 +537,14 @@ private struct GalaxyRiver: View {
                         .textStyle(.caption)
                         .foregroundStyle(now ? Color.starBright : Color.textTertiary)
                         .position(x: p.x + 1, y: p.y + 23)
-                }
-                if !timeline.isEmpty {
-                    let end = point(0.96, in: size)
-                    Text("지금 여기")
-                        .textStyle(.caption)
-                        .foregroundStyle(Color.starBright)
-                        .position(x: min(size.width - 28, end.x + 2), y: end.y - 32)
+                    // Figma 81: "지금 여기" sits with the last ring, at the end of the path.
+                    if now {
+                        Text("지금 여기")
+                            .textStyle(.caption)
+                            .foregroundStyle(Color.starBright)
+                            .fixedSize()
+                            .position(x: min(size.width - 28, max(28, p.x)), y: p.y - 22)
+                    }
                 }
             }
             .frame(width: size.width, height: size.height)

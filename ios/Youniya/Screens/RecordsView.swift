@@ -69,15 +69,17 @@ struct RecordsView: View {
 
     // MARK: Segment
 
+    /// Figma 115–119: the same pill switch as the collection (79) — the chosen side
+    /// is a filled violet capsule.
     private var segment: some View {
         HStack(spacing: Space.xs) {
             seg("목록", .list)
             seg("달력", .calendar)
         }
         .padding(Space.xs)
-        .cosmos("records-seg", in: RoundedRectangle(cornerRadius: Radius.md))
-        .background(Color.bgSurface, in: .rect(cornerRadius: Radius.md))
-        .overlay(RoundedRectangle(cornerRadius: Radius.md).strokeBorder(Color.borderDefault, lineWidth: 1))
+        .cosmos("records-seg", in: Capsule())
+        .background(Color.bgSurfaceRaised, in: .capsule)
+        .overlay(Capsule().strokeBorder(Color.borderDefault, lineWidth: 1))
     }
 
     private func seg(_ title: String, _ m: Mode) -> some View {
@@ -85,15 +87,11 @@ struct RecordsView: View {
         return Button { withAnimation(.snappy) { mode = m; searching = false } } label: {
             Text(title)
                 .textStyle(.labelM)
-                .foregroundStyle(on ? Color.textPrimary : Color.textSecondary)
-                .frame(maxWidth: .infinity, minHeight: 34)
-                .background {
-                    if on {
-                        RoundedRectangle(cornerRadius: Radius.sm).fill(Color.tintPrimary)
-                            .overlay(RoundedRectangle(cornerRadius: Radius.sm).strokeBorder(Color.hex(0x8555EF), lineWidth: 1))
-                    }
-                }
-                .contentShape(.rect)
+                .foregroundStyle(on ? Color.textOnBrand : Color.textSecondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Space.sm)
+                .background(on ? Color.brandPrimary : .clear, in: .capsule)
+                .contentShape(.capsule)
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(on ? .isSelected : [])
@@ -286,6 +284,11 @@ struct RecordsView: View {
                     }
                 }
             }
+        }
+        // Figma 116: opens on the latest day this month that has stars, with its list.
+        .onAppear {
+            guard day == nil else { return }
+            day = days.compactMap { $0 }.filter { byDay[$0] != nil }.max()
         }
 
         if let day {

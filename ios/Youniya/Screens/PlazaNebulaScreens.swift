@@ -191,7 +191,7 @@ struct PlazaNebulaField: View {
 struct MiniConstellation: View {
     var nebula: GalaxyNebula
     var dot: CGFloat
-    var lineColor: Color = Color.textTertiary.opacity(0.6)
+    var lineColor: Color = Color.textSecondary.opacity(0.75)
 
     var body: some View {
         GeometryReader { geo in
@@ -203,7 +203,7 @@ struct MiniConstellation: View {
                     p.move(to: at(f.point))
                     for s in stars.dropFirst().prefix(7) { p.addLine(to: at(s.point)) }
                 }
-                .stroke(lineColor, lineWidth: 1)
+                .stroke(lineColor, lineWidth: 1.2)
                 ForEach(stars.indices, id: \.self) { i in
                     Circle().fill(stars[i].color)
                         .frame(width: dot * (i % 3 == 0 ? 1.3 : 1), height: dot * (i % 3 == 0 ? 1.3 : 1))
@@ -296,7 +296,8 @@ struct GalaxyNebulaView: View {
     var onLines: () -> Void
     var onOpenStar: (String) -> Void
 
-    @State private var level: CGFloat = 1
+    /// Figma 73 at 1×; 78 is the zoomed-in view.
+    @State private var level: CGFloat = DebugScreen.is("78") ? 2.2 : 1
     @State private var selected = 0
 
     /// 78 from about 1.8× (1 + 0.4 + 0.4 is a hair under 1.8 in floating point).

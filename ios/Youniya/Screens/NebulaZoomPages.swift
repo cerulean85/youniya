@@ -160,7 +160,8 @@ struct MyNebulaZoomView: View {
     /// 성운 그리기 · 성운 이야기 · 자라는 모습 · 하늘에 띄우기
     var onOpen: (String) -> Void
 
-    @State private var level: CGFloat = 2.4
+    /// Figma 70 opens at 1× on the whole nebula; 77 is the zoomed-in, picked state.
+    @State private var level: CGFloat = DebugScreen.is("77") ? 2.4 : 1
     @State private var selectedID: StarItem.ID?
     @State private var toast: String?
     /// 71 하늘에 띄우기
@@ -255,6 +256,9 @@ struct MyNebulaZoomView: View {
             .padding(.bottom, Space.xl)
         }
         .onGeometryChange(for: Bool.self) { $0.size.height < 700 } action: { isShortScreen = $0 }
+        .onAppear {
+            if DebugScreen.is("77") { selectedID = floated.first?.id }
+        }
         .background { StarField() }
         .simulatedLoad($loaded)
         .toast($toast)
@@ -397,8 +401,9 @@ struct GalaxyZoomView: View {
     var onMyNebula: () -> Void
     var onPlaza: () -> Void
 
-    @State private var level: CGFloat = 2.6
-    @State private var showMine = false
+    /// Figma 69 opens at 1× on the whole galaxy; 76 is the zoomed-in, picked state.
+    @State private var level: CGFloat = DebugScreen.is("76") ? 2.6 : 1
+    @State private var showMine = DebugScreen.is("76")
 
     /// TODO: Tonight's count comes from the plaza API.
     private let tonight = 1284
@@ -433,14 +438,13 @@ struct GalaxyZoomView: View {
                 ZoomControls(level: $level, range: 1...3.4)
                     .padding(.top, 8)
                     .padding(.trailing, 4)
-                Text(showMine ? "별의 모양은 쓴 글의 결로 정해져요" : "두 손가락으로 확대 · 별을 눌러 보기")
-                    .textStyle(.caption)
-                    .foregroundStyle(Color.textTertiary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-                    .padding(.leading, 4)
-                    .allowsHitTesting(false)
             }
-            .frame(height: 300)
+            .frame(height: 280)
+
+            // Below the field, so it never sits on the stars.
+            Text(showMine ? "별의 모양은 쓴 글의 결로 정해져요" : "두 손가락으로 확대 · 별을 눌러 보기")
+                .textStyle(.caption)
+                .foregroundStyle(Color.textTertiary)
 
             // 69 Stats by default; tapping my star in the middle shows its card (76).
             if showMine, let first = mine.first {
@@ -645,6 +649,12 @@ struct NebulaStoryView: View {
                 Button(model.storyPolished ? "서사를 다듬었어요" : "서사 다듬기 · 코인 \(AppModel.storyPolishCost)") { polish() }
                     .buttonStyle(.primary)
                     .disabled(model.storyPolished || lines.count < 2)
+                // Say why it can't be pressed.
+                if !model.storyPolished && lines.count < 2 {
+                    Text("문장이 두 개 이상 모이면 서사를 다듬을 수 있어요.")
+                        .textStyle(.caption)
+                        .foregroundStyle(Color.textTertiary)
+                }
                 Button("문장만 엮어 두기 · 무료", action: onSaved)
                     .buttonStyle(.ghost)
             }
