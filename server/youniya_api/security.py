@@ -80,5 +80,6 @@ class IdTokenVerifier:
             algorithms=["RS256"],
             audience=list(audience),
             issuer=list(self.PROVIDERS[provider][1]),
+            leeway=60,  # a phone or host clock a little off should not refuse a fresh token
         )
         return claims["sub"]
