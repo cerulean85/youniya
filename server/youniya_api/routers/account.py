@@ -3,11 +3,12 @@
 from datetime import datetime, timezone
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
+from .. import allowance
 from ..blocks import hidden_users
 from ..deps import current_user, get_cipher, get_db
 from ..export import StarEntry, as_pdf, as_text
@@ -68,14 +69,16 @@ def settings_of(user: User) -> AppSettings:
 
 
 @router.get("/me")
-def me(user: User = Depends(current_user)):
+def me(request: Request, user: User = Depends(current_user)):
+    """`free_star_today` (0/1), `free_telescope` (this month's and the sign-up one left), `free_story` (0/1)."""
     return {
         "id": user.id,
         "provider": user.provider,
         "needs_consent": user.consented_at is None,
         "marketing_opt_in": user.marketing_opt_in,
         "coins": user.coins,
-        "free_telescope_available": not user.free_telescope_used,
+        "free_telescope_available": allowance.telescopes_left(user) > 0,
+        **allowance.summary(user, request.app.state.settings.free_stars_per_day),
         "settings": settings_of(user).model_dump(),
     }
 

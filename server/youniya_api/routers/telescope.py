@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .. import coins
+from .. import allowance, coins
 from ..deps import ApiError, consented_user, get_cipher, get_db
 from ..models import Star, TelescopeReport, User
 from ..rules import TELESCOPE_COST
@@ -42,9 +42,10 @@ def _view(r: TelescopeReport, cipher: Cipher) -> dict:
 
 @router.get("/offer")
 def offer(user: User = Depends(consented_user)):
-    free = not user.free_telescope_used
-    return {"free": free, "cost": 0 if free else TELESCOPE_COST, "coins": user.coins,
-            "enough": free or user.coins >= TELESCOPE_COST}
+    """`free_left`: this month's free one plus the sign-up one, if still unused."""
+    left = allowance.telescopes_left(user)
+    return {"free": left > 0, "free_left": left, "cost": 0 if left else TELESCOPE_COST, "coins": user.coins,
+            "enough": left > 0 or user.coins >= TELESCOPE_COST}
 
 
 @router.post("/reports", status_code=201, dependencies=[per_user("telescope", 10, 3600)])
@@ -59,7 +60,7 @@ def create_report(body: ReportIn, request: Request, user: User = Depends(consent
     if not stars or (body.star_ids and len(stars) != len(set(body.star_ids))):
         raise ApiError(422, "no_stars", "망원경으로 볼 별이 없어요. 떠 있는 별만 볼 수 있어요.")
 
-    free = not user.free_telescope_used
+    free = allowance.telescopes_left(user) > 0
     if not free and user.coins < TELESCOPE_COST:
         raise ApiError(402, "insufficient_coins", "코인이 조금 부족해요.", coins=user.coins, cost=TELESCOPE_COST)
 
@@ -72,7 +73,7 @@ def create_report(body: ReportIn, request: Request, user: User = Depends(consent
         raise ApiError(502, "analysis_failed", "별을 읽지 못했어요. 코인은 차감되지 않았어요.")
 
     # Charged only once the report exists (Protoss punch concept 4.4).
-    used_free = coins.use_free_telescope(db, user) if free else False
+    used_free = allowance.use_telescope(db, user) if free else False
     if not used_free and not coins.spend(db, user, TELESCOPE_COST, "마음 망원경"):
         db.rollback()
         raise ApiError(402, "insufficient_coins", "코인이 조금 부족해요.", coins=user.coins, cost=TELESCOPE_COST)

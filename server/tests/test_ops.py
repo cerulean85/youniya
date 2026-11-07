@@ -122,15 +122,16 @@ def test_refund_never_goes_below_zero(make_app):
     h = sign_in(client)
     client.post("/v1/coins/purchases", json={"signed_transaction": apple.jws(transactionId="77")}, headers=h)
     float_star(client, h)
-    client.post("/v1/telescope/reports", json={}, headers=h)  # free
-    for _ in range(3):
-        assert client.post("/v1/telescope/reports", json={}, headers=h).status_code == 201  # 90 spent
-    assert client.get("/v1/coins", headers=h).json()["coins"] == 30
+    for _ in range(2):
+        client.post("/v1/telescope/reports", json={}, headers=h)  # free: this month's and the sign-up one
+    for _ in range(4):
+        assert client.post("/v1/telescope/reports", json={}, headers=h).status_code == 201  # 80 spent
+    assert client.get("/v1/coins", headers=h).json()["coins"] == 40
 
     client.post("/v1/storekit/notifications", json={"signedPayload": _refund_note(apple, "77")})
     assert client.get("/v1/coins", headers=h).json()["coins"] == 0
     refund = client.get("/v1/coins/history", headers=h).json()["items"][0]
-    assert (refund["kind"], refund["delta"]) == ("refund", -30)
+    assert (refund["kind"], refund["delta"]) == ("refund", -40)
 
 
 def test_balance_constraint_and_startup_fix(make_app):
@@ -158,7 +159,7 @@ def test_empty_refund_row_is_hidden_but_kept(make_app):
                 headers=h)
     float_star(client, h)
     client.post("/v1/telescope/reports", json={}, headers=h)  # free
-    client.post("/v1/telescope/reports", json={}, headers=h)  # 30 spent → 20 left
+    client.post("/v1/telescope/reports", json={}, headers=h)  # the sign-up one, free too
     with app.state.sessions() as db:  # spend the rest some other way
         from sqlalchemy import update
 

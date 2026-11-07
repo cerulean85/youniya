@@ -11,7 +11,8 @@ from sqlalchemy.orm import Session
 from .. import coins
 from ..deps import ApiError, consented_user, get_db
 from ..models import CoinEntry, User
-from ..rules import COIN_PACKAGES, REFUND_WINDOW_DAYS
+from .. import allowance
+from ..rules import COIN_PACKAGES, REFUND_WINDOW_DAYS, STAR_FLOAT_COST, STORY_POLISH_COST, TELESCOPE_COST
 from ..storekit import PurchaseInvalid
 from ..views import aware, iso
 from ..ratelimit import per_user
@@ -32,11 +33,15 @@ class PurchaseIn(BaseModel):
 
 
 @router.get("")
-def balance(user: User = Depends(consented_user)):
+def balance(request: Request, user: User = Depends(consented_user)):
+    """`packages` lists only what is on sale; older products are still accepted and refunded."""
     return {
         "coins": user.coins,
-        "free_telescope_available": not user.free_telescope_used,
-        "packages": [{"product_id": k, **v} for k, v in COIN_PACKAGES.items()],
+        "free_telescope_available": allowance.telescopes_left(user) > 0,
+        **allowance.summary(user, request.app.state.settings.free_stars_per_day),
+        "prices": {"star": STAR_FLOAT_COST, "telescope": TELESCOPE_COST, "story": STORY_POLISH_COST},
+        "packages": [{"product_id": k, "coins": v["coins"], "price": v["price"], "bonus": v.get("bonus", 0)}
+                     for k, v in COIN_PACKAGES.items() if v["sold"]],
     }
 
 

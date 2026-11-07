@@ -43,6 +43,8 @@ def make_app(tmp_path):
             "data_key": Fernet.generate_key().decode(),
             "gemini_api_key": None,
             "trust_purchases": True,
+            # Most tests float many stars; the one-a-day rule has its own test (test_free_uses.py).
+            "free_stars_per_day": 10**6,
             **overrides,
         })
         app = create_app(settings)

@@ -6,16 +6,20 @@ MOOD_LABELS = {"calm": "평온", "sorrow": "슬픔", "anger": "분노", "insight
 # 104/105: floating (analysis) needs 1,000 characters; keeping has no minimum.
 MIN_FLOAT_LENGTH = 1000
 
-# 24 마음 망원경: 30 coins, the first one free (07 "처음 한 번은 무료").
-TELESCOPE_COST = 30
-# 83 서사 다듬기 · 코인 20
-STORY_POLISH_COST = 20
+# Prices (기획 확정 20261107, 1 coin = 10 KRW). Free uses: youniya_api/allowance.py.
+STAR_FLOAT_COST = 5  # 별 띄우기 after the day's free one
+TELESCOPE_COST = 20  # 24 마음 망원경
+STORY_POLISH_COST = 10  # 83 서사 다듬기
 
-# 28 코인 충전. Prices in KRW.
+# 28 코인 충전. Prices in KRW. `sold: False` packages are no longer offered, but purchases and
+# refunds of them are still recognised.
 COIN_PACKAGES = {
-    "coin_50": {"coins": 50, "price": 3300},
-    "coin_120": {"coins": 120, "price": 6600},
-    "coin_300": {"coins": 300, "price": 14900},
+    "coin_110": {"coins": 110, "price": 1100, "sold": True},
+    "coin_330": {"coins": 330, "price": 3300, "sold": True},
+    "coin_1100": {"coins": 1100, "price": 9900, "sold": True, "bonus": 100},
+    "coin_50": {"coins": 50, "price": 3300, "sold": False},
+    "coin_120": {"coins": 120, "price": 6600, "sold": False},
+    "coin_300": {"coins": 300, "price": 14900, "sold": False},
 }
 
 # 46 결제·환불 정책: unspent coins can be refunded within 7 days of purchase; spent coins can't.

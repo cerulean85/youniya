@@ -57,7 +57,8 @@ def main() -> None:
     a = ap.parse_args()
     login = a.login.strip().lower()
 
-    settings = dataclasses.replace(Settings(), gemini_api_key=None)
+    # The seed floats many stars in one day: lift the one-free-a-day rule for it.
+    settings = dataclasses.replace(Settings(), gemini_api_key=None, free_stars_per_day=10**6)
     app = create_app(settings)
     app.state.prism = SeedPrism(None, settings.prism_model, settings.prism_samples)
     client = TestClient(app)

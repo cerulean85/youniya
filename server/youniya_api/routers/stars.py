@@ -12,7 +12,9 @@ from sqlalchemy.orm import Session
 from ..deps import ApiError, consented_user, get_cipher, get_db
 from ..models import Draft, Nebula, Star, User
 from ..prism.filters import CRISIS_GUIDANCE, has_crisis_signal
-from ..rules import DEEP_DEPTH_SCORE, FIRST_STAGE_STARS, STAGE_NAMES, SUPERNOVA_STARLIGHT, growth_stage
+from .. import allowance, coins
+from ..rules import (DEEP_DEPTH_SCORE, FIRST_STAGE_STARS, STAGE_NAMES, STAR_FLOAT_COST, SUPERNOVA_STARLIGHT,
+                     growth_stage)
 from ..security import Cipher
 from ..views import aware, iso, local, shared_star_ids, star_view
 from ..ratelimit import per_user
@@ -51,21 +53,39 @@ def _apply(star: Star, analysis: dict, cipher: Cipher) -> None:
     star.analysis_failed = False
 
 
-def _float(star: Star, request: Request, cipher: Cipher) -> str:
-    """Runs the prism on a star. Returns the prism status; raises on unscoreable text."""
+def _insufficient(user: User, cost: int) -> ApiError:
+    return ApiError(402, "insufficient_coins", "코인이 조금 부족해요.", coins=user.coins, cost=cost)
+
+
+def _float(db: Session, user: User, star: Star, request: Request, cipher: Cipher) -> tuple[str, int]:
+    """Runs the prism on a star. Returns (prism status, coins charged); raises on unscoreable text.
+    The day's free float first, then STAR_FLOAT_COST; charged only when the star is read."""
+    per_day = request.app.state.settings.free_stars_per_day
+    free = allowance.stars_left(user, per_day) > 0
+    if not free and user.coins < STAR_FLOAT_COST:
+        raise _insufficient(user, STAR_FLOAT_COST)  # 29, before anything is stored
     result = request.app.state.prism.evaluate(cipher.dec(star.title_enc), cipher.dec(star.body_enc))
     if result.status in ("too_short", "foul"):
         raise ApiError(422, result.status, result.message)
-    if result.status == "ok":
-        _apply(star, result.analysis, cipher)
-    elif result.status == "failed":
+    if result.status == "failed":
         star.analysis_failed = True
-    return result.status
+        return result.status, 0
+    if result.status != "ok":
+        return result.status, 0
+    charged = 0
+    if not (free and allowance.use_star(db, user, per_day)):
+        if not coins.spend(db, user, STAR_FLOAT_COST, "별 띄우기"):
+            db.rollback()
+            raise _insufficient(user, STAR_FLOAT_COST)
+        charged = STAR_FLOAT_COST
+    _apply(star, result.analysis, cipher)
+    return result.status, charged
 
 
-def _response(db: Session, star: Star, cipher: Cipher, crisis: bool) -> dict:
+def _response(db: Session, star: Star, cipher: Cipher, crisis: bool, charged: int = 0) -> dict:
+    user = db.get(User, star.user_id)
     out = {"star": star_view(star, cipher, shared=star.id in shared_star_ids(db, star.user_id)),
-           "crisis": CRISIS_GUIDANCE if crisis else None}
+           "crisis": CRISIS_GUIDANCE if crisis else None, "charged": charged, "coins": user.coins}
     if star.rewrite_of:
         prev = db.get(Star, star.rewrite_of)
         # 16 같은 마음, 다른 빛
@@ -84,14 +104,15 @@ def create_star(body: StarIn, request: Request, user: User = Depends(consented_u
     # 37 위기 돌봄: the writing is always saved as written, but never scored.
     crisis = has_crisis_signal(f"{title}\n{body.body}")
     star.crisis = crisis
+    charged = 0
     if body.mode == "float" and not crisis:
-        _float(star, request, cipher)  # 422 before anything is stored when it can't be floated
+        _, charged = _float(db, user, star, request, cipher)  # 402/422 before anything is stored
     db.add(star)
     draft = db.get(Draft, user.id)
     if draft:
         db.delete(draft)
     db.commit()
-    return _response(db, star, cipher, crisis)
+    return _response(db, star, cipher, crisis, charged)
 
 
 @router.post("/stars/{star_id}/float", dependencies=[per_user("prism", 30, 3600)])
@@ -103,11 +124,11 @@ def float_star(star_id: str, request: Request, user: User = Depends(consented_us
         raise ApiError(409, "already_floated", "이미 떠 있는 별이에요.")
     if star.crisis:
         return _response(db, star, cipher, crisis=True)
-    status = _float(star, request, cipher)
+    status, charged = _float(db, user, star, request, cipher)
     db.commit()
     if status == "failed":
         raise ApiError(502, "analysis_failed", "별을 읽지 못했어요. 글은 그대로 보관돼요.")
-    return _response(db, star, cipher, crisis=False)
+    return _response(db, star, cipher, crisis=False, charged=charged)
 
 
 @router.get("/stars")

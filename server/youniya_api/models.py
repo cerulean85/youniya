@@ -38,7 +38,13 @@ class User(Base):
     marketing_opt_in: Mapped[bool] = mapped_column(Boolean, default=False)
     settings: Mapped[dict] = mapped_column(JSON, default=dict)
     coins: Mapped[int] = mapped_column(Integer, default=0)
-    free_telescope_used: Mapped[bool] = mapped_column(Boolean, default=False)
+    free_telescope_used: Mapped[bool] = mapped_column(Boolean, default=False)  # the sign-up one
+    # Free uses (youniya_api/allowance.py): the Korean day and how many free floats it had,
+    # the month whose free telescope was used, and the sign-up story polish.
+    free_star_day: Mapped[str | None] = mapped_column(String(10))
+    free_star_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    free_telescope_month: Mapped[str | None] = mapped_column(String(7))
+    free_story_used: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
 
 
 class RefreshToken(Base):

@@ -148,31 +148,33 @@ def test_growth_stages_go_in_order():
 
 # --- telescope and coins -----------------------------------------------------
 
-def test_telescope_first_free_then_30_coins(client):
+def test_telescope_free_ones_then_20_coins(client):
     h = sign_in(client)
     star = float_star(client, h)
+    assert client.get("/v1/telescope/offer", headers=h).json()["free_left"] == 2  # this month + sign-up
     first = client.post("/v1/telescope/reports", json={"star_ids": [star["id"]]}, headers=h)
     assert first.status_code == 201 and first.json()["charged"] == 0
+    assert client.post("/v1/telescope/reports", json={}, headers=h).json()["charged"] == 0
     report = first.json()["report"]
     assert [lens["label"] for lens in report["lenses"]] == ["별의 깊이", "빛의 선명함", "마음의 무게"]
     assert report["evidence"] in DEEP_BODY
 
     # 29 코인이 조금 부족해요
     r = client.post("/v1/telescope/reports", json={}, headers=h)
-    assert r.status_code == 402 and r.json()["error"]["cost"] == 30
+    assert r.status_code == 402 and r.json()["error"]["cost"] == 20
 
-    buy = client.post("/v1/coins/purchases", json={"product_id": "coin_50", "transaction_id": "t1"}, headers=h)
-    assert buy.json()["coins"] == 50
+    buy = client.post("/v1/coins/purchases", json={"product_id": "coin_110", "transaction_id": "t1"}, headers=h)
+    assert buy.json()["coins"] == 110
     # The same store transaction never pays twice.
-    assert client.post("/v1/coins/purchases", json={"product_id": "coin_50", "transaction_id": "t1"},
+    assert client.post("/v1/coins/purchases", json={"product_id": "coin_110", "transaction_id": "t1"},
                        headers=h).json()["already_processed"] is True
 
     paid = client.post("/v1/telescope/reports", json={}, headers=h).json()
-    assert paid["charged"] == 30 and paid["coins"] == 20
+    assert paid["charged"] == 20 and paid["coins"] == 90
     history = [(e["kind"], e["delta"]) for e in client.get("/v1/coins/history", headers=h).json()["items"]]
-    assert history == [("spend", -30), ("purchase", 50)]
+    assert history == [("spend", -20), ("purchase", 110)]
     titles = [r["title"] for r in client.get("/v1/telescope/reports", headers=h).json()["items"]]
-    assert len(titles) == 2
+    assert len(titles) == 3
 
 
 def test_failed_report_charges_nothing(client, monkeypatch):
@@ -204,10 +206,9 @@ def test_nebula_story_and_polish(client):
 
     story = client.get(f"/v1/nebulae/{n['id']}/story", headers=h).json()
     assert all(e["sentence"] in DEEP_BODY for e in story["entries"]) and story["polished"] is False
-    assert client.post(f"/v1/nebulae/{n['id']}/story/polish", headers=h).status_code == 402
-    client.post("/v1/coins/purchases", json={"product_id": "coin_50", "transaction_id": "t"}, headers=h)
+    assert story["polish_free"] is True and story["polish_cost"] == 0  # the sign-up one
     polished = client.post(f"/v1/nebulae/{n['id']}/story/polish", headers=h).json()
-    assert polished["charged"] == 20 and len(polished["bridges"]) == 2
+    assert polished["charged"] == 0 and len(polished["bridges"]) == 2 and polished["polish_free"] is False
     # The original sentences are untouched.
     assert [e["sentence"] for e in polished["entries"]] == [e["sentence"] for e in story["entries"]]
     assert client.post(f"/v1/nebulae/{n['id']}/story/polish", headers=h).json()["charged"] == 0

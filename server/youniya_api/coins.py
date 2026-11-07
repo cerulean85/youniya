@@ -18,14 +18,6 @@ def spend(db: Session, user: User, amount: int, title: str) -> bool:
     return True
 
 
-def use_free_telescope(db: Session, user: User) -> bool:
-    done = db.execute(
-        update(User).where(User.id == user.id, User.free_telescope_used.is_(False)).values(free_telescope_used=True)
-    ).rowcount
-    db.refresh(user)
-    return bool(done)
-
-
 def add(db: Session, user: User, amount: int, title: str, transaction_id: str | None = None,
         refund_consent_at=None) -> None:
     if amount < 0:

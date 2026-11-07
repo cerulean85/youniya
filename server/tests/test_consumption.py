@@ -51,14 +51,15 @@ def test_spent_coins_ask_apple_to_decline(make_app):
     apple, client, h = _setup(make_app, appstore)
     _buy(client, h, apple, "500")
     float_star(client, h)
-    client.post("/v1/telescope/reports", json={}, headers=h)  # free
+    for _ in range(2):
+        client.post("/v1/telescope/reports", json={}, headers=h)  # free: this month's and the sign-up one
     for _ in range(3):
-        client.post("/v1/telescope/reports", json={}, headers=h)  # 90 of 120 spent
+        client.post("/v1/telescope/reports", json={}, headers=h)  # 60 of 120 spent
 
     r = client.post("/v1/storekit/notifications", json={"signedPayload": _request(apple, "500")}).json()
     assert r["handled"] is True
     assert appstore.sent == [("500", "Sandbox", {
-        "customerConsented": True, "consumptionPercentage": 75000, "deliveryStatus": "DELIVERED",
+        "customerConsented": True, "consumptionPercentage": 50000, "deliveryStatus": "DELIVERED",
         "refundPreference": "DECLINE", "sampleContentProvided": False})]
 
 

@@ -266,6 +266,7 @@
           "account"
         ],
         "summary": "Me",
+        "description": "`free_star_today` (0/1), `free_telescope` (this month's and the sign-up one left), `free_story` (0/1).",
         "operationId": "me_v1_me_get",
         "responses": {
           "200": {
@@ -1126,6 +1127,7 @@
           "telescope"
         ],
         "summary": "Offer",
+        "description": "`free_left`: this month's free one plus the sign-up one, if still unused.",
         "operationId": "offer_v1_telescope_offer_get",
         "responses": {
           "200": {
@@ -1334,6 +1336,7 @@
           "coins"
         ],
         "summary": "Balance",
+        "description": "`packages` lists only what is on sale; older products are still accepted and refunded.",
         "operationId": "balance_v1_coins_get",
         "responses": {
           "200": {
@@ -1650,7 +1653,7 @@
           "nebulae"
         ],
         "summary": "Polish",
-        "description": "83 서사 다듬기 · 코인 20: adds lines only at the ✦ places.",
+        "description": "83 서사 다듬기 · 코인 10 (the first one free): adds lines only at the ✦ places.",
         "operationId": "polish_v1_nebulae__nebula_id__story_polish_post",
         "security": [
           {

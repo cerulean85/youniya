@@ -29,9 +29,9 @@ The prism keeps the Protoss pipeline:
 YOUNIYA-only rules come from the screens and `ios/Youniya/App/AppModel.swift`:
 
 - 1,000 characters to float a star.
-- Floating a star is free.
-- The telescope costs 30 coins, and the first one is free.
-- Story polish costs 20 coins.
+- Floating a star is free once a Korean day, then 5 coins.
+- The telescope costs 20 coins; one a month and one at sign-up are free.
+- Story polish costs 10 coins; the first one is free.
 - 별빛 한 줄 is 60 characters, one per nebula, and fades after a day.
 
 ## Run
@@ -103,10 +103,11 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
 | `DATA_ENCRYPTION_KEY` | (required) | Fernet key. Writing, analyses and inquiries are encrypted at rest. **Losing it loses every star.** |
 | `DATABASE_URL` | `sqlite:///./youniya.db` | SQLite or Postgres (`postgresql://…`, e.g. Neon) |
 | `GEMINI_API_KEY` | (none) | Without it, a deterministic offline evaluator stands in (Protoss mock mode) |
-| `PRISM_MODEL` | `gemini-3.8-flash` | Star scoring (fast, called 3× per star; two good readings are enough) |
-| `TELESCOPE_MODEL` | `gemini-3.1-pro-preview` | Telescope reports and story polish |
-| `TELESCOPE_THINKING` | (empty) | Thinking level for telescope reports and story polish; `low` costs about a third to a half (tools/measure_ai_cost.py) |
-| `PRISM_SAMPLES` | `3` | Independent scoring calls per star |
+| `PRISM_MODEL` | `gemini-3.8-flash` | Star scoring |
+| `TELESCOPE_MODEL` | `gemini-3.8-flash` | Telescope reports and story polish (no Pro: 20261107 experiment) |
+| `TELESCOPE_THINKING` | `low` | Thinking level for telescope reports and story polish (`off`, `low`, `high`; empty: the model's default) |
+| `FREE_STARS_PER_DAY` | `1` | Free 별 띄우기 per Korean day; after that each costs 5 coins |
+| `PRISM_SAMPLES` | `1` | Scoring calls per star (one, tried again once; with 3 the median is used) |
 | `PRISM_THINKING` | `low` | Gemini 3 thinking level for scoring; empty = model default (about twice as slow) |
 | `APPLE_CLIENT_IDS`, `GOOGLE_CLIENT_IDS` | (none) | Comma-separated audiences for Sign in with Apple / Google |
 | `MIN_APP_VERSION` | `1.0.0` | Below this, requests with `X-App-Version` get 426 (40) |
@@ -151,12 +152,13 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
   - Text under 1,000 characters gets `422 too_short` and nothing is stored, so the app keeps the draft (104).
   - If the model fails, the star is stored as kept with `analysis_failed: true`, and `POST /v1/stars/{id}/float` retries it (36).
 - **Crisis signals:** The writing is saved as written, but it is never scored or shared. The response carries `crisis` with the 109 line (37).
+- **Prices and free uses** (1 coin = 10 KRW): floating a star is free once a Korean day, then 5 coins (keeping is always free). The telescope costs 20 coins, free once a calendar month (no carry-over) plus once at sign-up. Story polish costs 10 coins, free once at sign-up. `GET /v1/me` and `GET /v1/coins` show `free_star_today`, `free_telescope` and `free_story`; a float, report or polish answers `charged` and `coins`. Products on sale: `coin_110` (1,100원), `coin_330` (3,300원), `coin_1100` (9,900원, 100 bonus). `coin_50`, `coin_120` and `coin_300` are no longer listed but are still accepted and refunded.
 - **Coins:** Charged only after a result exists. A failed report or polish charges nothing (Protoss 4.4). The balance never goes below zero, even with requests racing.
 - **Buying coins** (`POST /v1/coins/purchases`):
   - Send `{"signed_transaction": transaction.jwsRepresentation}` after a verified StoreKit 2 purchase, then call `transaction.finish()` once the server answers 200.
   - Buy with `appAccountToken` set to the user id from `GET /v1/me`. A transaction bought for another account is refused.
   - The server checks the certificate chain up to the pinned Apple Root CA - G3, the Apple purpose OIDs, the signature, the bundle id, revocation, and that the product is a consumable.
-  - The App Store Connect product ids must be the package keys: `coin_50`, `coin_120` and `coin_300`. `quantity` multiplies the coins.
+  - The App Store Connect product ids must be the package keys: `coin_110`, `coin_330` and `coin_1100` (the older `coin_50`, `coin_120`, `coin_300` are still accepted). `quantity` multiplies the coins.
   - The same transaction never pays twice. A retry answers `already_processed: true`.
   - Send `"consumption_consent": true` when the buyer saw and accepted the 28 notice ("쓴 코인은 환불되지 않아요. 환불을 요청하면 코인 사용 내역이 앱 스토어에 전달돼요."). It is stored per purchase.
 - **Refund requests** (CONSUMPTION_REQUEST, Figma 46 policy):

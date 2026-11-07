@@ -30,12 +30,14 @@ class Settings:
     # Protoss model selection (20261027): fast model for scoring, stronger one for reports.
     # 2.5 is closed to new keys (404); these are the replacements Google lists (checked 20261107).
     prism_model: str = field(default_factory=lambda: os.getenv("PRISM_MODEL", "gemini-3.8-flash"))
-    telescope_model: str = field(default_factory=lambda: os.getenv("TELESCOPE_MODEL", "gemini-3.1-pro-preview"))
-    prism_samples: int = field(default_factory=lambda: int(os.getenv("PRISM_SAMPLES", "3")))
+    telescope_model: str = field(default_factory=lambda: os.getenv("TELESCOPE_MODEL", "gemini-3.8-flash"))
+    prism_samples: int = field(default_factory=lambda: int(os.getenv("PRISM_SAMPLES", "1")))
     # Gemini 3 thinking level for scoring. "low" halves the wait (12 s → 6.6 s per call, 20261107).
     prism_thinking: str | None = field(default_factory=lambda: os.getenv("PRISM_THINKING", "low") or None)
-    # The same for telescope reports and story polish. Empty: the model's default (high for 3.1 Pro).
-    telescope_thinking: str | None = field(default_factory=lambda: os.getenv("TELESCOPE_THINKING") or None)
+    # The same for telescope reports and story polish ("off", "low", "high"; empty: the model's default).
+    telescope_thinking: str | None = field(default_factory=lambda: os.getenv("TELESCOPE_THINKING", "low") or None)
+    # 별 띄우기 free a Korean day; after that each costs STAR_FLOAT_COST coins.
+    free_stars_per_day: int = field(default_factory=lambda: int(os.getenv("FREE_STARS_PER_DAY", "1")))
 
     apple_client_ids: tuple[str, ...] = field(default_factory=lambda: _list("APPLE_CLIENT_IDS"))
     google_client_ids: tuple[str, ...] = field(default_factory=lambda: _list("GOOGLE_CLIENT_IDS"))
