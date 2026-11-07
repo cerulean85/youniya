@@ -67,6 +67,8 @@ extension AppModel {
             coins = b.coins
             applyFreeUses(telescopeAvailable: b.freeTelescopeAvailable, star: b.freeStarToday,
                           telescope: b.freeTelescope, story: b.freeStory)
+            // Members: today's 10 floats / telescopes / polishes left.
+            if membershipAvailable { await loadMembership() }
             coinHistory = h.items.map {
                 CoinEntry(id: UUID(uuidString: $0.id) ?? UUID(), title: $0.title, delta: $0.delta,
                           date: $0.createdAt, kind: $0.kind)

@@ -348,6 +348,14 @@ final class AppModel {
     /// Mock, or the current StoreKit entitlement.
     var memberActive = false
     var memberRenewal: Date?
+    /// Live: a member's uses left today (stars, telescope, story); 10 each a day.
+    var memberLeftToday: (stars: Int?, telescope: Int?, story: Int?) = (nil, nil, nil)
+    static let memberDailyLimit = 10
+    /// A member still has today's included float / telescope / polish.
+    /// Mock: stars floated today; the other two are counted by the server only.
+    var memberHasStar: Bool { isMember && (memberLeftToday.stars ?? (Self.memberDailyLimit - floatedToday)) > 0 }
+    var memberHasTelescope: Bool { isMember && (memberLeftToday.telescope ?? Self.memberDailyLimit) > 0 }
+    var memberHasStory: Bool { isMember && (memberLeftToday.story ?? Self.memberDailyLimit) > 0 }
     /// Live 26: a member's monthly reports (123).
     var monthlyReports: [MonthlyReportItem] = []
     /// 68-1: a locked sky shown for 3 seconds before M1.
@@ -428,7 +436,7 @@ final class AppModel {
     }
     /// Live: the sign-up free polish is left (`free_story`).
     var serverFreePolish: Bool?
-    var isPolishFree: Bool { isMember || ((useLiveAPI ? serverFreePolish : nil) ?? !usedFreePolish) }
+    var isPolishFree: Bool { memberHasStory || ((useLiveAPI ? serverFreePolish : nil) ?? !usedFreePolish) }
     /// 39–41: a notice covering the whole app. Not saved.
     var appNotice: AppNotice?
     /// Dev only: makes analysis or payment fail until turned off (35, 36, 38).
@@ -733,7 +741,7 @@ final class AppModel {
     }
     /// Live: today's free float is left (`free_star_today`, Korean day on the server).
     var serverFreeFloat: Bool?
-    var isFloatFree: Bool { isMember || ((useLiveAPI ? serverFreeFloat : nil) ?? (floatedToday == 0)) }
+    var isFloatFree: Bool { memberHasStar || ((useLiveAPI ? serverFreeFloat : nil) ?? (floatedToday == 0)) }
     /// 05 "별 띄우기" / "별 띄우기 · 5코인"
     var floatButtonTitle: String { isFloatFree ? "별 띄우기" : "별 띄우기 · \(Self.floatCost)코인" }
     /// 29 from 05: floating would need coins the user doesn't have.
@@ -774,8 +782,8 @@ final class AppModel {
     /// The first telescope after sign-up is free, and one each month.
     /// Live: the server's `free_telescope_available`.
     var isTelescopeFree: Bool {
-        // v1.1: members get 15 a month (counted by the server).
-        if isMember { return true }
+        // v1.1: members get 10 a day (counted by the server), then the usual rules.
+        if memberHasTelescope { return true }
         if useLiveAPI { return !usedFreeTelescope }
         return !usedFreeTelescope || monthlyFreeTelescopeMonth != Self.thisMonth
     }
