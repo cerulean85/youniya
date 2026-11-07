@@ -185,11 +185,15 @@ def build_monthly(month: str, stars: list[StarText], api_key: str | None, model:
             "question": brightest.analysis["rewrite_question"]}
     if api_key:
         parts = [f"## {s.created_at[:10]} · {s.title}\n\"\"\"\n{s.body}\n\"\"\"" for s in stars]
-        out = generate_json(api_key, model, MONTHLY_PROMPT + f"\n\n# {month}의 별들\n" + "\n\n".join(parts),
-                            temperature=0.3, thinking=thinking, timeout=MODEL_TIMEOUT, retries=1)
-        notes = out.get("notes")
-        if not (isinstance(notes, dict) and all(isinstance(notes.get(k), str) and notes[k] for k, _ in LENSES)
-                and all(isinstance(out.get(k), str) and out[k] for k in ("title", "intro", "question"))):
+        prompt = MONTHLY_PROMPT + f"\n\n# {month}의 별들\n" + "\n\n".join(parts)
+        for attempt in range(2):  # a malformed answer now and then (1 in 4, 20261107): ask once more
+            out = generate_json(api_key, model, prompt, temperature=0.3, thinking=thinking,
+                                timeout=MODEL_TIMEOUT, retries=1)
+            notes = out.get("notes")
+            if (isinstance(notes, dict) and all(isinstance(notes.get(k), str) and notes[k] for k, _ in LENSES)
+                    and all(isinstance(out.get(k), str) and out[k] for k in ("title", "intro", "question"))):
+                break
+        else:
             raise ValueError("incomplete monthly report")
         text = {"title": out["title"], "intro": out["intro"], "notes": notes, "question": out["question"]}
     return {
