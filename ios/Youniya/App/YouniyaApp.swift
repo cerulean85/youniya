@@ -71,6 +71,11 @@ struct RootView: View {
             case "120": model.appNotice = .rateLimited
             default: break
             }
+            // `-requestNotifications YES`: ask for notification permission on launch, so a
+            // simulator can register for push without opening Settings (for test pushes).
+            if UserDefaults.standard.bool(forKey: "requestNotifications") {
+                Task { _ = await NotificationAccess.request() }
+            }
             // `-autoDevSignIn YES`: sign in to the live API on launch (for testing without taps).
             if model.useLiveAPI && !model.isSignedIn && UserDefaults.standard.bool(forKey: "autoDevSignIn") {
                 model.signIn()

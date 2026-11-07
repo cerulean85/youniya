@@ -404,6 +404,8 @@ struct GalaxyZoomView: View {
     /// Figma 69 opens at 1× on the whole galaxy; 76 is the zoomed-in, picked state.
     @State private var level: CGFloat = DebugScreen.is("76") ? 2.6 : 1
     @State private var showMine = DebugScreen.is("76")
+    /// iPhone SE (Figma "Mobile · SE"): 26pt title, 210pt field.
+    @State private var isShortScreen = false
 
     /// Live: today's floated stars across everyone (`/v1/plaza/tonight`); mock: Figma's sample.
     private var tonight: Int { model.useLiveAPI ? model.tonightCount ?? 0 : 1284 }
@@ -411,7 +413,7 @@ struct GalaxyZoomView: View {
     var body: some View {
         // My stars in everyone's galaxy are the ones shared to the plaza (19).
         let mine = model.stars.filter { $0.isFloated && $0.isShared }
-        VStack(alignment: .leading, spacing: Space.lg) {
+        VStack(alignment: .leading, spacing: isShortScreen ? Space.sm : Space.lg) {
             Text("TONIGHT · \(tonight.formatted())개의 마음")
                 .textStyle(.labelS)
                 .foregroundStyle(Color.starBright)
@@ -420,7 +422,12 @@ struct GalaxyZoomView: View {
                 .background(Color.tintGold, in: .capsule)
             Text("오늘 밤,\n\(tonight.formatted())개의 마음이 모였어요")
                 .textStyle(.h1)
+                .font(isShortScreen ? .custom("NotoSerifKR-SemiBold", size: 26, relativeTo: .title) : nil)
                 .foregroundStyle(Color.textPrimary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+                .fixedSize(horizontal: false, vertical: true)
+                .layoutPriority(1)
                 .accessibilityAddTraits(.isHeader)
             Text(mine.isEmpty
                  ? "별을 우주 광장에 나누면 이 안에서 함께 빛나요. 별 하나하나는 익명이고, 글은 보이지 않아요."
@@ -439,7 +446,7 @@ struct GalaxyZoomView: View {
                     .padding(.top, 8)
                     .padding(.trailing, 4)
             }
-            .frame(height: 280)
+            .frame(height: isShortScreen ? 210 : 280)
 
             // Below the field, so it never sits on the stars.
             Text(showMine ? "별의 모양은 쓴 글의 결로 정해져요" : "두 손가락으로 확대 · 별을 눌러 보기")
@@ -467,7 +474,11 @@ struct GalaxyZoomView: View {
         .padding(.horizontal, Space.xl)
         .padding(.top, Space.sm)
         .padding(.bottom, Space.xl)
-        .background { StarField() }
+        // Measured on the full-screen background: the content itself can overflow.
+        .background {
+            StarField()
+                .onGeometryChange(for: Bool.self) { $0.size.height < 700 } action: { isShortScreen = $0 }
+        }
         .task {
             await model.loadTonight()
             if model.plazaNebulaeLive.isEmpty { await model.loadPlaza() }
