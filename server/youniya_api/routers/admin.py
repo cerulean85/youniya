@@ -40,6 +40,7 @@ def status(request: Request):
         "storekit": state.storekit is not None,
         "refund_answers": state.appstore is not None,
         "real_model": bool(settings.gemini_api_key),
+        "error_reports": bool(settings.sentry_dsn),
         "apple_sign_in": bool(settings.apple_client_ids),
         "google_sign_in": bool(settings.google_client_ids),
         "dev_login": settings.dev_login,
