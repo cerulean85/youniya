@@ -165,7 +165,7 @@ struct PlazaNebulaField: View {
                         VStack(alignment: .leading, spacing: Space.sm) {
                             Text(current.name).textStyle(.labelM).foregroundStyle(Color.textPrimary)
                             HStack(spacing: Space.sm) {
-                                Tag(text: "\(current.stage)단계", tone: .gold)
+                                Tag(text: "깊이 \(current.stage)단계", tone: .gold)
                                 // Live: others' resonance counts are never shown.
                                 if current.serverID == nil {
                                     Tag(text: "공명 \(current.resonance + (model.resonated.contains(Self.key(current)) ? 1 : 0))", tone: .violet)
@@ -317,7 +317,7 @@ struct GalaxyNebulaView: View {
                         .accessibilityAddTraits(.isHeader)
                     HStack(spacing: Space.sm) {
                         Tag(text: "익명의 별지기", tone: .neutral)
-                        Tag(text: "\(nebula.stage)단계", tone: .gold)
+                        Tag(text: "깊이 \(nebula.stage)단계", tone: .gold)
                     }
 
                     ZStack(alignment: .topTrailing) {
@@ -407,7 +407,7 @@ struct GalaxyNebulaView: View {
                     }
 
                     HStack(spacing: Space.md) {
-                        Button("공명 \(nebula.resonance + (resonated ? 1 : 0))") {
+                        Button(resonated ? "공명했어요" : "공명 남기기") {
                             withAnimation(.snappy) { model.toggleResonance(key) }
                         }
                         .buttonStyle(.secondary)
@@ -541,6 +541,7 @@ struct GalaxyLinesView: View {
         .task {
             #if DEBUG
             if DebugScreen.is("100") { reporting = model.lines(for: nebula).first }
+            if DebugScreen.is("101") { toast = ToastCardMessage(title: "신고를 받았어요", detail: "살펴본 뒤 결과를 알림으로 알려 드릴게요") }
             #endif
         }
         .toastCard($toast)
@@ -580,6 +581,10 @@ struct GalaxyLinesView: View {
             Button { send(draft) } label: {
                 Circle().fill(Color.hex(0x8555EF))
                     .frame(width: 34, height: 34)
+                    .overlay {
+                        Image(.iconSend).renderingMode(.template).resizable()
+                            .frame(width: 18, height: 18).foregroundStyle(.white)
+                    }
                     .frame(width: 44, height: 44)
                     .contentShape(.circle)
             }

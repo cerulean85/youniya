@@ -128,7 +128,7 @@ struct GalaxyStarView: View {
                         .accessibilityAddTraits(.isHeader)
                     HStack(spacing: Space.sm) {
                         Tag(text: "익명의 별지기", tone: .neutral)
-                        Tag(text: "\(max(1, nebula.stage - 1))단계", tone: .gold)
+                        Tag(text: "깊이 \(max(1, nebula.stage - 1))단계", tone: .gold)
                     }
 
                     // Figma `Hero`: the star in gold, a dotted orbit, four small stars.
@@ -168,7 +168,7 @@ struct GalaxyStarView: View {
                     .flatCard(seed: "star-quote")
 
                     HStack(spacing: Space.md) {
-                        Button("공명 \(nebula.resonance + (resonated ? 1 : 0))") {
+                        Button(resonated ? "공명했어요" : "공명 남기기") {
                             withAnimation(.snappy) { model.toggleResonance(key) }
                         }
                         .buttonStyle(.secondary)
@@ -326,6 +326,8 @@ struct GrowthStagesView: View {
     @Environment(AppModel.self) private var model
     var onBack: () -> Void
 
+    private static let ordinals = ["첫 번째", "두 번째", "세 번째", "네 번째"]
+
     var body: some View {
         let stage = model.growthStage
         VStack(spacing: 0) {
@@ -366,7 +368,8 @@ struct GrowthStagesView: View {
         }()
         return VStack(alignment: .leading, spacing: Space.sm) {
             HStack(spacing: Space.sm) {
-                Text(now ? "\(s)단계 · 지금 여기" : passed ? "\(s)단계 · 지나옴" : "\(s)단계")
+                // Figma 86: "첫 번째 걸음 · 지나옴", "두 번째 걸음 · 지금 여기", "세 번째 걸음"
+                Text(now ? "\(Self.ordinals[s - 1]) 걸음 · 지금 여기" : passed ? "\(Self.ordinals[s - 1]) 걸음 · 지나옴" : "\(Self.ordinals[s - 1]) 걸음")
                     .textStyle(.labelS)
                     .foregroundStyle(now ? Color.white : Color.textSecondary)
                     .padding(.horizontal, Space.md)

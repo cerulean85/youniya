@@ -231,6 +231,7 @@ struct SettingsView: View {
                 onClose: { close { export(format) } }
             )
             .task {
+                if DebugScreen.is("114") { return }  // visual review: hold at 62%
                 exportProgress = 0
                 for step in 1...10 {
                     try? await Task.sleep(for: .milliseconds(140))

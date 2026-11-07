@@ -63,7 +63,7 @@ struct StarMakingView: View {
                 .accessibilityLabel("\(draft.body.count)자 작성함")
 
             if canPublish && !canFloat {
-                NoticeBanner(message: "\(AppModel.minFloatLength.formatted())자부터 별로 띄울 수 있어요")
+                NoticeBanner(message: "짧은 글은 '조용히 간직하기'로 남겨 둘 수 있어요")
                     .transition(.opacity)
             }
 

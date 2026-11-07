@@ -67,6 +67,7 @@ enum DebugScreen {
         case "98":
             for i in model.stars.indices { model.stars[i].report = nil }
         case "108": model.coinHistory = []
+        case "29": model.coins = 10  // fewer than the 30 a telescope needs
         case "109":
             // Fewer than three floated stars.
             model.stars = model.stars.filter { !$0.isFloated } + model.stars.filter(\.isFloated).prefix(2)

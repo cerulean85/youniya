@@ -144,7 +144,7 @@ struct PlazaWelcomeView: View {
                 Text("우주 광장에 오신 걸\n환영해요")
                     .textStyle(.h1)
                     .foregroundStyle(Color.textPrimary)
-                Text("점수도 순위도 없는 곳이에요.\n마음에 닿으면 '공명'만 남길 수 있어요.")
+                Text("점수도 순위도 없는 곳이에요.\n마음에 닿으면 '공명'이나 '별빛 한 줄'을 남길 수 있어요.")
                     .textStyle(.bodyM)
                     .foregroundStyle(Color.textSecondary)
             }

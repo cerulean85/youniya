@@ -19,7 +19,7 @@ struct NebulaStarsView: View {
             switch self {
             case .floated: "지금 성운에 떠 있는 별이에요. 누르면 그날의 기록이 열려요."
             case .deep: "마음을 깊이 들여다본 별이에요. 누르면 그날의 기록이 열려요."
-            case .supernova: "별빛이 700을 넘어 크게 빛난 별이에요."
+            case .supernova: "별빛이 900을 넘어 크게 빛난 별이에요."
             }
         }
 
@@ -35,7 +35,7 @@ struct NebulaStarsView: View {
             switch self {
             case .floated: "오늘의 마음을 별로 띄우면\n이곳에 하나씩 모여요."
             case .deep: "마음을 천천히 들여다본 날의 별이\n깊은 별로 남아요."
-            case .supernova: "마음을 깊이 들여다본 날, 별빛이 700을 넘으면\n초신성으로 터져요. 서두르지 않아도 괜찮아요."
+            case .supernova: "마음을 깊이 들여다본 날, 별빛이 900을 넘으면\n초신성으로 터져요. 서두르지 않아도 괜찮아요."
             }
         }
 

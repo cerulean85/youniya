@@ -12,7 +12,7 @@ struct StarlightLineView: View {
     var body: some View {
         let saved = model.savedLines.contains(line)
         VStack(spacing: 0) {
-            TopAppBar(title: "별빛 한 줄", onBack: onClose)
+            TopAppBar(title: "오늘의 한 줄", onBack: onClose)
 
             VStack(alignment: .leading, spacing: Space.lg) {
                 VStack(alignment: .leading, spacing: Space.lg) {
