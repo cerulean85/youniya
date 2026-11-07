@@ -28,9 +28,12 @@ class Settings:
 
     gemini_api_key: str | None = field(default_factory=lambda: os.getenv("GEMINI_API_KEY") or None)
     # Protoss model selection (20261027): fast model for scoring, stronger one for reports.
-    prism_model: str = field(default_factory=lambda: os.getenv("PRISM_MODEL", "gemini-2.5-flash"))
-    telescope_model: str = field(default_factory=lambda: os.getenv("TELESCOPE_MODEL", "gemini-2.5-pro"))
+    # 2.5 is closed to new keys (404); these are the replacements Google lists (checked 20261107).
+    prism_model: str = field(default_factory=lambda: os.getenv("PRISM_MODEL", "gemini-3.8-flash"))
+    telescope_model: str = field(default_factory=lambda: os.getenv("TELESCOPE_MODEL", "gemini-3.1-pro-preview"))
     prism_samples: int = field(default_factory=lambda: int(os.getenv("PRISM_SAMPLES", "3")))
+    # Gemini 3 thinking level for scoring. "low" halves the wait (12 s → 6.6 s per call, 20261107).
+    prism_thinking: str | None = field(default_factory=lambda: os.getenv("PRISM_THINKING", "low") or None)
 
     apple_client_ids: tuple[str, ...] = field(default_factory=lambda: _list("APPLE_CLIENT_IDS"))
     google_client_ids: tuple[str, ...] = field(default_factory=lambda: _list("GOOGLE_CLIENT_IDS"))

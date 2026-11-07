@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 Mood = Literal["calm", "sorrow", "anger", "insight"]
 
@@ -39,9 +39,15 @@ class PrismSample(BaseModel):
     # YOUNIYA screens
     moods: list[MoodShare] = Field(..., min_length=1, max_length=3)  # 07 감정 칩, 10 감정의 결
     observation: str  # 07 "그런 마음이 머물렀군요. …"
-    telescope_teaser: str  # 07 마음 망원경 카드의 한 줄
+    telescope_teaser: str = "망원경으로 보면 이 별의 결이 조금 더 또렷해져요."  # 07 마음 망원경 카드의 한 줄
     rewrite_question: str  # 14 다시 쓰기 질문
     signal_sentences: list[str] = Field(default_factory=list, max_length=5)  # 88 불이 켜진 문장
+
+    @field_validator("latent_hypothesis", "telescope_teaser", mode="before")
+    @classmethod
+    def _null_is_unset(cls, v, info):
+        """The model sometimes sends null when it has nothing to say: use the default line."""
+        return cls.model_fields[info.field_name].default if v is None else v
 
 
 class Scores(BaseModel):

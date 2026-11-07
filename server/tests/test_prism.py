@@ -67,3 +67,39 @@ def test_model_failure_is_reported(monkeypatch):
 
     monkeypatch.setattr("youniya_api.prism.engine.generate_json", boom)
     assert PrismEngine(api_key="k", model="m").evaluate("t", DEEP_BODY).status == "failed"
+
+
+def test_one_lost_reading_still_scores(monkeypatch):
+    """Two good readings of three give a score; one does not."""
+    import itertools
+
+    good = mock_sample("t", DEEP_BODY).model_dump()
+    seen = []
+
+    def calls(outcomes):
+        it = itertools.cycle(outcomes)
+
+        def fake(api_key, model, prompt, **kw):
+            seen.append(kw)
+            o = next(it)
+            if o == "boom":
+                raise TimeoutError("slow")
+            return {"confrontation_depth": 999} if o == "bad" else good
+
+        return fake
+
+    monkeypatch.setattr("youniya_api.prism.engine.generate_json", calls(["ok", "boom", "ok"]))
+    r = PrismEngine(api_key="k", model="m", thinking="low").evaluate("t", DEEP_BODY)
+    assert r.status == "ok" and r.analysis["starlight"] == 955
+    assert seen[0] == {"thinking": "low"}
+
+    monkeypatch.setattr("youniya_api.prism.engine.generate_json", calls(["ok", "boom", "bad"]))
+    assert PrismEngine(api_key="k", model="m").evaluate("t", DEEP_BODY).status == "failed"
+
+
+def test_null_teaser_takes_the_default_line():
+    from youniya_api.prism.schemas import PrismSample
+
+    raw = mock_sample("t", DEEP_BODY).model_dump() | {"telescope_teaser": None, "latent_hypothesis": None}
+    s = PrismSample.model_validate(raw)
+    assert s.telescope_teaser.startswith("망원경으로") and s.latent_hypothesis == "없음"

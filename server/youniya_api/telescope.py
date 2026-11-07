@@ -93,7 +93,8 @@ def build_report(stars: list[StarText], api_key: str | None, model: str) -> dict
 
 def _model_text(stars: list[StarText], api_key: str, model: str) -> dict:
     parts = [f"## star_id: {s.id}\n제목: {s.title}\n\"\"\"\n{s.body}\n\"\"\"" for s in stars]
-    out = generate_json(api_key, model, TELESCOPE_PROMPT + "\n\n# 별들\n" + "\n\n".join(parts), temperature=0.3)
+    out = generate_json(api_key, model, TELESCOPE_PROMPT + "\n\n# 별들\n" + "\n\n".join(parts), temperature=0.3,
+                        timeout=90.0)
     if not isinstance(out.get("notes"), dict) or not out.get("star_name") or not out.get("question"):
         raise ValueError("incomplete telescope output")
     return out
@@ -124,7 +125,7 @@ def story_bridges(sentences: list[str], api_key: str | None, model: str) -> list
         fallback = ("그리고 시간이 조금 흘렀어요.", "그 마음은 다른 날에도 이어졌어요.", "빛은 천천히 방향을 바꾸었어요.")
         return [fallback[i % len(fallback)] for i in range(need)]
     listed = "\n".join(f"{i + 1}. {s}" for i, s in enumerate(sentences))
-    out = generate_json(api_key, model, f"{STORY_PROMPT}\n\n# 문장\n{listed}", temperature=0.5)
+    out = generate_json(api_key, model, f"{STORY_PROMPT}\n\n# 문장\n{listed}", temperature=0.5, timeout=90.0)
     bridges = [str(b) for b in out.get("bridges", [])]
     if len(bridges) != need:
         raise ValueError("bridge count mismatch")

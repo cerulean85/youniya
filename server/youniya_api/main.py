@@ -51,7 +51,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.push = (ApnsClient(settings.apns_team_id, settings.apns_key_id, apns_key, settings.apple_bundle_id)
                       if settings.apple_bundle_id and settings.apns_team_id and settings.apns_key_id and apns_key
                       else None)
-    app.state.prism = PrismEngine(settings.gemini_api_key, settings.prism_model, settings.prism_samples)
+    app.state.prism = PrismEngine(settings.gemini_api_key, settings.prism_model, settings.prism_samples,
+                                  thinking=settings.prism_thinking)
 
     @app.exception_handler(ApiError)
     async def api_error(_: Request, e: ApiError):

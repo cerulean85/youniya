@@ -1,6 +1,7 @@
 """별빛 프리즘 pipeline (Protoss design.md 1장):
 pre-validation → safety interlock → N independent scoring calls → median → formula."""
 
+import logging
 import math
 import re
 from concurrent.futures import ThreadPoolExecutor
@@ -12,6 +13,8 @@ from .calculator import final_scores
 from .filters import foul_reason, has_crisis_signal
 from .prompt import build_prompt
 from .schemas import MoodShare, PrismSample
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -26,8 +29,10 @@ def split_sentences(text: str) -> list[str]:
 
 
 class PrismEngine:
-    def __init__(self, api_key: str | None, model: str, samples: int = 3):
-        self.api_key, self.model, self.sample_count = api_key, model, samples
+    def __init__(self, api_key: str | None, model: str, samples: int = 3, thinking: str | None = None):
+        self.api_key, self.model, self.sample_count, self.thinking = api_key, model, samples, thinking
+        # A median needs at least two readings; one lost call out of three still gives a score.
+        self.min_samples = min(2, samples)
 
     def evaluate(self, title: str, body: str, min_length: int = MIN_FLOAT_LENGTH) -> PrismResult:
         foul = foul_reason(body, min_length)
@@ -47,8 +52,20 @@ class PrismEngine:
             return [mock_sample(title, body)] * self.sample_count
         prompt = build_prompt(title, body)
         with ThreadPoolExecutor(max_workers=self.sample_count) as pool:
-            raw = list(pool.map(lambda _: generate_json(self.api_key, self.model, prompt), range(self.sample_count)))
-        return [PrismSample.model_validate(r) for r in raw]
+            got = list(pool.map(lambda _: self._one(prompt), range(self.sample_count)))
+        samples = [s for s in got if s is not None]
+        if len(samples) < self.min_samples:
+            raise RuntimeError(f"only {len(samples)} of {self.sample_count} readings")
+        return samples
+
+    def _one(self, prompt: str) -> PrismSample | None:
+        """One independent reading, or None when the call or its JSON fails."""
+        try:
+            return PrismSample.model_validate(
+                generate_json(self.api_key, self.model, prompt, thinking=self.thinking))
+        except Exception as e:  # noqa: BLE001 — any lost reading is just one fewer sample
+            log.warning("prism reading failed: %s: %s", type(e).__name__, str(e)[:200])
+            return None
 
 
 def to_analysis(samples: list[PrismSample], body: str) -> dict:
