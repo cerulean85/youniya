@@ -13,6 +13,8 @@ struct DrawnNebula: Codable, Identifiable, Equatable {
     var edges: [[Int]] = []
     /// Titles of guest stars let into empty slots (85).
     var guests: [String] = []
+    /// Live: the guests' plaza share ids.
+    var guestShareIDs: [String] = []
     var shared = false
     var createdAt = Date.now
     /// Live: the server's nebula id, set once it is saved there.
@@ -104,7 +106,9 @@ struct GuestStar: Identifiable, Hashable {
     var source: String
     var day: String
     var color: Color
-    var id: String { title }
+    /// Live: the plaza share id sent as a guest (85).
+    var shareID: String? = nil
+    var id: String { shareID ?? title }
 
     static let candidates: [GuestStar] = [
         GuestStar(title: "고요한 새벽의 별", source: "비 온 뒤 고래자리", day: "11월 2일", color: .starClear),
@@ -167,6 +171,7 @@ struct NebulaDrawingFlow: View {
             .animation(.easeInOut(duration: 0.3), value: step)
         }
         .background { StarField() }
+        .task { await model.loadGuestCandidates() }
         .edgeSwipeBack(enabled: step != .done, onBack: back)
     }
 
@@ -297,14 +302,14 @@ struct NebulaDrawingFlow: View {
                     }
                     if let silhouette {
                         SilhouettePreview(silhouette: silhouette, stars: placed,
-                                          guests: GuestStar.candidates.filter(guests.contains))
+                                          guests: model.guestCandidates.filter(guests.contains))
                             .frame(height: 140)
                             .cosmos("guest-preview", in: RoundedRectangle(cornerRadius: Radius.lg))
                             .background(Color.bgSurface, in: .rect(cornerRadius: Radius.lg))
                     }
                     VStack(spacing: 0) {
-                        ForEach(Array(GuestStar.candidates.enumerated()), id: \.element.id) { i, g in
-                            guestRow(g, last: i == GuestStar.candidates.count - 1, limit: limit)
+                        ForEach(Array(model.guestCandidates.enumerated()), id: \.element.id) { i, g in
+                            guestRow(g, last: i == model.guestCandidates.count - 1, limit: limit)
                         }
                     }
                     .padding(.horizontal, Space.lg).padding(.vertical, Space.xs)
@@ -449,7 +454,7 @@ struct NebulaDrawingFlow: View {
         let template = saved.map { $0.silhouette.flatMap(NebulaSilhouette.init(rawValue:)) }
             ?? (steps.contains(.pick) ? nil : silhouette)
         if let template {
-            SilhouettePreview(silhouette: template, stars: placed, guests: GuestStar.candidates.filter(guests.contains))
+            SilhouettePreview(silhouette: template, stars: placed, guests: model.guestCandidates.filter(guests.contains))
         } else {
             StarStage(stars: floated, picked: picked, edges: edges, interactive: false)
         }
@@ -462,7 +467,8 @@ struct NebulaDrawingFlow: View {
             silhouette: template?.rawValue,
             starIDs: template == nil ? picked : placed.map(\.id),
             edges: template == nil ? edges : [],
-            guests: template == nil ? [] : GuestStar.candidates.filter(guests.contains).map(\.title)
+            guests: template == nil ? [] : model.guestCandidates.filter(guests.contains).map(\.title),
+            guestShareIDs: template == nil ? [] : model.guestCandidates.filter(guests.contains).compactMap(\.shareID)
         )
         model.saveDrawnNebula(nebula)
         saved = nebula

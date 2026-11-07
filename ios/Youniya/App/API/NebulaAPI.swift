@@ -7,7 +7,7 @@ private struct NebulaIn: Encodable {
     var silhouette: String?
     var starIds: [String]
     var edges: [[Int]]
-    /// TODO: 85 guests from GET /v1/nebulae/guest-candidates (plaza share ids).
+    /// 85: plaza share ids from GET /v1/nebulae/guest-candidates.
     var guestShareIds: [String] = []
 }
 
@@ -43,7 +43,8 @@ extension AppModel {
         let task = Task { @MainActor () -> String? in
             do {
                 let r: NebulaCreated = try await APIClient.shared.post("/v1/nebulae", body: NebulaIn(
-                    name: n.name, silhouette: n.silhouette, starIds: n.starIDs.map(\.apiID), edges: n.edges))
+                    name: n.name, silhouette: n.silhouette, starIds: n.starIDs.map(\.apiID), edges: n.edges,
+                    guestShareIds: n.guestShareIDs))
                 if let i = drawnNebulae.firstIndex(where: { $0.id == n.id }) { drawnNebulae[i].serverID = r.id }
                 return r.id
             } catch {

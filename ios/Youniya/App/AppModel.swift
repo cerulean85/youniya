@@ -429,6 +429,9 @@ final class AppModel {
     var nebulaCreates: [DrawnNebula.ID: Task<String?, Never>] = [:]
     /// Live: the server's account id (/v1/me), used as StoreKit's appAccountToken.
     var accountID: String?
+    /// Live 85 guests and 69 tonight's count.
+    var guestCandidatesLive: [GuestStar] = []
+    var tonightCount: Int?
     /// Live: `GET /v1/growth` stage (0–4).
     var serverGrowthStage: Int?
     /// Live: stars whose telescope report is being made on the server (25 → 10).

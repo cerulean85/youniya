@@ -405,8 +405,8 @@ struct GalaxyZoomView: View {
     @State private var level: CGFloat = DebugScreen.is("76") ? 2.6 : 1
     @State private var showMine = DebugScreen.is("76")
 
-    /// TODO: Tonight's count comes from the plaza API.
-    private let tonight = 1284
+    /// Live: today's floated stars across everyone (`/v1/plaza/tonight`); mock: Figma's sample.
+    private var tonight: Int { model.useLiveAPI ? model.tonightCount ?? 0 : 1284 }
 
     var body: some View {
         // My stars in everyone's galaxy are the ones shared to the plaza (19).
@@ -451,9 +451,9 @@ struct GalaxyZoomView: View {
                 StarTooltip(star: first) { onOpenStar(first) }
             } else {
                 HStack(spacing: Space.md) {
-                    GalaxyStat(value: 86, label: "오늘 떠오른 별")
+                    GalaxyStat(value: model.useLiveAPI ? tonight : 86, label: "오늘 떠오른 별")
                     GalaxyStat(value: model.resonated.filter { $0.hasPrefix("nebula:") }.count, label: "내가 곁에 둔 성운")
-                    GalaxyStat(value: 312, label: "모인 성운")
+                    GalaxyStat(value: model.useLiveAPI ? model.plazaNebulaeLive.count : 312, label: "모인 성운")
                 }
             }
 
@@ -468,6 +468,10 @@ struct GalaxyZoomView: View {
         .padding(.top, Space.sm)
         .padding(.bottom, Space.xl)
         .background { StarField() }
+        .task {
+            await model.loadTonight()
+            if model.plazaNebulaeLive.isEmpty { await model.loadPlaza() }
+        }
         // No back button in Figma: edge swipe, and the VoiceOver escape gesture.
         .accessibilityAction(.escape, onBack)
     }
@@ -583,9 +587,18 @@ struct NebulaStoryView: View {
         var id: StarItem.ID { star.id }
     }
 
-    /// TODO: The analysis picks the core sentence; for now, the last one.
+    /// Live: the server's story for my newest nebula (its stars' key sentences).
+    @State private var serverStory: ServerStory?
+
+    /// Live: the server's entries; mock: each floated star's last sentence.
     private var lines: [Line] {
-        model.stars
+        if let serverStory {
+            return serverStory.entries.compactMap { e in
+                guard let id = UUID(uuidString: e.starId), let star = model.stars.first(where: { $0.id == id }) else { return nil }
+                return Line(star: star, sentence: e.sentence)
+            }
+        }
+        return model.stars
             .filter(\.isFloated)
             .sorted { ($0.date ?? .now) < ($1.date ?? .now) }
             .compactMap { star in
@@ -663,6 +676,12 @@ struct NebulaStoryView: View {
         }
         .background { StarField() }
         .toastCard($toast)
+        .task {
+            if let story = await model.loadStory() {
+                serverStory = story
+                model.storyPolished = story.polished
+            }
+        }
     }
 
     private func storyCard(_ lines: [Line]) -> some View {
@@ -671,7 +690,7 @@ struct NebulaStoryView: View {
                 if i > 0 {
                     Group {
                         if model.storyPolished {
-                            Text(Self.bridges[(i - 1) % Self.bridges.count])
+                            Text(bridge(i))
                                 .textStyle(.bodyS)
                                 .foregroundStyle(Color.starBright)
                         } else {
@@ -711,7 +730,29 @@ struct NebulaStoryView: View {
     }
 
     /// Mock: spends coins and turns on the bridging lines.
+    /// The line shown at the ✦ before sentence `i`: the server's, or a mock one.
+    private func bridge(_ i: Int) -> String {
+        if let b = serverStory?.bridges, i - 1 < b.count { return b[i - 1] }
+        return Self.bridges[(i - 1) % Self.bridges.count]
+    }
+
     private func polish() {
+        if model.useLiveAPI && model.storyNebulaID != nil {
+            Task { @MainActor in
+                do {
+                    if let s = try await model.polishStory() {
+                        withAnimation(.easeInOut(duration: 0.4)) { serverStory = s }
+                    }
+                } catch let e as APIError where e.code == "insufficient_coins" {
+                    toast = ToastCardMessage(title: "코인이 조금 부족해요", detail: "코인 충전에서 채울 수 있어요")
+                    try? await Task.sleep(for: .seconds(1.2))
+                    onNeedCoins()
+                } catch {
+                    model.handle(error)
+                }
+            }
+            return
+        }
         if model.spendCoins(AppModel.storyPolishCost, for: "서사 다듬기") {
             withAnimation(.easeInOut(duration: 0.4)) { model.storyPolished = true }
         } else {

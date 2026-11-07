@@ -125,6 +125,8 @@ struct MainView: View {
             case "plaza", "plazaNebula": tab = .plaza     // 09 / 72
             case "compose": push(.compose())              // 05
             case "myNebula": push(.myNebulaZoom)          // 77
+            case "galaxy": push(.galaxyZoom)              // 69
+            case "story": push(.nebulaStory)              // 83
             case "missingReport": push(.report(UUID()))   // 122-1
             // Visual review (mock data):
             case "coinsAgreed": push(.coins)              // 28-1
