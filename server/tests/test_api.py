@@ -215,6 +215,21 @@ def test_nebula_story_and_polish(client):
 
 # --- plaza -------------------------------------------------------------------
 
+def test_preview_is_exactly_what_is_shared(client):
+    """19-1 / 71-1: the app previews with privacy-scan on the chosen sentence; both shares store that text."""
+    h = sign_in(client)
+    quote = "지훈이 형이랑 망원시장에서 만나고 jh@mail.com으로 사진을 보냈다."
+    ids = [float_star(client, h, body=DEEP_BODY + " " + quote)["id"]] + [float_star(client, h)["id"] for _ in range(2)]
+    preview = client.post("/v1/plaza/privacy-scan", json={"text": quote}, headers=h).json()
+    assert preview["masked"] == "●●● 형이랑 ●●●에서 만나고 ●●●으로 사진을 보냈다."
+    assert preview["counts"] == {"contacts": 1, "names": 1, "places": 1} and preview["total"] == 3
+
+    star = client.put(f"/v1/stars/{ids[0]}/share", json={"quote": quote}, headers=h).json()
+    n = client.post("/v1/nebulae", json={"name": "성운", "star_ids": ids}, headers=h).json()
+    nebula = client.put(f"/v1/nebulae/{n['id']}/share", json={"quote": quote}, headers=h).json()
+    assert star["quote"] == nebula["quote"] == preview["masked"]
+
+
 def test_star_share_is_masked_and_counts_stay_private(client):
     owner, other = sign_in(client, "owner"), sign_in(client, "other")
     body = DEEP_BODY + " 민지 씨한테 010-1234-5678로 연락했다."
