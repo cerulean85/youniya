@@ -22,6 +22,7 @@ struct YouniyaApp: App {
 struct RootView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @Environment(\.scenePhase) private var scenePhase
     @State private var showSplash = true
     /// StoreKit purchases paid but not credited yet (live, StoreKit builds).
     @State private var transactions: Task<Void, Never>?
@@ -88,6 +89,10 @@ struct RootView: View {
             if model.useLiveAPI && AppModel.usesStoreKit && transactions == nil {
                 transactions = StoreKitCoins.listenForTransactions()
             }
+        }
+        // 87 별 만들기 알림: keep two weeks scheduled, and follow iOS permission changes.
+        .onChange(of: scenePhase, initial: true) { _, phase in
+            if phase == .active { StarReminder.reschedule(model) }
         }
         .task {
             try? await Task.sleep(for: .seconds(2))

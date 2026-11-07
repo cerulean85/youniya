@@ -305,6 +305,8 @@ struct AppSettings: Codable, Equatable {
     var ambience = true
     var sound = "밤바람"
     var starReminder = false
+    /// 87-2: the reminder's time of day, in minutes after midnight (오후 9:30).
+    var reminderMinutes = 21 * 60 + 30
     /// 68 우주의 색
     var sky: SkyTheme = .violet
 
@@ -318,6 +320,7 @@ struct AppSettings: Codable, Equatable {
         ambience = try c.decodeIfPresent(Bool.self, forKey: .ambience) ?? d.ambience
         sound = try c.decodeIfPresent(String.self, forKey: .sound) ?? d.sound
         starReminder = try c.decodeIfPresent(Bool.self, forKey: .starReminder) ?? d.starReminder
+        reminderMinutes = try c.decodeIfPresent(Int.self, forKey: .reminderMinutes) ?? d.reminderMinutes
         sky = (try? c.decodeIfPresent(SkyTheme.self, forKey: .sky)) ?? d.sky
     }
 }
@@ -354,7 +357,12 @@ final class AppModel {
     }
     /// 87 Settings
     var settings: AppSettings {
-        didSet { UserDefaults.standard.set(try? JSONEncoder().encode(settings), forKey: "settings") }
+        didSet {
+            UserDefaults.standard.set(try? JSONEncoder().encode(settings), forKey: "settings")
+            if settings.starReminder != oldValue.starReminder || settings.reminderMinutes != oldValue.reminderMinutes {
+                Task { @MainActor in StarReminder.reschedule(self) }
+            }
+        }
     }
     /// Set once the free first telescope ("처음 한 번은 무료", 07) is used.
     var usedFreeTelescope: Bool {
@@ -453,7 +461,11 @@ final class AppModel {
     /// Saved to `stars.json` on every change.
     /// Saved to `stars.json`, or `stars-live.json` (a cache of the server's) when live.
     var stars: [StarItem] = [] {
-        didSet { store.save(stars, to: starsFile) }
+        didSet {
+            store.save(stars, to: starsFile)
+            // 87: today's reminder goes once a star is written.
+            if settings.starReminder { Task { @MainActor in StarReminder.reschedule(self) } }
+        }
     }
     private var starsFile: String { useLiveAPI ? "stars-live" : "stars" }
     /// Autosaved draft, saved to `draft.json`.

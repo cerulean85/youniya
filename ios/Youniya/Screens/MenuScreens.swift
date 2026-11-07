@@ -65,6 +65,7 @@ struct SettingsView: View {
     /// 91–94 bottom sheets over Settings.
     private enum Sheet: Identifiable {
         case deleteAccount, withdrawShares, export, sound
+        case reminderTime // 87-2
         case notificationsOff // iOS notifications are turned off for the app
         case exporting(DataExport.Format) // 114
         var id: String { "\(self)" }
@@ -120,10 +121,16 @@ struct SettingsView: View {
                         SettingsRow(icon: .iconHeart, title: "소리 고르기", value: model.settings.sound) { sheet = .sound }
                     }
 
-                    SettingsSection("알림", note: "연속 기록이나 재촉하는 알림은 보내지 않아요.") {
-                        // TODO: Schedule the reminder once its time and copy are decided.
+                    SettingsSection("알림", note: model.settings.starReminder
+                                    ? "별을 띄우지 않은 날에만 고른 시각에 한 번 알려 드려요. 연속 기록이나 재촉하는 알림은 보내지 않아요."
+                                    : "연속 기록이나 재촉하는 알림은 보내지 않아요.") {
+                        // 87 별 만들기 알림 (`StarReminder`), 87-1 알림 시각 when on.
                         SettingsToggleRow(icon: .iconBell, title: "별 만들기 알림",
                                           isOn: notificationToggle($model.settings.starReminder))
+                        if model.settings.starReminder {
+                            SettingsRow(icon: .iconMoon, title: "알림 시각",
+                                        value: StarReminder.timeText(model.settings.reminderMinutes)) { sheet = .reminderTime }
+                        }
                         // 11 (선택) 새 기능·혜택 알림: the same consent, changeable here.
                         SettingsToggleRow(icon: .iconInfo, title: "새 기능·혜택 알림",
                                           isOn: notificationToggle($model.marketingOptIn))
@@ -167,6 +174,12 @@ struct SettingsView: View {
             if DebugScreen.is("92") { sheet = .withdrawShares }
             if DebugScreen.is("93") { sheet = .export }
             if DebugScreen.is("94") { sheet = .sound }
+            if DebugScreen.is("87-1") || DebugScreen.is("87-2") {
+                // As in Figma: the reminder on, 새 기능·혜택 알림 off.
+                model.settings.starReminder = true
+                model.marketingOptIn = false
+            }
+            if DebugScreen.is("87-2") { sheet = .reminderTime }
             if DebugScreen.is("95") { sheet = .notificationsOff }
             if DebugScreen.is("114") { exportProgress = 0.62; sheet = .exporting(.text) }
         }
@@ -246,6 +259,12 @@ struct SettingsView: View {
                 primary: ("설정 열기", { close { NotificationAccess.openSettings() } }),
                 secondary: ("닫기", { close() }),
                 ghost: nil
+            )
+        case .reminderTime: // 87-2
+            ReminderTimeSheet(
+                minutes: model.settings.reminderMinutes,
+                onSave: { m in close { model.settings.reminderMinutes = m } },
+                onCancel: { close() }
             )
         case .sound: // 94
             ActionSheetContent(

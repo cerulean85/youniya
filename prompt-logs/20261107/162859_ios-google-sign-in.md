@@ -26,3 +26,10 @@
 ## 확인하지 않은 것
 - 시뮬레이터에서 실제 Google 계정으로 로그인하는 흐름은 탭과 계정 입력이 필요해 보지 못했다.
 - 개발 서버(Tailscale)에 GOOGLE_CLIENT_IDS가 있는지는 확인하지 않았다. 운영 서버에는 있다.
+
+## 실제 로그인 확인
+- 16:29:05 시뮬레이터(Mac): 개발 서버가 401 invalid_id_token으로 거절했다. 그때는 이유를 로그에 남기지 않아 원인을 알 수 없다.
+  - API 세션이 서버 시계를 확인했다. NTP로 맞춰져 있고 Google 서명 키도 받아 온다.
+  - API 세션이 거절 이유를 로그에 남기게 했고(`599b447`), 토큰 시각 확인에 leeway=60을 줬다(`c7db6ff`).
+- 16:39:31 iPhone(Tailscale 켠 뒤): `POST /v1/auth/google` 200. 기기에서 Google 로그인이 된다.
+- 기기에서 Debug 빌드로 시험하려면 iPhone에 Tailscale을 켜야 한다. 개발 서버가 Tailscale 주소다.

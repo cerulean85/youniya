@@ -457,7 +457,7 @@ struct MainView: View {
         case "74", "99", "100", "101", "106", "107": push(.galaxyLines(nebula.name))
         case "75": push(.galaxyStar(nebula: nebula.name, star: nebula.stars[0].title))
         case "79", "80", "96", "97", "110": push(.collection)
-        case "87", "91", "92", "93", "94", "95", "114": push(.settings)
+        case "87", "87-1", "87-2", "91", "92", "93", "94", "95", "114": push(.settings)
         case "122": push(.detail(UUID()))
         case "122-1": push(.report(UUID()))
         default: break
