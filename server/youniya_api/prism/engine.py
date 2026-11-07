@@ -61,8 +61,12 @@ class PrismEngine:
     def _one(self, prompt: str) -> PrismSample | None:
         """One independent reading, or None when the call or its JSON fails."""
         try:
-            return PrismSample.model_validate(
-                generate_json(self.api_key, self.model, prompt, thinking=self.thinking))
+            # With one reading there is no second to fall back on: a slow or dropped call is tried again
+            # (one took 60 s in the 20261107 experiment). With three, a lost one is simply left out.
+            single = self.sample_count == 1
+            return PrismSample.model_validate(generate_json(
+                self.api_key, self.model, prompt, thinking=self.thinking,
+                timeout=25.0 if single else 60.0, retries=1 if single else 0))
         except Exception as e:  # noqa: BLE001 — any lost reading is just one fewer sample
             # Only where it failed: a validation message would quote the reading, and so the writing.
             where = [".".join(map(str, err["loc"])) for err in e.errors()] if hasattr(e, "errors") else []

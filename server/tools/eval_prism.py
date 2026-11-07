@@ -66,6 +66,9 @@ def main() -> int:
     ap.add_argument("--repeat", type=int, default=3, help="extra runs of a few texts for spread")
     ap.add_argument("--thinking", default=None, help="override PRISM_THINKING (\"\" = model default)")
     ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--model", help="override PRISM_MODEL")
+    ap.add_argument("--samples", type=int, help="override PRISM_SAMPLES")
+    ap.add_argument("--out", help="write every score and check as JSON here")
     args = ap.parse_args()
 
     s = Settings()
@@ -73,8 +76,13 @@ def main() -> int:
         print("GEMINI_API_KEY is not set")
         return 2
     thinking = s.prism_thinking if args.thinking is None else (args.thinking or None)
-    engine = PrismEngine(s.gemini_api_key, s.prism_model, s.prism_samples, thinking=thinking)
-    print(f"model {s.prism_model} · thinking {thinking or 'default'} · {s.prism_samples} readings\n")
+    model, samples = args.model or s.prism_model, args.samples or s.prism_samples
+    engine = PrismEngine(s.gemini_api_key, model, samples, thinking=thinking)
+    print(f"model {model} · thinking {thinking or 'default'} · {samples} readings\n")
+    from youniya_api import llm
+
+    usage: list[dict] = []
+    llm.usage_listeners.append(lambda m, u: usage.append(u))
 
     jobs = [(k, t) for k, (_, t) in ANCHORS.items()] + list(LOW.items()) + list(CALM.items()) + list(TEMPLATE.items())
     jobs += [(f"pair_{k}_{side}", t) for k, pair in PAIRS.items() for side, t in zip(("judge", "specific"), pair)]
@@ -123,6 +131,16 @@ def main() -> int:
     for name, value, ok in checks:
         print(f"{'PASS' if ok else 'FAIL'}  {name:34} {value}")
     print(f"\nwait per star: median {statistics.median(times):.1f}s, max {max(times):.1f}s")
+    if args.out:
+        import json
+
+        Path(args.out).write_text(json.dumps({
+            "model": model, "samples": samples, "thinking": thinking,
+            "results": {n: {"status": st, "score": sc, "level": lv, "seconds": round(sec, 1)}
+                        for n, (st, sc, lv, sec) in results.items()},
+            "checks": [{"name": n, "value": v, "ok": ok} for n, v, ok in checks],
+            "calls": len(usage), "usage": usage,
+            "median_seconds": statistics.median(times), "max_seconds": max(times)}, ensure_ascii=False, indent=1))
     return 0 if all(ok for *_, ok in checks) else 1
 
 

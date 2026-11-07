@@ -91,7 +91,7 @@ def test_one_lost_reading_still_scores(monkeypatch):
     monkeypatch.setattr("youniya_api.prism.engine.generate_json", calls(["ok", "boom", "ok"]))
     r = PrismEngine(api_key="k", model="m", thinking="low").evaluate("t", DEEP_BODY)
     assert r.status == "ok" and r.analysis["starlight"] == 955
-    assert seen[0] == {"thinking": "low"}
+    assert seen[0] == {"thinking": "low", "timeout": 60.0, "retries": 0}
 
     monkeypatch.setattr("youniya_api.prism.engine.generate_json", calls(["ok", "boom", "bad"]))
     assert PrismEngine(api_key="k", model="m").evaluate("t", DEEP_BODY).status == "failed"
@@ -103,3 +103,31 @@ def test_null_teaser_takes_the_default_line():
     raw = mock_sample("t", DEEP_BODY).model_dump() | {"telescope_teaser": None, "latent_hypothesis": None}
     s = PrismSample.model_validate(raw)
     assert s.telescope_teaser.startswith("망원경으로") and s.latent_hypothesis == "없음"
+
+
+def test_thinking_off_and_retries(monkeypatch):
+    import httpx
+
+    from youniya_api import llm
+
+    assert llm.thinking_config("gemini-3.8-flash", "off") == {"thinkingBudget": 0}
+    assert llm.thinking_config("gemini-3.5-flash-lite", "off") == {"thinkingLevel": "minimal"}
+    assert llm.thinking_config("gemini-3.8-flash", "low") == {"thinkingLevel": "low"}
+    assert llm.thinking_config("gemini-3.8-flash", None) is None
+
+    tries = []
+
+    def handler(request):
+        tries.append(request)
+        if len(tries) == 1:
+            raise httpx.ReadTimeout("slow")
+        return httpx.Response(200, json={"candidates": [{"content": {"parts": [{"text": '{"ok": 1}'}]}}]})
+
+    real = httpx.Client
+    monkeypatch.setattr(llm.httpx, "Client", lambda **kw: real(transport=httpx.MockTransport(handler), **kw))
+    assert llm.generate_json("k", "m", "p", retries=1) == {"ok": 1} and len(tries) == 2
+    tries.clear()
+    import pytest
+
+    with pytest.raises(httpx.ReadTimeout):
+        llm.generate_json("k", "m", "p")  # no retry by default
