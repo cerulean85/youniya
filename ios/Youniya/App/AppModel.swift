@@ -411,7 +411,7 @@ final class AppModel {
         #endif
     }
     /// Debug builds sign in with the dev server's `/v1/auth/dev` (no Apple ID on the
-    /// simulator needed); `-realSignIn YES` uses Sign in with Apple instead.
+    /// simulator needed); `-realSignIn YES` uses Sign in with Apple / Google instead.
     static var usesDevSignIn: Bool {
         #if DEBUG
         !UserDefaults.standard.bool(forKey: "realSignIn")
@@ -493,7 +493,7 @@ final class AppModel {
 
     enum SignInProvider { case apple, google }
 
-    /// 02 로그인. Live: Sign in with Apple (or the dev sign-in in Debug builds).
+    /// 02 로그인. Live: Sign in with Apple or Google (or the dev sign-in in Debug builds).
     func signIn(with provider: SignInProvider = .apple) {
         guard useLiveAPI else { isSignedIn = true; return }
         Task { @MainActor in
@@ -505,15 +505,14 @@ final class AppModel {
                     let token = try await AppleSignIn().identityToken()
                     session = try await APIClient.shared.signIn(provider: "apple", idToken: token)
                 } else {
-                    // TODO: Google Sign-In SDK and an OAuth client id (server GOOGLE_CLIENT_IDS).
-                    apiMessage = "Google 로그인은 곧 열려요. 지금은 Apple로 계속해 주세요."
-                    return
+                    let token = try await GoogleSignIn().idToken()
+                    session = try await APIClient.shared.signIn(provider: "google", idToken: token)
                 }
                 hasConsented = !session.needsConsent
                 isSignedIn = true
                 await refreshMe()
-            } catch is AppleSignIn.Cancelled {
-                // Closed the Apple sheet: stay on 02.
+            } catch is AppleSignIn.Cancelled, is GoogleSignIn.Cancelled {
+                // Closed the Apple or Google sheet: stay on 02.
             } catch {
                 handle(error)
             }

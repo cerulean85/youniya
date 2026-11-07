@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 02 Login. Live: Sign in with Apple (Google is still to come); mock: signs in locally.
+/// 02 Login. Live: Sign in with Apple or Google; mock: signs in locally.
 struct LoginView: View {
     @Environment(AppModel.self) private var model
 

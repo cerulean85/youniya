@@ -97,7 +97,7 @@ actor APIClient {
         return s
     }
 
-    /// Apple or Google: the provider's ID token. TODO: Wire up Sign in with Apple / Google.
+    /// Apple or Google: the provider's ID token (AppleSignIn / GoogleSignIn).
     func signIn(provider: String, idToken: String) async throws -> AuthSession {
         let s: AuthSession = try await send("POST", "/v1/auth/\(provider)", body: ["id_token": idToken], authorized: false)
         store(s)
