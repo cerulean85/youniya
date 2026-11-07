@@ -2618,6 +2618,54 @@
         }
       }
     },
+    "/v1/admin/error-test": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Error Test",
+        "description": "An unhandled error on purpose (500), to see a report arrive in Sentry. Nothing is written.",
+        "operationId": "error_test_v1_admin_error_test_post",
+        "parameters": [
+          {
+            "name": "x-admin-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/reports": {
       "get": {
         "tags": [

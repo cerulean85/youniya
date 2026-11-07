@@ -207,3 +207,10 @@ def test_operator_test_push(make_app):
     _, bare = _app(make_app, None)
     assert bare.post("/v1/admin/push-test", json={"user_id": user_id}, headers=OP).json()["error"]["code"] \
         == "push_not_configured"
+
+
+def test_operator_error_test_is_a_500(make_app):
+    app, _ = _app(make_app)
+    client = TestClient(app, raise_server_exceptions=False)
+    assert client.post("/v1/admin/error-test", headers=OP).status_code == 500
+    assert client.post("/v1/admin/error-test").status_code == 404

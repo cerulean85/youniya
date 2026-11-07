@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily YOUNIYA production database backup
+
+[Timer]
+# 04:00 KST. Persistent: a day missed while this machine was off runs at the next boot.
+OnCalendar=*-*-* 04:00:00 Asia/Seoul
+Persistent=true
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target

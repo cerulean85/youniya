@@ -82,6 +82,14 @@ Both files are gitignored. Keep a copy of the production `DATA_ENCRYPTION_KEY` s
 - **Environment:** Copy every variable from `.env.production` into the Vercel project. `APPSTORE_PRIVATE_KEY_PATH` is not needed there.
 - **Migrations:** Vercel never runs them. Before a deploy that adds a migration, run `deploy/migrate-production.sh` here.
 - **Time limit:** `maxDuration` is 120 seconds, for the three model calls per star once the real model is on.
+- **Error reports:** With `SENTRY_DSN` set, unhandled errors go to Sentry without any writing (`youniya_api/monitoring.py`). `POST /v1/admin/error-test` sends one on purpose.
+
+### Backups
+
+- **Daily copy:** The user timer `youniya-backup.timer` (04:00 KST, from `deploy/`) runs `deploy/backup-production.sh` on home-desktop. It writes every table of the production database as CSV from one snapshot to `~/backups/youniya/`, keeping 14. A failure is reported to Sentry.
+- **Install:** `cp deploy/youniya-backup.* ~/.config/systemd/user/ && systemctl --user enable --now youniya-backup.timer`.
+- **Restore:** Create an empty database, run `alembic upgrade <revision in meta.json>`, then `python tools/backup_db.py restore <url> <archive>`. `check` restores into a scratch schema and compares every row without touching the data.
+- **Key:** Writing stays encrypted in the copy. Without the same `DATA_ENCRYPTION_KEY` a restore cannot be read.
 
 The same spec is checked in as [`openapi.json`](openapi.json) for the iOS side. A test fails when it falls behind the code; refresh it with `.venv/bin/python -m tests.dump_openapi`.
 
@@ -132,7 +140,7 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
 | Coins | `GET /v1/coins`, `GET /v1/coins/history`, `POST /v1/coins/purchases` | 28, 33, 38, 102, 108 |
 | Nebulae | `POST·GET /v1/nebulae`, `GET /v1/nebulae/guest-candidates`, `GET /v1/nebulae/{id}`, `GET /v1/nebulae/{id}/story`, `POST …/story/polish`, `PUT·DELETE …/share` | 51–55, 70, 71, 80, 83–85, 96 |
 | Refunds | `POST /v1/storekit/notifications` (App Store Server Notifications V2 URL) | — |
-| Operator | `GET /v1/admin/reports`, `POST /v1/admin/lines/{id}/hide·restore`, `GET /v1/admin/inquiries`, `GET /v1/admin/logs` | — |
+| Operator | `GET /v1/admin/status`, `POST /v1/admin/push-test`, `POST /v1/admin/error-test`, `POST /v1/admin/announcements`, `GET /v1/admin/reports`, `POST /v1/admin/lines/{id}/hide·restore`, `GET /v1/admin/inquiries`, `GET /v1/admin/logs` | — |
 | Plaza | `POST /v1/plaza/privacy-scan`, `PUT·DELETE /v1/stars/{id}/share`, `GET /v1/plaza/stars[/{id}]`, `GET /v1/plaza/nebulae[/{id}]`, `PUT·DELETE /v1/plaza/{star\|nebula}/{id}/resonance` and `…/beside`, `GET·POST /v1/plaza/nebulae/{id}/lines`, `POST /v1/plaza/lines/{id}/report`, `GET /v1/plaza/tonight` | 09, 19–22, 55, 69, 72–75, 79, 99–101, 103, 106, 107 |
 
 ### Behaviour worth knowing

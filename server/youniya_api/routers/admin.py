@@ -76,6 +76,16 @@ def push_test(body: PushTestIn, request: Request, db: Session = Depends(get_db))
     return {"devices": results}
 
 
+class OperatorTestError(RuntimeError):
+    """Raised on purpose by POST /v1/admin/error-test."""
+
+
+@router.post("/error-test")
+def error_test():
+    """An unhandled error on purpose (500), to see a report arrive in Sentry. Nothing is written."""
+    raise OperatorTestError("operator test")
+
+
 @router.get("/reports")
 def reported_lines(db: Session = Depends(get_db)):
     """Lines with at least one report, most reported first."""
