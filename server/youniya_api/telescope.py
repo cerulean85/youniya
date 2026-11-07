@@ -66,7 +66,8 @@ class StarText:
     analysis: dict
 
 
-def build_report(stars: list[StarText], api_key: str | None, model: str, thinking: str | None = None) -> dict:
+def build_report(stars: list[StarText], api_key: str | None, model: str, thinking: str | None = None,
+                 caches=None) -> dict:
     """10 마음 망원경 리포트 and 88 관측 연출 data."""
     n = len(stars)
     lens_values = {k: round(sum(s.analysis[k] for s in stars) / n, 3) for k, _ in LENSES}
@@ -82,7 +83,7 @@ def build_report(stars: list[StarText], api_key: str | None, model: str, thinkin
     brightest = max(stars, key=lambda s: s.analysis["starlight"])
     text = _mock_text(brightest, emotions[0]["mood"] if emotions else "calm")
     if api_key:
-        text = _model_text(stars, api_key, model, thinking)  # raises on failure; caller charges nothing
+        text = _model_text(stars, api_key, model, thinking, caches)  # raises on failure; caller charges nothing
 
     bodies = {s.id: s.body for s in stars}
     evidence = text.get("evidence", "")
@@ -107,9 +108,12 @@ def build_report(stars: list[StarText], api_key: str | None, model: str, thinkin
     }
 
 
-def _model_text(stars: list[StarText], api_key: str, model: str, thinking: str | None = None) -> dict:
+def _model_text(stars: list[StarText], api_key: str, model: str, thinking: str | None = None, caches=None) -> dict:
     parts = [f"## star_id: {s.id}\n제목: {s.title}\n\"\"\"\n{s.body}\n\"\"\"" for s in stars]
-    out = generate_json(api_key, model, TELESCOPE_PROMPT + "\n\n# 별들\n" + "\n\n".join(parts), temperature=0.3,
+    prefix = TELESCOPE_PROMPT + "\n\n"
+    cache = caches.for_request("telescope", model, prefix) if caches else None
+    out = generate_json(api_key, model, "# 별들\n" + "\n\n".join(parts), prefix=prefix, cache=cache,
+                        temperature=0.3,
                         thinking=thinking, timeout=MODEL_TIMEOUT, retries=1)
     if not isinstance(out.get("notes"), dict) or not out.get("star_name") or not out.get("question"):
         raise ValueError("incomplete telescope output")
@@ -134,14 +138,18 @@ def _mock_text(star: StarText, top_mood: str) -> dict:
     }
 
 
-def story_bridges(sentences: list[str], api_key: str | None, model: str, thinking: str | None = None) -> list[str]:
+def story_bridges(sentences: list[str], api_key: str | None, model: str, thinking: str | None = None,
+                  caches=None) -> list[str]:
     """83 서사 다듬기: lines for the ✦ places between the original sentences."""
     need = max(0, len(sentences) - 1)
     if not api_key:
         fallback = ("그리고 며칠 뒤", "그 마음은 이어져", "시간이 조금 흘러")
         return [fallback[i % len(fallback)] for i in range(need)]
     listed = "\n".join(f"{i + 1}. {s}" for i, s in enumerate(sentences))
-    out = generate_json(api_key, model, f"{STORY_PROMPT}\n\n# 문장\n{listed}", temperature=0.5,
+    prefix = STORY_PROMPT + "\n\n"
+    cache = caches.for_request("story", model, prefix) if caches else None
+    out = generate_json(api_key, model, f"# 문장\n{listed}", prefix=prefix, cache=cache,
+                        temperature=0.5,
                         thinking=thinking, timeout=MODEL_TIMEOUT, retries=1)
     bridges = [str(b) for b in out.get("bridges", [])]
     if len(bridges) != need:
@@ -190,7 +198,7 @@ def clip(text: str, limit: int = MONTHLY_MAX_CHARS) -> str:
 
 
 def build_monthly(month: str, stars: list[StarText], api_key: str | None, model: str,
-                  thinking: str | None = None) -> dict:
+                  thinking: str | None = None, cache: str | None = None) -> dict:
     """월간 마음 리포트 (Figma 123). Numbers come from the stars' analyses; the brightest star's
     sentence is quoted as written."""
     base = build_report(stars, None, model)  # lens values, emotions and period, without the model
@@ -205,9 +213,10 @@ def build_monthly(month: str, stars: list[StarText], api_key: str | None, model:
     if api_key:
         parts = [f"## {s.created_at[:10]} · {s.title}\n\"\"\"\n{clip(s.body)}\n\"\"\""
                  for s in stars[:MONTHLY_MAX_STARS]]
-        prompt = MONTHLY_PROMPT + f"\n\n# {month}의 별들\n" + "\n\n".join(parts)
+        prefix, prompt = MONTHLY_PROMPT + "\n\n", f"# {month}의 별들\n" + "\n\n".join(parts)
         for attempt in range(2):  # a malformed answer now and then (1 in 4, 20261107): ask once more
-            out = generate_json(api_key, model, prompt, temperature=0.3, thinking=thinking,
+            out = generate_json(api_key, model, prompt, prefix=prefix, cache=cache, temperature=0.3,
+                                thinking=thinking,
                                 timeout=MODEL_TIMEOUT, retries=1)
             notes = out.get("notes")
             if (isinstance(notes, dict) and all(isinstance(notes.get(k), str) and notes[k] for k, _ in LENSES)

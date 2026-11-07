@@ -11,7 +11,9 @@ from ..llm import generate_json
 from ..rules import MIN_FLOAT_LENGTH
 from .calculator import final_scores
 from .filters import foul_reason, has_crisis_signal
-from .prompt import build_prompt
+import contextvars
+
+from .prompt import PREFIX, user_part
 from .schemas import MoodShare, PrismSample
 
 log = logging.getLogger(__name__)
@@ -33,6 +35,7 @@ class PrismEngine:
         self.api_key, self.model, self.sample_count, self.thinking = api_key, model, samples, thinking
         # A median needs at least two readings; one lost call out of three still gives a score.
         self.min_samples = min(2, samples)
+        self.caches = None  # an ai_cache.CacheManager, set by the app
 
     def evaluate(self, title: str, body: str, min_length: int = MIN_FLOAT_LENGTH) -> PrismResult:
         foul = foul_reason(body, min_length)
@@ -50,22 +53,25 @@ class PrismEngine:
     def _samples(self, title: str, body: str) -> list[PrismSample]:
         if not self.api_key:
             return [mock_sample(title, body)] * self.sample_count
-        prompt = build_prompt(title, body)
+        prompt = user_part(title, body)
+        cache = self.caches.for_request("prism", self.model, PREFIX) if self.caches else None
+        # Each reading runs in a copy of this context, so the request's cost meter sees it.
+        contexts = [contextvars.copy_context() for _ in range(self.sample_count)]
         with ThreadPoolExecutor(max_workers=self.sample_count) as pool:
-            got = list(pool.map(lambda _: self._one(prompt), range(self.sample_count)))
+            got = list(pool.map(lambda ctx: ctx.run(self._one, prompt, cache), contexts))
         samples = [s for s in got if s is not None]
         if len(samples) < self.min_samples:
             raise RuntimeError(f"only {len(samples)} of {self.sample_count} readings")
         return samples
 
-    def _one(self, prompt: str) -> PrismSample | None:
+    def _one(self, prompt: str, cache: str | None = None) -> PrismSample | None:
         """One independent reading, or None when the call or its JSON fails."""
         try:
             # With one reading there is no second to fall back on: a slow or dropped call is tried again
             # (one took 60 s in the 20261107 experiment). With three, a lost one is simply left out.
             single = self.sample_count == 1
             return PrismSample.model_validate(generate_json(
-                self.api_key, self.model, prompt, thinking=self.thinking,
+                self.api_key, self.model, prompt, thinking=self.thinking, prefix=PREFIX, cache=cache,
                 timeout=25.0 if single else 60.0, retries=1 if single else 0))
         except Exception as e:  # noqa: BLE001 — any lost reading is just one fewer sample
             # Only where it failed: a validation message would quote the reading, and so the writing.

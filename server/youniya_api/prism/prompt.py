@@ -80,5 +80,13 @@ moods, observation, telescope_teaser, rewrite_question, signal_sentences
 """
 
 
+# The fixed part first (cacheable, the same for everyone), then the writing.
+PREFIX = SYSTEM_PROMPT + "\n\n"
+
+
+def user_part(title: str, body: str) -> str:
+    return f'# 사용자 글\n제목: {title}\n"""\n{body}\n"""'
+
+
 def build_prompt(title: str, body: str) -> str:
-    return f'{SYSTEM_PROMPT}\n\n# 사용자 글\n제목: {title}\n"""\n{body}\n"""'
+    return PREFIX + user_part(title, body)

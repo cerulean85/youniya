@@ -18,6 +18,8 @@ from sqlalchemy.orm import sessionmaker
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from youniya_api import membership, monthly  # noqa: E402
+from youniya_api.ai_cache import CacheManager  # noqa: E402
+from youniya_api.telescope import MONTHLY_PROMPT  # noqa: E402
 from youniya_api.config import Settings  # noqa: E402
 from youniya_api.db import make_engine  # noqa: E402
 from youniya_api.models import Subscription, User  # noqa: E402
@@ -38,13 +40,22 @@ def main() -> int:
     now = datetime.now(timezone.utc)
     user_ids = set(db.scalars(select(Subscription.user_id).where(Subscription.status.in_(membership.LIVE),
                                                                  Subscription.expires_at > now)))
+    # One explicit cache of the fixed prompt for the whole run, deleted at the end. Too small to cache
+    # on gemini-3.8-flash for now (441 of the 1,024 tokens needed): then every call goes in full.
+    caches = CacheManager(sessionmaker(make_engine(settings.database_url)), settings.gemini_api_key)
+    cache = None
+    if settings.gemini_api_key and user_ids:
+        try:
+            cache = caches.batch("monthly", settings.telescope_model, MONTHLY_PROMPT + "\n\n")
+        except Exception as e:  # noqa: BLE001
+            logging.warning("monthly cache not made: %s", type(e).__name__)
     made = skipped = failed = 0
     for user_id in sorted(user_ids):
         user = db.get(User, user_id)
         if user is None or monthly.existing(db, user, month):
             continue
         try:
-            monthly.make(db, user, month, cipher, settings)
+            monthly.make(db, user, month, cipher, settings, cache)
             made += 1
         except monthly.NotEnoughStars:
             skipped += 1
@@ -52,6 +63,8 @@ def main() -> int:
             db.rollback()
             failed += 1
             logging.warning("monthly report for %s failed: %s", user_id, type(e).__name__)
+    if cache:
+        caches.drop("monthly")
     print(f"{month}: {made} made, {skipped} with too few stars, {failed} failed (tried again tomorrow)")
     return 1 if failed else 0
 

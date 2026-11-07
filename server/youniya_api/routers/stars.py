@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from ..deps import ApiError, consented_user, get_cipher, get_db
 from ..models import Draft, Nebula, Star, User
 from ..prism.filters import CRISIS_GUIDANCE, has_crisis_signal
-from .. import allowance, coins, membership
+from .. import ai_cost, allowance, coins, membership
 from ..rules import (DEEP_DEPTH_SCORE, FIRST_STAGE_STARS, STAGE_NAMES, STAR_FLOAT_COST, SUPERNOVA_STARLIGHT,
                      growth_stage)
 from ..security import Cipher
@@ -62,11 +62,12 @@ def _float(db: Session, user: User, star: Star, request: Request, cipher: Cipher
     The day's free float first, then STAR_FLOAT_COST; charged only when the star is read."""
     settings = request.app.state.settings
     per_day = settings.free_stars_per_day
-    member = membership.is_member(db, settings, user)  # 별지기 멤버십: no limit
+    member = membership.is_member(db, settings, user) and membership.left_today(user, "star") > 0
     free = member or allowance.stars_left(user, per_day) > 0
     if not free and user.coins < STAR_FLOAT_COST:
         raise _insufficient(user, STAR_FLOAT_COST)  # 29, before anything is stored
-    result = request.app.state.prism.evaluate(cipher.dec(star.title_enc), cipher.dec(star.body_enc))
+    with ai_cost.metered(db, user):
+        result = request.app.state.prism.evaluate(cipher.dec(star.title_enc), cipher.dec(star.body_enc))
     if result.status in ("too_short", "foul"):
         raise ApiError(422, result.status, result.message)
     if result.status == "failed":
@@ -75,7 +76,9 @@ def _float(db: Session, user: User, star: Star, request: Request, cipher: Cipher
     if result.status != "ok":
         return result.status, 0
     charged = 0
-    if not member and not (free and allowance.use_star(db, user, per_day)):
+    # A member's daily ones first, then the free one everybody has, then coins.
+    used_free = (member and membership.use_today(db, user, "star")) or (free and allowance.use_star(db, user, per_day))
+    if not used_free:
         if not coins.spend(db, user, STAR_FLOAT_COST, "별 띄우기"):
             db.rollback()
             raise _insufficient(user, STAR_FLOAT_COST)

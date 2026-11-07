@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .. import allowance, coins, membership
+from .. import ai_cost, allowance, coins, membership
 from ..deps import ApiError, consented_user, get_cipher, get_db
 from ..models import Star, TelescopeReport, User
 from ..rules import TELESCOPE_COST
@@ -37,7 +37,7 @@ def week_label(dt: datetime) -> str:
 
 def _free_left(db: Session, request: Request, user: User) -> int:
     member = membership.is_member(db, request.app.state.settings, user)
-    return allowance.telescopes_left(user) + (membership.telescopes_left(user) if member else 0)
+    return allowance.telescopes_left(user) + (membership.left_today(user, "telescope") if member else 0)
 
 
 def _view(r: TelescopeReport, cipher: Cipher) -> dict:
@@ -73,14 +73,17 @@ def create_report(body: ReportIn, request: Request, user: User = Depends(consent
     texts = [StarText(id=s.id, title=cipher.dec(s.title_enc), body=cipher.dec(s.body_enc),
                       created_at=iso(s.created_at), analysis=cipher.dec_json(s.analysis_enc)) for s in stars]
     try:
-        report = build_report(texts, settings.gemini_api_key, settings.telescope_model, settings.telescope_thinking)
+        with ai_cost.metered(db, user):
+            report = build_report(texts, settings.gemini_api_key, settings.telescope_model,
+                                  settings.telescope_thinking, request.app.state.caches)
     except Exception:
         raise ApiError(502, "analysis_failed", "별을 읽지 못했어요. 코인은 차감되지 않았어요.")
 
     # Charged only once the report exists (Protoss punch concept 4.4).
-    # A member's monthly ones go first, then the free monthly one, then the sign-up one.
+    # A member's daily ones go first, then the free monthly one, then the sign-up one.
     member = membership.is_member(db, request.app.state.settings, user)
-    used_free = free and ((member and membership.use_telescope(db, user)) or allowance.use_telescope(db, user))
+    used_free = free and ((member and membership.use_today(db, user, "telescope"))
+                          or allowance.use_telescope(db, user))
     if not used_free and not coins.spend(db, user, TELESCOPE_COST, "마음 망원경"):
         db.rollback()
         raise ApiError(402, "insufficient_coins", "코인이 조금 부족해요.", coins=user.coins, cost=TELESCOPE_COST)

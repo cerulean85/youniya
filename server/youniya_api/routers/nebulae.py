@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .. import allowance, coins, membership, privacy
+from .. import ai_cost, allowance, coins, membership, privacy
 from ..blocks import visible_shares
 from ..deps import ApiError, consented_user, get_cipher, get_db
 from ..models import Beside, Nebula, NebulaShare, Resonance, Star, StarShare, User
@@ -167,7 +167,8 @@ def story(nebula_id: str, request: Request, user: User = Depends(consented_user)
           cipher: Cipher = Depends(get_cipher)):
     """83: each star's key sentence in time order. The sentences are never changed."""
     n = owned_nebula(db, user, nebula_id)
-    member = membership.is_member(db, request.app.state.settings, user)
+    member = (membership.is_member(db, request.app.state.settings, user)
+              and membership.left_today(user, "story") > 0)
     return _story(n, _stars(db, n), cipher) | _story_offer(user, member)
 
 
@@ -178,7 +179,8 @@ def polish(nebula_id: str, request: Request, user: User = Depends(consented_user
     n = owned_nebula(db, user, nebula_id)
     stars = _stars(db, n)
     current = _story(n, stars, cipher)
-    member = membership.is_member(db, request.app.state.settings, user)  # 별지기 멤버십: no limit
+    member = (membership.is_member(db, request.app.state.settings, user)
+              and membership.left_today(user, "story") > 0)
     if current["polished"] and len(n.story_bridges) == max(0, len(stars) - 1):
         return current | _story_offer(user, member) | {"charged": 0}
     free = member or allowance.stories_left(user) > 0
@@ -186,11 +188,12 @@ def polish(nebula_id: str, request: Request, user: User = Depends(consented_user
         raise ApiError(402, "insufficient_coins", "코인이 조금 부족해요.", coins=user.coins, cost=STORY_POLISH_COST)
     settings = request.app.state.settings
     try:
-        bridges = story_bridges([e["sentence"] for e in current["entries"]], settings.gemini_api_key,
-                                settings.telescope_model, settings.telescope_thinking)
+        with ai_cost.metered(db, user):
+            bridges = story_bridges([e["sentence"] for e in current["entries"]], settings.gemini_api_key,
+                                    settings.telescope_model, settings.telescope_thinking, request.app.state.caches)
     except Exception:
         raise ApiError(502, "analysis_failed", "이야기를 다듬지 못했어요. 코인은 차감되지 않았어요.")
-    used_free = member or (free and allowance.use_story(db, user))
+    used_free = (member and membership.use_today(db, user, "story")) or (free and allowance.use_story(db, user))
     if not used_free and not coins.spend(db, user, STORY_POLISH_COST, "서사 다듬기"):
         db.rollback()
         raise ApiError(402, "insufficient_coins", "코인이 조금 부족해요.", coins=user.coins, cost=STORY_POLISH_COST)

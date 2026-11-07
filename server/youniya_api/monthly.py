@@ -2,9 +2,11 @@
 
 from datetime import datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from . import ai_cost
 from .models import MonthlyReport, Star, User
 from .rules import MONTHLY_REPORT_MIN_STARS
 from .security import Cipher
@@ -35,8 +37,12 @@ class NotEnoughStars(Exception):
     pass
 
 
-def make(db: Session, user: User, month: str, cipher: Cipher, settings) -> MonthlyReport:
-    """Raises NotEnoughStars, or whatever the model call raised (try again another day)."""
+def make(db: Session, user: User, month: str, cipher: Cipher, settings, cache: str | None = None) -> MonthlyReport:
+    """One report a month, never remade. Requests racing for the same month make one: on Postgres
+    they queue on a lock and the later ones find the first one's report.
+    Raises NotEnoughStars, or whatever the model call raised (try again another day)."""
+    if db.get_bind().dialect.name == "postgresql":
+        db.execute(text("SELECT pg_advisory_xact_lock(hashtext(:k))"), {"k": f"monthly:{user.id}:{month}"})
     row = existing(db, user, month)
     if row:
         return row
@@ -45,11 +51,16 @@ def make(db: Session, user: User, month: str, cipher: Cipher, settings) -> Month
         raise NotEnoughStars(len(stars))
     texts = [StarText(id=s.id, title=cipher.dec(s.title_enc), body=cipher.dec(s.body_enc),
                       created_at=iso(s.created_at), analysis=cipher.dec_json(s.analysis_enc)) for s in stars]
-    report = build_monthly(month, texts, settings.gemini_api_key, settings.telescope_model,
-                           settings.telescope_thinking)
+    with ai_cost.metered(db, user):
+        report = build_monthly(month, texts, settings.gemini_api_key, settings.telescope_model,
+                               settings.telescope_thinking, cache)
     row = MonthlyReport(user_id=user.id, month=month, report_enc=cipher.enc_json(report))
     db.add(row)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:  # another request made it first (SQLite has no lock)
+        db.rollback()
+        return existing(db, user, month)
     return row
 
 

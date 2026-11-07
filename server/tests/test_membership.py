@@ -48,41 +48,51 @@ def test_everything_is_hidden_while_off(client):
     assert client.post("/v1/membership/verify", json={"signedTransaction": "x"}, headers=h).status_code == 404
 
 
-def test_member_gets_unlimited_stars_story_15_telescopes_and_every_sky(make_app):
+def test_member_gets_ten_a_day_of_each_then_the_free_ones_then_coins(make_app):
     apple, client = _app(make_app)
     h = sign_in(client)
     assert client.get("/v1/membership", headers=h).json()["active"] is False
     assert client.patch("/v1/me/settings", json={"sky": "rose"}, headers=h).status_code == 403
 
     user_id, joined = _join(apple, client, h)
-    assert joined | {"expires_at": None} == {"active": True, "product_id": "membership_monthly", "expires_at": None,
-                                             "auto_renew": True, "status": "active", "telescope_left_this_month": 15}
+    assert joined | {"expires_at": None} == {
+        "active": True, "product_id": "membership_monthly", "expires_at": None, "auto_renew": True,
+        "status": "active", "stars_left_today": 10, "telescope_left_today": 10, "story_left_today": 10}
     me = client.get("/v1/me", headers=h).json()
-    assert me["membership"]["active"] is True and me["free_telescope"] == 17  # 15 + this month's + sign-up
-
-    charged = [client.post("/v1/stars", json={"mood": "insight", "title": "t", "body": DEEP_BODY, "mode": "float"},
-                           headers=h).json()["charged"] for _ in range(3)]
-    assert charged == [0, 0, 0] and client.get("/v1/coins", headers=h).json()["coins"] == 0
-    ids = [float_star(client, h)["id"] for _ in range(3)]
-    for name in ("하나", "둘"):
-        n = client.post("/v1/nebulae", json={"name": name, "star_ids": ids}, headers=h).json()
-        assert client.post(f"/v1/nebulae/{n['id']}/story/polish", headers=h).json()["charged"] == 0
+    assert me["membership"]["active"] is True
+    assert (me["free_star_today"], me["free_telescope"], me["free_story"]) == (11, 12, 11)  # member + free ones
     assert client.patch("/v1/me/settings", json={"sky": "rose"}, headers=h).json()["sky"] == "rose"
 
-    # The membership's 15 go first; the free monthly and sign-up ones are still there after.
-    for _ in range(2):
-        assert client.post("/v1/telescope/reports", json={}, headers=h).json()["charged"] == 0
-    assert client.get("/v1/membership", headers=h).json()["telescope_left_this_month"] == 13
-    with client.app.state.sessions() as db:  # the other 13 (the rate limit allows 10 an hour)
+    star = {"mood": "insight", "title": "t", "body": DEEP_BODY, "mode": "float"}
+    charged = [client.post("/v1/stars", json=star, headers=h).json()["charged"] for _ in range(3)]
+    assert charged == [0, 0, 0]
+    m = client.get("/v1/membership", headers=h).json()
+    assert m["stars_left_today"] == 7 and client.get("/v1/me", headers=h).json()["free_star_today"] == 8
+
+    # After today's 10 the free one everybody has, then coins.
+    with client.app.state.sessions() as db:
         from youniya_api.models import User
 
-        db.get(User, user_id).member_telescope_count = 15
+        u = db.get(User, user_id)
+        u.member_star_count = u.member_telescope_count = u.member_story_count = 10
         db.commit()
-    assert client.get("/v1/membership", headers=h).json()["telescope_left_this_month"] == 0
-    assert client.get("/v1/telescope/offer", headers=h).json()["free_left"] == 2
-    for _ in range(2):
+    assert client.post("/v1/stars", json=star, headers=h).json()["charged"] == 0  # the daily free one
+    r = client.post("/v1/stars", json=star, headers=h)
+    assert r.status_code == 402 and r.json()["error"]["cost"] == 5
+    for _ in range(2):  # this month's free one and the sign-up one
         assert client.post("/v1/telescope/reports", json={}, headers=h).json()["charged"] == 0
     assert client.post("/v1/telescope/reports", json={}, headers=h).json()["error"]["cost"] == 20
+
+    # A new Korean day: ten more of each.
+    import youniya_api.allowance as allowance
+
+    real = allowance.today
+    allowance.today = lambda: "2099-01-01"
+    try:
+        assert client.get("/v1/membership", headers=h).json()["telescope_left_today"] == 10
+        assert client.post("/v1/telescope/reports", json={}, headers=h).json()["charged"] == 0
+    finally:
+        allowance.today = real
 
 
 def test_notifications_keep_the_subscription_current(make_app):
@@ -108,7 +118,7 @@ def test_notifications_keep_the_subscription_current(make_app):
     client.post(URL, json=_note(apple, "REFUND", _tx(user_id, transactionId="t3", revocationDate=1)))
     assert client.get("/v1/membership", headers=h).json() | {"expires_at": None} == {
         "active": False, "product_id": "membership_monthly", "expires_at": None, "auto_renew": False,
-        "status": "revoked", "telescope_left_this_month": 0}
+        "status": "revoked", "stars_left_today": 0, "telescope_left_today": 0, "story_left_today": 0}
 
     # Someone else's purchase cannot be claimed.
     other = sign_in(client, "other")

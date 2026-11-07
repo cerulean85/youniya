@@ -51,8 +51,9 @@ FREE_SKIES = ("violet", "ocean")
 
 # 별지기 멤버십 (v1.1, behind MEMBERSHIP=1). One auto-renewable subscription group, 7-day free trial.
 MEMBERSHIP_PRODUCTS = {"membership_monthly": 2900, "membership_yearly": 29000}  # KRW
-MEMBER_TELESCOPES_PER_MONTH = 15  # calendar month; after that, 20 coins
+MEMBER_DAILY_LIMIT = 10  # each of floats, telescope reports and story polish, a Korean day; then coins
 MONTHLY_REPORT_MIN_STARS = 5  # stars floated in the month
+AI_COST_ALERT_KRW = 2000  # a month's model cost for one account above this is logged for the operator
 SOUNDS = ("밤바람", "미세한 성간 주파수")
 INQUIRY_KINDS = ("payment", "account", "other")  # 결제 · 계정 · 기타
 

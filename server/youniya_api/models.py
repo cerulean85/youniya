@@ -45,9 +45,11 @@ class User(Base):
     free_star_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     free_telescope_month: Mapped[str | None] = mapped_column(String(7))
     free_story_used: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
-    # 별지기 멤버십: telescope reports used this calendar month out of MEMBER_TELESCOPES_PER_MONTH.
-    member_telescope_month: Mapped[str | None] = mapped_column(String(7))
+    # 별지기 멤버십: uses on member_day (Korean day) out of MEMBER_DAILY_LIMIT each.
+    member_day: Mapped[str | None] = mapped_column(String(10))
+    member_star_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     member_telescope_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    member_story_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
 
 class RefreshToken(Base):
@@ -329,3 +331,26 @@ class MonthlyReport(Base):
     month: Mapped[str] = mapped_column(String(7))  # YYYY-MM, Korean time
     report_enc: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class AiCost(Base):
+    """What the model cost for one account in one month (KRW, from usageMetadata)."""
+
+    __tablename__ = "ai_costs"
+
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    month: Mapped[str] = mapped_column(String(7), primary_key=True)
+    krw: Mapped[float] = mapped_column(Float, default=0.0)
+    calls: Mapped[int] = mapped_column(Integer, default=0)
+    alerted: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class AiCache(Base):
+    """An explicit Gemini context cache for one feature's fixed prompt, shared by every instance."""
+
+    __tablename__ = "ai_caches"
+
+    feature: Mapped[str] = mapped_column(String(16), primary_key=True)
+    key: Mapped[str] = mapped_column(String(64))  # model + prompt hash: a new prompt or model, a new cache
+    name: Mapped[str | None] = mapped_column(String(128))  # None: too small to cache
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

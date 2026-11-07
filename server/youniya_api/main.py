@@ -5,6 +5,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import sessionmaker
 
+from .ai_cache import CacheManager
 from .config import Settings
 from .db import make_engine
 from .deps import ApiError
@@ -56,6 +57,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                       else None)
     app.state.prism = PrismEngine(settings.gemini_api_key, settings.prism_model, settings.prism_samples,
                                   thinking=settings.prism_thinking)
+    app.state.caches = CacheManager(app.state.sessions, settings.gemini_api_key)
+    app.state.prism.caches = app.state.caches
 
     @app.exception_handler(ApiError)
     async def api_error(_: Request, e: ApiError):

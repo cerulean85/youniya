@@ -2738,7 +2738,7 @@
           "membership"
         ],
         "summary": "Status",
-        "description": "{active, product_id, expires_at, auto_renew, status, telescope_left_this_month}",
+        "description": "{active, product_id, expires_at, auto_renew, status, stars_left_today, telescope_left_today, story_left_today}",
         "operationId": "status_v1_membership_get",
         "responses": {
           "200": {
