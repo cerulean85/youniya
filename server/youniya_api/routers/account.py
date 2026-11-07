@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
+from ..blocks import hidden_users
 from ..deps import current_user, get_cipher, get_db
 from ..export import StarEntry, as_pdf, as_text
 from ..models import DeviceToken, Inquiry, Nebula, NebulaShare, Resonance, Star, StarlightLine, StarShare, User
@@ -136,14 +137,16 @@ def my_shares(user: User = Depends(current_user), db: Session = Depends(get_db),
                        .where(StarShare.user_id == user.id).order_by(StarShare.created_at.desc())).all()
     nebulae = db.scalars(select(NebulaShare).where(NebulaShare.user_id == user.id)
                          .order_by(NebulaShare.created_at.desc())).all()
+    hidden = hidden_users(db, user.id)
     return {
         "stars": [{"id": sh.id, "star_id": sh.star_id, "name": sh.name, "title": cipher.dec(st.title_enc),
                    "written_at": iso(st.created_at), "starlight": st.starlight, "created_at": iso(sh.created_at),
-                   "resonances": resonances("star", sh.id)} for sh, st in stars],
+                   "resonances": resonances("star", sh.id), "hidden": sh.hidden} for sh, st in stars],
         "nebulae": [{"id": n.id, "nebula_id": n.nebula_id, "name": n.name, "created_at": iso(n.created_at),
-                     "resonances": resonances("nebula", n.id),
+                     "resonances": resonances("nebula", n.id), "hidden": n.hidden,
                      "lines": db.scalar(select(func.count()).select_from(StarlightLine)
-                                        .where(StarlightLine.share_id == n.id))} for n in nebulae],
+                                        .where(StarlightLine.share_id == n.id,
+                                               StarlightLine.user_id.not_in(hidden)))} for n in nebulae],
     }
 
 

@@ -11,7 +11,8 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from ..deps import ApiError, get_cipher, get_db
-from ..models import AdminLog, DeviceToken, Inquiry, LineReport, NebulaShare, StarlightLine, User
+from ..models import (AdminLog, DeviceToken, Inquiry, LineReport, NebulaShare, ShareReport, StarlightLine, StarShare,
+                      User)
 from ..push import Message, is_night_kst, notify
 from ..security import Cipher
 from ..views import iso
@@ -41,6 +42,7 @@ def status(request: Request):
         "refund_answers": state.appstore is not None,
         "real_model": bool(settings.gemini_api_key),
         "error_reports": bool(settings.sentry_dsn),
+        "invite_login": settings.invite_login,
         "apple_sign_in": bool(settings.apple_client_ids),
         "google_sign_in": bool(settings.google_client_ids),
         "dev_login": settings.dev_login,
@@ -100,8 +102,20 @@ def reported_lines(db: Session = Depends(get_db)):
     items = [{"line_id": line.id, "text": line.text, "nebula": name, "hidden": line.hidden,
               "created_at": iso(line.created_at), "reasons": by_line[line.id],
               "reports": sum(by_line[line.id].values())} for line, name in rows]
+    shares = []
+    share_counts = (select(ShareReport.kind, ShareReport.target_id, ShareReport.reason, func.count().label("n"))
+                    .group_by(ShareReport.kind, ShareReport.target_id, ShareReport.reason))
+    by_share: dict[tuple[str, str], dict[str, int]] = {}
+    for kind, target_id, reason, n in db.execute(share_counts):
+        by_share.setdefault((kind, target_id), {})[reason] = n
+    for (kind, target_id), reasons in by_share.items():
+        row = db.get(StarShare if kind == "star" else NebulaShare, target_id)
+        if row:
+            shares.append({"kind": kind, "id": row.id, "name": row.name, "quote": row.quote, "hidden": row.hidden,
+                           "created_at": iso(row.created_at), "reasons": reasons, "reports": sum(reasons.values())})
     _log(db, "list_reports")
-    return {"items": sorted(items, key=lambda i: -i["reports"])}
+    return {"items": sorted(items, key=lambda i: -i["reports"]),
+            "shares": sorted(shares, key=lambda i: -i["reports"])}
 
 
 # 101 "살펴본 뒤 결과를 알림으로 알려 드릴게요". The line itself is never quoted.
@@ -128,6 +142,27 @@ def moderate_line(line_id: str, action: Literal["hide", "restore"], request: Req
     _log(db, f"{action}_line", line_id)
     sent = notify(db, request.app.state.push, [r.user_id for r in pending], REPORT_RESULT[action])
     return {"line_id": line_id, "hidden": line.hidden, "reporters_told": len(pending), "push": sent}
+
+
+SHARE_RESULT_TITLE = {"star": "신고하신 별을 살펴봤어요", "nebula": "신고하신 성운을 살펴봤어요"}
+
+
+@router.post("/shares/{kind}/{share_id}/{action}")
+def moderate_share(kind: Literal["star", "nebula"], share_id: str, action: Literal["hide", "restore"],
+                   request: Request, db: Session = Depends(get_db)):
+    """The same as for lines, for a plaza star or nebula. A reporter keeps not seeing it after a restore."""
+    row = db.get(StarShare if kind == "star" else NebulaShare, share_id)
+    if row is None:
+        raise ApiError(404, "not_found", "찾지 못했어요.")
+    row.hidden = action == "hide"
+    pending = db.scalars(select(ShareReport).where(ShareReport.kind == kind, ShareReport.target_id == share_id,
+                                                   ShareReport.notified_at.is_(None))).all()
+    for r in pending:
+        r.notified_at = datetime.now(timezone.utc)
+    _log(db, f"{action}_{kind}", share_id)
+    message = Message(SHARE_RESULT_TITLE[kind], REPORT_RESULT[action].body, "report_result")
+    sent = notify(db, request.app.state.push, [r.user_id for r in pending], message)
+    return {"kind": kind, "id": share_id, "hidden": row.hidden, "reporters_told": len(pending), "push": sent}
 
 
 class AnnouncementIn(BaseModel):

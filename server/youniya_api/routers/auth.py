@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
+from .. import invites
 from ..deps import ApiError, get_db
 from ..models import RefreshToken, User
 from ..security import REFRESH_TTL, hash_token, issue_access_token, new_refresh_token
@@ -28,6 +29,11 @@ class SignIn(BaseModel):
 
 class DevSignIn(BaseModel):
     name: str = Field(..., min_length=1, max_length=64)
+
+
+class InviteSignIn(BaseModel):
+    login: str = Field(..., min_length=1, max_length=64)
+    password: str = Field(..., min_length=1, max_length=128)
 
 
 class Refresh(BaseModel):
@@ -70,6 +76,18 @@ def dev_sign_in(body: DevSignIn, request: Request, db: Session = Depends(get_db)
     if not request.app.state.settings.dev_login:
         raise ApiError(404, "not_found", "찾지 못했어요.")
     return _session_for(db, "dev", body.name, request.app.state.settings.jwt_secret)
+
+
+@router.post("/invite", dependencies=[per_ip("invite", 10, 60)])
+def invite_sign_in(body: InviteSignIn, request: Request, db: Session = Depends(get_db)):
+    """초대 계정 (INVITE_LOGIN=1): accounts an operator made with tools/invite.py. No sign-up.
+    A wrong login and a wrong password get the same answer."""
+    if not request.app.state.settings.invite_login:
+        raise ApiError(404, "not_found", "찾지 못했어요.")
+    user = invites.check(db, body.login, body.password)
+    if user is None:
+        raise ApiError(401, "invalid_credentials", "아이디나 비밀번호를 확인해 주세요.")
+    return _tokens(db, user, request.app.state.settings.jwt_secret)
 
 
 def _session_for(db: Session, provider: str, sub: str, secret: str) -> dict:

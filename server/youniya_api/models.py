@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import (JSON, Boolean, CheckConstraint, DateTime, Float, ForeignKey, Index, Integer, String, Text,
-                        UniqueConstraint)
+                        UniqueConstraint, false)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -94,6 +94,8 @@ class StarShare(Base):
     moods: Mapped[list] = mapped_column(JSON, default=list)
     depth_level: Mapped[int] = mapped_column(Integer)
     shape: Mapped[dict] = mapped_column(JSON)
+    # Taken down for everyone: three reports, or an operator (101).
+    hidden: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
 
 
@@ -127,6 +129,8 @@ class NebulaShare(Base):
     depth_level: Mapped[int] = mapped_column(Integer)
     receive_lines: Mapped[bool] = mapped_column(Boolean, default=True)
     quote: Mapped[str | None] = mapped_column(Text)
+    # Taken down for everyone: three reports, or an operator (101).
+    hidden: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
 
 
@@ -174,6 +178,19 @@ class LineReport(Base):
     reason: Mapped[str] = mapped_column(String(16))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     # When the reporter was told the outcome (101 "결과를 알림으로 알려 드릴게요"). Told once.
+    notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class ShareReport(Base):
+    """신고하기 for a plaza star or nebula, as LineReport is for a line."""
+
+    __tablename__ = "share_reports"
+
+    kind: Mapped[str] = mapped_column(String(8), primary_key=True)  # star | nebula
+    target_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    reason: Mapped[str] = mapped_column(String(16))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
@@ -248,3 +265,28 @@ class DeviceToken(Base):
     user_id: Mapped[str] = user_fk()
     environment: Mapped[str] = mapped_column(String(16))  # "production" | "sandbox"
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+
+
+class Block(Base):
+    """차단 (App Store 1.2). One-sided to make, two-sided to hide: neither sees the other's shares or lines.
+    The blocker never learns who it was; the blocked never learns they were blocked."""
+
+    __tablename__ = "blocks"
+    __table_args__ = (UniqueConstraint("blocker_id", "blocked_id"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    blocker_id: Mapped[str] = user_fk()
+    blocked_id: Mapped[str] = user_fk()
+    source: Mapped[str] = mapped_column(String(8))  # line | star | nebula: where it was blocked from
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class InviteAccount(Base):
+    """초대 계정 (App Review): made by an operator, signed in with login and password. No sign-up."""
+
+    __tablename__ = "invite_accounts"
+
+    login: Mapped[str] = mapped_column(String(64), primary_key=True)
+    password_hash: Mapped[str] = mapped_column(String(200))  # argon2id
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

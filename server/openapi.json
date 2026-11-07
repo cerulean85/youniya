@@ -166,6 +166,46 @@
         }
       }
     },
+    "/v1/auth/invite": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Invite Sign In",
+        "description": "초대 계정 (INVITE_LOGIN=1): accounts an operator made with tools/invite.py. No sign-up.\nA wrong login and a wrong password get the same answer.",
+        "operationId": "invite_sign_in_v1_auth_invite_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteSignIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/auth/{provider}": {
       "post": {
         "tags": [
@@ -2487,6 +2527,75 @@
         }
       }
     },
+    "/v1/plaza/{kind}/{target_id}/report": {
+      "post": {
+        "tags": [
+          "plaza"
+        ],
+        "summary": "Report Share",
+        "description": "100 신고하기 for a plaza star or nebula. It leaves the reporter's plaza at once;\nthree reports take it down for everyone until an operator looks.",
+        "operationId": "report_share_v1_plaza__kind___target_id__report_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "star",
+                "nebula"
+              ],
+              "type": "string",
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "target_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Target Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/youniya_api__routers__plaza__ReportIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/plaza/tonight": {
       "get": {
         "tags": [
@@ -2510,6 +2619,113 @@
             "HTTPBearer": []
           }
         ]
+      }
+    },
+    "/v1/blocks": {
+      "get": {
+        "tags": [
+          "blocks"
+        ],
+        "summary": "List Blocks",
+        "description": "설정 › 차단한 별지기: when and where, never who.",
+        "operationId": "list_blocks_v1_blocks_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "blocks"
+        ],
+        "summary": "Create",
+        "operationId": "create_v1_blocks_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlockIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/blocks/{block_id}": {
+      "delete": {
+        "tags": [
+          "blocks"
+        ],
+        "summary": "Unblock",
+        "operationId": "unblock_v1_blocks__block_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "block_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Block Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/admin/status": {
@@ -2784,6 +3000,89 @@
         }
       }
     },
+    "/v1/admin/shares/{kind}/{share_id}/{action}": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Moderate Share",
+        "description": "The same as for lines, for a plaza star or nebula. A reporter keeps not seeing it after a restore.",
+        "operationId": "moderate_share_v1_admin_shares__kind___share_id___action__post",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "star",
+                "nebula"
+              ],
+              "type": "string",
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "share_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Share Id"
+            }
+          },
+          {
+            "name": "action",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "hide",
+                "restore"
+              ],
+              "type": "string",
+              "title": "Action"
+            }
+          },
+          {
+            "name": "x-admin-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/announcements": {
       "post": {
         "tags": [
@@ -2968,6 +3267,45 @@
         ],
         "title": "AnnouncementIn"
       },
+      "BlockIn": {
+        "properties": {
+          "line_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Id"
+          },
+          "star_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Star Id"
+          },
+          "nebula_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nebula Id"
+          }
+        },
+        "type": "object",
+        "title": "BlockIn"
+      },
       "Consent": {
         "properties": {
           "terms": {
@@ -3112,6 +3450,28 @@
           "body"
         ],
         "title": "InquiryIn"
+      },
+      "InviteSignIn": {
+        "properties": {
+          "login": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Login"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "login",
+          "password"
+        ],
+        "title": "InviteSignIn"
       },
       "LineIn": {
         "properties": {
@@ -3527,6 +3887,11 @@
               "other"
             ],
             "title": "Reason"
+          },
+          "block": {
+            "type": "boolean",
+            "title": "Block",
+            "default": false
           }
         },
         "type": "object",

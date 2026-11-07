@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import coins, privacy
+from ..blocks import visible_shares
 from ..deps import ApiError, consented_user, get_cipher, get_db
 from ..models import Beside, Nebula, NebulaShare, Resonance, Star, StarShare, User
 from ..rules import MAX_GUEST_STARS, MIN_NEBULA_STARS, NEBULA_SILHOUETTES, STORY_POLISH_COST
@@ -69,7 +70,8 @@ def create(body: NebulaIn, user: User = Depends(consented_user), db: Session = D
         raise ApiError(422, "invalid_edges", "별과 별을 다시 이어 주세요.")
     guests = list(dict.fromkeys(body.guest_share_ids))
     if guests:
-        ok = db.scalars(select(StarShare.id).where(StarShare.id.in_(guests), StarShare.user_id != user.id)).all()
+        ok = db.scalars(select(StarShare.id).where(StarShare.id.in_(guests), StarShare.user_id != user.id,
+                                                   *visible_shares(db, user.id, StarShare))).all()
         if len(ok) != len(guests):
             raise ApiError(422, "invalid_guests", "들일 수 없는 손님별이 있어요.")
     n = Nebula(user_id=user.id, name=body.name.strip(), silhouette=body.silhouette, star_ids=ids,
@@ -85,7 +87,7 @@ def guest_candidates(user: User = Depends(consented_user), db: Session = Depends
     rows = db.execute(
         select(StarShare, Resonance.created_at)
         .join(Resonance, (Resonance.kind == "star") & (Resonance.target_id == StarShare.id))
-        .where(Resonance.user_id == user.id)
+        .where(Resonance.user_id == user.id, *visible_shares(db, user.id, StarShare))
         .order_by(Resonance.created_at.desc())
     ).all()
     return {"items": [{"share_id": s.id, "name": s.name, "mood": s.mood, "resonated_at": iso(at)}
@@ -105,7 +107,7 @@ def list_nebulae(user: User = Depends(consented_user), db: Session = Depends(get
                      "created_at": iso(n.created_at)})
     beside = db.scalars(
         select(NebulaShare).join(Beside, (Beside.kind == "nebula") & (Beside.target_id == NebulaShare.id))
-        .where(Beside.user_id == user.id)
+        .where(Beside.user_id == user.id, *visible_shares(db, user.id, NebulaShare))
     ).all()
     return {"mine": mine,
             "beside": [{"share_id": s.id, "name": s.name, "depth_level": s.depth_level} for s in beside]}
@@ -122,7 +124,8 @@ def detail(nebula_id: str, user: User = Depends(consented_user), db: Session = D
         moods[s.mood] = moods.get(s.mood, 0) + 1
     # "5 · 다시 쓴 주제": rewrite chains among the nebula's stars.
     topics = {s.rewrite_of for s in stars if s.rewrite_of}
-    guests = db.scalars(select(StarShare).where(StarShare.id.in_(n.guest_share_ids))).all()
+    guests = db.scalars(select(StarShare).where(StarShare.id.in_(n.guest_share_ids),
+                                                *visible_shares(db, user.id, StarShare))).all()
     return {
         "id": n.id,
         "name": n.name,

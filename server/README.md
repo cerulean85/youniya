@@ -131,7 +131,7 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
 | Area | Endpoints | Screens |
 | :--- | :--- | :--- |
 | App | `GET /v1/app/status` | 40, 41 |
-| Auth | `POST /v1/auth/{apple,google}`, `/refresh`, `/logout` | 02, 39 |
+| Auth | `POST /v1/auth/{apple,google}`, `POST /v1/auth/invite` (`INVITE_LOGIN=1`), `/refresh`, `/logout` | 02, 39 |
 | Account | `GET /v1/me`, `POST /v1/me/consent`, `PATCH /v1/me/settings`, `PUT /v1/me/devices`, `DELETE /v1/me/devices/{token}`, `DELETE /v1/me`, `GET /v1/me/export?format=text\|pdf`, `GET·DELETE /v1/me/shares`, `POST /v1/inquiries` | 11, 87, 91–94, 113, 114, 32 |
 | Stars | `POST /v1/stars` (`mode: float \| keep`), `GET /v1/stars` (`state`, `mood`, `q`, `month`, `before`), `GET /v1/stars/summary`, `GET·DELETE /v1/stars/{id}`, `POST /v1/stars/{id}/float` | 05, 07, 12–16, 36, 104, 105, 115–119 |
 | Draft | `GET·PUT·DELETE /v1/drafts/current` | 34 |
@@ -141,7 +141,8 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
 | Nebulae | `POST·GET /v1/nebulae`, `GET /v1/nebulae/guest-candidates`, `GET /v1/nebulae/{id}`, `GET /v1/nebulae/{id}/story`, `POST …/story/polish`, `PUT·DELETE …/share` | 51–55, 70, 71, 80, 83–85, 96 |
 | Refunds | `POST /v1/storekit/notifications` (App Store Server Notifications V2 URL) | — |
 | Operator | `GET /v1/admin/status`, `POST /v1/admin/push-test`, `POST /v1/admin/error-test`, `POST /v1/admin/announcements`, `GET /v1/admin/reports`, `POST /v1/admin/lines/{id}/hide·restore`, `GET /v1/admin/inquiries`, `GET /v1/admin/logs` | — |
-| Plaza | `POST /v1/plaza/privacy-scan`, `PUT·DELETE /v1/stars/{id}/share`, `GET /v1/plaza/stars[/{id}]`, `GET /v1/plaza/nebulae[/{id}]`, `PUT·DELETE /v1/plaza/{star\|nebula}/{id}/resonance` and `…/beside`, `GET·POST /v1/plaza/nebulae/{id}/lines`, `POST /v1/plaza/lines/{id}/report`, `GET /v1/plaza/tonight` | 09, 19–22, 55, 69, 72–75, 79, 99–101, 103, 106, 107 |
+| Blocks | `POST·GET /v1/blocks`, `DELETE /v1/blocks/{id}` | 87-3, 100 |
+| Plaza | `POST /v1/plaza/privacy-scan`, `PUT·DELETE /v1/stars/{id}/share`, `GET /v1/plaza/stars[/{id}]`, `GET /v1/plaza/nebulae[/{id}]`, `PUT·DELETE /v1/plaza/{star\|nebula}/{id}/resonance` and `…/beside`, `GET·POST /v1/plaza/nebulae/{id}/lines`, `POST /v1/plaza/lines/{id}/report`, `POST /v1/plaza/{star|nebula}/{id}/report`, `GET /v1/plaza/tonight` | 09, 19–22, 55, 69, 72–75, 79, 99–101, 103, 106, 107 |
 
 ### Behaviour worth knowing
 
@@ -168,7 +169,9 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
 - **Plaza:**
   - A shared star carries only the one masked sentence its owner chose. A shared nebula carries only its outline, colours, depth and an optional masked sentence.
   - Others never see scores, ranks or 공명 counts. Owners see their counts in `GET /v1/me/shares`.
-  - A line someone reports disappears for them at once. Three reports hide it for everyone.
+  - A line, star or nebula someone reports disappears for them at once. Three reports hide it for everyone until an operator restores it (`POST /v1/admin/shares/{star|nebula}/{id}/hide|restore`).
+  - **Blocks** (App Store 1.2): `POST /v1/blocks` with one of `line_id`, `star_id` or `nebula_id` (the plaza share id) blocks whoever wrote it, also via `"block": true` on a report. Hiding goes both ways: neither sees the other's shares or lines anywhere. `GET /v1/blocks` lists when and where, never who.
+- **Invite accounts** (App Review): `tools/invite.py create LOGIN` makes one (argon2id, the password printed once); `POST /v1/auth/invite {login, password}` signs in when `INVITE_LOGIN=1`, 10 tries a minute per IP, the same `401 invalid_credentials` for a wrong login or password. `tools/seed_review.py` fills a review account and the plaza.
 - **Refunds:** A REFUND notification takes that purchase's coins back once. Only the coins left are taken: the balance stops at 0 (기획서 11.6).
 - **Notifications:** The server sends two kinds through APNs, and never puts writing or analyses in them.
   - **101 신고 결과:** When an operator hides or restores a reported line (`POST /v1/admin/lines/{id}/hide|restore`), each reporter is told once. The line is not quoted.

@@ -10,12 +10,14 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from .. import privacy
+from ..blocks import can_see, hidden_users, visible_shares
 from ..deps import ApiError, consented_user, get_cipher, get_db
-from ..models import Beside, LineReport, NebulaShare, Resonance, Star, StarlightLine, StarShare, User
+from ..models import Beside, LineReport, NebulaShare, Resonance, ShareReport, Star, StarlightLine, StarShare, User
 from ..rules import LINE_LIFETIME_HOURS, LINE_MAX_LENGTH, LINE_REPORT_REASONS
 from ..security import Cipher
 from ..views import KST, iso
 from ..ratelimit import per_user
+from .blocks import block
 from .stars import owned_star
 
 router = APIRouter(prefix="/v1", tags=["plaza"])
@@ -40,6 +42,7 @@ class LineIn(BaseModel):
 
 class ReportIn(BaseModel):
     reason: Literal[LINE_REPORT_REASONS]  # type: ignore[valid-type]
+    block: bool = False  # 100 "이 별지기도 차단하기"
 
 
 @router.post("/plaza/privacy-scan", dependencies=[per_user("scan", 60, 60)])
@@ -109,7 +112,8 @@ def _nebula_item(n: NebulaShare, res: set[str], bes: set[str]) -> dict:
 def plaza_stars(sort: Literal["new", "similar"] = "new", limit: int = Query(40, ge=1, le=100),
                 user: User = Depends(consented_user), db: Session = Depends(get_db)):
     """09 새로 뜬 것 · 나와 결이 비슷한"""
-    rows = db.scalars(select(StarShare).where(StarShare.user_id != user.id)
+    rows = db.scalars(select(StarShare)
+                      .where(StarShare.user_id != user.id, *visible_shares(db, user.id, StarShare))
                       .order_by(StarShare.created_at.desc()).limit(500)).all()
     if sort == "similar":
         rows = _similar_order(db, user, rows)
@@ -121,7 +125,7 @@ def plaza_stars(sort: Literal["new", "similar"] = "new", limit: int = Query(40, 
 def plaza_star(share_id: str, user: User = Depends(consented_user), db: Session = Depends(get_db)):
     """75 다른 이의 별"""
     s = db.get(StarShare, share_id)
-    if s is None:
+    if s is None or not can_see(db, user.id, s):
         raise ApiError(404, "not_found", "별을 찾지 못했어요.")
     return _star_item(s, *_marks(db, user, "star"))
 
@@ -131,7 +135,9 @@ def plaza_nebulae(filter: Literal["similar", "new", "beside"] = "similar", limit
                   user: User = Depends(consented_user), db: Session = Depends(get_db)):
     """72 나와 비슷한 결 · 새로 띄운 성운 · 곁에 둔 성운"""
     res, bes = _marks(db, user, "nebula")
-    stmt = select(NebulaShare).where(NebulaShare.user_id != user.id).order_by(NebulaShare.created_at.desc())
+    stmt = (select(NebulaShare)
+            .where(NebulaShare.user_id != user.id, *visible_shares(db, user.id, NebulaShare))
+            .order_by(NebulaShare.created_at.desc()))
     if filter == "beside":
         stmt = stmt.where(NebulaShare.id.in_(bes))
     rows = db.scalars(stmt.limit(500)).all()
@@ -140,9 +146,9 @@ def plaza_nebulae(filter: Literal["similar", "new", "beside"] = "similar", limit
     return {"items": [_nebula_item(n, res, bes) for n in rows[:limit]]}
 
 
-def _nebula_share(db: Session, share_id: str) -> NebulaShare:
+def _nebula_share(db: Session, share_id: str, user: User) -> NebulaShare:
     n = db.get(NebulaShare, share_id)
-    if n is None:
+    if n is None or (n.user_id != user.id and not can_see(db, user.id, n)):
         raise ApiError(404, "not_found", "성운을 찾지 못했어요.")
     return n
 
@@ -150,12 +156,12 @@ def _nebula_share(db: Session, share_id: str) -> NebulaShare:
 @router.get("/plaza/nebulae/{share_id}")
 def plaza_nebula(share_id: str, user: User = Depends(consented_user), db: Session = Depends(get_db)):
     """73 다른 이의 성운"""
-    return _nebula_item(_nebula_share(db, share_id), *_marks(db, user, "nebula"))
+    return _nebula_item(_nebula_share(db, share_id, user), *_marks(db, user, "nebula"))
 
 
 def _target(db: Session, user: User, kind: str, target_id: str):
     row = db.get(_MODELS[kind], target_id)
-    if row is None:
+    if row is None or (row.user_id != user.id and not can_see(db, user.id, row)):
         raise ApiError(404, "not_found", "찾지 못했어요.")
     if row.user_id == user.id:
         raise ApiError(422, "own_share", "내가 나눈 것이에요.")
@@ -202,11 +208,12 @@ def _line_cutoff() -> datetime:
 @router.get("/plaza/nebulae/{share_id}/lines")
 def lines(share_id: str, user: User = Depends(consented_user), db: Session = Depends(get_db)):
     """74: lines from the last day, newest first. Lines I reported are hidden from me at once."""
-    share = _nebula_share(db, share_id)
+    share = _nebula_share(db, share_id, user)
     reported = select(LineReport.line_id).where(LineReport.user_id == user.id)
     rows = db.scalars(select(StarlightLine).where(
         StarlightLine.share_id == share.id, StarlightLine.created_at >= _line_cutoff(),
         StarlightLine.hidden.is_(False), StarlightLine.id.not_in(reported),
+        StarlightLine.user_id.not_in(hidden_users(db, user.id)),
     ).order_by(StarlightLine.created_at.desc())).all()
     mine = db.scalar(select(StarlightLine.id).where(StarlightLine.share_id == share.id,
                                                    StarlightLine.user_id == user.id))
@@ -218,7 +225,7 @@ def lines(share_id: str, user: User = Depends(consented_user), db: Session = Dep
 
 @router.post("/plaza/nebulae/{share_id}/lines", status_code=201, dependencies=[per_user("lines", 30, 3600)])
 def leave_line(share_id: str, body: LineIn, user: User = Depends(consented_user), db: Session = Depends(get_db)):
-    share = _nebula_share(db, share_id)
+    share = _nebula_share(db, share_id, user)
     if share.user_id == user.id:
         raise ApiError(422, "own_share", "내가 띄운 성운이에요.")
     if not share.receive_lines:
@@ -244,14 +251,39 @@ def report_line(line_id: str, body: ReportIn, user: User = Depends(consented_use
     line = db.get(StarlightLine, line_id)
     if line is None:
         raise ApiError(404, "not_found", "별빛을 찾지 못했어요.")
+    blocked = False
+    if body.block and line.user_id != user.id:
+        block(db, user, "line", line.id)
+        blocked = True
     if db.get(LineReport, (line.id, user.id)) is None:
         db.add(LineReport(line_id=line.id, user_id=user.id, reason=body.reason))
         db.flush()
         count = db.scalar(select(func.count()).select_from(LineReport).where(LineReport.line_id == line.id))
         if count >= HIDE_AFTER_REPORTS:
             line.hidden = True
-        db.commit()
-    return {"reported": True}
+    db.commit()
+    return {"reported": True, "blocked": blocked}
+
+
+@router.post("/plaza/{kind}/{target_id}/report", dependencies=[per_user("report", 30, 3600)])
+def report_share(kind: Kind, target_id: str, body: ReportIn, user: User = Depends(consented_user),
+                 db: Session = Depends(get_db)):
+    """100 신고하기 for a plaza star or nebula. It leaves the reporter's plaza at once;
+    three reports take it down for everyone until an operator looks."""
+    row = _target(db, user, kind, target_id)
+    blocked = False
+    if body.block:
+        block(db, user, kind, target_id)
+        blocked = True
+    if db.get(ShareReport, (kind, target_id, user.id)) is None:
+        db.add(ShareReport(kind=kind, target_id=target_id, user_id=user.id, reason=body.reason))
+        db.flush()
+        count = db.scalar(select(func.count()).select_from(ShareReport)
+                          .where(ShareReport.kind == kind, ShareReport.target_id == target_id))
+        if count >= HIDE_AFTER_REPORTS:
+            row.hidden = True
+    db.commit()
+    return {"reported": True, "blocked": blocked}
 
 
 @router.get("/plaza/tonight")

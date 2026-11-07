@@ -70,6 +70,8 @@ class Settings:
     sentry_dsn: str | None = field(default_factory=lambda: os.getenv("SENTRY_DSN") or None)
     sentry_environment: str = field(default_factory=lambda: os.getenv(
         "SENTRY_ENVIRONMENT", "production" if os.getenv("VERCEL") == "1" else "development"))
+    # POST /v1/auth/invite: operator-made accounts sign in with login and password (App Review).
+    invite_login: bool = field(default_factory=lambda: os.getenv("INVITE_LOGIN") == "1")
     # Accept purchases without store verification. Development only.
     trust_purchases: bool = field(default_factory=lambda: os.getenv("TRUST_PURCHASES") == "1")
 
