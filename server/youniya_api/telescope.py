@@ -149,3 +149,58 @@ def story_bridges(sentences: list[str], api_key: str | None, model: str, thinkin
     if any(len(b) > MAX_BRIDGE_LENGTH for b in bridges):  # a long line is telling a story of its own
         raise ValueError("bridge too long")
     return bridges
+
+
+MONTHLY_PROMPT = """# Role
+당신은 '월간 마음 리포트'를 쓴다. 사용자가 한 달 동안 띄운 별(일기)을 함께 읽고, 그달의 마음이 어떻게 흘렀는지 비춘다.
+평가나 처방이 아니라 곁에서 함께 바라본 기록이다. 진단하지 않고, 조언하지 않고, 인격을 규정하지 않는다.
+원문에 없는 사건, 장소, 사람, 감정을 지어내지 않는다. 별들에 실제로 쓰인 것만 말한다.
+
+# 출력 (JSON 객체 하나)
+- title: 이 달에 붙일 이름. "~달"로 끝나는 12자 안팎의 시적인 이름. 맞춤법대로 띄어 쓴다(예: "천천히 숨을 고른 달")
+- intro: 이 달을 소개하는 한 문장
+- notes: {"depth": …, "clarity": …, "weight": …} 각 렌즈에서 한 달 동안의 흐름을 한 문장씩
+  depth=별의 깊이(사건을 지나 속마음까지 내려간 정도), clarity=빛의 선명함(감정을 또렷이 구분한 정도),
+  weight=마음의 무게(남이 아니라 내 마음으로 품어낸 정도)
+- question: 다음 달의 나에게 건네는 질문 한 문장. 답을 유도하지 않는다
+
+# 말투
+- 모든 문장은 "~어요/~해요/~나요" 체로 통일한다. 높이는 "-시-"("~셨어요")는 쓰지 않고, 사용자를 "당신"이라고 부르지 않는다
+- 점수, 숫자, 순위를 말하지 않는다
+"""
+
+
+def build_monthly(month: str, stars: list[StarText], api_key: str | None, model: str,
+                  thinking: str | None = None) -> dict:
+    """월간 마음 리포트 (Figma 123). Numbers come from the stars' analyses; the brightest star's
+    sentence is quoted as written."""
+    base = build_report(stars, None, model)  # lens values, emotions and period, without the model
+    brightest = max(stars, key=lambda s: s.analysis["starlight"])
+    quote = brightest.analysis["impact_quote"]
+    top = base["emotions"][0]["mood"] if base["emotions"] else "calm"
+    text = {"title": {"calm": "천천히 숨을 고른 달", "sorrow": "젖은 빛을 말린 달", "anger": "뜨거움이 지나간 달",
+                      "insight": "맑게 깨어난 달"}[top],
+            "intro": f"이번 달에는 별 {len(stars)}개가 떴어요.",
+            "notes": {lens["key"]: lens["note"] for lens in base["lenses"]},
+            "question": brightest.analysis["rewrite_question"]}
+    if api_key:
+        parts = [f"## {s.created_at[:10]} · {s.title}\n\"\"\"\n{s.body}\n\"\"\"" for s in stars]
+        out = generate_json(api_key, model, MONTHLY_PROMPT + f"\n\n# {month}의 별들\n" + "\n\n".join(parts),
+                            temperature=0.3, thinking=thinking, timeout=MODEL_TIMEOUT, retries=1)
+        notes = out.get("notes")
+        if not (isinstance(notes, dict) and all(isinstance(notes.get(k), str) and notes[k] for k, _ in LENSES)
+                and all(isinstance(out.get(k), str) and out[k] for k in ("title", "intro", "question"))):
+            raise ValueError("incomplete monthly report")
+        text = {"title": out["title"], "intro": out["intro"], "notes": notes, "question": out["question"]}
+    return {
+        "month": month,
+        "title": text["title"],
+        "intro": text["intro"],
+        "lenses": [{"key": lens["key"], "label": lens["label"], "value": lens["value"],
+                    "note": text["notes"][lens["key"]]} for lens in base["lenses"]],
+        "emotions": base["emotions"],
+        "brightest": {"star_id": brightest.id, "title": brightest.title, "sentence": quote},
+        "question": text["question"],
+        "star_count": len(stars),
+        "period": base["period"],
+    }

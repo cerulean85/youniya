@@ -8,9 +8,9 @@ from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from .. import allowance
+from .. import allowance, membership
 from ..blocks import hidden_users
-from ..deps import current_user, get_cipher, get_db
+from ..deps import ApiError, current_user, get_cipher, get_db
 from ..export import StarEntry, as_pdf, as_text
 from ..models import DeviceToken, Inquiry, Nebula, NebulaShare, Resonance, Star, StarlightLine, StarShare, User
 from ..rules import INQUIRY_KINDS, MOOD_LABELS, SKY_THEMES, SOUNDS
@@ -64,13 +64,20 @@ class InquiryIn(BaseModel):
     body: str = Field(..., min_length=1, max_length=5000)
 
 
-def settings_of(user: User) -> AppSettings:
-    return AppSettings(**(user.settings or {}))
+def settings_of(user: User, member: bool = False) -> AppSettings:
+    """A member sky saved by someone who is no longer a member shows as violet (기획서 13장)."""
+    out = AppSettings(**(user.settings or {}))
+    if not membership.sky_allowed(out.sky, member):
+        out.sky = "violet"
+    return out
 
 
 @router.get("/me")
-def me(request: Request, user: User = Depends(current_user)):
-    """`free_star_today` (0/1), `free_telescope` (this month's and the sign-up one left), `free_story` (0/1)."""
+def me(request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """`free_star_today` (0/1), `free_telescope` (this month's and the sign-up one left), `free_story` (0/1).
+    With MEMBERSHIP=1, `membership` too (see GET /v1/membership); a member's counts include its own."""
+    settings = request.app.state.settings
+    member = membership.is_member(db, settings, user)
     return {
         "id": user.id,
         "provider": user.provider,
@@ -78,9 +85,9 @@ def me(request: Request, user: User = Depends(current_user)):
         "marketing_opt_in": user.marketing_opt_in,
         "coins": user.coins,
         "free_telescope_available": allowance.telescopes_left(user) > 0,
-        **allowance.summary(user, request.app.state.settings.free_stars_per_day),
-        "settings": settings_of(user).model_dump(),
-    }
+        **membership.free_summary(db, settings, user),
+        "settings": settings_of(user, member).model_dump(),
+    } | ({"membership": membership.view(db, settings, user)} if settings.membership else {})
 
 
 @router.post("/me/consent")
@@ -93,8 +100,13 @@ def consent(body: Consent, user: User = Depends(current_user), db: Session = Dep
 
 
 @router.patch("/me/settings")
-def update_settings(body: SettingsPatch, user: User = Depends(current_user), db: Session = Depends(get_db)):
-    merged = settings_of(user).model_dump() | body.model_dump(exclude_none=True)
+def update_settings(body: SettingsPatch, request: Request, user: User = Depends(current_user),
+                    db: Session = Depends(get_db)):
+    """우주의 색: violet and ocean for everyone, the rest for 별지기 멤버십 (403 member_only)."""
+    member = membership.is_member(db, request.app.state.settings, user)
+    if body.sky and not membership.sky_allowed(body.sky, member):
+        raise ApiError(403, "member_only", "별지기 멤버십에서 쓸 수 있는 우주의 색이에요.")
+    merged = settings_of(user, member).model_dump() | body.model_dump(exclude_none=True)
     user.settings = AppSettings(**merged).model_dump()
     db.add(user)
     db.commit()

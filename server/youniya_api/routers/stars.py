@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from ..deps import ApiError, consented_user, get_cipher, get_db
 from ..models import Draft, Nebula, Star, User
 from ..prism.filters import CRISIS_GUIDANCE, has_crisis_signal
-from .. import allowance, coins
+from .. import allowance, coins, membership
 from ..rules import (DEEP_DEPTH_SCORE, FIRST_STAGE_STARS, STAGE_NAMES, STAR_FLOAT_COST, SUPERNOVA_STARLIGHT,
                      growth_stage)
 from ..security import Cipher
@@ -60,8 +60,10 @@ def _insufficient(user: User, cost: int) -> ApiError:
 def _float(db: Session, user: User, star: Star, request: Request, cipher: Cipher) -> tuple[str, int]:
     """Runs the prism on a star. Returns (prism status, coins charged); raises on unscoreable text.
     The day's free float first, then STAR_FLOAT_COST; charged only when the star is read."""
-    per_day = request.app.state.settings.free_stars_per_day
-    free = allowance.stars_left(user, per_day) > 0
+    settings = request.app.state.settings
+    per_day = settings.free_stars_per_day
+    member = membership.is_member(db, settings, user)  # 별지기 멤버십: no limit
+    free = member or allowance.stars_left(user, per_day) > 0
     if not free and user.coins < STAR_FLOAT_COST:
         raise _insufficient(user, STAR_FLOAT_COST)  # 29, before anything is stored
     result = request.app.state.prism.evaluate(cipher.dec(star.title_enc), cipher.dec(star.body_enc))
@@ -73,7 +75,7 @@ def _float(db: Session, user: User, star: Star, request: Request, cipher: Cipher
     if result.status != "ok":
         return result.status, 0
     charged = 0
-    if not (free and allowance.use_star(db, user, per_day)):
+    if not member and not (free and allowance.use_star(db, user, per_day)):
         if not coins.spend(db, user, STAR_FLOAT_COST, "별 띄우기"):
             db.rollback()
             raise _insufficient(user, STAR_FLOAT_COST)

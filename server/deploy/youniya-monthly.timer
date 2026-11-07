@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily YOUNIYA 월간 마음 리포트 (last month's, for members who have none yet)
+
+[Timer]
+OnCalendar=*-*-* 06:00:00 Asia/Seoul
+Persistent=true
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target

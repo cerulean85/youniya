@@ -76,6 +76,8 @@ class Settings:
         "SENTRY_ENVIRONMENT", "production" if os.getenv("VERCEL") == "1" else "development"))
     # POST /v1/auth/invite: operator-made accounts sign in with login and password (App Review).
     invite_login: bool = field(default_factory=lambda: os.getenv("INVITE_LOGIN") == "1")
+    # 별지기 멤버십 (v1.1). Off: every membership API is 404 and /v1/me says nothing of it.
+    membership: bool = field(default_factory=lambda: os.getenv("MEMBERSHIP") == "1")
     # Accept purchases without store verification. Development only.
     trust_purchases: bool = field(default_factory=lambda: os.getenv("TRUST_PURCHASES") == "1")
 

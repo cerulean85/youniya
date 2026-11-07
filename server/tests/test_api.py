@@ -310,7 +310,10 @@ def test_withdraw_all_and_delete_account(client):
 
 def test_settings_and_inquiry(client):
     h = sign_in(client)
-    assert client.patch("/v1/me/settings", json={"sky": "aurora", "haptics": False}, headers=h).json()["sky"] == "aurora"
+    assert client.patch("/v1/me/settings", json={"sky": "ocean", "haptics": False}, headers=h).json()["sky"] == "ocean"
+    # 기획서 13장: the other skies are for 별지기 멤버십.
+    r = client.patch("/v1/me/settings", json={"sky": "aurora"}, headers=h)
+    assert r.status_code == 403 and r.json()["error"]["code"] == "member_only"
     assert client.patch("/v1/me/settings", json={"sky": "nope"}, headers=h).status_code == 422
     r = client.post("/v1/inquiries", json={"kind": "payment", "email": "a@b.co", "body": "결제가 안 돼요"}, headers=h)
     assert r.status_code == 201

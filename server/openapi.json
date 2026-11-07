@@ -266,7 +266,7 @@
           "account"
         ],
         "summary": "Me",
-        "description": "`free_star_today` (0/1), `free_telescope` (this month's and the sign-up one left), `free_story` (0/1).",
+        "description": "`free_star_today` (0/1), `free_telescope` (this month's and the sign-up one left), `free_story` (0/1).\nWith MEMBERSHIP=1, `membership` too (see GET /v1/membership); a member's counts include its own.",
         "operationId": "me_v1_me_get",
         "responses": {
           "200": {
@@ -353,6 +353,7 @@
           "account"
         ],
         "summary": "Update Settings",
+        "description": "우주의 색: violet and ocean for everyone, the rest for 별지기 멤버십 (403 member_only).",
         "operationId": "update_settings_v1_me_settings_patch",
         "requestBody": {
           "content": {
@@ -1127,7 +1128,7 @@
           "telescope"
         ],
         "summary": "Offer",
-        "description": "`free_left`: this month's free one plus the sign-up one, if still unused.",
+        "description": "`free_left`: a member's monthly ones, this month's free one and the sign-up one, if still unused.",
         "operationId": "offer_v1_telescope_offer_get",
         "responses": {
           "200": {
@@ -1429,7 +1430,7 @@
           "coins"
         ],
         "summary": "App Store Notification",
-        "description": "App Store Server Notifications V2 (set this URL in App Store Connect).\n- CONSUMPTION_REQUEST: a refund was requested; tell Apple how much of the purchase was used.\n- REFUND: take back the purchase's coins that are left; the balance never goes below 0.",
+        "description": "App Store Server Notifications V2 (set this URL in App Store Connect).\n- CONSUMPTION_REQUEST: a refund was requested; tell Apple how much of the purchase was used.\n- REFUND: take back the purchase's coins that are left; the balance never goes below 0.\n- 별지기 멤버십: SUBSCRIBED, DID_RENEW, DID_CHANGE_RENEWAL_STATUS, DID_FAIL_TO_RENEW (grace period),\n  EXPIRED, GRACE_PERIOD_EXPIRED, REFUND and REVOKE keep the subscription current.",
         "operationId": "app_store_notification_v1_storekit_notifications_post",
         "requestBody": {
           "content": {
@@ -2731,6 +2732,189 @@
         }
       }
     },
+    "/v1/membership": {
+      "get": {
+        "tags": [
+          "membership"
+        ],
+        "summary": "Status",
+        "description": "{active, product_id, expires_at, auto_renew, status, telescope_left_this_month}",
+        "operationId": "status_v1_membership_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/membership/verify": {
+      "post": {
+        "tags": [
+          "membership"
+        ],
+        "summary": "Verify",
+        "description": "After a StoreKit 2 subscription purchase (or restore). Buy with appAccountToken = user id.",
+        "operationId": "verify_v1_membership_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/reports/monthly": {
+      "get": {
+        "tags": [
+          "membership"
+        ],
+        "summary": "List Monthly",
+        "description": "Newest first: month, title and when it was made (open one with GET …/{month}).",
+        "operationId": "list_monthly_v1_reports_monthly_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "membership"
+        ],
+        "summary": "Make Monthly",
+        "description": "The button on 123: the same rule as the 1st of the month, for last month by default.\nAn existing report is returned as it is.",
+        "operationId": "make_monthly_v1_reports_monthly_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MonthlyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/reports/monthly/{month}": {
+      "get": {
+        "tags": [
+          "membership"
+        ],
+        "summary": "Get Monthly",
+        "operationId": "get_monthly_v1_reports_monthly__month__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Month"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/status": {
       "get": {
         "tags": [
@@ -3491,6 +3675,25 @@
         ],
         "title": "LineIn"
       },
+      "MonthlyIn": {
+        "properties": {
+          "month": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Month",
+            "description": "YYYY-MM; default: last month"
+          }
+        },
+        "type": "object",
+        "title": "MonthlyIn"
+      },
       "NebulaIn": {
         "properties": {
           "name": {
@@ -3878,6 +4081,21 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VerifyIn": {
+        "properties": {
+          "signedTransaction": {
+            "type": "string",
+            "maxLength": 20000,
+            "title": "Signedtransaction",
+            "description": "Transaction.jwsRepresentation of the subscription purchase"
+          }
+        },
+        "type": "object",
+        "required": [
+          "signedTransaction"
+        ],
+        "title": "VerifyIn"
       },
       "youniya_api__routers__plaza__ReportIn": {
         "properties": {

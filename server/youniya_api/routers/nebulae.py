@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .. import allowance, coins, privacy
+from .. import allowance, coins, membership, privacy
 from ..blocks import visible_shares
 from ..deps import ApiError, consented_user, get_cipher, get_db
 from ..models import Beside, Nebula, NebulaShare, Resonance, Star, StarShare, User
@@ -155,17 +155,18 @@ def _story(n: Nebula, stars: list[Star], cipher: Cipher) -> dict:
             "polish_cost": STORY_POLISH_COST}
 
 
-def _story_offer(user: User) -> dict:
-    free = allowance.stories_left(user) > 0
+def _story_offer(user: User, member: bool = False) -> dict:
+    free = member or allowance.stories_left(user) > 0
     return {"polish_cost": 0 if free else STORY_POLISH_COST, "polish_free": free}
 
 
 @router.get("/{nebula_id}/story")
-def story(nebula_id: str, user: User = Depends(consented_user), db: Session = Depends(get_db),
+def story(nebula_id: str, request: Request, user: User = Depends(consented_user), db: Session = Depends(get_db),
           cipher: Cipher = Depends(get_cipher)):
     """83: each star's key sentence in time order. The sentences are never changed."""
     n = owned_nebula(db, user, nebula_id)
-    return _story(n, _stars(db, n), cipher) | _story_offer(user)
+    member = membership.is_member(db, request.app.state.settings, user)
+    return _story(n, _stars(db, n), cipher) | _story_offer(user, member)
 
 
 @router.post("/{nebula_id}/story/polish", dependencies=[per_user("polish", 10, 3600)])
@@ -175,9 +176,10 @@ def polish(nebula_id: str, request: Request, user: User = Depends(consented_user
     n = owned_nebula(db, user, nebula_id)
     stars = _stars(db, n)
     current = _story(n, stars, cipher)
+    member = membership.is_member(db, request.app.state.settings, user)  # 별지기 멤버십: no limit
     if current["polished"] and len(n.story_bridges) == max(0, len(stars) - 1):
-        return current | _story_offer(user) | {"charged": 0}
-    free = allowance.stories_left(user) > 0
+        return current | _story_offer(user, member) | {"charged": 0}
+    free = member or allowance.stories_left(user) > 0
     if not free and user.coins < STORY_POLISH_COST:
         raise ApiError(402, "insufficient_coins", "코인이 조금 부족해요.", coins=user.coins, cost=STORY_POLISH_COST)
     settings = request.app.state.settings
@@ -186,13 +188,13 @@ def polish(nebula_id: str, request: Request, user: User = Depends(consented_user
                                 settings.telescope_model, settings.telescope_thinking)
     except Exception:
         raise ApiError(502, "analysis_failed", "이야기를 다듬지 못했어요. 코인은 차감되지 않았어요.")
-    used_free = allowance.use_story(db, user) if free else False
+    used_free = member or (free and allowance.use_story(db, user))
     if not used_free and not coins.spend(db, user, STORY_POLISH_COST, "서사 다듬기"):
         db.rollback()
         raise ApiError(402, "insufficient_coins", "코인이 조금 부족해요.", coins=user.coins, cost=STORY_POLISH_COST)
     n.story_bridges = bridges
     db.commit()
-    return _story(n, stars, cipher) | _story_offer(user) | {"charged": 0 if used_free else STORY_POLISH_COST,
+    return _story(n, stars, cipher) | _story_offer(user, member) | {"charged": 0 if used_free else STORY_POLISH_COST,
                                                             "coins": user.coins}
 
 

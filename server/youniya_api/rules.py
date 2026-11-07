@@ -44,6 +44,13 @@ LINE_LIFETIME_HOURS = 24
 LINE_REPORT_REASONS = ("hurtful", "personal_info", "spam", "other")
 
 SKY_THEMES = ("violet", "aurora", "ember", "ocean", "rose")
+# 기획서 13장: violet and ocean for everyone; the rest are 별지기 멤버십 skies (from v1.0 on).
+FREE_SKIES = ("violet", "ocean")
+
+# 별지기 멤버십 (v1.1, behind MEMBERSHIP=1). One auto-renewable subscription group, 7-day free trial.
+MEMBERSHIP_PRODUCTS = {"membership_monthly": 2900, "membership_yearly": 29000}  # KRW
+MEMBER_TELESCOPES_PER_MONTH = 15  # calendar month; after that, 20 coins
+MONTHLY_REPORT_MIN_STARS = 5  # stars floated in the month
 SOUNDS = ("밤바람", "미세한 성간 주파수")
 INQUIRY_KINDS = ("payment", "account", "other")  # 결제 · 계정 · 기타
 

@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .. import allowance, coins
+from .. import allowance, coins, membership
 from ..deps import ApiError, consented_user, get_cipher, get_db
 from ..models import Star, TelescopeReport, User
 from ..rules import TELESCOPE_COST
@@ -35,15 +35,20 @@ def week_label(dt: datetime) -> str:
     return f"{t.month}월 {'마지막' if last else _NTH[(t.day - 1) // 7]} 주"
 
 
+def _free_left(db: Session, request: Request, user: User) -> int:
+    member = membership.is_member(db, request.app.state.settings, user)
+    return allowance.telescopes_left(user) + (membership.telescopes_left(user) if member else 0)
+
+
 def _view(r: TelescopeReport, cipher: Cipher) -> dict:
     return {"id": r.id, "title": week_label(r.created_at), "created_at": iso(r.created_at), "saved": r.saved,
             "star_ids": r.star_ids, "report": cipher.dec_json(r.report_enc)}
 
 
 @router.get("/offer")
-def offer(user: User = Depends(consented_user)):
-    """`free_left`: this month's free one plus the sign-up one, if still unused."""
-    left = allowance.telescopes_left(user)
+def offer(request: Request, user: User = Depends(consented_user), db: Session = Depends(get_db)):
+    """`free_left`: a member's monthly ones, this month's free one and the sign-up one, if still unused."""
+    left = _free_left(db, request, user)
     return {"free": left > 0, "free_left": left, "cost": 0 if left else TELESCOPE_COST, "coins": user.coins,
             "enough": left > 0 or user.coins >= TELESCOPE_COST}
 
@@ -60,7 +65,7 @@ def create_report(body: ReportIn, request: Request, user: User = Depends(consent
     if not stars or (body.star_ids and len(stars) != len(set(body.star_ids))):
         raise ApiError(422, "no_stars", "망원경으로 볼 별이 없어요. 떠 있는 별만 볼 수 있어요.")
 
-    free = allowance.telescopes_left(user) > 0
+    free = _free_left(db, request, user) > 0
     if not free and user.coins < TELESCOPE_COST:
         raise ApiError(402, "insufficient_coins", "코인이 조금 부족해요.", coins=user.coins, cost=TELESCOPE_COST)
 
@@ -73,7 +78,9 @@ def create_report(body: ReportIn, request: Request, user: User = Depends(consent
         raise ApiError(502, "analysis_failed", "별을 읽지 못했어요. 코인은 차감되지 않았어요.")
 
     # Charged only once the report exists (Protoss punch concept 4.4).
-    used_free = allowance.use_telescope(db, user) if free else False
+    # A member's monthly ones go first, then the free monthly one, then the sign-up one.
+    member = membership.is_member(db, request.app.state.settings, user)
+    used_free = free and ((member and membership.use_telescope(db, user)) or allowance.use_telescope(db, user))
     if not used_free and not coins.spend(db, user, TELESCOPE_COST, "마음 망원경"):
         db.rollback()
         raise ApiError(402, "insufficient_coins", "코인이 조금 부족해요.", coins=user.coins, cost=TELESCOPE_COST)

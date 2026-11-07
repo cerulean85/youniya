@@ -45,6 +45,9 @@ class User(Base):
     free_star_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     free_telescope_month: Mapped[str | None] = mapped_column(String(7))
     free_story_used: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    # 별지기 멤버십: telescope reports used this calendar month out of MEMBER_TELESCOPES_PER_MONTH.
+    member_telescope_month: Mapped[str | None] = mapped_column(String(7))
+    member_telescope_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
 
 class RefreshToken(Base):
@@ -295,4 +298,34 @@ class InviteAccount(Base):
     login: Mapped[str] = mapped_column(String(64), primary_key=True)
     password_hash: Mapped[str] = mapped_column(String(200))  # argon2id
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class Subscription(Base):
+    """별지기 멤버십: one App Store auto-renewable subscription, kept current by Server Notifications."""
+
+    __tablename__ = "subscriptions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    user_id: Mapped[str] = user_fk()
+    product_id: Mapped[str] = mapped_column(String(64))
+    original_transaction_id: Mapped[str] = mapped_column(String(64), unique=True)
+    transaction_id: Mapped[str] = mapped_column(String(64))  # the latest one
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(String(16))  # active | grace | expired | revoked
+    auto_renew: Mapped[bool] = mapped_column(Boolean, default=True)
+    environment: Mapped[str] = mapped_column(String(16))  # Production | Sandbox
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+
+
+class MonthlyReport(Base):
+    """월간 마음 리포트 (Figma 123): one per member per month."""
+
+    __tablename__ = "monthly_reports"
+    __table_args__ = (UniqueConstraint("user_id", "month"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    user_id: Mapped[str] = user_fk()
+    month: Mapped[str] = mapped_column(String(7))  # YYYY-MM, Korean time
+    report_enc: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
