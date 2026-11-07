@@ -9,7 +9,7 @@ from .. import allowance, coins, membership, privacy
 from ..blocks import visible_shares
 from ..deps import ApiError, consented_user, get_cipher, get_db
 from ..models import Beside, Nebula, NebulaShare, Resonance, Star, StarShare, User
-from ..rules import MAX_GUEST_STARS, MIN_NEBULA_STARS, NEBULA_SILHOUETTES, STORY_POLISH_COST
+from ..rules import MAX_GUEST_STARS, MEMBER_SILHOUETTES, MIN_NEBULA_STARS, NEBULA_SILHOUETTES, STORY_POLISH_COST
 from ..security import Cipher
 from ..telescope import story_bridges
 from ..views import iso
@@ -58,9 +58,11 @@ def avg_depth(stars: list[Star], cipher: Cipher) -> float | None:
 
 
 @router.post("", status_code=201)
-def create(body: NebulaIn, user: User = Depends(consented_user), db: Session = Depends(get_db)):
-    if body.silhouette is not None and body.silhouette not in NEBULA_SILHOUETTES:
+def create(body: NebulaIn, request: Request, user: User = Depends(consented_user), db: Session = Depends(get_db)):
+    if body.silhouette is not None and body.silhouette not in NEBULA_SILHOUETTES + MEMBER_SILHOUETTES:
         raise ApiError(422, "unknown_silhouette", "알 수 없는 모양이에요.")
+    if body.silhouette in MEMBER_SILHOUETTES and not membership.is_member(db, request.app.state.settings, user):
+        raise ApiError(403, "member_only", "별지기 멤버십에서 쓸 수 있는 모양이에요.")
     ids = list(dict.fromkeys(body.star_ids))
     found = db.scalars(select(Star.id).where(Star.id.in_(ids), Star.user_id == user.id,
                                              Star.state == "floated")).all()

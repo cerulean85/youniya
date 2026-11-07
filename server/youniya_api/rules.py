@@ -37,6 +37,8 @@ STAGE_NAMES = ("첫 별들", "따뜻한 빛줄기", "짙어지는 성운", "온�
 MIN_NEBULA_STARS = 3
 MAX_GUEST_STARS = 5
 NEBULA_SILHOUETTES = ("whale", "lighthouse", "tree", "bird", "flower")
+# 기획서 13.5 계절 팩: 별지기 멤버십 silhouettes. A nebula saved with one keeps it after the membership ends.
+MEMBER_SILHOUETTES = ("cherry_blossom", "wave", "maple", "snowflake")
 
 # 74 별빛 한 줄: one line per nebula per person, 60 characters, fades after a day.
 LINE_MAX_LENGTH = 60

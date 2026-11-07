@@ -15,7 +15,7 @@ URL = "/v1/storekit/notifications"
 
 def _app(make_app, **kw):
     apple = FakeApple()
-    app = make_app(membership=True, apple_bundle_id=BUNDLE, free_stars_per_day=1, **kw)
+    app = make_app(**{"membership": True, "apple_bundle_id": BUNDLE, "free_stars_per_day": 1} | kw)
     app.state.storekit = StoreKitVerifier(BUNDLE, root=apple.root)
     return apple, TestClient(app)
 
@@ -139,3 +139,22 @@ def test_monthly_report(make_app):
     assert [i["month"] for i in client.get("/v1/reports/monthly", headers=h).json()["items"]] == [month]
     assert client.get(f"/v1/reports/monthly/{month}", headers=h).json()["id"] == report["id"]
     assert client.get("/v1/reports/monthly/2000-01", headers=h).status_code == 404
+
+
+def test_season_silhouettes_are_for_members_and_stay(make_app):
+    apple, client = _app(make_app, free_stars_per_day=10**6)
+    h = sign_in(client)
+    ids = [float_star(client, h)["id"] for _ in range(3)]
+    body = {"name": "벚꽃 성운", "silhouette": "cherry_blossom", "star_ids": ids}
+    r = client.post("/v1/nebulae", json=body, headers=h)
+    assert r.status_code == 403 and r.json()["error"]["code"] == "member_only"
+    assert client.post("/v1/nebulae", json=body | {"silhouette": "whale"}, headers=h).status_code == 201
+
+    user_id, _ = _join(apple, client, h)
+    n = client.post("/v1/nebulae", json=body, headers=h).json()
+    share = client.put(f"/v1/nebulae/{n['id']}/share", json={}, headers=h).json()
+    client.post(URL, json=_note(apple, "EXPIRED", _tx(user_id, days=-1)))
+    # The membership ended: the saved nebula keeps its silhouette, and others see it on the plaza.
+    assert client.get(f"/v1/nebulae/{n['id']}", headers=h).json()["silhouette"] == "cherry_blossom"
+    seen = client.get(f"/v1/plaza/nebulae/{share['share_id']}", headers=sign_in(client, "other")).json()
+    assert seen["shape"]["silhouette"] == "cherry_blossom"
