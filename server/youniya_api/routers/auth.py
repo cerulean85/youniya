@@ -3,6 +3,8 @@
 from datetime import datetime, timezone
 from typing import Literal
 
+import logging
+
 import jwt
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
@@ -14,6 +16,8 @@ from ..models import RefreshToken, User
 from ..security import REFRESH_TTL, hash_token, issue_access_token, new_refresh_token
 from ..views import aware
 from ..ratelimit import per_ip
+
+log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
 
@@ -77,11 +81,21 @@ def _session_for(db: Session, provider: str, sub: str, secret: str) -> dict:
     return _tokens(db, user, secret)
 
 
+def _who_issued(id_token: str) -> str:
+    """aud and iss of a refused token, to tell a wrong client ID from a wrong token. Never the account."""
+    try:
+        claims = jwt.decode(id_token, options={"verify_signature": False})
+    except jwt.InvalidTokenError:
+        return "not a JWT"
+    return f"aud={claims.get('aud')} iss={claims.get('iss')}"
+
+
 # Registered last so /refresh, /logout and /dev are matched first.
 @router.post("/{provider}", dependencies=[per_ip("auth", 30, 60)])
 def sign_in(provider: Literal["apple", "google"], body: SignIn, request: Request, db: Session = Depends(get_db)):
     try:
         sub = request.app.state.verifier.verify(provider, body.id_token)
-    except (jwt.InvalidTokenError, jwt.PyJWKClientError):
+    except (jwt.InvalidTokenError, jwt.PyJWKClientError) as e:
+        log.warning("%s sign-in refused: %s: %s (%s)", provider, type(e).__name__, e, _who_issued(body.id_token))
         raise ApiError(401, "invalid_id_token", "로그인 정보를 확인하지 못했어요.")
     return _session_for(db, provider, sub, request.app.state.settings.jwt_secret)
