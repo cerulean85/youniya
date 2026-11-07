@@ -95,9 +95,10 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
 | `DATA_ENCRYPTION_KEY` | (required) | Fernet key. Writing, analyses and inquiries are encrypted at rest. **Losing it loses every star.** |
 | `DATABASE_URL` | `sqlite:///./youniya.db` | SQLite or Postgres (`postgresql://…`, e.g. Neon) |
 | `GEMINI_API_KEY` | (none) | Without it, a deterministic offline evaluator stands in (Protoss mock mode) |
-| `PRISM_MODEL` | `gemini-2.5-flash` | Star scoring (fast, called 3× per star) |
-| `TELESCOPE_MODEL` | `gemini-2.5-pro` | Telescope reports and story polish |
+| `PRISM_MODEL` | `gemini-3.8-flash` | Star scoring (fast, called 3× per star; two good readings are enough) |
+| `TELESCOPE_MODEL` | `gemini-3.1-pro-preview` | Telescope reports and story polish |
 | `PRISM_SAMPLES` | `3` | Independent scoring calls per star |
+| `PRISM_THINKING` | `low` | Gemini 3 thinking level for scoring; empty = model default (about twice as slow) |
 | `APPLE_CLIENT_IDS`, `GOOGLE_CLIENT_IDS` | (none) | Comma-separated audiences for Sign in with Apple / Google |
 | `MIN_APP_VERSION` | `1.0.0` | Below this, requests with `X-App-Version` get 426 (40) |
 | `MAINTENANCE_START`, `MAINTENANCE_END` | (none) | ISO times; without an offset they are read as KST. Every request gets 503 in between (41) |
@@ -126,7 +127,7 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
 | Account | `GET /v1/me`, `POST /v1/me/consent`, `PATCH /v1/me/settings`, `PUT /v1/me/devices`, `DELETE /v1/me/devices/{token}`, `DELETE /v1/me`, `GET /v1/me/export?format=text\|pdf`, `GET·DELETE /v1/me/shares`, `POST /v1/inquiries` | 11, 87, 91–94, 113, 114, 32 |
 | Stars | `POST /v1/stars` (`mode: float \| keep`), `GET /v1/stars` (`state`, `mood`, `q`, `month`, `before`), `GET /v1/stars/summary`, `GET·DELETE /v1/stars/{id}`, `POST /v1/stars/{id}/float` | 05, 07, 12–16, 36, 104, 105, 115–119 |
 | Draft | `GET·PUT·DELETE /v1/drafts/current` | 34 |
-| Growth | `GET /v1/starlight/trend`, `GET /v1/growth` | 08, 65, 66, 82, 86, 109 |
+| Growth | `GET /v1/starlight/trend`, `GET /v1/growth` (`stage` 0 below 12 stars, then 1–4) | 08, 65, 66, 82, 86, 109 |
 | Telescope | `GET /v1/telescope/offer`, `POST·GET /v1/telescope/reports`, `GET /v1/telescope/reports/{id}`, `POST …/save` | 10, 24–27, 29, 88, 98 |
 | Coins | `GET /v1/coins`, `GET /v1/coins/history`, `POST /v1/coins/purchases` | 28, 33, 38, 102, 108 |
 | Nebulae | `POST·GET /v1/nebulae`, `GET /v1/nebulae/guest-candidates`, `GET /v1/nebulae/{id}`, `GET /v1/nebulae/{id}/story`, `POST …/story/polish`, `PUT·DELETE …/share` | 51–55, 70, 71, 80, 83–85, 96 |
@@ -173,4 +174,4 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
 
 ## Not done yet
 
-- **Real model:** The server has not been connected to the real model (`GEMINI_API_KEY`). The Protoss reliability protocol (`design.md` 6장) has not been run yet.
+- **Reliability protocol:** `tools/eval_prism.py` runs a scaled-down `design.md` 6장 (22 texts, passed 20261107). The full protocol (30 texts × 20 runs, two human raters on 100 texts) has not been run. The check texts are a few hundred characters; real stars are 1,000+.

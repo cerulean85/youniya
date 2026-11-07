@@ -977,7 +977,7 @@
           "stars"
         ],
         "summary": "Growth",
-        "description": "08 나의 성운, 86 네 걸음, 66 지나온 순간.",
+        "description": "08 나의 성운, 86 네 걸음, 66 지나온 순간.\n\n`stage` is 0 until there are 12 stars (floated or kept), then 1–4; `stage_name` is null at 0.\n`next.needs` holds [now, goal] pairs for the next stage: `stars` at 0 (별 N/12), `deep` at 1,\n`deep` and `starlight_900` at 2, `deep` and `moods` at 3. `next` is null at 4.",
         "operationId": "growth_v1_growth_get",
         "responses": {
           "200": {

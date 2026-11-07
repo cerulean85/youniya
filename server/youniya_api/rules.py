@@ -44,8 +44,15 @@ SOUNDS = ("밤바람", "미세한 성간 주파수")
 INQUIRY_KINDS = ("payment", "account", "other")  # 결제 · 계정 · 기타
 
 
-def growth_stage(deep: int, brightest: int, moods: int) -> int:
-    """86: 1 첫 별들 · 2 깊은 별 6 · 3 깊은 별 15와 별빛 900 이상 1번 · 4 깊은 별 30과 여러 감정의 결."""
+FIRST_STAGE_STARS = 12  # 기획서 5.1: 별 12개부터 첫 단계
+
+
+def growth_stage(total: int, deep: int, brightest: int, moods: int) -> int:
+    """86: 0 첫 단계 전 · 1 첫 별들(별 12개) · 2 깊은 별 6 · 3 깊은 별 15와 별빛 900 이상 1번 ·
+    4 깊은 별 30과 여러 감정의 결. Stages go in order: every stage needs the 12 stars first.
+    `total` counts every star, floated or kept."""
+    if total < FIRST_STAGE_STARS:
+        return 0
     if deep >= 30 and moods >= 3:
         return 4
     if deep >= 15 and brightest >= SUPERNOVA_STARLIGHT:

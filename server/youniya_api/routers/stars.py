@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from ..deps import ApiError, consented_user, get_cipher, get_db
 from ..models import Draft, Nebula, Star, User
 from ..prism.filters import CRISIS_GUIDANCE, has_crisis_signal
-from ..rules import DEEP_DEPTH_SCORE, STAGE_NAMES, SUPERNOVA_STARLIGHT, growth_stage
+from ..rules import DEEP_DEPTH_SCORE, FIRST_STAGE_STARS, STAGE_NAMES, SUPERNOVA_STARLIGHT, growth_stage
 from ..security import Cipher
 from ..views import aware, iso, local, shared_star_ids, star_view
 from ..ratelimit import per_user
@@ -206,14 +206,19 @@ def trend(user: User = Depends(consented_user), db: Session = Depends(get_db)):
 
 @router.get("/growth")
 def growth(user: User = Depends(consented_user), db: Session = Depends(get_db)):
-    """08 나의 성운, 86 네 걸음, 66 지나온 순간."""
+    """08 나의 성운, 86 네 걸음, 66 지나온 순간.
+
+    `stage` is 0 until there are 12 stars (floated or kept), then 1–4; `stage_name` is null at 0.
+    `next.needs` holds [now, goal] pairs for the next stage: `stars` at 0 (별 N/12), `deep` at 1,
+    `deep` and `starlight_900` at 2, `deep` and `moods` at 3. `next` is null at 4."""
     stars = db.scalars(select(Star).where(Star.user_id == user.id).order_by(Star.created_at)).all()
     floated = [s for s in stars if s.state == "floated"]
     deep = sum(1 for s in floated if (s.depth_score or 0) >= DEEP_DEPTH_SCORE)
     brightest = max((s.starlight or 0 for s in floated), default=0)
     moods = len({s.mood for s in floated})
-    stage = growth_stage(deep, brightest, moods)
-    nxt = {2: {"deep": [deep, 6]},
+    stage = growth_stage(len(stars), deep, brightest, moods)
+    nxt = {1: {"stars": [len(stars), FIRST_STAGE_STARS]},
+           2: {"deep": [deep, 6]},
            3: {"deep": [deep, 15], "starlight_900": [int(brightest >= SUPERNOVA_STARLIGHT), 1]},
            4: {"deep": [deep, 30], "moods": [moods, 3]}}.get(stage + 1)
 
@@ -228,7 +233,7 @@ def growth(user: User = Depends(consented_user), db: Session = Depends(get_db)):
     ]
     return {
         "stage": stage,
-        "stage_name": STAGE_NAMES[stage - 1],
+        "stage_name": STAGE_NAMES[stage - 1] if stage else None,
         "floated": len(floated),
         "deep": deep,
         "supernova": sum(1 for s in floated if (s.starlight or 0) >= SUPERNOVA_STARLIGHT),

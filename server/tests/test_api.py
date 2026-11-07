@@ -122,9 +122,28 @@ def test_trend_and_growth(client):
     trend = client.get("/v1/starlight/trend", headers=h).json()
     assert len(trend["recent"]) == 3 and trend["enough"] is True
     growth = client.get("/v1/growth", headers=h).json()
-    assert growth["stage"] == 1 and growth["deep"] == 3
-    assert growth["next"]["needs"]["deep"] == [3, 6]
+    # 기획서 5.1: below 12 stars there is no stage yet, whatever the depth.
+    assert growth["stage"] == 0 and growth["stage_name"] is None and growth["deep"] == 3
+    assert growth["next"] == {"stage": 1, "stage_name": "첫 별들", "needs": {"stars": [3, 12]}}
     assert growth["milestones"][0]["key"] == "first_star"
+
+    for i in range(9):  # kept stars count toward the 12 too
+        r = client.post("/v1/stars", json={"mood": "calm", "title": f"간직 {i}", "body": "조용히 간직하는 글",
+                                           "mode": "keep"}, headers=h)
+        assert r.status_code == 201, r.text
+    growth = client.get("/v1/growth", headers=h).json()
+    assert growth["stage"] == 1 and growth["stage_name"] == "첫 별들"
+    assert growth["next"]["needs"] == {"deep": [3, 6]}
+
+
+def test_growth_stages_go_in_order():
+    from youniya_api.rules import growth_stage
+
+    assert growth_stage(10, 6, 0, 1) == 0  # deep enough for 2, but not 12 stars yet
+    assert growth_stage(11, 30, 950, 4) == 0
+    assert growth_stage(12, 0, 0, 1) == 1
+    assert growth_stage(12, 6, 0, 1) == 2
+    assert growth_stage(40, 30, 950, 3) == 4
 
 
 # --- telescope and coins -----------------------------------------------------
