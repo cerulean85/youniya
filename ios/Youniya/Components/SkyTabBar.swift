@@ -26,6 +26,7 @@ enum SkyTab: CaseIterable, Identifiable {
 /// Figma `Tab Bar`: four tabs around a raised violet pencil FAB.
 /// Custom (not `TabView`) because the design reserves a center slot for the FAB.
 struct SkyTabBar: View {
+    @Environment(\.skyTheme) private var theme
     @Binding var selection: SkyTab
     var onCompose: () -> Void
 
@@ -86,10 +87,12 @@ struct SkyTabBar: View {
 
     private var fab: some View {
         Button(action: onCompose) {
-            // FAB: violet gradient circle with glow; icon = `Icon/write-star` (pencil + sparkle)
-            Image(.fab)
-                .resizable()
-                .frame(width: 108, height: 108)
+            // Figma FAB: a 60pt circle in the theme gradient with a dark ring and the
+            // tint's glow; icon = `Icon/write-star` (pencil + sparkle).
+            Circle()
+                .fill(LinearGradient(colors: [theme.accent.top, theme.accent.bottom], startPoint: .top, endPoint: .bottom))
+                .overlay(Circle().strokeBorder(Color.bgSurface, lineWidth: 4))
+                .shadow(color: theme.accent.tint.opacity(0.4), radius: 12)
                 .overlay { WriteStarIcon() }
                 .frame(width: 60, height: 60)
                 .contentShape(.circle)

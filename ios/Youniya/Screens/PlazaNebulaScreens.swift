@@ -217,6 +217,7 @@ struct MiniConstellation: View {
 
 /// Figma `Chip` with a leading dot (09 sort, 72 filter).
 struct DotChip: View {
+    @Environment(\.skyTheme) private var theme
     var title: String
     var isSelected: Bool
     var dot: Color = .brandPrimary
@@ -232,8 +233,8 @@ struct DotChip: View {
             }
             .padding(.horizontal, Space.md)
             .padding(.vertical, Space.sm)
-            .background(isSelected ? Color.tintPrimary : Color.bgSurface, in: .capsule)
-            .overlay(Capsule().strokeBorder(isSelected ? Color.brandPrimary : Color.borderDefault, lineWidth: 1))
+            .background(isSelected ? theme.accent.tint.opacity(0.16) : Color.bgSurface, in: .capsule)
+            .overlay(Capsule().strokeBorder(isSelected ? theme.accent.strong : Color.borderDefault, lineWidth: 1))
             .contentShape(.capsule)
         }
         .buttonStyle(.plain)

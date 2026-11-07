@@ -4,6 +4,7 @@ import SwiftUI
 
 /// Figma `Zoom Controls`: + / level / −, 36pt circles. − is filled violet.
 struct ZoomControls: View {
+    @Environment(\.skyTheme) private var theme
     @Binding var level: CGFloat
     var range: ClosedRange<CGFloat>
 
@@ -33,7 +34,7 @@ struct ZoomControls: View {
                 .foregroundStyle(filled ? Color.white : Color.textSecondary)
                 .frame(width: 36, height: 36)
                 .cosmos("zoom-\(glyph)", in: Circle(), intensity: 0.6)
-                .background(filled ? Color.hex(0x8555EF) : Color.bgSurfaceRaised, in: .circle)
+                .background(filled ? theme.accent.strong : Color.bgSurfaceRaised, in: .circle)
                 .overlay(Circle().strokeBorder(Color.borderDefault, lineWidth: 1))
         }
         .buttonStyle(.plain)
@@ -44,6 +45,7 @@ struct ZoomControls: View {
 
 /// Figma `Star Tooltip`: the selected star, its shape, and a link to it.
 private struct StarTooltip: View {
+    @Environment(\.skyTheme) private var theme
     var star: StarItem
     var onOpen: () -> Void
 
@@ -63,7 +65,7 @@ private struct StarTooltip: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Text("별 보기 ›")
                     .textStyle(.labelM)
-                    .foregroundStyle(Color.hex(0x8555EF))
+                    .foregroundStyle(theme.accent.strong)
             }
             .padding(Space.lg)
             .cosmos("tooltip", in: RoundedRectangle(cornerRadius: Radius.lg))
@@ -343,6 +345,7 @@ struct PetalLayout {
 
 /// Figma `Nebula Shape`: violet petal lines and star shapes, scaled by `level`.
 private struct PetalNebula: View {
+    @Environment(\.skyTheme) private var theme
     var layout: PetalLayout
     var level: CGFloat
     var onSelect: (StarItem) -> Void
@@ -359,7 +362,7 @@ private struct PetalNebula: View {
                         for n in layout.petals[i] { p.addLine(to: at(n.point)) }
                         p.closeSubpath()
                     }
-                    .stroke(Color.hex(0x8555EF).opacity(0.55), lineWidth: 2.4)
+                    .stroke(theme.accent.strong.opacity(0.55), lineWidth: 2.4)
                 }
                 ForEach(layout.petals.flatMap { $0 }) { node in
                     star(node.star, selected: false)

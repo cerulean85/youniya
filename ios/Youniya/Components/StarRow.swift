@@ -43,6 +43,7 @@ struct StarRow: View {
 
 /// Figma `Starlight Badge` (Standard tier). Shows "—" before analysis.
 struct StarlightBadge: View {
+    @Environment(\.skyTheme) private var theme
     var value: Int?
 
     var body: some View {
@@ -60,8 +61,8 @@ struct StarlightBadge: View {
         }
         .padding(.horizontal, Space.md)
         .padding(.vertical, Space.xs)
-        .background(Color.tintPrimary, in: .capsule)
-        .overlay(Capsule().strokeBorder(Color.brandPrimary, lineWidth: 1))
+        .background(theme.accent.tint.opacity(0.16), in: .capsule)
+        .overlay(Capsule().strokeBorder(theme.accent.strong, lineWidth: 1))
     }
 }
 

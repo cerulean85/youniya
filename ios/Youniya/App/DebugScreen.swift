@@ -42,6 +42,10 @@ enum DebugScreen {
     /// App-wide state for the screen, before the first page shows.
     @MainActor static func prepare(_ model: AppModel) {
         #if DEBUG
+        // `-debugTheme violet|aurora|ember|ocean|rose`: 68 우주의 색 for the review.
+        if let raw = UserDefaults.standard.string(forKey: "debugTheme"), let theme = SkyTheme(rawValue: raw) {
+            model.settings.sky = theme
+        }
         guard let s = current, supported.contains(s) else { return }
         UserDefaults.standard.set(false, forKey: "useLiveAPI")
         model.useLiveAPI = false

@@ -4,11 +4,14 @@ import SwiftUI
 /// Pressed uses the Hover variant gradient.
 struct PrimaryButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.skyTheme) private var theme
 
     func makeBody(configuration: Configuration) -> some View {
+        // 68: the gradient follows the chosen sky; violet keeps its Hover variant.
+        let a = theme.accent
         let colors: [Color] = configuration.isPressed
-            ? [.primaryHoverGradientStart, .primaryHoverGradientEnd]
-            : [.primaryGradientStart, .primaryGradientEnd]
+            ? (theme == .violet ? [.primaryHoverGradientStart, .primaryHoverGradientEnd] : [a.bottom, a.bottom])
+            : [a.top, a.bottom]
         configuration.label
             .textStyle(.labelM)
             .foregroundStyle(isEnabled ? Color.textOnBrand : Color.textSecondary)
@@ -26,8 +29,8 @@ struct PrimaryButtonStyle: ButtonStyle {
                     RoundedRectangle(cornerRadius: Radius.md).fill(Color.borderDefault)
                 }
             }
-            // brand/primary-glow: #8B5CF6 @ 40%, blur 24
-            .shadow(color: Color.brandPrimary.opacity(isEnabled ? 0.4 : 0), radius: 12)
+            // brand/primary-glow: the theme tint @ 40%, blur 24
+            .shadow(color: a.tint.opacity(isEnabled ? 0.4 : 0), radius: 12)
             .contentShape(.rect(cornerRadius: Radius.md))
     }
 }
