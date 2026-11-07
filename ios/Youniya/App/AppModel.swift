@@ -211,7 +211,7 @@ struct StarItem: Identifiable, Hashable, Codable {
     /// Sample stars from the Figma `04 Home` frame.
     static let samples: [StarItem] = [
         StarItem(title: "느리게 흘러간 하루", dateText: "11월 3일 · 21:30", state: .floated(starlight: 742),
-                 body: "오늘은 마음이 조금 느리게 흘렀어요. 해야 할 일은 많았는데 자꾸만 창밖을 보게 됐어요.\n\n기다리는 일이 이렇게 오래 걸릴 줄 몰랐어요. 그래도 그 느림이 싫지만은 않았어요. 어쩌면 나는 쉬고 싶었는지도 몰라요.",
+                 body: "오늘은 마음이 조금 느리게 흘렀어요. 해야 할 일은 많았는데 자꾸만 창밖을 보게 됐어요.\n\n민지 언니를 기다리는 일이 이렇게 오래 걸릴 줄 몰랐어요. 그래도 그 느림이 싫지만은 않았어요. 어쩌면 나는 쉬고 싶었는지도 몰라요.",
                  analysis: StarAnalysis(starlight: 742, depth: 0.82, clarity: 0.55, weight: 0.55,
                                         observation: "그런 마음이 머물렀군요.\n오늘의 별은 조용히 숨을 고르고 있어요.",
                                         telescopeTeaser: "기다림 속에 작은 안도가 섞여 있어요.",
@@ -638,12 +638,11 @@ final class AppModel {
         return f.string(from: until)
     }
 
-    /// 19: share to / withdraw from the plaza.
-    /// TODO: send to the plaza API; for now it's a local flag.
-    func setShared(_ shared: Bool, for id: StarItem.ID) {
+    /// 19: share to / withdraw from the plaza. `quote`: the sentence picked on 19-1.
+    func setShared(_ shared: Bool, for id: StarItem.ID, quote: String? = nil) {
         if useLiveAPI {
             Task { @MainActor in
-                if shared { _ = await shareStarLive(id) } else { await unshareStarLive(id) }
+                if shared { _ = await shareStarLive(id, quote: quote) } else { await unshareStarLive(id) }
             }
             return
         }
@@ -715,7 +714,9 @@ final class AppModel {
 
     /// 71 하늘에 띄우기: floats my newest nebula. Live: on the server, and only
     /// once it is there; without a drawn nebula there is nothing to float yet.
-    func floatMyNebula(receiveLines: Bool, showQuote: Bool) {
+    /// `quote`: the line picked on 71-1 when "가린 한 문장 함께 보이기" is on.
+    func floatMyNebula(receiveLines: Bool, quote: String?) {
+        let showQuote = quote != nil
         let share = NebulaSkyShare(name: nebulaName, receiveLines: receiveLines, showQuote: showQuote)
         guard useLiveAPI else { skyShare = share; return }
         guard let latest = drawnNebulae.last else {
@@ -723,7 +724,7 @@ final class AppModel {
             return
         }
         Task { @MainActor in
-            if await shareNebulaLive(latest.id, receiveLines: receiveLines, withQuote: showQuote) { skyShare = share }
+            if await shareNebulaLive(latest.id, receiveLines: receiveLines, quote: quote) { skyShare = share }
         }
     }
 

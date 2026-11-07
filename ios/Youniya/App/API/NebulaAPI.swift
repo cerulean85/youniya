@@ -62,20 +62,10 @@ extension AppModel {
     }
 
     /// Live 55 우주 광장에 나누기 / 71 하늘에 띄우기.
-    /// `quote`: when 71 "가린 한 문장 함께 보이기" is on, a sentence from the nebula's
-    /// own stars; the server masks it again.
-    @MainActor func shareNebulaLive(_ id: DrawnNebula.ID, receiveLines: Bool = true, withQuote: Bool = false) async -> Bool {
-        guard let serverID = await serverID(of: id),
-              let nebula = drawnNebulae.first(where: { $0.id == id }) else { return false }
-        var quote: String?
-        if withQuote {
-            // TODO: Let the user pick the sentence ("직접 골라 가린 한 줄").
-            quote = stars.filter { nebula.starIDs.contains($0.id) }
-                .flatMap { $0.body.split(whereSeparator: { ".!?\n".contains($0) }) }
-                .map { $0.trimmingCharacters(in: .whitespaces) }
-                .filter { !$0.isEmpty && $0.count <= 300 }
-                .max(by: { $0.count < $1.count })
-        }
+    /// `quote`: the line picked on 71-1, as written in one of the nebula's stars;
+    /// the server masks it again.
+    @MainActor func shareNebulaLive(_ id: DrawnNebula.ID, receiveLines: Bool = true, quote: String? = nil) async -> Bool {
+        guard let serverID = await serverID(of: id) else { return false }
         do {
             try await APIClient.shared.sendRaw("PUT", "/v1/nebulae/\(serverID)/share",
                                                body: NebulaShareIn(receiveLines: receiveLines, quote: quote))

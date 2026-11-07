@@ -168,16 +168,12 @@ extension AppModel {
         }
     }
 
-    /// Live 19/20: shares a floated star with one sentence of its own text.
-    /// The server masks names, contacts and places again before it is public.
-    /// TODO: Let the user pick the sentence (Figma 75 "본인이 골라 공개한 한 문장").
-    @MainActor func shareStarLive(_ id: StarItem.ID) async -> Bool {
+    /// Live 19/20: shares a floated star with one sentence of its own text,
+    /// the one picked on 19-1 (sent as written; the server masks names,
+    /// contacts and places before it is public). Without a pick (20): the longest.
+    @MainActor func shareStarLive(_ id: StarItem.ID, quote picked: String? = nil) async -> Bool {
         guard let star = stars.first(where: { $0.id == id }) else { return false }
-        let sentences = star.body
-            .split(whereSeparator: { ".!?\n".contains($0) })
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty && $0.count <= 300 }
-        let quote = sentences.max(by: { $0.count < $1.count }) ?? String(star.body.prefix(300))
+        let quote = picked ?? star.body.shareSentences.max(by: { $0.count < $1.count }) ?? String(star.body.prefix(300))
         do {
             try await APIClient.shared.sendRaw("PUT", "/v1/stars/\(id.apiID)/share", body: ShareIn(quote: quote))
             if let i = stars.firstIndex(where: { $0.id == id }) { stars[i].sharedToPlaza = true }

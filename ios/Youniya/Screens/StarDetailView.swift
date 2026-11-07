@@ -15,6 +15,11 @@ struct StarDetailView: View {
     @State private var confirmDelete = DebugScreen.is("15")
     @State private var confirmShare = DebugScreen.is("19")
     @State private var shareSheetHeight: CGFloat = 336
+    /// 19-1: opens after 19 "익명으로 나누기" closes.
+    @State private var pickQuote = DebugScreen.is("19-1")
+    @State private var wantsPick = false
+    @State private var pickerHeight: CGFloat = 480
+    @State private var screenHeight: CGFloat = 844
     @State private var sheetHeight: CGFloat = 336
 
     var body: some View {
@@ -44,6 +49,7 @@ struct StarDetailView: View {
             .frame(maxHeight: .infinity, alignment: .top)
         }
         .background { StarField() }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { screenHeight = $0 }
     }
 
     private func content(_ star: StarItem) -> some View {
@@ -117,10 +123,13 @@ struct StarDetailView: View {
             .presentationBackground { SheetBackground(seed: "delete-sheet") }
         }
         // 19 Share Consent
-        .sheet(isPresented: $confirmShare) {
+        .sheet(isPresented: $confirmShare, onDismiss: {
+            if wantsPick { wantsPick = false; pickQuote = true }
+        }) {
             ShareConsentSheet(
                 onShare: {
-                    model.setShared(true, for: starID)
+                    // 19-1: pick the one sentence first.
+                    wantsPick = true
                     confirmShare = false
                 },
                 onReview: {
@@ -135,6 +144,27 @@ struct StarDetailView: View {
             .presentationDragIndicator(.hidden)
             .presentationCornerRadius(Radius.xl)
             .presentationBackground { SheetBackground(seed: "share-sheet") }
+        }
+        // 19-1 어떤 문장을 나눌까요?
+        .sheet(isPresented: $pickQuote) {
+            SentencePickerSheet(
+                title: "어떤 문장을 나눌까요?",
+                detail: "고른 한 문장만 익명으로 올라가요. 이름·연락처·장소는 ●●●로 가려져요.",
+                actionTitle: "이 문장 나누기",
+                options: model.sentenceOptions(for: starID),
+                maxHeight: screenHeight * 0.85,
+                onPick: { sentence in
+                    model.setShared(true, for: starID, quote: sentence)
+                    pickQuote = false
+                },
+                onCancel: { pickQuote = false }
+            )
+            .fixedSize(horizontal: false, vertical: true)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { pickerHeight = $0 }
+            .presentationDetents([.height(pickerHeight)])
+            .presentationDragIndicator(.hidden)
+            .presentationCornerRadius(Radius.xl)
+            .presentationBackground { SheetBackground(seed: "quote-sheet") }
         }
     }
 

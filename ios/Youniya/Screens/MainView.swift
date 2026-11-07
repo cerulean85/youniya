@@ -424,7 +424,7 @@ struct MainView: View {
             push(.compose())
         case "14", "16", "105": if let floated { push(.compose(rewriteOf: floated.id)) }
         case "10": if let floated { push(.report(floated.id)) }
-        case "12", "15", "19", "48": if let floated { push(.detail(floated.id)) }
+        case "12", "15", "19", "19-1", "48": if let floated { push(.detail(floated.id)) }
         case "20": if let floated { push(.privacy(floated.id)) }
         case "24", "29": if let s = fresh ?? floated { push(.telescopeConfirm(s.id)) }
         case "25": if let s = fresh ?? floated { push(.scanning(s.id)) }
@@ -447,7 +447,7 @@ struct MainView: View {
         case "86": push(.stages)
         case "68": push(.sky)
         case "69", "76": push(.galaxyZoom)
-        case "70", "71", "77", "112": push(.myNebulaZoom)
+        case "70", "71", "71-1", "77", "112": push(.myNebulaZoom)
         case "81": push(.milkyWay)
         case "82", "109": push(.brightness)
         case "83": push(.nebulaStory)

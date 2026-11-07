@@ -167,7 +167,8 @@ struct MyNebulaZoomView: View {
     @State private var selectedID: StarItem.ID?
     @State private var toast: String?
     /// 71 하늘에 띄우기
-    @State private var askFloat = DebugScreen.is("71")
+    @State private var askFloat = DebugScreen.is("71") || DebugScreen.is("71-1")
+    @State private var screenHeight: CGFloat = 844
     @State private var floatSheetHeight: CGFloat = 640
     @State private var isShortScreen = false
     /// 112 skeleton while the nebula loads.
@@ -258,6 +259,7 @@ struct MyNebulaZoomView: View {
             .padding(.bottom, Space.xl)
         }
         .onGeometryChange(for: Bool.self) { $0.size.height < 700 } action: { isShortScreen = $0 }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { screenHeight = $0 }
         .onAppear {
             if DebugScreen.is("77") { selectedID = floated.first?.id }
         }
@@ -266,6 +268,7 @@ struct MyNebulaZoomView: View {
         .toast($toast)
         .sheet(isPresented: $askFloat) {
             FloatNebulaSheet(
+                maxPickerHeight: screenHeight * 0.85,
                 onFloat: {
                     askFloat = false
                     toast = "성운을 하늘에 띄웠어요"

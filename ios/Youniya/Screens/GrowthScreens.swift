@@ -5,11 +5,17 @@ import SwiftUI
 /// 71 하늘에 띄우기 시트 (over 77): what goes out, what never does, two options.
 struct FloatNebulaSheet: View {
     @Environment(AppModel.self) private var model
+    /// 71-1's height cap (85% of the screen).
+    var maxPickerHeight: CGFloat = 700
     var onFloat: () -> Void
     var onLater: () -> Void
 
     @State private var receiveLines = true
     @State private var showQuote = false
+    /// The line picked on 71-1; turning the option on opens the picker.
+    @State private var quote: String?
+    @State private var pickQuote = DebugScreen.is("71-1")
+    @State private var pickerHeight: CGFloat = 480
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.lg) {
@@ -37,14 +43,18 @@ struct FloatNebulaSheet: View {
             ])
 
             optionRow("별빛 한 줄 받기", "다른 사람이 짧은 한 줄을 건넬 수 있어요", isOn: $receiveLines)
-            optionRow("가린 한 문장 함께 보이기", "직접 골라 가린 한 줄만 보여요", isOn: $showQuote)
+            optionRow("가린 한 문장 함께 보이기", "직접 골라 가린 한 줄만 보여요", isOn: Binding(
+                get: { showQuote },
+                set: { on in
+                    if on { pickQuote = true } else { showQuote = false; quote = nil }
+                }))
 
             Text("띄운 성운은 설정 › 모든 공유 거두기에서 언제든 거둘 수 있어요.")
                 .textStyle(.caption).foregroundStyle(Color.textTertiary)
 
             VStack(spacing: Space.md) {
                 Button("띄우기") {
-                    model.floatMyNebula(receiveLines: receiveLines, showQuote: showQuote)
+                    model.floatMyNebula(receiveLines: receiveLines, quote: showQuote ? quote : nil)
                     onFloat()
                 }
                 .buttonStyle(.primary)
@@ -55,7 +65,30 @@ struct FloatNebulaSheet: View {
         .padding(.top, Space.md)
         .padding(.bottom, Space.lg)
         .onAppear {
-            if let s = model.skyShare { receiveLines = s.receiveLines; showQuote = s.showQuote }
+            // The picked line isn't kept, so a float again asks for it again.
+            if let s = model.skyShare { receiveLines = s.receiveLines }
+        }
+        // 71-1 함께 보일 한 줄을 골라요: cancel leaves the option off.
+        .sheet(isPresented: $pickQuote) {
+            SentencePickerSheet(
+                title: "함께 보일 한 줄을 골라요",
+                detail: "성운에 모인 별들의 문장 중 하나만 함께 보여요. 이름·연락처·장소는 ●●●로 가려져요.",
+                actionTitle: "이 한 줄 함께 보이기",
+                options: model.nebulaSentenceOptions(),
+                maxHeight: maxPickerHeight,
+                onPick: { sentence in
+                    quote = sentence
+                    withAnimation(.snappy(duration: 0.2)) { showQuote = true }
+                    pickQuote = false
+                },
+                onCancel: { pickQuote = false }
+            )
+            .fixedSize(horizontal: false, vertical: true)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { pickerHeight = $0 }
+            .presentationDetents([.height(pickerHeight)])
+            .presentationDragIndicator(.hidden)
+            .presentationCornerRadius(Radius.xl)
+            .presentationBackground { SheetBackground(seed: "quote-sheet") }
         }
     }
 
