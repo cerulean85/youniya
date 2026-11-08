@@ -1,0 +1,23 @@
+.back { display: inline-flex; align-items: center; gap: 6px; font: 500 14px/20px var(--sans); color: var(--text-2); margin-bottom: -8px; }
+.card { align-self: center; width: 100%; max-width: 560px; padding: 32px 36px; border-radius: 28px; display: flex; flex-direction: column; gap: 20px; }
+.head { display: flex; flex-direction: column; gap: 10px; }
+.tags { display: flex; gap: 8px; }
+.tag { padding: 4px 10px; border-radius: 999px; font: 500 12px/16px var(--sans); background: var(--raised); color: var(--text-2); }
+.gold { background: var(--tint-gold); color: var(--gold); }
+.sky { height: 200px; display: grid; place-items: center; border-radius: 16px; background: radial-gradient(50% 60% at 50% 50%, rgba(251, 191, 36, 0.12), transparent 70%); }
+.quote { margin: 0; padding: 20px 24px; border-radius: 16px; background: var(--raised); border: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+.actions { display: flex; gap: 12px; }
+.actions .btn { flex: 1; }
+.on { color: #fff; background: color-mix(in srgb, var(--pink) 70%, #000); border-color: var(--pink); }
+.more { display: flex; justify-content: center; gap: 20px; }
+.more button { background: none; border: 0; cursor: pointer; font: 500 12px/16px var(--sans); color: var(--text-3); }
+.more button:hover { color: var(--text); }
+.dialog { max-width: 440px; padding: 32px; color: var(--text); }
+.dialog::backdrop { background: rgba(11, 15, 25, 0.7); }
+.dialog form { display: flex; flex-direction: column; gap: 16px; }
+.reasons { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font: 400 14px/22px var(--sans); }
+.reasons label, .check { display: flex; gap: 10px; align-items: center; cursor: pointer; }
+.reasons input, .check input { accent-color: var(--primary); width: 18px; height: 18px; }
+.check { font: 400 14px/22px var(--sans); padding-top: 4px; border-top: 1px solid var(--border); padding-top: 14px; }
+.dialogActions { display: flex; justify-content: flex-end; gap: 8px; padding-top: 8px; }
+.danger { color: #fff; background: linear-gradient(180deg, #bc5457, #a5202a); }

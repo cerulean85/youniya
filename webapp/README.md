@@ -48,7 +48,9 @@ vercel deploy --prod   # from this folder, linked to youniya-app
    **Done** (both checked on production, 2026-11-08).
 3. Home, writing (drafts in the database), floating, star detail, records (list, search, filters,
    calendar): **done**.
-4. Plaza, nebulae, mind telescope, settings, contact, states.
+4. Plaza stars (grid, new or similar, the other person's star with resonance, keep beside, report
+   with optional block, block; sharing one masked sentence from a star): **done**.
+   Next: plaza nebulae, nebulae, mind telescope, settings, contact, states.
    Nebula rules (server, 2026-11-08): at least 3 floated stars (the next button stays off until then;
    subtitle "N개 골랐어요 · 3개 이상이면 돼요"), names up to 20 characters, and `PATCH /v1/nebulae/{id}`
    reshapes a drawn nebula (`plaza_updated` when it is shared; changing its stars drops the polished

@@ -1,0 +1,22 @@
+.header { display: flex; flex-direction: column; gap: 8px; }
+.loading { min-height: 480px; opacity: 0.5; }
+.controls { display: flex; align-items: center; gap: 16px; }
+.spacer { flex: 1; }
+.segment { display: inline-flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); }
+.segment a { padding: 8px 32px; border-radius: 999px; font: 500 14px/20px var(--sans); color: var(--text-2); }
+.segment a[aria-current="page"] { background: var(--primary); color: var(--on-brand); }
+.sorts { display: flex; gap: 8px; }
+.sorts a { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; font: 500 12px/18px var(--sans); background: var(--raised); border: 1px solid var(--border); color: var(--text-2); }
+.sorts a::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--primary); }
+.sorts a[aria-current="true"] { color: var(--text); border-color: var(--primary); background: var(--tint); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
+.card { display: flex; flex-direction: column; gap: 8px; padding: 10px 10px 14px; border-radius: 16px; }
+.card:hover { border-color: rgba(133, 85, 239, 0.6); }
+.card > :not(.sky) { padding: 0 6px; }
+.sky { height: 128px; border-radius: 12px; display: grid; place-items: center; margin-bottom: 4px;
+  background: radial-gradient(70% 70% at 40% 40%, rgba(139, 92, 246, 0.25), transparent 70%), #0e1424 url("/stars.svg") 0 0 / 360px; }
+.quote { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.foot { display: inline-flex; align-items: center; gap: 4px; font: 500 12px/16px var(--sans); color: var(--primary-text); margin-top: 2px; }
+.foot[data-on="true"] { color: var(--pink); }
+.empty { padding: 48px; display: flex; flex-direction: column; gap: 8px; }
+.notice { align-self: flex-start; padding: 10px 16px; border-radius: 12px; background: var(--tint-calm); border: 1px solid rgba(52, 211, 153, 0.4); font: 400 13px/20px var(--sans); }

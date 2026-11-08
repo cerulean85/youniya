@@ -1,0 +1,71 @@
+"use client";
+
+import { useRef, useState, useTransition } from "react";
+import { useFormStatus } from "react-dom";
+import { Lock } from "@/components/icons";
+import { scanSentences, shareStar, unshareStar } from "./actions";
+import styles from "./star.module.css";
+
+type Option = { text: string; masked: string; total: number };
+
+function sentencesOf(body: string) {
+  return body.split(/(?<=[.!?。…])\s+|\n+/).map((s) => s.trim()).filter((s) => s.length >= 4 && s.length <= 300).slice(0, 12);
+}
+
+// Figma W-26 (19-1 나눌 문장 고르기): one sentence, chosen by the writer, masked before it leaves.
+export function ShareStar({ id, title, body, shared }: { id: string; title: string; body: string; shared: boolean }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [options, setOptions] = useState<Option[] | null>(null);
+  const [loading, start] = useTransition();
+
+  if (shared) {
+    return (
+      <form action={unshareStar.bind(null, id)} className={styles.shared}>
+        <span className="body-s muted">우주 광장에 한 문장을 나눈 별이에요.</span>
+        <Pending label="나눈 문장 거두기" busy="거두는 중…" style="btn-ghost" />
+      </form>
+    );
+  }
+  const open = () => {
+    dialog.current?.showModal();
+    if (!options) start(async () => {
+      const list = sentencesOf(body);
+      const scans = await scanSentences(list);
+      setOptions(list.map((text, i) => ({ text, masked: scans[i].masked, total: scans[i].total })));
+    });
+  };
+  return (
+    <>
+      <button type="button" className="btn btn-secondary btn-block" onClick={open}>우주 광장에 나누기</button>
+      <dialog ref={dialog} className={`card ${styles.dialog} ${styles.shareDialog}`} aria-labelledby="share-title">
+        <form action={async (f) => { await shareStar(id, f); dialog.current?.close(); }}>
+          <p className="caption faint">{title}</p>
+          <h2 id="share-title" className="h2">어떤 문장을 나눌까요?</h2>
+          <p className="body-s muted">고른 한 문장만 익명으로 올라가요. 이름·연락처·장소는 ●●●로 가려져요.</p>
+          <div className={styles.options} role="radiogroup">
+            {loading || !options ? <p className="body-s faint">문장을 살펴보는 중…</p> : options.length === 0 ? (
+              <p className="body-s faint">나눌 만한 문장을 찾지 못했어요.</p>
+            ) : options.map((o, i) => (
+              <label key={i} className={styles.option}>
+                <input type="radio" name="quote" value={o.text} defaultChecked={i === 0} />
+                <span>
+                  <span className="observation">“{o.masked}”</span>
+                  {o.total > 0 && <span className={styles.masked}><Lock size={14} />{o.total}곳을 가린 채로 올라가요</span>}
+                </span>
+              </label>
+            ))}
+          </div>
+          <div className={styles.dialogActions}>
+            <button type="button" className="btn btn-ghost" onClick={() => dialog.current?.close()}>취소</button>
+            <Pending label="이 문장으로 나누기" busy="나누는 중…" style="btn-primary" disabled={!options?.length} />
+          </div>
+        </form>
+      </dialog>
+    </>
+  );
+}
+
+function Pending({ label, busy, style, disabled }: { label: string; busy: string; style: string; disabled?: boolean }) {
+  const { pending } = useFormStatus();
+  return <button className={`btn ${style}`} disabled={pending || disabled}>{pending ? busy : label}</button>;
+}

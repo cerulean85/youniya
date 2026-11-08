@@ -53,3 +53,16 @@ export type Summary = {
 export type Draft = { mood: Mood; title: string; body: string } | null;
 
 export type CreateResult = { star: Star; crisis: unknown; charged: number; coins: number };
+
+export type PlazaStar = {
+  id: string; // the share id
+  name: string;
+  quote: string;
+  mood: Mood;
+  moods: Mood[];
+  depth_level: number;
+  shape: { points: number; sharpness: "soft" | "normal" | "sharp" | string } | null;
+  created_at: string;
+  resonated: boolean;
+  beside: boolean;
+};

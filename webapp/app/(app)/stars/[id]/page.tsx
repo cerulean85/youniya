@@ -7,6 +7,7 @@ import { StarCard } from "@/components/StarCard";
 import { api, ApiError } from "@/lib/api";
 import { longDate, moodOf, dateTime } from "@/lib/format";
 import type { Star } from "@/lib/types";
+import { ShareStar } from "./ShareStar";
 import { DeleteButton, FloatButton } from "./StarActions";
 import styles from "./star.module.css";
 
@@ -64,6 +65,7 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
             <StarCard analysis={star.analysis!} />
             {star.analysis!.rewrite_question && <p className={`observation ${styles.question}`}>“{star.analysis!.rewrite_question}”</p>}
             <Link href="/write" className="btn btn-primary btn-block">이 주제로 다시 쓰기</Link>
+            <ShareStar id={star.id} title={star.title || "제목 없는 별"} body={star.body} shared={star.shared} />
           </>
         ) : (
           <div className={`card ${styles.keptCard}`}>
