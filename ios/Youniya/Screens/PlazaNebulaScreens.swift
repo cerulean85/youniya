@@ -82,14 +82,15 @@ struct GalaxyNebula: Identifiable, Hashable {
 
 // MARK: - 72 Plaza · Nebula
 
-/// 72 우주 광장 · 성운: everyone's drawn nebulae in one field. No ranking.
+/// 09-4 우주 광장 · 성운: everyone's drawn nebulae in one field. No ranking.
+/// The tab's filter (새로 뜬 것 / 나와 결이 비슷한 / 곁에 둔 것) picks what shows.
 struct PlazaNebulaField: View {
-    enum Filter: String, CaseIterable { case similar = "나와 비슷한 결", newest = "새로 띄운 성운", kept = "곁에 둔 성운" }
-
     @Environment(AppModel.self) private var model
+    var filter: PlazaFilter
+    /// 09-4: the field takes the height left on the screen.
+    var fills = false
     var onOpen: (GalaxyNebula) -> Void
 
-    @State private var filter: Filter = .similar
     @State private var selected: GalaxyNebula.ID?
     @State private var level: CGFloat = 1
 
@@ -97,7 +98,9 @@ struct PlazaNebulaField: View {
         switch filter {
         case .similar: model.galaxyNebulae.sorted { $0.similarity > $1.similarity }
         case .newest: model.galaxyNebulae.sorted { $0.order < $1.order }
-        case .kept: model.galaxyNebulae.filter { model.resonated.contains(Self.key($0)) }
+        // Live: the server's beside list; mock: the ones I resonated with.
+        case .kept: model.useLiveAPI ? model.plazaNebulaeBeside
+            : model.galaxyNebulae.filter { model.resonated.contains(Self.key($0)) }
         }
     }
 
@@ -107,23 +110,11 @@ struct PlazaNebulaField: View {
         let items = self.items
         let current = items.first { $0.id == selected } ?? items.first
         VStack(alignment: .leading, spacing: Space.lg) {
-            // Figma: two rows of dotted chips.
-            FlowRow(spacing: Space.sm) {
-                ForEach(Filter.allCases, id: \.self) { f in
-                    DotChip(title: f.rawValue, isSelected: filter == f) {
-                        withAnimation(.snappy) { filter = f; selected = nil }
-                    }
-                }
-            }
-
             if items.isEmpty {
-                // 103
-                EmptyStateView(title: "곁에 둔 성운이 아직 없어요",
-                               message: "마음이 닿은 성운을 곁에 두면\n여기서 다시 모아 볼 수 있어요.",
-                               action: ("나와 비슷한 결 둘러보기", .outline, {
-                                   withAnimation(.snappy) { filter = .similar; selected = nil }
-                               }))
-                    .padding(.top, 48)
+                Text(filter == .kept ? "곁에 둔 성운이 아직 없어요." : "아직 모인 성운이 없어요.")
+                    .textStyle(.bodyS)
+                    .foregroundStyle(Color.textTertiary)
+                    .frame(maxWidth: .infinity, minHeight: 120, maxHeight: fills ? .infinity : nil)
             } else {
             ZStack(alignment: .topTrailing) {
                 GeometryReader { geo in
@@ -159,7 +150,8 @@ struct PlazaNebulaField: View {
                 ZoomControls(level: $level, range: 1...2.6)
                     .padding(.trailing, 4)
             }
-            .frame(height: 280)
+            .frame(height: fills ? nil : 280)
+            .frame(maxHeight: fills ? .infinity : nil)
 
             Text("두 손가락으로 확대 · 별을 눌러 보기")
                 .textStyle(.caption)
@@ -173,9 +165,9 @@ struct PlazaNebulaField: View {
                             Text(current.name).textStyle(.labelM).foregroundStyle(Color.textPrimary)
                             HStack(spacing: Space.sm) {
                                 Tag(text: "깊이 \(current.stage)단계", tone: .gold)
-                                // Live: others' resonance counts are never shown.
-                                if current.serverID == nil {
-                                    Tag(text: "공명 \(current.resonance + (model.resonated.contains(Self.key(current)) ? 1 : 0))", tone: .violet)
+                                // Others' resonance counts are never shown, only mine.
+                                if model.resonated.contains(Self.key(current)) {
+                                    Tag(text: "공명했어요", tone: .violet)
                                 }
                             }
                         }
@@ -690,7 +682,7 @@ enum LineFilter {
 }
 
 #Preview("72") {
-    ScrollView { PlazaNebulaField(onOpen: { _ in }).padding(24) }
+    ScrollView { PlazaNebulaField(filter: .newest, onOpen: { _ in }).padding(24) }
         .background(Color.bgCanvas)
         .environment(AppModel())
 }

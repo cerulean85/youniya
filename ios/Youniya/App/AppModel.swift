@@ -352,14 +352,13 @@ final class AppModel {
     /// Mock, or the current StoreKit entitlement.
     var memberActive = false
     var memberRenewal: Date?
-    /// Live: a member's uses left today (stars, telescope, story); 10 each a day.
-    var memberLeftToday: (stars: Int?, telescope: Int?, story: Int?) = (nil, nil, nil)
+    /// Live: a member's uses left today (stars, telescope); 10 each a day.
+    var memberLeftToday: (stars: Int?, telescope: Int?) = (nil, nil)
     static let memberDailyLimit = 10
-    /// A member still has today's included float / telescope / polish.
-    /// Mock: stars floated today; the other two are counted by the server only.
+    /// A member still has today's included float / telescope.
+    /// Mock: stars floated today; telescopes are counted by the server only.
     var memberHasStar: Bool { isMember && (memberLeftToday.stars ?? (Self.memberDailyLimit - floatedToday)) > 0 }
     var memberHasTelescope: Bool { isMember && (memberLeftToday.telescope ?? Self.memberDailyLimit) > 0 }
-    var memberHasStory: Bool { isMember && (memberLeftToday.story ?? Self.memberDailyLimit) > 0 }
     /// Live 26: a member's monthly reports (123).
     var monthlyReports: [MonthlyReportItem] = []
     /// 68-1: a locked sky shown for 3 seconds before M1.
@@ -408,10 +407,6 @@ final class AppModel {
     var savedLines: [String] {
         didSet { UserDefaults.standard.set(savedLines, forKey: "savedLines") }
     }
-    /// 83: the story was polished once (coins spent); keeps the bridging lines.
-    var storyPolished: Bool {
-        didSet { UserDefaults.standard.set(storyPolished, forKey: "storyPolished") }
-    }
     /// 100/101: other people's lines this user reported (hidden for them).
     var reportedLines: Set<String> {
         didSet { UserDefaults.standard.set(Array(reportedLines), forKey: "reportedLines") }
@@ -432,15 +427,6 @@ final class AppModel {
     static let defaultNebulaName = "늦은 밤의 등대자리"
     /// The user's nebula name: the latest drawn one, or the default.
     var nebulaName: String { drawnNebulae.last?.name ?? Self.defaultNebulaName }
-    /// 83 "서사 다듬기 · 코인 10" (the first one after sign-up is free).
-    static let storyPolishCost = 10
-    /// Mock: the free first 서사 다듬기 is used.
-    var usedFreePolish: Bool {
-        didSet { UserDefaults.standard.set(usedFreePolish, forKey: "usedFreePolish") }
-    }
-    /// Live: the sign-up free polish is left (`free_story`).
-    var serverFreePolish: Bool?
-    var isPolishFree: Bool { memberHasStory || ((useLiveAPI ? serverFreePolish : nil) ?? !usedFreePolish) }
     /// 39–41: a notice covering the whole app. Not saved.
     var appNotice: AppNotice?
     /// Dev only: makes analysis or payment fail until turned off (35, 36, 38).
@@ -477,6 +463,9 @@ final class AppModel {
     /// Live plaza (09, 72, 74), loaded by `loadPlaza()` / `loadLines(for:)`.
     var plazaStarsLive: [PlazaNebula] = []
     var plazaNebulaeLive: [GalaxyNebula] = []
+    /// Live 09-2 「곁에 둔 것」: the server's beside lists, most recently kept first.
+    var plazaStarsBeside: [PlazaNebula] = []
+    var plazaNebulaeBeside: [GalaxyNebula] = []
     var liveLines: [String: [GalaxyNebula.Line]] = [:]
     /// Live 54 → 55/71: nebula creations still on their way to the server.
     var nebulaCreates: [DrawnNebula.ID: Task<String?, Never>] = [:]
@@ -545,9 +534,7 @@ final class AppModel {
         coins = Self.savedCoins(live: live)
         savedLines = UserDefaults.standard.stringArray(forKey: "savedLines") ?? []
         usedFreeTelescope = UserDefaults.standard.bool(forKey: "usedFreeTelescope")
-        usedFreePolish = UserDefaults.standard.bool(forKey: "usedFreePolish")
         monthlyFreeTelescopeMonth = UserDefaults.standard.string(forKey: "monthlyFreeTelescopeMonth")
-        storyPolished = UserDefaults.standard.bool(forKey: "storyPolished")
         nebulaLines = UserDefaults.standard.dictionary(forKey: "nebulaLines") as? [String: String] ?? [:]
         reportedLines = Set(UserDefaults.standard.stringArray(forKey: "reportedLines") ?? [])
         skyShare = Self.savedSkyShare(live: live)
@@ -635,7 +622,7 @@ final class AppModel {
             marketingOptIn = me.marketingOptIn
             coins = me.coins
             applyFreeUses(telescopeAvailable: me.freeTelescopeAvailable, star: me.freeStarToday,
-                          telescope: me.freeTelescope, story: me.freeStory)
+                          telescope: me.freeTelescope)
         } catch {
             handle(error)
             return
@@ -795,10 +782,9 @@ final class AppModel {
     }
 
     /// Live: free uses left, from /v1/me and /v1/coins.
-    func applyFreeUses(telescopeAvailable: Bool, star: Int?, telescope: Int?, story: Int?) {
+    func applyFreeUses(telescopeAvailable: Bool, star: Int?, telescope: Int?) {
         usedFreeTelescope = !(telescope.map { $0 > 0 } ?? telescopeAvailable)
         serverFreeFloat = star.map { $0 > 0 }
-        serverFreePolish = story.map { $0 > 0 }
     }
 
     /// The first telescope after sign-up is free, and one each month.
@@ -851,9 +837,6 @@ final class AppModel {
         guard let i = drawnNebulae.firstIndex(where: { $0.id == n.id }) else { return }
         var updated = n
         updated.updatedAt = .now
-        // New stars, or the same ones in another order: the server clears the
-        // polished story (bridges), so do it here too.
-        if drawnNebulae[i].starIDs != n.starIDs { storyPolished = false }
         drawnNebulae[i] = updated
         if useLiveAPI { Task { @MainActor in await updateNebulaLive(updated) } }
     }
@@ -930,10 +913,8 @@ final class AppModel {
         settings = AppSettings()
         coins = Self.starterCoins
         usedFreeTelescope = false
-        usedFreePolish = false
         monthlyFreeTelescopeMonth = nil
         drawnNebulae = []
-        storyPolished = false
         nebulaLines = [:]
         reportedLines = []
         skyShare = nil
@@ -1131,5 +1112,4 @@ struct MeResponse: Decodable {
     var freeTelescopeAvailable: Bool
     var freeStarToday: Int?
     var freeTelescope: Int?
-    var freeStory: Int?
 }

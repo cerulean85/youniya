@@ -21,6 +21,8 @@ private struct PlazaStarItem: Decodable {
     var shape: ShapeOut?
     var resonated: Bool
     var beside: Bool
+    /// 09-2 row: when it was shared.
+    var createdAt: Date?
 }
 
 private struct PlazaNebulaItem: Decodable {
@@ -58,7 +60,8 @@ private extension PlazaNebula {
         var rng = SeededRandom(seed: s.id)
         self.init(name: s.name, line: s.quote, pattern: rng.next(in: 0...1) < 0.5 ? .a : .b,
                   similarity: similarity, order: order, serverID: s.id,
-                  starShape: s.shape?.spec, mood: s.mood, depthLevel: s.depthLevel)
+                  starShape: s.shape?.spec, mood: s.mood, depthLevel: s.depthLevel,
+                  sharedAt: s.createdAt)
     }
 }
 
@@ -99,7 +102,9 @@ extension AppModel {
             async let similarStars: Items<PlazaStarItem> = APIClient.shared.get("/v1/plaza/stars", query: ["sort": "similar"])
             async let newNebulae: Items<PlazaNebulaItem> = APIClient.shared.get("/v1/plaza/nebulae", query: ["filter": "new"])
             async let similarNebulae: Items<PlazaNebulaItem> = APIClient.shared.get("/v1/plaza/nebulae", query: ["filter": "similar"])
-            let (ns, ss, nn, sn) = try await (newStars, similarStars, newNebulae, similarNebulae)
+            async let besideStars: Items<PlazaStarItem> = APIClient.shared.get("/v1/plaza/stars", query: ["sort": "beside"])
+            async let besideNebulae: Items<PlazaNebulaItem> = APIClient.shared.get("/v1/plaza/nebulae", query: ["filter": "beside"])
+            let (ns, ss, nn, sn, bs, bn) = try await (newStars, similarStars, newNebulae, similarNebulae, besideStars, besideNebulae)
 
             let starRank = Dictionary(ss.items.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { a, _ in a })
             plazaStarsLive = ns.items.enumerated().map { i, s in
@@ -109,6 +114,9 @@ extension AppModel {
             plazaNebulaeLive = nn.items.enumerated().map { i, n in
                 GalaxyNebula(n, order: i, similarity: 1 - Double(nebulaRank[n.id] ?? sn.items.count) / Double(max(1, sn.items.count)))
             }
+            // 「곁에 둔 것」: the server's order (most recently kept first).
+            plazaStarsBeside = bs.items.enumerated().map { i, s in PlazaNebula(s, order: i, similarity: 0) }
+            plazaNebulaeBeside = bn.items.enumerated().map { i, n in GalaxyNebula(n, order: i, similarity: 0) }
             // The app keeps one "resonated" set: star names, and "nebula:" keys for
             // nebulae the user resonated with or keeps beside (80).
             for s in ns.items where s.resonated { resonated.insert(s.name) }
@@ -118,24 +126,22 @@ extension AppModel {
         }
     }
 
-    /// Live: sends a resonance toggle. A nebula's toggle also keeps it beside
-    /// (80 컬렉션), as the app shows both as one "곁에 둔" state.
+    /// Live: sends a resonance toggle. It also keeps the star or nebula beside
+    /// (09-2 「곁에 둔 것」), as the app shows both as one "곁에 둔" state.
     @MainActor func sendResonance(key: String, on: Bool) {
         let target: (PlazaKind, String)?
         if key.hasPrefix("nebula:") {
             let name = String(key.dropFirst("nebula:".count))
-            target = plazaNebulaeLive.first { $0.name == name }?.serverID.map { (.nebula, $0) }
+            target = (plazaNebulaeLive + plazaNebulaeBeside).first { $0.name == name }?.serverID.map { (.nebula, $0) }
         } else {
-            target = plazaStarsLive.first { $0.name == key }?.serverID.map { (.star, $0) }
+            target = (plazaStarsLive + plazaStarsBeside).first { $0.name == key }?.serverID.map { (.star, $0) }
         }
         guard let (kind, id) = target else { return }  // e.g. a star inside a nebula: kept on device
         Task { @MainActor in
             do {
                 let method = on ? "PUT" : "DELETE"
                 try await APIClient.shared.sendRaw(method, "/v1/plaza/\(kind.rawValue)/\(id)/resonance")
-                if kind == .nebula {
-                    try await APIClient.shared.sendRaw(method, "/v1/plaza/nebula/\(id)/beside")
-                }
+                try await APIClient.shared.sendRaw(method, "/v1/plaza/\(kind.rawValue)/\(id)/beside")
             } catch {
                 if on { resonated.remove(key) } else { resonated.insert(key) }
                 handle(error)

@@ -13,7 +13,6 @@ struct MembershipOut: Decodable {
     /// Members: 10 a day each, then coins.
     var starsLeftToday: Int?
     var telescopeLeftToday: Int?
-    var storyLeftToday: Int?
 }
 
 private struct VerifyIn: Encodable { var signedTransaction: String }
@@ -65,7 +64,7 @@ extension AppModel {
     @MainActor func apply(_ m: MembershipOut) {
         memberActive = m.active
         memberRenewal = m.expiresAt
-        memberLeftToday = (m.starsLeftToday, m.telescopeLeftToday, m.storyLeftToday)
+        memberLeftToday = (m.starsLeftToday, m.telescopeLeftToday)
         if !m.active { endMemberLooks() }
     }
 

@@ -99,7 +99,6 @@ struct MembershipSheet: View {
     private static let benefits: [(ImageResource, String)] = [
         (.iconStar, "별 띄우기 하루 10개"),
         (.iconTelescope, "마음 망원경 하루 10번 · 띄운 별마다"),
-        (.iconPencil, "서사 다듬기 하루 10번"),
         (.iconNebula, "월간 마음 리포트"),
         (.iconSun, "우주의 색 장면 3가지 · 아이콘 · 성운 실루엣 계절 팩"),
     ]

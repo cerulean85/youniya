@@ -143,20 +143,6 @@ struct ListSkeleton: View {
     }
 }
 
-/// 110 스켈레톤 · 컬렉션: two-column tiles under the real header, segment and filters.
-struct CollectionGridSkeleton: View {
-    var body: some View {
-        SkeletonStack(spacing: Space.lg) {
-            ForEach(0..<4, id: \.self) { _ in
-                HStack(spacing: Space.md) {
-                    SkeletonBlock(height: 114, radius: Radius.lg)
-                    SkeletonBlock(height: 114, radius: Radius.lg)
-                }
-            }
-        }
-    }
-}
-
 /// 111 스켈레톤 · 리포트 목록: three report rows under the real hero.
 struct ReportListSkeleton: View {
     var body: some View {

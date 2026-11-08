@@ -1,7 +1,7 @@
 import SwiftUI
 
-// One way to draw a nebula from its data, used by 08, 70/77, the 80
-// collection and the plaza: silhouette places with mood-colored stars,
+// One way to draw a nebula from its data, used by 08, 70/77 and the
+// plaza: silhouette places with mood-colored stars,
 // guests with gold rings, faint empty places, and thin gold lines. No
 // decoration that isn't in the data.
 

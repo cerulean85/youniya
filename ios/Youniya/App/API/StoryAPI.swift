@@ -2,8 +2,8 @@ import SwiftUI
 
 // MARK: - 83 성운 이야기
 
-/// `GET /v1/nebulae/{id}/story`: each star's key sentence in time order, and the
-/// bridging lines once "서사 다듬기" is done. The sentences are never changed.
+/// `GET /v1/nebulae/{id}/story`: each star's key sentence in time order.
+/// The sentences are never changed.
 struct ServerStory: Decodable {
     struct Entry: Decodable {
         var starId: String
@@ -11,10 +11,6 @@ struct ServerStory: Decodable {
         var sentence: String
     }
     var entries: [Entry]
-    var bridges: [String]?
-    var polished: Bool
-    /// Only after polishing.
-    var coins: Int?
 }
 
 // MARK: - 85 손님별
@@ -49,17 +45,6 @@ extension AppModel {
             handle(error)
             return nil
         }
-    }
-
-    /// Live 83 서사 다듬기 · 코인 20: charged by the server only when it works.
-    /// Throws for 402 (not enough coins) so 83 can show its shortage toast.
-    @MainActor func polishStory() async throws -> ServerStory? {
-        guard let id = storyNebulaID else { return nil }
-        let r: ServerStory = try await APIClient.shared.post("/v1/nebulae/\(id)/story/polish", body: [String: String]())
-        if let c = r.coins { coins = c }
-        storyPolished = r.polished
-        await loadCoins()
-        return r
     }
 
     /// 85: the plaza stars I left a resonance on (live), or the mock samples.

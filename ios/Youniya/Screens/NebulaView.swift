@@ -88,7 +88,6 @@ struct NebulaView: View {
                     if model.latestNebula != nil { linkChip("성운 그리기") }
                     linkChip("성운 이야기")
                     linkChip("나의 은하수")
-                    linkChip("성운 모음")
                 }
             }
             .padding(.horizontal, Space.xl)

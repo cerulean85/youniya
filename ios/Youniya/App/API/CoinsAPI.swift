@@ -5,10 +5,9 @@ import Foundation
 private struct CoinBalance: Decodable {
     var coins: Int
     var freeTelescopeAvailable: Bool
-    /// Free uses left (e24a01d): today's float (0/1), telescopes (0–2), polish (0/1).
+    /// Free uses left (e24a01d): today's float (0/1), telescopes (0–2).
     var freeStarToday: Int?
     var freeTelescope: Int?
-    var freeStory: Int?
 }
 
 private struct CoinHistoryList: Decodable {
@@ -66,8 +65,8 @@ extension AppModel {
             let (b, h) = try await (balance, history)
             coins = b.coins
             applyFreeUses(telescopeAvailable: b.freeTelescopeAvailable, star: b.freeStarToday,
-                          telescope: b.freeTelescope, story: b.freeStory)
-            // Members: today's 10 floats / telescopes / polishes left.
+                          telescope: b.freeTelescope)
+            // Members: today's 10 floats / telescopes left.
             if membershipAvailable { await loadMembership() }
             coinHistory = h.items.map {
                 CoinEntry(id: UUID(uuidString: $0.id) ?? UUID(), title: $0.title, delta: $0.delta,

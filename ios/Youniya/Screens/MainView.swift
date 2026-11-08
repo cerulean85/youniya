@@ -55,7 +55,6 @@ struct MainView: View {
         case growth     // 65
         case moments    // 66
         case stages     // 86
-        case collection // 79·80
         case sharedStars // 87 › 나눈 별
         case blockedKeepers // 87-3 차단한 별지기
         case editStar(StarItem.ID)  // 글 수정
@@ -82,8 +81,6 @@ struct MainView: View {
                         } else if title == "별빛 기록" {
                             recordsFilter = .all
                             tab = .records
-                        } else if title == "컬렉션" {
-                            push(.collection)
                         } else if title == "간직한 별" {
                             recordsFilter = .kept
                             tab = .records
@@ -119,7 +116,6 @@ struct MainView: View {
             case "coins": push(.coins)
             case "settings": push(.settings)
             case "reports": push(.reports)
-            case "collection": push(.collection)
             case "plaza", "plazaNebula": tab = .plaza     // 09 / 72
             case "compose": push(.compose())              // 05
             case "myNebula": push(.myNebulaZoom)          // 77
@@ -371,8 +367,7 @@ struct MainView: View {
                             onSaved: {
                                 pop()
                                 toast = ToastCardMessage(title: "성운 이야기를 엮어 두었어요")
-                            },
-                            onNeedCoins: { push(.coins) })
+                            })
                 .edgeSwipeBack(onBack: pop)
         case .drawNebula:
             NebulaDrawingFlow(
@@ -414,20 +409,6 @@ struct MainView: View {
         case .stages:
             GrowthStagesView(onBack: pop)
                 .edgeSwipeBack(onBack: pop)
-        case .collection:
-            CollectionView(
-                onBack: pop,
-                onOpenStar: openStar,
-                onOpenOtherStar: { push(.galaxyStar(nebula: $0, star: $1)) },
-                onOpenMyNebula: { push(.myNebulaZoom) },
-                onOpenOtherNebula: { push(.galaxyNebula($0.name)) },
-                onDraw: { push(.drawNebula) },
-                onPlaza: {
-                    withAnimation(.easeInOut(duration: 0.32)) { stack.removeAll() }
-                    tab = .plaza
-                }
-            )
-            .edgeSwipeBack(onBack: pop)
         case .reshapeNebula:
             NebulaDrawingFlow(onClose: pop, onHome: pop, onShare: pop, editing: model.latestNebula)
         case .editStar(let id):
@@ -545,7 +526,6 @@ struct MainView: View {
         case "84-1": push(.drawNebula)
         case "87-4": push(.settings)
         case "123": push(.monthlyReport(nil))
-        case "79", "80", "96", "97", "110": push(.collection)
         case "87", "87-1", "87-2", "87-5", "91", "92", "93", "94", "95", "114": push(.settings)
         case "122": push(.detail(UUID()))
         case "122-1": push(.report(UUID()))
@@ -630,7 +610,6 @@ struct MainView: View {
         case "깊은 별": push(.nebulaStars(.deep))
         case "초신성": push(.nebulaStars(.supernova))
         case "나의 은하수": push(.milkyWay)
-        case "성운 모음": push(.collection)
         case "우주 광장":
             // 모두의 은하 (69) is merged into the plaza: switch tabs.
             withAnimation(.easeInOut(duration: 0.32)) { stack.removeAll() }

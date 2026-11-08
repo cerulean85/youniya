@@ -172,8 +172,6 @@ struct NebulaDrawingFlow: View {
 
     @State private var steps: [Step] = DebugScreen.is("84-1") ? [.start, .shape] : [.start]
     @State private var prefilled = false
-    /// Reshape: new stars clear a polished story, so ask once first.
-    @State private var confirmClearStory = false
     @State private var silhouette: NebulaSilhouette? = .lighthouse
     /// 84-1: M1 from a locked season silhouette.
     @State private var showMembership = false
@@ -353,7 +351,7 @@ struct NebulaDrawingFlow: View {
             }
 
             if editing != nil {
-                Text("우주 광장에 띄운 성운이면, 광장에서도 새 모양으로 바뀌어요.\n별을 바꾸면 다듬은 성운 이야기는 지워지고, 문장만 엮은 이야기로 돌아가요.")
+                Text("우주 광장에 띄운 성운이면, 광장에서도 새 모양으로 바뀌어요.")
                     .textStyle(.caption).foregroundStyle(Color.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -528,21 +526,9 @@ struct NebulaDrawingFlow: View {
             NameField(text: $name)
             Spacer(minLength: 0)
             actions {
-                Button("저장하기") {
-                    if let e = editing, model.storyPolished, e.starIDs != newStarIDs {
-                        confirmClearStory = true
-                    } else {
-                        save()
-                    }
-                }
-                .buttonStyle(.primary)
-                .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
-                .alert("다듬은 이야기가 지워져요", isPresented: $confirmClearStory) {
-                    Button("그대로 두기", role: .cancel) {}
-                    Button("바꾸기") { save() }
-                } message: {
-                    Text("별을 바꾸면 다듬은 성운 이야기는 지워지고, 문장만 엮은 이야기로 돌아가요.")
-                }
+                Button("저장하기") { save() }
+                    .buttonStyle(.primary)
+                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
         .padding(Space.xl)
@@ -589,8 +575,6 @@ struct NebulaDrawingFlow: View {
         }
     }
 
-    /// The stars the nebula will hold once saved.
-    private var newStarIDs: [UUID] { chosenTemplate == nil ? picked : placed.map(\.id) }
 
     private func save() {
         let template = chosenTemplate

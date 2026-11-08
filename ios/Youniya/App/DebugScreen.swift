@@ -33,11 +33,12 @@ enum DebugScreen {
     /// Frames that open (see `prepare` and `MainView.openDebugScreen`).
     /// Not supported: 30/67 (popup menu, the app uses the 67-1 drawer), 42 (toast
     /// sheet), 52–55/84/85 (later drawing steps), 57–60 (story pages, removed),
-    /// 63/64 (later birth stages), 88 (telescope observing), 103 (plaza filter).
+    /// 63/64 (later birth stages), 88 (telescope observing), 103 (plaza filter),
+    /// 79/80/96/97/110 (collection, removed).
     static let supported: Set<String> = Set("""
     1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 28-1 29 31 32 33 34 35 36 37 38
-    39 40 41 43 44 45 46 47 48 49 50 51 56 61 62 65 66 67-1 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83
-    86 87 89 90 91 92 93 94 95 96 97 98 99 100 101 102 104 105 106 107 108 109 110 111 112 113 114 115 116 117
+    39 40 41 43 44 45 46 47 48 49 50 51 56 61 62 65 66 67-1 68 69 70 71 72 73 74 75 76 77 78 81 82 83
+    86 87 89 90 91 92 93 94 95 98 99 100 101 102 104 105 106 107 108 109 111 112 113 114 115 116 117
     118 119 120 120-1 121 122 122-1 86-1 19-1 71-1 87-1 87-2 3-1 2-1 75-1 75-2 87-3 M1 28-2 68-1 87-4 123 84-1 5-3 5-4 87-5 12-2
     """.split(whereSeparator: \.isWhitespace).map(String.init))
 
@@ -90,15 +91,10 @@ enum DebugScreen {
             model.reportedLines.remove("그 문장, 저도 오늘 쓰고 싶던 말이에요.")
         case "118":
             if !model.stars.contains(where: { !$0.isFloated }) { model.fillSampleStars() }
-        case "80":
-            if model.drawnNebulae.isEmpty {
-                model.drawnNebulae = [DrawnNebula(name: AppModel.defaultNebulaName, silhouette: "lighthouse",
-                                                  starIDs: model.stars.filter(\.isFloated).map(\.id))]
-            }
         case "69":
             model.resonated.insert("nebula:" + GalaxyNebula.samples[0].name)
             for star in model.stars.filter(\.isFloated).prefix(2) { model.setShared(true, for: star.id) }
-        case "47", "48", "49", "50", "110", "111", "112":
+        case "47", "48", "49", "50", "111", "112":
             UserDefaults.standard.set(600, forKey: "simulateLoadingSeconds")
             model.simulateLoading = true
         case "98":
@@ -123,8 +119,6 @@ enum DebugScreen {
             for star in model.stars.filter(\.isFloated).prefix(2) { model.setShared(true, for: star.id) }
         case "18":
             for star in model.stars where star.isShared { model.setShared(false, for: star.id) }
-        case "96":
-            model.drawnNebulae = []
         default: break
         }
         #endif
