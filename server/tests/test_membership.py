@@ -168,3 +168,23 @@ def test_season_silhouettes_are_for_members_and_stay(make_app):
     assert client.get(f"/v1/nebulae/{n['id']}", headers=h).json()["silhouette"] == "cherry_blossom"
     seen = client.get(f"/v1/plaza/nebulae/{share['share_id']}", headers=sign_in(client, "other")).json()
     assert seen["shape"]["silhouette"] == "cherry_blossom"
+
+
+def test_redrawn_nebula_keeps_a_member_silhouette_after_the_membership(make_app):
+    apple, client = _app(make_app, free_stars_per_day=10**6)
+    h = sign_in(client)
+    ids = [float_star(client, h)["id"] for _ in range(4)]
+    plain = client.post("/v1/nebulae", json={"name": "고래", "silhouette": "whale", "star_ids": ids[:3]},
+                        headers=h).json()
+    r = client.patch(f"/v1/nebulae/{plain['id']}", json={"silhouette": "wave"}, headers=h)
+    assert r.status_code == 403 and r.json()["error"]["code"] == "member_only"
+
+    user_id, _ = _join(apple, client, h)
+    n = client.post("/v1/nebulae", json={"name": "파도", "silhouette": "wave", "star_ids": ids[:3]}, headers=h).json()
+    client.post(URL, json=_note(apple, "EXPIRED", _tx(user_id, days=-1)))
+    # Not a member any more: the nebula can still be redrawn while it keeps its silhouette…
+    r = client.patch(f"/v1/nebulae/{n['id']}", json={"name": "새 파도", "silhouette": "wave", "star_ids": ids,
+                                                     "edges": [[0, 1]]}, headers=h)
+    assert r.status_code == 200 and r.json()["silhouette"] == "wave" and r.json()["star_count"] == 4
+    # …but cannot pick another member one.
+    assert client.patch(f"/v1/nebulae/{n['id']}", json={"silhouette": "maple"}, headers=h).status_code == 403

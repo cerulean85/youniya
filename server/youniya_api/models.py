@@ -126,6 +126,8 @@ class Nebula(Base):
     guest_share_ids: Mapped[list] = mapped_column(JSON, default=list)
     story_bridges: Mapped[list | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    # Set when the nebula is drawn again; null for one never changed.
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class NebulaShare(Base):

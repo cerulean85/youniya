@@ -1585,14 +1585,40 @@
         ]
       }
     },
-    "/v1/nebulae/guest-candidates": {
-      "get": {
+    "/v1/nebulae/{nebula_id}": {
+      "patch": {
         "tags": [
           "nebulae"
         ],
-        "summary": "Guest Candidates",
-        "description": "85: plaza stars I left a 공명 on, newest first.",
-        "operationId": "guest_candidates_v1_nebulae_guest_candidates_get",
+        "summary": "Edit",
+        "description": "성운 다시 그리기. Same checks as drawing it. A member silhouette needs the membership only when\nnewly chosen: one already kept stays after the membership ends (13.5). New stars drop the\npolished story (its lines joined the old ones). A nebula on the plaza is updated there too,\nkeeping its 공명 and 별빛 한 줄, unless a star in it carries a crisis signal.",
+        "operationId": "edit_v1_nebulae__nebula_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "nebula_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Nebula Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NebulaEdit"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1601,16 +1627,19 @@
                 "schema": {}
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/v1/nebulae/{nebula_id}": {
+        }
+      },
       "get": {
         "tags": [
           "nebulae"
@@ -1654,6 +1683,31 @@
             }
           }
         }
+      }
+    },
+    "/v1/nebulae/guest-candidates": {
+      "get": {
+        "tags": [
+          "nebulae"
+        ],
+        "summary": "Guest Candidates",
+        "description": "85: plaza stars I left a 공명 on, newest first.",
+        "operationId": "guest_candidates_v1_nebulae_guest_candidates_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/v1/nebulae/{nebula_id}/story": {
@@ -3795,6 +3849,92 @@
         },
         "type": "object",
         "title": "MonthlyIn"
+      },
+      "NebulaEdit": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "silhouette": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Silhouette"
+          },
+          "star_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 200,
+                "minItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Star Ids"
+          },
+          "edges": {
+            "anyOf": [
+              {
+                "items": {
+                  "prefixItems": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "integer"
+                    }
+                  ],
+                  "type": "array",
+                  "maxItems": 2,
+                  "minItems": 2
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edges"
+          },
+          "guest_share_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 5
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guest Share Ids"
+          }
+        },
+        "type": "object",
+        "title": "NebulaEdit",
+        "description": "Only what is given changes. New `star_ids` need their `edges` too: the indexes move."
       },
       "NebulaIn": {
         "properties": {
