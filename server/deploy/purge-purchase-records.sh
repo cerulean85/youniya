@@ -1,5 +1,5 @@
 #!/bin/sh
-# Deletes deleted accounts' purchase records once they are 5 years old. Run daily by youniya-purge.timer.
+# Deletes deleted accounts' purchase records once they are 5 years old, by hand (Vercel Cron does it daily).
 set -e
 cd "$(dirname "$0")/.."
 set -a

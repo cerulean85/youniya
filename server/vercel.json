@@ -5,5 +5,11 @@
       "maxDuration": 120,
       "excludeFiles": "{tests/**,migrations/**,deploy/**,*.db,openapi.json}"
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/v1/cron/purge-purchase-records",
+      "schedule": "0 20 * * *"
+    }
+  ]
 }

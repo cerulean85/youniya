@@ -250,3 +250,23 @@ def test_detached_purchase_records_go_after_five_years(client):
         assert coins.purge_detached(db, now) == 1
         db.commit()
         assert sorted(r.transaction_id for r in db.query(CoinEntry)) == ["mine", "new"]
+
+
+def test_vercel_cron_purges_with_the_secret_only(make_app):
+    from datetime import datetime, timedelta, timezone
+
+    from youniya_api import coins
+    from youniya_api.models import CoinEntry
+
+    url = "/v1/cron/purge-purchase-records"
+    assert TestClient(make_app()).get(url).status_code == 404  # no CRON_SECRET: the route doesn't exist
+    app = make_app(cron_secret="s3cret")
+    client = TestClient(app)
+    assert client.get(url).status_code == 404
+    assert client.get(url, headers={"Authorization": "Bearer wrong"}).status_code == 404
+    with app.state.sessions() as db:
+        db.add(CoinEntry(user_id=None, title="코인 충전", delta=110, transaction_id="old",
+                         created_at=datetime.now(timezone.utc) - coins.DETACHED_KEEP - timedelta(days=1)))
+        db.commit()
+    r = client.get(url, headers={"Authorization": "Bearer s3cret"})
+    assert r.status_code == 200 and r.json() == {"deleted": 1}

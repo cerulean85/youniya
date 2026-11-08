@@ -1,5 +1,6 @@
 """Deletes deleted accounts' purchase records once they are 5 years old (개인정보 처리방침 3).
-Run daily by youniya-purge.timer; a missed day is caught up by the next run.
+Production runs the same purge daily through Vercel Cron (GET /v1/cron/purge-purchase-records);
+this script is for counting (--dry-run) or running it by hand.
 
     python tools/purge_purchase_records.py [--dry-run]
 

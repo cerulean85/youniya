@@ -78,6 +78,8 @@ class Settings:
     invite_login: bool = field(default_factory=lambda: os.getenv("INVITE_LOGIN") == "1")
     # 별지기 멤버십 (v1.1). Off: every membership API is 404 and /v1/me says nothing of it.
     membership: bool = field(default_factory=lambda: os.getenv("MEMBERSHIP") == "1")
+    # Vercel Cron sends "Authorization: Bearer <CRON_SECRET>". Unset: the /v1/cron routes are 404.
+    cron_secret: str | None = field(default_factory=lambda: os.getenv("CRON_SECRET") or None)
     # Accept purchases without store verification. Development only.
     trust_purchases: bool = field(default_factory=lambda: os.getenv("TRUST_PURCHASES") == "1")
 
