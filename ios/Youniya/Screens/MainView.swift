@@ -99,15 +99,6 @@ struct MainView: View {
                     .zIndex(Double(index + 1))
             }
 
-            // 56–60 Story, over the tab bar, the first time the nebula tab opens.
-            if tab == .nebula && !model.hasSeenNebulaStory && stack.isEmpty {
-                NebulaStoryIntroView {
-                    withAnimation(.easeInOut(duration: 0.4)) { model.hasSeenNebulaStory = true }
-                }
-                .transition(.opacity)
-                .zIndex(0.5)
-            }
-
             // 21 Plaza Welcome, over the tab bar, the first time the plaza opens.
             if tab == .plaza && !model.hasSeenPlazaIntro && stack.isEmpty {
                 PlazaWelcomeView(

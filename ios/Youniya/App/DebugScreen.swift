@@ -32,7 +32,7 @@ enum DebugScreen {
 
     /// Frames that open (see `prepare` and `MainView.openDebugScreen`).
     /// Not supported: 30/67 (popup menu, the app uses the 67-1 drawer), 42 (toast
-    /// sheet), 52–55/84/85 (later drawing steps), 57–60 (later story pages),
+    /// sheet), 52–55/84/85 (later drawing steps), 57–60 (story pages, removed),
     /// 63/64 (later birth stages), 88 (telescope observing), 103 (plaza filter).
     static let supported: Set<String> = Set("""
     1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 28-1 29 31 32 33 34 35 36 37 38
@@ -56,7 +56,6 @@ enum DebugScreen {
         model.useLiveAPI = false
         model.isSignedIn = s != "2" && s != "2-1"
         model.hasConsented = s != "11"
-        model.hasSeenNebulaStory = s != "56"
         model.hasSeenPlazaIntro = s != "21"
         // 03 shows the empty sky alone; 03-1 opens the welcome over it.
         model.hasSeenWelcome = true

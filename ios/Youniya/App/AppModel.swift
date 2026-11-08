@@ -347,10 +347,6 @@ final class AppModel {
     var marketingOptIn: Bool {
         didSet { UserDefaults.standard.set(marketingOptIn, forKey: "marketingOptIn") }
     }
-    /// 56–60 story is shown the first time the nebula tab opens.
-    var hasSeenNebulaStory: Bool {
-        didSet { UserDefaults.standard.set(hasSeenNebulaStory, forKey: "hasSeenNebulaStory") }
-    }
     /// v1.1 membership: the server says it is on (TODO: GET /v1/membership; 404 = off).
     var membershipAvailable = false
     /// Mock, or the current StoreKit entitlement.
@@ -543,7 +539,6 @@ final class AppModel {
         marketingOptIn = UserDefaults.standard.bool(forKey: "marketingOptIn")
         hasSeenPlazaIntro = UserDefaults.standard.bool(forKey: "hasSeenPlazaIntro")
         hasSeenWelcome = UserDefaults.standard.bool(forKey: "hasSeenWelcome")
-        hasSeenNebulaStory = UserDefaults.standard.bool(forKey: "hasSeenNebulaStory")
         let live = Self.savedLiveAPI
         blockedKeepers = UserDefaults.standard.data(forKey: live ? "blockedKeepers-live" : "blockedKeepers")
             .flatMap { try? JSONDecoder().decode([BlockedKeeper].self, from: $0) } ?? []
@@ -943,7 +938,6 @@ final class AppModel {
         reportedLines = []
         skyShare = nil
         hasSeenPlazaIntro = false
-        hasSeenNebulaStory = false
         marketingOptIn = false
         hasConsented = false
         isSignedIn = false
