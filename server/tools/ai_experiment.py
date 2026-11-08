@@ -1,4 +1,4 @@
-"""The 20261107 model experiment: cheaper prism, telescope and story polish without Pro.
+"""The 20261107 model experiment: cheaper prism and telescope without Pro (story polish was removed on 20261108).
 
     GEMINI_API_KEY=… python tools/ai_experiment.py OUT_DIR
 
@@ -16,11 +16,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from youniya_api import llm  # noqa: E402
 from youniya_api.prism import PrismEngine  # noqa: E402
-from youniya_api.prism.engine import split_sentences  # noqa: E402
-from youniya_api.telescope import MAX_BRIDGE_LENGTH, StarText, build_report, story_bridges  # noqa: E402
+from youniya_api.telescope import StarText, build_report  # noqa: E402
 
 from measure_ai_cost import KRW_PER_USD, star_of  # noqa: E402
-from seed_texts import REVIEW_FLOATED  # noqa: E402
 
 # USD per 1M tokens (input, output incl. thinking), Standard paid tier, read 2026-11-07.
 PRICES = {
@@ -102,18 +100,12 @@ def main() -> None:
                 rows[-1]["result"] = {"star_name": r["star_name"], "question": r["question"],
                                       "notes": [lens["note"] for lens in r["lenses"]], "evidence": r["evidence"]}
 
-    # 3. Story polish with the new prompt, thinking low and off, twice per size.
-    sentences = [split_sentences(b)[0] for _, _, b in REVIEW_FLOATED]
-    for thinking in ("low", "off"):
-        for n in (3, 14) * 2:
-            run("story", f"flash-{thinking}", f"{n} sentences",
-                lambda: story_bridges(sentences[:n], key, FLASH, thinking))
     (out_dir / "experiment.json").write_text(json.dumps(
-        {"prices": PRICES, "prices_2027": PRICES_2027, "krw_per_usd": KRW_PER_USD, "max_bridge": MAX_BRIDGE_LENGTH,
-         "stars": {k: len(b) for k, (_, b) in stars.items()}, "sentences": sentences, "rows": rows},
+        {"prices": PRICES, "prices_2027": PRICES_2027, "krw_per_usd": KRW_PER_USD,
+         "stars": {k: len(b) for k, (_, b) in stars.items()}, "rows": rows},
         ensure_ascii=False, indent=1))
 
-    # 4. Prism quality: the scaled-down Protoss check for each variant.
+    # 3. Prism quality: the scaled-down Protoss check for each variant.
     for name, (model, n, thinking) in PRISM_VARIANTS.items():
         print(f"\n--- prism quality {name} ---", flush=True)
         subprocess.run([sys.executable, str(Path(__file__).with_name("eval_prism.py")), "--model", model,

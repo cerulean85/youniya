@@ -7,15 +7,13 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .. import ai_cost, allowance, coins, membership, privacy
+from .. import membership, privacy
 from ..blocks import visible_shares
 from ..deps import ApiError, consented_user, get_cipher, get_db
 from ..models import Beside, Nebula, NebulaShare, Resonance, Star, StarShare, User
-from ..rules import MAX_GUEST_STARS, MEMBER_SILHOUETTES, MIN_NEBULA_STARS, NEBULA_SILHOUETTES, STORY_POLISH_COST
+from ..rules import MAX_GUEST_STARS, MEMBER_SILHOUETTES, MIN_NEBULA_STARS, NEBULA_SILHOUETTES
 from ..security import Cipher
-from ..telescope import story_bridges
 from ..views import iso
-from ..ratelimit import per_user
 
 router = APIRouter(prefix="/v1/nebulae", tags=["nebulae"])
 
@@ -120,8 +118,7 @@ def create(body: NebulaIn, request: Request, user: User = Depends(consented_user
 def edit(nebula_id: str, body: NebulaEdit, request: Request, user: User = Depends(consented_user),
          db: Session = Depends(get_db), cipher: Cipher = Depends(get_cipher)):
     """성운 다시 그리기. Same checks as drawing it. A member silhouette needs the membership only when
-    newly chosen: one already kept stays after the membership ends (13.5). New stars drop the
-    polished story (its lines joined the old ones). A nebula on the plaza is updated there too,
+    newly chosen: one already kept stays after the membership ends (13.5). A nebula on the plaza is updated there too,
     keeping its 공명 and 별빛 한 줄, unless a star in it carries a crisis signal."""
     n = owned_nebula(db, user, nebula_id)
     given = body.model_fields_set
@@ -132,8 +129,6 @@ def edit(nebula_id: str, body: NebulaEdit, request: Request, user: User = Depend
         if body.edges is None:
             raise ApiError(422, "edges_required", "별을 바꾸면 잇기도 함께 보내 주세요.")
         ids = _check_stars(db, user, body.star_ids, body.edges)
-        if ids != n.star_ids:
-            n.story_bridges = None
         n.star_ids, n.edges = ids, [list(e) for e in body.edges]
     elif body.edges is not None:
         _check_stars(db, user, n.star_ids, body.edges)
@@ -240,54 +235,15 @@ def _story(n: Nebula, stars: list[Star], cipher: Cipher) -> dict:
         entries.append({"star_id": s.id, "date": iso(s.created_at), "title": cipher.dec(s.title_enc),
                         "sentence": a["impact_quote"]})
     return {"name": n.name, "since": entries[0]["date"] if entries else None, "star_count": len(entries),
-            "entries": entries, "bridges": n.story_bridges, "polished": n.story_bridges is not None,
-            "polish_cost": STORY_POLISH_COST}
-
-
-def _story_offer(user: User, member: bool = False) -> dict:
-    free = member or allowance.stories_left(user) > 0
-    return {"polish_cost": 0 if free else STORY_POLISH_COST, "polish_free": free}
+            "entries": entries}
 
 
 @router.get("/{nebula_id}/story")
-def story(nebula_id: str, request: Request, user: User = Depends(consented_user), db: Session = Depends(get_db),
+def story(nebula_id: str, user: User = Depends(consented_user), db: Session = Depends(get_db),
           cipher: Cipher = Depends(get_cipher)):
-    """83: each star's key sentence in time order. The sentences are never changed."""
+    """83: each star's key sentence in time order. The sentences are never changed. Free."""
     n = owned_nebula(db, user, nebula_id)
-    member = (membership.is_member(db, request.app.state.settings, user)
-              and membership.left_today(user, "story") > 0)
-    return _story(n, _stars(db, n), cipher) | _story_offer(user, member)
-
-
-@router.post("/{nebula_id}/story/polish", dependencies=[per_user("polish", 10, 3600)])
-def polish(nebula_id: str, request: Request, user: User = Depends(consented_user),
-           db: Session = Depends(get_db), cipher: Cipher = Depends(get_cipher)):
-    """83 서사 다듬기 · 코인 10 (the first one free): adds lines only at the ✦ places."""
-    n = owned_nebula(db, user, nebula_id)
-    stars = _stars(db, n)
-    current = _story(n, stars, cipher)
-    member = (membership.is_member(db, request.app.state.settings, user)
-              and membership.left_today(user, "story") > 0)
-    if current["polished"] and len(n.story_bridges) == max(0, len(stars) - 1):
-        return current | _story_offer(user, member) | {"charged": 0}
-    free = member or allowance.stories_left(user) > 0
-    if not free and user.coins < STORY_POLISH_COST:
-        raise ApiError(402, "insufficient_coins", "코인이 조금 부족해요.", coins=user.coins, cost=STORY_POLISH_COST)
-    settings = request.app.state.settings
-    try:
-        with ai_cost.metered(db, user):
-            bridges = story_bridges([e["sentence"] for e in current["entries"]], settings.gemini_api_key,
-                                    settings.telescope_model, settings.telescope_thinking, request.app.state.caches)
-    except Exception:
-        raise ApiError(502, "analysis_failed", "이야기를 다듬지 못했어요. 코인은 차감되지 않았어요.")
-    used_free = (member and membership.use_today(db, user, "story")) or (free and allowance.use_story(db, user))
-    if not used_free and not coins.spend(db, user, STORY_POLISH_COST, "서사 다듬기"):
-        db.rollback()
-        raise ApiError(402, "insufficient_coins", "코인이 조금 부족해요.", coins=user.coins, cost=STORY_POLISH_COST)
-    n.story_bridges = bridges
-    db.commit()
-    return _story(n, stars, cipher) | _story_offer(user, member) | {"charged": 0 if used_free else STORY_POLISH_COST,
-                                                            "coins": user.coins}
+    return _story(n, _stars(db, n), cipher)
 
 
 @router.put("/{nebula_id}/share")

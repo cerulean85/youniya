@@ -15,13 +15,14 @@ def _client(make_app):
 
 def _me(client, h):
     me = client.get("/v1/me", headers=h).json()
-    return me["free_star_today"], me["free_telescope"], me["free_story"], me["coins"]
+    return me["free_star_today"], me["free_telescope"], me["coins"]
 
 
 def test_one_free_star_a_day_then_five_coins(make_app, monkeypatch):
     client = _client(make_app)
     h = sign_in(client)
-    assert _me(client, h) == (1, 2, 1, 0)
+    assert _me(client, h) == (1, 2, 0)
+    assert "free_story" not in client.get("/v1/me", headers=h).json()
 
     first = client.post("/v1/stars", json=STAR, headers=h).json()
     assert first["charged"] == 0 and first["star"]["state"] == "floated"
@@ -55,7 +56,7 @@ def test_one_free_star_a_day_then_five_coins(make_app, monkeypatch):
     assert _me(client, h)[0] == 1
 
 
-def test_telescope_month_and_sign_up_story(make_app, monkeypatch):
+def test_telescope_month_and_sign_up(make_app, monkeypatch):
     client = _client(make_app)
     h = sign_in(client)
     float_star(client, h)
@@ -79,6 +80,6 @@ def test_packages_on_sale_and_old_ones_still_accepted(client):
         {"product_id": "coin_330", "coins": 330, "price": 3300, "bonus": 0},
         {"product_id": "coin_1100", "coins": 1100, "price": 9900, "bonus": 100},
     ]
-    assert shop["prices"] == {"star": 5, "telescope": 20, "story": 10}
+    assert shop["prices"] == {"star": 5, "telescope": 20}
     old = client.post("/v1/coins/purchases", json={"product_id": "coin_50", "transaction_id": "old"}, headers=h)
     assert old.json()["added"] == 50

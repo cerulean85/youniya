@@ -40,15 +40,17 @@ class User(Base):
     coins: Mapped[int] = mapped_column(Integer, default=0)
     free_telescope_used: Mapped[bool] = mapped_column(Boolean, default=False)  # the sign-up one
     # Free uses (youniya_api/allowance.py): the Korean day and how many free floats it had,
-    # the month whose free telescope was used, and the sign-up story polish.
+    # and the month whose free telescope was used.
     free_star_day: Mapped[str | None] = mapped_column(String(10))
     free_star_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     free_telescope_month: Mapped[str | None] = mapped_column(String(7))
+    # 서사 다듬기 was removed on 20261108; the column stays, unused.
     free_story_used: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     # 별지기 멤버십: uses on member_day (Korean day) out of MEMBER_DAILY_LIMIT each.
     member_day: Mapped[str | None] = mapped_column(String(10))
     member_star_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     member_telescope_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    # Unused since 서사 다듬기 was removed (20261108).
     member_story_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
 
@@ -126,6 +128,7 @@ class Nebula(Base):
     star_ids: Mapped[list] = mapped_column(JSON)
     edges: Mapped[list] = mapped_column(JSON, default=list)
     guest_share_ids: Mapped[list] = mapped_column(JSON, default=list)
+    # Lines from the removed 서사 다듬기 (20261108): kept in the table, never sent.
     story_bridges: Mapped[list | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     # Set when the nebula is drawn again; null for one never changed.

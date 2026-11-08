@@ -36,7 +36,7 @@ class MonthlyIn(BaseModel):
 
 @router.get("/membership")
 def status(request: Request, user: User = Depends(consented_user), db: Session = Depends(get_db)):
-    """{active, product_id, expires_at, auto_renew, status, stars_left_today, telescope_left_today, story_left_today}"""
+    """{active, product_id, expires_at, auto_renew, status, stars_left_today, telescope_left_today}"""
     return membership.view(db, request.app.state.settings, user)
 
 

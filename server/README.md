@@ -31,7 +31,7 @@ YOUNIYA-only rules come from the screens and `ios/Youniya/App/AppModel.swift`:
 - 50 characters to float a star (1,000 until 20261108).
 - Floating a star is free once a Korean day, then 5 coins.
 - The telescope costs 20 coins; one a month and one at sign-up are free.
-- Story polish costs 10 coins; the first one is free.
+- 성운 이야기 is free: each star's sentence in time order. 서사 다듬기 was removed on 20261108.
 - 별빛 한 줄 is 60 characters, one per nebula, and fades after a day.
 
 ## Run
@@ -104,8 +104,8 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
 | `DATABASE_URL` | `sqlite:///./youniya.db` | SQLite or Postgres (`postgresql://…`, e.g. Neon) |
 | `GEMINI_API_KEY` | (none) | Without it, a deterministic offline evaluator stands in (Protoss mock mode) |
 | `PRISM_MODEL` | `gemini-3.8-flash` | Star scoring |
-| `TELESCOPE_MODEL` | `gemini-3.8-flash` | Telescope reports and story polish (no Pro: 20261107 experiment) |
-| `TELESCOPE_THINKING` | `low` | Thinking level for telescope reports and story polish (`off`, `low`, `high`; empty: the model's default) |
+| `TELESCOPE_MODEL` | `gemini-3.8-flash` | Telescope reports (no Pro: 20261107 experiment) |
+| `TELESCOPE_THINKING` | `low` | Thinking level for telescope reports (`off`, `low`, `high`; empty: the model's default) |
 | `FREE_STARS_PER_DAY` | `1` | Free 별 띄우기 per Korean day; after that each costs 5 coins |
 | `PRISM_SAMPLES` | `1` | Scoring calls per star (one, tried again once; with 3 the median is used) |
 | `PRISM_THINKING` | `low` | Gemini 3 thinking level for scoring; empty = model default (about twice as slow) |
@@ -141,7 +141,7 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
 | Growth | `GET /v1/starlight/trend`, `GET /v1/growth` (`stage` 0 below 12 stars, then 1–4) | 08, 65, 66, 82, 86, 109 |
 | Telescope | `GET /v1/telescope/offer`, `POST·GET /v1/telescope/reports`, `GET /v1/telescope/reports/{id}`, `POST …/save` | 10, 24–27, 29, 88, 98 |
 | Coins | `GET /v1/coins`, `GET /v1/coins/history`, `POST /v1/coins/purchases` | 28, 33, 38, 102, 108 |
-| Nebulae | `POST·GET /v1/nebulae`, `GET /v1/nebulae/guest-candidates`, `GET·PATCH /v1/nebulae/{id}` (다시 그리기: same checks as drawing; a shared one updates its plaza snapshot unless a star carries a crisis signal), `GET /v1/nebulae/{id}/story`, `POST …/story/polish`, `PUT·DELETE …/share` | 51–55, 70, 71, 80, 83–85, 96 |
+| Nebulae | `POST·GET /v1/nebulae`, `GET /v1/nebulae/guest-candidates`, `GET·PATCH /v1/nebulae/{id}` (다시 그리기: same checks as drawing; a shared one updates its plaza snapshot unless a star carries a crisis signal), `GET /v1/nebulae/{id}/story`, `PUT·DELETE …/share` | 51–55, 70, 71, 80, 83–85, 96 |
 | Refunds | `POST /v1/storekit/notifications` (App Store Server Notifications V2 URL) | — |
 | Operator | `GET /v1/admin/status`, `POST /v1/admin/push-test`, `POST /v1/admin/error-test`, `POST /v1/admin/announcements`, `GET /v1/admin/reports`, `POST /v1/admin/lines/{id}/hide·restore`, `GET /v1/admin/inquiries`, `GET /v1/admin/logs` | — |
 | Blocks | `POST·GET /v1/blocks`, `DELETE /v1/blocks/{id}` | 87-3, 100 |
@@ -154,8 +154,8 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
   - If the model fails, the star is stored as kept with `analysis_failed: true`, and `POST /v1/stars/{id}/float` retries it (36).
   - `PATCH /v1/stars/{id}` (글 수정) takes any of `title`, `body`, `mood`. A floated star keeps its mood (`409 mood_fixed`), shape, starlight, analysis and reports; nothing is read again or charged. Plaza shares keep the sentence copied when shared. The crisis check runs again; stars carry `updated_at` (null until edited).
 - **Crisis signals:** The writing is saved as written, but it is never scored or shared. The response carries `crisis` with the 109 line (37).
-- **Prices and free uses** (1 coin = 10 KRW): floating a star is free once a Korean day, then 5 coins (keeping is always free). The telescope costs 20 coins, free once a calendar month (no carry-over) plus once at sign-up. Story polish costs 10 coins, free once at sign-up. `GET /v1/me` and `GET /v1/coins` show `free_star_today`, `free_telescope` and `free_story`; a float, report or polish answers `charged` and `coins`. Products on sale: `coin_110` (1,100원), `coin_330` (3,300원), `coin_1100` (9,900원, 100 bonus). `coin_50`, `coin_120` and `coin_300` are no longer listed but are still accepted and refunded.
-- **Coins:** Charged only after a result exists. A failed report or polish charges nothing (Protoss 4.4). The balance never goes below zero, even with requests racing.
+- **Prices and free uses** (1 coin = 10 KRW): floating a star is free once a Korean day, then 5 coins (keeping is always free). The telescope costs 20 coins, free once a calendar month (no carry-over) plus once at sign-up. `GET /v1/me` and `GET /v1/coins` show `free_star_today` and `free_telescope`; a float or report answers `charged` and `coins`. Products on sale: `coin_110` (1,100원), `coin_330` (3,300원), `coin_1100` (9,900원, 100 bonus). `coin_50`, `coin_120` and `coin_300` are no longer listed but are still accepted and refunded.
+- **Coins:** Charged only after a result exists. A failed report charges nothing (Protoss 4.4). The balance never goes below zero, even with requests racing.
 - **Buying coins** (`POST /v1/coins/purchases`):
   - Send `{"signed_transaction": transaction.jwsRepresentation}` after a verified StoreKit 2 purchase, then call `transaction.finish()` once the server answers 200.
   - Buy with `appAccountToken` set to the user id from `GET /v1/me`. A transaction bought for another account is refused.
@@ -174,11 +174,12 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
 - **Plaza:**
   - A shared star carries only the one masked sentence its owner chose. A shared nebula carries only its outline, colours, depth and an optional masked sentence.
   - Others never see scores, ranks or 공명 counts. Owners see their counts in `GET /v1/me/shares`.
+  - One filter for both lists: `GET /v1/plaza/stars?sort=` and `GET /v1/plaza/nebulae?filter=` take `new`, `similar` or `beside`. `beside` lists what I kept 곁에, the most recently kept first, under the same block and hiding rules.
   - A line, star or nebula someone reports disappears for them at once. Three reports hide it for everyone until an operator restores it (`POST /v1/admin/shares/{star|nebula}/{id}/hide|restore`).
   - **Blocks** (App Store 1.2): `POST /v1/blocks` with one of `line_id`, `star_id` or `nebula_id` (the plaza share id) blocks whoever wrote it, also via `"block": true` on a report. Hiding goes both ways: neither sees the other's shares or lines anywhere. `GET /v1/blocks` lists when and where, never who.
 - **별지기 멤버십** (v1.1, `MEMBERSHIP=1`; off by default, and then every membership API is 404 and `/v1/me` says nothing of it):
   - Products `membership_monthly` (2,900원) and `membership_yearly` (29,000원), one auto-renewable group with a 7-day trial. `POST /v1/membership/verify {signedTransaction}` after a purchase or restore; App Store Server Notifications keep it current (SUBSCRIBED, DID_RENEW, DID_CHANGE_RENEWAL_STATUS, DID_FAIL_TO_RENEW grace, EXPIRED, GRACE_PERIOD_EXPIRED, REFUND, REVOKE).
-  - A member has 10 floats, 10 telescope reports and 10 story polishes a Korean day, used before the free ones everybody has, then coins; every sky; and a 월간 마음 리포트 (one a month, never remade): `GET /v1/reports/monthly[/{YYYY-MM}]`, `POST /v1/reports/monthly {month?}` (5 stars floated that month). `deploy/youniya-monthly.timer` makes last month's daily from 06:00 KST, so a failed one is tried again the next day.
+  - A member has 10 floats and 10 telescope reports a Korean day, used before the free ones everybody has, then coins; every sky; and a 월간 마음 리포트 (one a month, never remade): `GET /v1/reports/monthly[/{YYYY-MM}]`, `POST /v1/reports/monthly {month?}` (5 stars floated that month). `deploy/youniya-monthly.timer` makes last month's daily from 06:00 KST, so a failed one is tried again the next day.
   - Skies from v1.0: `violet` and `ocean` for everyone; another sky is `403 member_only`, and a member sky shows as `violet` once the membership ends.
 - **AI cost:** every model call is priced from its usageMetadata and added to the account's month (`ai_costs`, KRW). Over 2,000원 in a month, an `ai_cost_over` operator log and an error to Sentry, once.
 - **Context caching** (`youniya_api/ai_cache.py`): prompts go fixed part first, then the user's part. On gemini-3.8-flash the implicit cache needs 4,096 input tokens, which no feature reaches; an explicit cache needs 1,024, which only the prism's fixed part has (2,774 tokens). After 10 requests in an hour a feature gets an explicit cache for an hour, extended while requests keep coming; a refused or expired cache falls back to a full request. Measured 20261107: prism 7.6 → 4.8원 a star, storage 2.1원 an hour.
@@ -191,7 +192,7 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
   - **Checking a phone:** `POST /v1/admin/push-test {"user_id"}` sends "시험 알림" to that user's devices and returns what APNs answered for each (`devices: []` means the app has not registered). `GET /v1/admin/status` shows whether APNs is set up.
   - **87 별 만들기 알림** is a local notification the app schedules itself; the server only keeps the `star_reminder` setting.
   - The app registers its token with `PUT /v1/me/devices` (`environment`: `sandbox` for Xcode debug builds, `production` for TestFlight and the App Store) and removes it with `DELETE /v1/me/devices/{token}` before signing out. Payloads carry `kind` (`report_result` or `announcement`). Dead tokens are dropped when APNs says so.
-- **Rate limits:** `429 rate_limited` with `retry_after` seconds. Limits per user, per hour: floating a star 30, telescope 10, story polish 10, lines 30, reports 30, purchases 30, inquiries 5. The privacy scan allows 60 per minute, and sign-in allows 30 per minute per IP. Counters live in the database (`rate_hits`), so every server instance counts together.
+- **Rate limits:** `429 rate_limited` with `retry_after` seconds. Limits per user, per hour: floating a star 30, telescope 10, lines 30, reports 30, purchases 30, inquiries 5. The privacy scan allows 60 per minute, and sign-in allows 30 per minute per IP. Counters live in the database (`rate_hits`), so every server instance counts together.
 - **Operator API:** Every operator read or action is written to `admin_logs` (Protoss 3장).
 - **PDF:** The export embeds NanumGothic (SIL OFL, `youniya_api/fonts/OFL.txt`), so Korean renders anywhere.
 

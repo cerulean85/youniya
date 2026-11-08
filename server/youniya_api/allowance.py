@@ -31,13 +31,8 @@ def telescopes_left(user: User) -> int:
     return int(user.free_telescope_month != this_month()) + int(not user.free_telescope_used)
 
 
-def stories_left(user: User) -> int:
-    return int(not user.free_story_used)
-
-
 def summary(user: User, per_day: int) -> dict:
-    return {"free_star_today": stars_left(user, per_day), "free_telescope": telescopes_left(user),
-            "free_story": stories_left(user)}
+    return {"free_star_today": stars_left(user, per_day), "free_telescope": telescopes_left(user)}
 
 
 def _claim(db: Session, user: User, *conditions, **values) -> bool:
@@ -60,7 +55,3 @@ def use_telescope(db: Session, user: User) -> bool:
     return _claim(db, user, or_(User.free_telescope_month.is_(None), User.free_telescope_month != month),
                   free_telescope_month=month) or \
         _claim(db, user, User.free_telescope_used.is_(False), free_telescope_used=True)
-
-
-def use_story(db: Session, user: User) -> bool:
-    return _claim(db, user, User.free_story_used.is_(False), free_story_used=True)

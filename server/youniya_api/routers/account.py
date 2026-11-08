@@ -74,7 +74,7 @@ def settings_of(user: User, member: bool = False) -> AppSettings:
 
 @router.get("/me")
 def me(request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
-    """`free_star_today` (0/1), `free_telescope` (this month's and the sign-up one left), `free_story` (0/1).
+    """`free_star_today` (0/1), `free_telescope` (this month's and the sign-up one left).
     With MEMBERSHIP=1, `membership` too (see GET /v1/membership); a member's counts include its own."""
     settings = request.app.state.settings
     member = membership.is_member(db, settings, user)

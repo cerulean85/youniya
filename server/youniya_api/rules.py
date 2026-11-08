@@ -9,7 +9,6 @@ MIN_FLOAT_LENGTH = 50
 # Prices (기획 확정 20261107, 1 coin = 10 KRW). Free uses: youniya_api/allowance.py.
 STAR_FLOAT_COST = 5  # 별 띄우기 after the day's free one
 TELESCOPE_COST = 20  # 24 마음 망원경
-STORY_POLISH_COST = 10  # 83 서사 다듬기
 
 # 28 코인 충전. Prices in KRW. `sold: False` packages are no longer offered, but purchases and
 # refunds of them are still recognised.
@@ -51,7 +50,7 @@ FREE_SKIES = ("violet", "ocean")
 
 # 별지기 멤버십 (v1.1, behind MEMBERSHIP=1). One auto-renewable subscription group, 7-day free trial.
 MEMBERSHIP_PRODUCTS = {"membership_monthly": 2900, "membership_yearly": 29000}  # KRW
-MEMBER_DAILY_LIMIT = 10  # each of floats, telescope reports and story polish, a Korean day; then coins
+MEMBER_DAILY_LIMIT = 10  # each of floats and telescope reports, a Korean day; then coins
 MONTHLY_REPORT_MIN_STARS = 5  # stars floated in the month
 AI_COST_ALERT_KRW = 2000  # a month's model cost for one account above this is logged for the operator
 SOUNDS = ("밤바람", "미세한 성간 주파수")

@@ -52,15 +52,13 @@ def test_redraw_checks_like_drawing(client):
     assert client.patch(f"/v1/nebulae/{nid}", json={"name": "x"}, headers=other).status_code == 404
 
 
-def test_new_stars_drop_the_polished_story(client):
+def test_new_stars_join_the_story(client):
     h = sign_in(client)
     ids = [float_star(client, h)["id"] for _ in range(4)]
     nid = _nebula(client, h, ids[:3])
-    assert client.post(f"/v1/nebulae/{nid}/story/polish", headers=h).json()["polished"] is True
-    client.patch(f"/v1/nebulae/{nid}", json={"name": "이름만"}, headers=h)
-    assert client.get(f"/v1/nebulae/{nid}/story", headers=h).json()["polished"] is True
+    assert client.get(f"/v1/nebulae/{nid}/story", headers=h).json()["star_count"] == 3
     client.patch(f"/v1/nebulae/{nid}", json={"star_ids": ids, "edges": []}, headers=h)
-    assert client.get(f"/v1/nebulae/{nid}/story", headers=h).json()["polished"] is False
+    assert client.get(f"/v1/nebulae/{nid}/story", headers=h).json()["star_count"] == 4
 
 
 def test_shared_nebula_follows_on_the_plaza(client):

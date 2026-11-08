@@ -195,7 +195,7 @@ def test_unverified_purchase_adds_nothing(make_app):
 
 # --- nebulae -----------------------------------------------------------------
 
-def test_nebula_story_and_polish(client):
+def test_nebula_story(client):
     h = sign_in(client)
     ids = [float_star(client, h)["id"] for _ in range(3)]
     assert client.post("/v1/nebulae", json={"name": "n", "star_ids": ids[:2]}, headers=h).status_code == 422
@@ -205,13 +205,10 @@ def test_nebula_story_and_polish(client):
     assert detail["star_count"] == 3 and detail["depth_level"] == 7.0
 
     story = client.get(f"/v1/nebulae/{n['id']}/story", headers=h).json()
-    assert all(e["sentence"] in DEEP_BODY for e in story["entries"]) and story["polished"] is False
-    assert story["polish_free"] is True and story["polish_cost"] == 0  # the sign-up one
-    polished = client.post(f"/v1/nebulae/{n['id']}/story/polish", headers=h).json()
-    assert polished["charged"] == 0 and len(polished["bridges"]) == 2 and polished["polish_free"] is False
-    # The original sentences are untouched.
-    assert [e["sentence"] for e in polished["entries"]] == [e["sentence"] for e in story["entries"]]
-    assert client.post(f"/v1/nebulae/{n['id']}/story/polish", headers=h).json()["charged"] == 0
+    assert all(e["sentence"] in DEEP_BODY for e in story["entries"]) and story["star_count"] == 3
+    # 서사 다듬기 is gone (20261108): no bridges or offer, and no polish endpoint.
+    assert not {"bridges", "polished", "polish_cost", "polish_free"} & story.keys()
+    assert client.post(f"/v1/nebulae/{n['id']}/story/polish", headers=h).status_code in (404, 405)
 
 
 # --- plaza -------------------------------------------------------------------

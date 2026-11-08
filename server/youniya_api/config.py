@@ -34,7 +34,7 @@ class Settings:
     prism_samples: int = field(default_factory=lambda: int(os.getenv("PRISM_SAMPLES", "1")))
     # Gemini 3 thinking level for scoring. "low" halves the wait (12 s → 6.6 s per call, 20261107).
     prism_thinking: str | None = field(default_factory=lambda: os.getenv("PRISM_THINKING", "low") or None)
-    # The same for telescope reports and story polish ("off", "low", "high"; empty: the model's default).
+    # The same for telescope reports ("off", "low", "high"; empty: the model's default).
     telescope_thinking: str | None = field(default_factory=lambda: os.getenv("TELESCOPE_THINKING", "low") or None)
     # 별 띄우기 free a Korean day; after that each costs STAR_FLOAT_COST coins.
     free_stars_per_day: int = field(default_factory=lambda: int(os.getenv("FREE_STARS_PER_DAY", "1")))

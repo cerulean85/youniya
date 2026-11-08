@@ -87,6 +87,14 @@ def _marks(db: Session, user: User, kind: str) -> tuple[set[str], set[str]]:
     return res, bes
 
 
+def _besides_first(db: Session, user: User, model, kind: str):
+    """곁에 둔 것: my besides of this kind, the most recently kept first."""
+    return (select(model).join(Beside, (Beside.target_id == model.id) & (Beside.kind == kind)
+                               & (Beside.user_id == user.id))
+            .where(model.user_id != user.id, *visible_shares(db, user.id, model))
+            .order_by(Beside.created_at.desc()))
+
+
 def _similar_order(db: Session, user: User, rows: list) -> list:
     """나와 결이 비슷한: shares whose moods match the moods I write in most."""
     profile: dict[str, int] = {}
@@ -109,12 +117,13 @@ def _nebula_item(n: NebulaShare, res: set[str], bes: set[str]) -> dict:
 
 
 @router.get("/plaza/stars")
-def plaza_stars(sort: Literal["new", "similar"] = "new", limit: int = Query(40, ge=1, le=100),
+def plaza_stars(sort: Literal["new", "similar", "beside"] = "new", limit: int = Query(40, ge=1, le=100),
                 user: User = Depends(consented_user), db: Session = Depends(get_db)):
-    """09 새로 뜬 것 · 나와 결이 비슷한"""
-    rows = db.scalars(select(StarShare)
-                      .where(StarShare.user_id != user.id, *visible_shares(db, user.id, StarShare))
-                      .order_by(StarShare.created_at.desc()).limit(500)).all()
+    """09 새로 뜬 것 · 나와 결이 비슷한 · 곁에 둔 것 (the most recently kept first)"""
+    stmt = (_besides_first(db, user, StarShare, "star") if sort == "beside" else
+            select(StarShare).where(StarShare.user_id != user.id, *visible_shares(db, user.id, StarShare))
+            .order_by(StarShare.created_at.desc()))
+    rows = db.scalars(stmt.limit(500)).all()
     if sort == "similar":
         rows = _similar_order(db, user, rows)
     res, bes = _marks(db, user, "star")
@@ -133,13 +142,11 @@ def plaza_star(share_id: str, user: User = Depends(consented_user), db: Session 
 @router.get("/plaza/nebulae")
 def plaza_nebulae(filter: Literal["similar", "new", "beside"] = "similar", limit: int = Query(40, ge=1, le=100),
                   user: User = Depends(consented_user), db: Session = Depends(get_db)):
-    """72 나와 비슷한 결 · 새로 띄운 성운 · 곁에 둔 성운"""
+    """72 나와 비슷한 결 · 새로 띄운 성운 · 곁에 둔 성운 (the most recently kept first)"""
     res, bes = _marks(db, user, "nebula")
-    stmt = (select(NebulaShare)
-            .where(NebulaShare.user_id != user.id, *visible_shares(db, user.id, NebulaShare))
+    stmt = (_besides_first(db, user, NebulaShare, "nebula") if filter == "beside" else
+            select(NebulaShare).where(NebulaShare.user_id != user.id, *visible_shares(db, user.id, NebulaShare))
             .order_by(NebulaShare.created_at.desc()))
-    if filter == "beside":
-        stmt = stmt.where(NebulaShare.id.in_(bes))
     rows = db.scalars(stmt.limit(500)).all()
     if filter == "similar":
         rows = _similar_order(db, user, rows)

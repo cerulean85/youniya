@@ -57,10 +57,10 @@ def test_member_gets_ten_a_day_of_each_then_the_free_ones_then_coins(make_app):
     user_id, joined = _join(apple, client, h)
     assert joined | {"expires_at": None} == {
         "active": True, "product_id": "membership_monthly", "expires_at": None, "auto_renew": True,
-        "status": "active", "stars_left_today": 10, "telescope_left_today": 10, "story_left_today": 10}
+        "status": "active", "stars_left_today": 10, "telescope_left_today": 10}
     me = client.get("/v1/me", headers=h).json()
     assert me["membership"]["active"] is True
-    assert (me["free_star_today"], me["free_telescope"], me["free_story"]) == (11, 12, 11)  # member + free ones
+    assert (me["free_star_today"], me["free_telescope"]) == (11, 12)  # member + free ones
     assert client.patch("/v1/me/settings", json={"sky": "rose"}, headers=h).json()["sky"] == "rose"
 
     star = {"mood": "insight", "title": "t", "body": DEEP_BODY, "mode": "float"}
@@ -74,7 +74,7 @@ def test_member_gets_ten_a_day_of_each_then_the_free_ones_then_coins(make_app):
         from youniya_api.models import User
 
         u = db.get(User, user_id)
-        u.member_star_count = u.member_telescope_count = u.member_story_count = 10
+        u.member_star_count = u.member_telescope_count = 10
         db.commit()
     assert client.post("/v1/stars", json=star, headers=h).json()["charged"] == 0  # the daily free one
     r = client.post("/v1/stars", json=star, headers=h)
@@ -118,7 +118,7 @@ def test_notifications_keep_the_subscription_current(make_app):
     client.post(URL, json=_note(apple, "REFUND", _tx(user_id, transactionId="t3", revocationDate=1)))
     assert client.get("/v1/membership", headers=h).json() | {"expires_at": None} == {
         "active": False, "product_id": "membership_monthly", "expires_at": None, "auto_renew": False,
-        "status": "revoked", "stars_left_today": 0, "telescope_left_today": 0, "story_left_today": 0}
+        "status": "revoked", "stars_left_today": 0, "telescope_left_today": 0}
 
     # Someone else's purchase cannot be claimed.
     other = sign_in(client, "other")

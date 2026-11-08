@@ -118,3 +118,27 @@ def test_star_and_nebula_reports(make_app):
     assert r.json() == {"reported": True, "blocked": True}
     assert star not in _plaza(client, viewer)[0]  # the block hides the owner's star too
     assert client.post(f"/v1/plaza/nebula/{nebula}/report", json={"reason": "other"}, headers=owner).status_code == 422
+
+
+def test_beside_lists_newest_kept_first_and_follow_blocks(client):
+    """곁에 둔 것 (20261108 광장 필터): stars and nebulae I kept, the latest kept first."""
+    me, a, b = sign_in(client, "me"), sign_in(client, "a"), sign_in(client, "b")
+    a_star, a_nebula = _shared(client, a, "a의 성운")
+    b_star, b_nebula = _shared(client, b, "b의 성운")
+    for kind, share_id in (("star", a_star), ("star", b_star), ("nebula", a_nebula), ("nebula", b_nebula)):
+        client.put(f"/v1/plaza/{kind}/{share_id}/beside", headers=me)
+
+    def listed(kind):
+        key = "sort" if kind == "stars" else "filter"
+        items = client.get(f"/v1/plaza/{kind}", params={key: "beside"}, headers=me).json()["items"]
+        assert all(i["beside"] for i in items)
+        return [i["id"] for i in items]
+
+    # b's were kept last, so they come first, though both were shared before either was kept.
+    assert listed("stars") == [b_star, a_star] and listed("nebulae") == [b_nebula, a_nebula]
+    assert listed("stars") == listed("stars")  # stable
+    client.delete(f"/v1/plaza/star/{b_star}/beside", headers=me)
+    assert listed("stars") == [a_star]
+    # A block hides them here too.
+    client.post("/v1/blocks", json={"nebula_id": a_nebula}, headers=me)
+    assert listed("stars") == [] and listed("nebulae") == [b_nebula]

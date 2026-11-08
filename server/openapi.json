@@ -266,7 +266,7 @@
           "account"
         ],
         "summary": "Me",
-        "description": "`free_star_today` (0/1), `free_telescope` (this month's and the sign-up one left), `free_story` (0/1).\nWith MEMBERSHIP=1, `membership` too (see GET /v1/membership); a member's counts include its own.",
+        "description": "`free_star_today` (0/1), `free_telescope` (this month's and the sign-up one left).\nWith MEMBERSHIP=1, `membership` too (see GET /v1/membership); a member's counts include its own.",
         "operationId": "me_v1_me_get",
         "responses": {
           "200": {
@@ -1591,7 +1591,7 @@
           "nebulae"
         ],
         "summary": "Edit",
-        "description": "성운 다시 그리기. Same checks as drawing it. A member silhouette needs the membership only when\nnewly chosen: one already kept stays after the membership ends (13.5). New stars drop the\npolished story (its lines joined the old ones). A nebula on the plaza is updated there too,\nkeeping its 공명 and 별빛 한 줄, unless a star in it carries a crisis signal.",
+        "description": "성운 다시 그리기. Same checks as drawing it. A member silhouette needs the membership only when\nnewly chosen: one already kept stays after the membership ends (13.5). A nebula on the plaza is updated there too,\nkeeping its 공명 and 별빛 한 줄, unless a star in it carries a crisis signal.",
         "operationId": "edit_v1_nebulae__nebula_id__patch",
         "security": [
           {
@@ -1716,54 +1716,8 @@
           "nebulae"
         ],
         "summary": "Story",
-        "description": "83: each star's key sentence in time order. The sentences are never changed.",
+        "description": "83: each star's key sentence in time order. The sentences are never changed. Free.",
         "operationId": "story_v1_nebulae__nebula_id__story_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "nebula_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Nebula Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/nebulae/{nebula_id}/story/polish": {
-      "post": {
-        "tags": [
-          "nebulae"
-        ],
-        "summary": "Polish",
-        "description": "83 서사 다듬기 · 코인 10 (the first one free): adds lines only at the ✦ places.",
-        "operationId": "polish_v1_nebulae__nebula_id__story_polish_post",
         "security": [
           {
             "HTTPBearer": []
@@ -2041,7 +1995,7 @@
           "plaza"
         ],
         "summary": "Plaza Stars",
-        "description": "09 새로 뜬 것 · 나와 결이 비슷한",
+        "description": "09 새로 뜬 것 · 나와 결이 비슷한 · 곁에 둔 것 (the most recently kept first)",
         "operationId": "plaza_stars_v1_plaza_stars_get",
         "security": [
           {
@@ -2056,7 +2010,8 @@
             "schema": {
               "enum": [
                 "new",
-                "similar"
+                "similar",
+                "beside"
               ],
               "type": "string",
               "default": "new",
@@ -2150,7 +2105,7 @@
           "plaza"
         ],
         "summary": "Plaza Nebulae",
-        "description": "72 나와 비슷한 결 · 새로 띄운 성운 · 곁에 둔 성운",
+        "description": "72 나와 비슷한 결 · 새로 띄운 성운 · 곁에 둔 성운 (the most recently kept first)",
         "operationId": "plaza_nebulae_v1_plaza_nebulae_get",
         "security": [
           {
@@ -2846,7 +2801,7 @@
           "membership"
         ],
         "summary": "Status",
-        "description": "{active, product_id, expires_at, auto_renew, status, stars_left_today, telescope_left_today, story_left_today}",
+        "description": "{active, product_id, expires_at, auto_renew, status, stars_left_today, telescope_left_today}",
         "operationId": "status_v1_membership_get",
         "responses": {
           "200": {

@@ -36,25 +36,8 @@ TELESCOPE_PROMPT = """# Role
 - signals: [{"star_id": …, "sentence": …}] 감정의 신호가 머문 원문 문장 최대 5개
 """
 
-STORY_PROMPT = """# Role
-당신은 '성운 이야기'의 문장 사이(✦ 자리)에 들어갈 짧은 이음말을 쓴다. 아래 문장들은 사용자가 쓴 원문이며 절대 바꾸지 않는다.
-
-# 이음말 규칙
-- 이음말은 시간의 흐름이나 마음이 이어진다는 것만 나타낸다. 예: "그리고 며칠 뒤", "시간이 조금 흘러", "그 마음은 이어져", "다른 날", "그러다 문득", "또 하루가 지나"
-- 원문에 없는 사건, 행동, 장소, 사물, 사람, 날씨, 감정을 넣지 않는다. 앞뒤 문장을 요약하거나 해석하거나 평가하지 않는다
-- 장소를 넣지 않는다. 다음 문장에 나오는 장소도 미리 쓰지 않는다. 쓰지 않을 예: "어느 퇴근길", "회사에서", "집에 돌아와"
-- 구체적인 때를 단정하지 않는다. 쓰지 않을 예: "계절이 바뀌어", "다음 날 아침", "그날 저녁", "한 달 뒤". 쓸 수 있는 말은 "며칠 뒤", "시간이 흘러", "다른 날"처럼 정해지지 않은 때뿐이다
-- 12자 안팎으로 짧게, 마침표 없이 쓴다
-- 같은 이음말을 연달아 쓰지 않는다
-
-# 출력
-{"bridges": [문장 수보다 하나 적은 개수의 이음말]}
-"""
-
-
 # Two tries of 45 s fit Vercel's 120 s limit. One telescope call took over 90 s in 11 (20261107).
 MODEL_TIMEOUT = 45.0
-MAX_BRIDGE_LENGTH = 20
 
 
 @dataclass
@@ -136,27 +119,6 @@ def _mock_text(star: StarText, top_mood: str) -> dict:
         "question": a["rewrite_question"],
         "signals": [],
     }
-
-
-def story_bridges(sentences: list[str], api_key: str | None, model: str, thinking: str | None = None,
-                  caches=None) -> list[str]:
-    """83 서사 다듬기: lines for the ✦ places between the original sentences."""
-    need = max(0, len(sentences) - 1)
-    if not api_key:
-        fallback = ("그리고 며칠 뒤", "그 마음은 이어져", "시간이 조금 흘러")
-        return [fallback[i % len(fallback)] for i in range(need)]
-    listed = "\n".join(f"{i + 1}. {s}" for i, s in enumerate(sentences))
-    prefix = STORY_PROMPT + "\n\n"
-    cache = caches.for_request("story", model, prefix) if caches else None
-    out = generate_json(api_key, model, f"# 문장\n{listed}", prefix=prefix, cache=cache,
-                        temperature=0.5,
-                        thinking=thinking, timeout=MODEL_TIMEOUT, retries=1)
-    bridges = [str(b) for b in out.get("bridges", [])]
-    if len(bridges) != need:
-        raise ValueError("bridge count mismatch")
-    if any(len(b) > MAX_BRIDGE_LENGTH for b in bridges):  # a long line is telling a story of its own
-        raise ValueError("bridge too long")
-    return bridges
 
 
 MONTHLY_PROMPT = """# Role

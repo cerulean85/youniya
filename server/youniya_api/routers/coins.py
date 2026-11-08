@@ -13,7 +13,7 @@ from ..deps import ApiError, consented_user, get_db
 from ..models import CoinEntry, User
 from .. import allowance, membership
 from ..rules import MEMBERSHIP_PRODUCTS
-from ..rules import COIN_PACKAGES, REFUND_WINDOW_DAYS, STAR_FLOAT_COST, STORY_POLISH_COST, TELESCOPE_COST
+from ..rules import COIN_PACKAGES, REFUND_WINDOW_DAYS, STAR_FLOAT_COST, TELESCOPE_COST
 from ..storekit import PurchaseInvalid
 from ..views import aware, iso
 from ..ratelimit import per_user
@@ -40,7 +40,7 @@ def balance(request: Request, user: User = Depends(consented_user), db: Session 
         "coins": user.coins,
         "free_telescope_available": allowance.telescopes_left(user) > 0,
         **membership.free_summary(db, request.app.state.settings, user),
-        "prices": {"star": STAR_FLOAT_COST, "telescope": TELESCOPE_COST, "story": STORY_POLISH_COST},
+        "prices": {"star": STAR_FLOAT_COST, "telescope": TELESCOPE_COST},
         "packages": [{"product_id": k, "coins": v["coins"], "price": v["price"], "bonus": v.get("bonus", 0)}
                      for k, v in COIN_PACKAGES.items() if v["sold"]],
     }

@@ -1,6 +1,6 @@
 """별지기 멤버십 (기획서 13장, v1.1). Off unless MEMBERSHIP=1: then nobody is a member.
 
-A member has MEMBER_DAILY_LIMIT floats, telescope reports and story polishes a Korean day each,
+A member has MEMBER_DAILY_LIMIT floats and telescope reports a Korean day each,
 used before the free ones everybody has; after both, coins. Also a 월간 마음 리포트 and every sky."""
 
 from datetime import datetime, timezone
@@ -33,7 +33,7 @@ def is_member(db: Session, settings, user: User, at: datetime | None = None) -> 
         Subscription.user_id == user.id, Subscription.status.in_(LIVE), Subscription.expires_at > at)) is not None
 
 
-COUNTS = {"star": "member_star_count", "telescope": "member_telescope_count", "story": "member_story_count"}
+COUNTS = {"star": "member_star_count", "telescope": "member_telescope_count"}
 
 
 def left_today(user: User, feature: str) -> int:
@@ -45,7 +45,7 @@ def use_today(db: Session, user: User, feature: str) -> bool:
     """Claims one of today's member uses of a feature; a new day starts every count at 0."""
     day, column = allowance.today(), getattr(User, COUNTS[feature])
     db.execute(update(User).where(User.id == user.id, or_(User.member_day.is_(None), User.member_day != day))
-               .values(member_day=day, member_star_count=0, member_telescope_count=0, member_story_count=0))
+               .values(member_day=day, member_star_count=0, member_telescope_count=0))
     done = db.execute(update(User).where(User.id == user.id, User.member_day == day, column < MEMBER_DAILY_LIMIT)
                       .values({column: column + 1})).rowcount
     db.refresh(user)
@@ -63,8 +63,7 @@ def view(db: Session, settings, user: User) -> dict:
             "expires_at": sub.expires_at.isoformat() if sub else None,
             "auto_renew": sub.auto_renew if sub else False, "status": sub.status if sub else None,
             "stars_left_today": left_today(user, "star") if member else 0,
-            "telescope_left_today": left_today(user, "telescope") if member else 0,
-            "story_left_today": left_today(user, "story") if member else 0}
+            "telescope_left_today": left_today(user, "telescope") if member else 0}
 
 
 def current_for(db: Session, tx: dict) -> Subscription | None:
@@ -133,6 +132,5 @@ def free_summary(db: Session, settings, user: User) -> dict:
     out = allowance.summary(user, settings.free_stars_per_day)
     if is_member(db, settings, user):
         out = {"free_star_today": out["free_star_today"] + left_today(user, "star"),
-               "free_telescope": out["free_telescope"] + left_today(user, "telescope"),
-               "free_story": out["free_story"] + left_today(user, "story")}
+               "free_telescope": out["free_telescope"] + left_today(user, "telescope")}
     return out

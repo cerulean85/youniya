@@ -1,4 +1,4 @@
-"""What one telescope report, story polish and prism scoring cost with the real model.
+"""What one telescope report and prism scoring cost with the real model.
 
     GEMINI_API_KEY=… python tools/measure_ai_cost.py [--out result.json]
 
@@ -18,8 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from youniya_api import llm  # noqa: E402
 from youniya_api.config import Settings  # noqa: E402
 from youniya_api.prism import PrismEngine  # noqa: E402
-from youniya_api.prism.engine import split_sentences  # noqa: E402
-from youniya_api.telescope import StarText, build_report, story_bridges  # noqa: E402
+from youniya_api.telescope import StarText, build_report  # noqa: E402
 
 from seed_texts import PLAZA, REVIEW_FLOATED  # noqa: E402
 
@@ -107,15 +106,6 @@ def main() -> None:
                 samples.setdefault(label, {k: out[k] for k in ("star_name", "question")} |
                                    {"notes": [lens["note"] for lens in out["lenses"]]})
 
-    # 3. Story polish for a 3-star and a 14-star nebula.
-    sentences = [x for _, _, b in REVIEW_FLOATED for x in split_sentences(b)[:1]]
-    for thinking in (None, "low"):
-        for n in (3, 14) * (3 if thinking is None else 2):
-            label = f"story · {n} sentences · {thinking or 'default'}"
-            out = measured(label, lambda: story_bridges(sentences[:n], s.gemini_api_key, s.telescope_model, thinking))
-            if out:
-                samples.setdefault(label, out)
-
     def summary(prefix):
         group = [r for r in rows if r["label"].startswith(prefix)]
         return {"runs": len(group), "mean_usd": statistics.mean(r["usd"] for r in group),
@@ -123,8 +113,8 @@ def main() -> None:
                 "mean_seconds": statistics.mean(r["seconds"] for r in group),
                 "mean_thoughts": statistics.mean(r["thoughts"] for r in group)}
 
-    groups = {k: summary(k) for k in ("prism", "telescope", "story") if any(r["label"].startswith(k) for r in rows)}
-    for k in ("telescope", "story"):
+    groups = {k: summary(k) for k in ("prism", "telescope") if any(r["label"].startswith(k) for r in rows)}
+    for k in ("telescope",):
         for t in ("default", "low"):
             group = [r for r in rows if r["label"].startswith(k) and r["label"].endswith(t)]
             groups[f"{k} · {t}"] = {"runs": len(group), "mean_usd": statistics.mean(r["usd"] for r in group),

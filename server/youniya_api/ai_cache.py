@@ -1,7 +1,7 @@
 """Explicit Gemini context caches for a feature's fixed prompt (rules and examples).
 
 Implicit caching is automatic, but on gemini-3.8-flash only from 4,096 input tokens. An explicit
-cache needs 1,024 (checked 20261107: the prism's fixed part is 2,774 tokens; the telescope, story and
+cache needs 1,024 (checked 20261107: the prism's fixed part is 2,774 tokens; the telescope and
 monthly ones are 319–441, too small, and are left alone after one try). A cache is made once a
 feature has had CACHE_FROM_PER_HOUR requests in the last hour, kept for an hour, extended while the
 requests keep coming and left to expire when they stop. A new prompt or model makes a new one.
