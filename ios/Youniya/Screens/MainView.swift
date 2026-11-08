@@ -157,16 +157,7 @@ struct MainView: View {
             case "missingStar": push(.detail(UUID()))     // 122
             // 08-1 / 08-2 / 84 reshape (2026-11-08)
             case "nebulaDrawn", "reshapeNebula":
-                // A fresh mock nebula every time (an older one may point at stars
-                // that are gone), with every mood and two guests.
-                if model.stars.filter(\.isFloated).count < 3 { model.fillSampleStars() }
-                let moods: [Mood] = [.calm, .sorrow, .anger, .insight]
-                for (k, i) in model.stars.indices.filter({ model.stars[$0].isFloated }).enumerated() {
-                    model.stars[i].mood = moods[k % moods.count]
-                }
-                let ids = model.stars.filter(\.isFloated).map(\.id)
-                model.drawnNebulae = [DrawnNebula(name: "느린 저녁의 성운", silhouette: NebulaSilhouette.lighthouse.rawValue,
-                                                  starIDs: ids, guests: GuestStar.candidates.prefix(2).map(\.title))]
+                ensureMockNebula()
                 if UserDefaults.standard.string(forKey: "debugRoute") == "reshapeNebula" { push(.reshapeNebula) } else { tab = .nebula }
             case "nebulaEmpty":
                 model.drawnNebulae = []
@@ -386,7 +377,7 @@ struct MainView: View {
                 switch title {
                 case "성운 이야기": push(.nebulaStory)
                 case "성운 그리기": push(.drawNebula)
-        case "모양 바꾸기": push(.reshapeNebula)
+                case "모양 바꾸기": push(.reshapeNebula)
                 case "자라는 모습": push(.growth)
                 default: push(.page(title))
                 }
@@ -538,7 +529,9 @@ struct MainView: View {
         case "86": push(.stages)
         case "68": push(.sky)
         case "69", "76": push(.galaxyZoom)
-        case "70", "71", "71-1", "77", "112": push(.myNebulaZoom)
+        case "70", "71", "71-1", "77", "112":
+            ensureMockNebula()
+            push(.myNebulaZoom)
         case "81": push(.milkyWay)
         case "82", "109": push(.brightness)
         case "83": push(.nebulaStory)
@@ -561,6 +554,18 @@ struct MainView: View {
         }
     }
     #endif
+
+    /// Debug: a fresh mock nebula (등대, every mood, two guests) for 08 / 70 / 77.
+    private func ensureMockNebula() {
+        if model.stars.filter(\.isFloated).count < 3 { model.fillSampleStars() }
+        let moods: [Mood] = [.calm, .sorrow, .anger, .insight]
+        for (k, i) in model.stars.indices.filter({ model.stars[$0].isFloated }).enumerated() {
+            model.stars[i].mood = moods[k % moods.count]
+        }
+        let ids = model.stars.filter(\.isFloated).map(\.id)
+        model.drawnNebulae = [DrawnNebula(name: "느린 저녁의 성운", silhouette: NebulaSilhouette.lighthouse.rawValue,
+                                          starIDs: ids, guests: GuestStar.candidates.prefix(2).map(\.title))]
+    }
 
     /// 75-2 차단하기: leave the blocked keeper's page (and the nebula it came
     /// from, which is now hidden), then "차단했어요".
@@ -626,6 +631,7 @@ struct MainView: View {
         case "나의 성운 확대": push(.myNebulaZoom)
         case "성운 이야기": push(.nebulaStory)
         case "성운 그리기": push(.drawNebula)
+        case "모양 바꾸기": push(.reshapeNebula)
         case "성장 단계": push(.stages)
         default: push(.page(title))
         }

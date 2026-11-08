@@ -152,19 +152,21 @@ private struct NebulaInfoTable: View {
     }
 }
 
-// MARK: - 77 My nebula, zoomed
+// MARK: - 70 / 77 My nebula, zoomed
 
-/// 77 나의 성운 (확대): my stars as shapes, joined into petals around one star.
+/// 70 / 77 나의 성운 (자세히 보기): the nebula from 08, larger. Zoom (1–3.2×),
+/// pan and tap a star for its card (77); a guest shows only where it came from.
 struct MyNebulaZoomView: View {
     @Environment(AppModel.self) private var model
     var onBack: () -> Void
     var onOpenStar: (StarItem) -> Void
-    /// 성운 그리기 · 성운 이야기 · 자라는 모습 · 하늘에 띄우기
+    /// 모양 바꾸기 · 성운 이야기 · 자라는 모습
     var onOpen: (String) -> Void
 
     /// Figma 70 opens at 1× on the whole nebula; 77 is the zoomed-in, picked state.
     @State private var level: CGFloat = DebugScreen.is("77") ? 2.4 : 1
     @State private var selectedID: StarItem.ID?
+    @State private var selectedGuest: GuestStar?
     @State private var toast: String?
     /// 71 하늘에 띄우기
     @State private var askFloat = DebugScreen.is("71") || DebugScreen.is("71-1")
@@ -175,13 +177,25 @@ struct MyNebulaZoomView: View {
     @State private var loaded = false
     private var isLoading: Bool { model.simulateLoading && !loaded }
 
-    private var floated: [StarItem] { model.stars.filter(\.isFloated) }
-    private var selected: StarItem? {
-        floated.first { $0.id == selectedID } ?? floated.first
+    private var nebula: DrawnNebula? { model.latestNebula }
+    private var stars: [StarItem] {
+        guard let nebula else { return [] }
+        let floated = model.stars.filter(\.isFloated)
+        return nebula.starIDs.compactMap { id in floated.first { $0.id == id } }
+    }
+    private var guests: [GuestStar] {
+        guard let nebula else { return [] }
+        return model.guestCandidates.filter { nebula.guests.contains($0.title) }
+    }
+    private var selected: StarItem? { stars.first { $0.id == selectedID } }
+
+    /// "등대 · 두 번째 걸음" (직접 그리기: the stage only).
+    private var tagText: String {
+        let stage = model.stageName ?? model.stageLabel
+        return [nebula?.template?.name, stage].compactMap { $0 }.joined(separator: " · ")
     }
 
     var body: some View {
-        let layout = PetalLayout(stars: floated, center: selected)
         VStack(spacing: 0) {
             TopAppBar(title: "나의 성운", onBack: onBack)
 
@@ -190,26 +204,35 @@ struct MyNebulaZoomView: View {
                     NebulaDetailSkeleton()
                         .padding(.horizontal, Space.xl)
                         .padding(.top, Space.sm)
-                } else {
+                } else if let nebula {
                 VStack(alignment: .leading, spacing: Space.lg) {
-                    Text(model.nebulaName)
+                    Text(tagText)
                         .textStyle(.labelS)
                         .foregroundStyle(Color.starBright)
                         .padding(.horizontal, Space.md)
                         .padding(.vertical, Space.xs)
                         .background(Color.tintGold, in: .capsule)
-                    Text(layout.petals.isEmpty ? "아직 꽃잎이 없는 성운" : "\(layout.petals.count)개의 꽃잎을 가진 성운")
+                    Text(nebula.name)
                         .textStyle(.h1)
                         .foregroundStyle(Color.textPrimary)
                         .accessibilityAddTraits(.isHeader)
 
                     ZStack(alignment: .topTrailing) {
                         ZoomPanCanvas(level: $level, range: 1...3.2) { level in
-                            PetalNebula(layout: layout, level: level) { selectedID = $0.id }
+                            NebulaArt(nebula: nebula, selectedStar: selectedID, selectedGuest: selectedGuest?.title,
+                                      onTapStar: { star in
+                                          withAnimation(.snappy) { selectedID = star.id; selectedGuest = nil }
+                                      },
+                                      onTapGuest: { guest in
+                                          withAnimation(.snappy) { selectedGuest = guest; selectedID = nil }
+                                      })
+                                .frame(width: 342, height: isShortScreen ? 200 : 280)
+                                // 77: zoom in around the picked star or guest.
+                                .scaleEffect(level, anchor: zoomAnchor(nebula))
                         }
                         ZoomControls(level: $level, range: 1...3.2)
                             .padding(.top, 4)
-                        Text(selectedID == nil ? "두 손가락으로 확대 · 별을 눌러 보기" : "별의 모양은 쓴 글의 결로 정해져요")
+                        Text(selectedID == nil && selectedGuest == nil ? "두 손가락으로 확대 · 별을 눌러 보기" : "별의 모양은 쓴 글의 결로 정해져요")
                             .textStyle(.caption)
                             .foregroundStyle(Color.textTertiary)
                             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
@@ -218,16 +241,24 @@ struct MyNebulaZoomView: View {
                     }
                     // iPhone SE: a shorter canvas so the 70 info table shows above the buttons.
                     .frame(height: isShortScreen ? 200 : 280)
+                    .background { NebulaGlowBackground().clipShape(.rect(cornerRadius: Radius.lg)) }
 
-                    // 70 Info by default; tapping a star shows its card (77).
-                    if selectedID != nil, let selected {
+                    // 70 Info by default; a star shows its card (77); a guest, only its source.
+                    if let selected {
                         StarTooltip(star: selected) { onOpenStar(selected) }
+                    } else if let guest = selectedGuest {
+                        Text("손님별 · \(guest.source)")
+                            .textStyle(.labelM)
+                            .foregroundStyle(Color.textPrimary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(Space.lg)
+                            .itemCard(seed: "guest-tooltip", minHeight: 0, flatBorder: true)
                     } else {
-                        NebulaInfoTable(rows: infoRows(layout))
+                        NebulaInfoTable(rows: infoRows(nebula))
                     }
 
                     HStack(spacing: Space.sm) {
-                        LinkChip(title: "성운 그리기") { onOpen("성운 그리기") }
+                        LinkChip(title: "모양 바꾸기") { onOpen("모양 바꾸기") }
                         LinkChip(title: "성운 이야기") { onOpen("성운 이야기") }
                         LinkChip(title: "자라는 모습") { onOpen("자라는 모습") }
                     }
@@ -250,18 +281,18 @@ struct MyNebulaZoomView: View {
             VStack(spacing: Space.md) {
                 Button(model.skyShare == nil ? "하늘에 띄우기" : "하늘에 떠 있어요") { askFloat = true }
                     .buttonStyle(.primary)
-                Button("이미지로 저장") { saveImage(layout) }
+                Button("이미지로 저장") { saveImage() }
                     .buttonStyle(.ghost)
             }
             // Figma 112: both disabled until the nebula arrives.
-            .disabled(isLoading)
+            .disabled(isLoading || nebula == nil)
             .padding(.horizontal, Space.xl)
             .padding(.bottom, Space.xl)
         }
         .onGeometryChange(for: Bool.self) { $0.size.height < 700 } action: { isShortScreen = $0 }
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { screenHeight = $0 }
         .onAppear {
-            if DebugScreen.is("77") { selectedID = floated.first?.id }
+            if DebugScreen.is("77") { selectedID = stars.first?.id }
         }
         .background { StarField() }
         .simulatedLoad($loaded)
@@ -284,116 +315,46 @@ struct MyNebulaZoomView: View {
         }
     }
 
-    /// Figma 70 `Info`: 별 수 · 꽃잎 수 · 꽃잎 길이 · 빛깔.
-    private func infoRows(_ layout: PetalLayout) -> [(String, String)] {
-        let deep = floated.compactMap { $0.analysis?.depth }
-        // Depth 0…1 shown on the 1–5 stage scale.
-        let avg = deep.isEmpty ? 0 : 1 + deep.reduce(0, +) / Double(deep.count) * 4
-        let rewrites = Set(model.stars.compactMap(\.rewriteOf)).count
-        let moods = Mood.allCases.filter { m in floated.contains { $0.mood == m } }.map(\.label)
-        return [
-            ("별 수", "\(floated.count) · 기록한 글"),
-            ("꽃잎 수", "\(layout.petals.count) · 다시 쓴 주제 \(rewrites)"),
-            ("꽃잎 길이", String(format: "평균 깊이 %.1f단계", avg)),
-            ("빛깔", moods.isEmpty ? "-" : moods.joined(separator: " · ")),
-        ]
+    private func zoomAnchor(_ nebula: DrawnNebula) -> UnitPoint {
+        guard let template = nebula.template else { return .center }
+        let index: Int?
+        if let selectedID { index = stars.firstIndex { $0.id == selectedID } }
+        else if let g = selectedGuest { index = guests.firstIndex(of: g).map { stars.count + $0 } }
+        else { index = nil }
+        guard let index else { return .center }
+        return NebulaArt.anchor(slot: index, of: template, in: CGSize(width: 342, height: isShortScreen ? 200 : 280))
     }
 
-    /// Saves the whole nebula (zoomed out) to Photos, then T2.
+    /// Figma 70 `Info`: 내 별 · 빈 자리 (실루엣만) · 평균 깊이 · 빛깔, for this nebula.
+    private func infoRows(_ nebula: DrawnNebula) -> [(String, String)] {
+        let deep = stars.compactMap { $0.analysis?.depth }
+        // Depth 0…1 shown on the 1–5 stage scale.
+        let avg = deep.isEmpty ? 0 : 1 + deep.reduce(0, +) / Double(deep.count) * 4
+        let moods = Mood.allCases.filter { m in stars.contains { $0.mood == m } }.map(\.label)
+        var rows = [("내 별", "\(stars.count)개 · 손님별 \(guests.count)개")]
+        if nebula.template != nil {
+            let empty = max(0, NebulaSilhouette.slotCount - stars.count - guests.count)
+            rows.append(("빈 자리", "\(empty) · 다음 별을 기다려요"))
+        }
+        rows.append(("평균 깊이", String(format: "%.1f단계", avg)))
+        rows.append(("빛깔", moods.isEmpty ? "-" : moods.joined(separator: " · ")))
+        return rows
+    }
+
+    /// Saves this nebula (as drawn on 08) to Photos, then T2.
     @MainActor
-    private func saveImage(_ layout: PetalLayout) {
+    private func saveImage() {
+        guard let nebula else { return }
         let renderer = ImageRenderer(content:
-            PetalNebula(layout: layout, level: 1.4, onSelect: { _ in })
+            NebulaArt(nebula: nebula)
+                .environment(model)
                 .frame(width: 360, height: 360)
-                .background(Color.bgCanvas)
+                .background { NebulaGlowBackground() }
         )
         renderer.scale = 3
         guard let image = renderer.uiImage else { return }
         UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
         toast = "이미지로 저장했어요"
-    }
-}
-
-/// Where each star sits in 77: one center star, then petals of up to three
-/// stars each, newest first, going around the center.
-struct PetalLayout {
-    struct Node: Identifiable {
-        var star: StarItem
-        var point: CGPoint   // relative to the center star, at level 1
-        var id: StarItem.ID { star.id }
-    }
-
-    var center: StarItem?
-    var petals: [[Node]] = []
-
-    init(stars: [StarItem], center: StarItem?) {
-        self.center = center
-        let others = stars.filter { $0.id != center?.id }
-        guard !others.isEmpty else { return }
-        let count = min(6, max(1, Int((Double(others.count) / 3).rounded(.up))))
-        for p in 0..<count {
-            let members = Array(others.dropFirst(p * 3).prefix(3))
-            guard !members.isEmpty else { continue }
-            let angle = -90.0 + Double(p) * 360 / Double(count)
-            // Three stars per petal: left edge, tip, right edge.
-            let shape: [(Double, Double)] = [(-20, 52), (0, 86), (20, 52)]
-            petals.append(members.enumerated().map { i, star in
-                let (da, r) = shape[i]
-                let a = (angle + da) * .pi / 180
-                return Node(star: star, point: CGPoint(x: cos(a) * r, y: sin(a) * r))
-            })
-        }
-    }
-}
-
-/// Figma `Nebula Shape`: violet petal lines and star shapes, scaled by `level`.
-private struct PetalNebula: View {
-    @Environment(\.skyTheme) private var theme
-    var layout: PetalLayout
-    var level: CGFloat
-    var onSelect: (StarItem) -> Void
-
-    var body: some View {
-        GeometryReader { geo in
-            let c = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
-            let at: (CGPoint) -> CGPoint = { CGPoint(x: c.x + $0.x * level, y: c.y + $0.y * level) }
-            ZStack(alignment: .topLeading) {
-                // Petal outlines: center → stars → center.
-                ForEach(layout.petals.indices, id: \.self) { i in
-                    Path { p in
-                        p.move(to: c)
-                        for n in layout.petals[i] { p.addLine(to: at(n.point)) }
-                        p.closeSubpath()
-                    }
-                    .stroke(theme.accent.strong.opacity(0.55), lineWidth: 2.4)
-                }
-                ForEach(layout.petals.flatMap { $0 }) { node in
-                    star(node.star, selected: false)
-                        .position(at(node.point))
-                }
-                if let center = layout.center {
-                    star(center, selected: true)
-                        .position(c)
-                }
-            }
-        }
-    }
-
-    private func star(_ s: StarItem, selected: Bool) -> some View {
-        let deep = s.analysis?.isDeep == true
-        let size: CGFloat = (selected ? 36 : deep ? 23 : 13) * level
-        var rng = SeededRandom(seed: s.id.uuidString)
-        return Button { onSelect(s) } label: {
-            ShapeStar(spec: StarShapeSpec(star: s),
-                      color: selected ? .starBright : s.mood.color,
-                      size: size, rays: selected || deep)
-                .rotationEffect(.degrees(rng.next(in: 0...40)))
-                .frame(width: max(size, 44), height: max(size, 44))
-                .contentShape(.circle)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(s.title), 별빛 \(s.starlightValue ?? 0)")
-        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 

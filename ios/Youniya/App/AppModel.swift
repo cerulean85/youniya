@@ -847,7 +847,8 @@ final class AppModel {
         let showQuote = quote != nil
         let share = NebulaSkyShare(name: nebulaName, receiveLines: receiveLines, showQuote: showQuote)
         guard useLiveAPI else { skyShare = share; return }
-        guard let latest = drawnNebulae.last else {
+        // 77: the nebula shown on 08 and 70/77 (the latest drawn or reshaped).
+        guard let latest = latestNebula else {
             apiMessage = "먼저 성운을 그려 주세요. 그린 성운을 하늘에 띄울 수 있어요."
             return
         }
