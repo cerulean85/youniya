@@ -38,7 +38,6 @@ export type Me = {
   coins: number;
   free_star_today: number;
   free_telescope: number;
-  free_story: number;
 };
 
 export type Summary = {
