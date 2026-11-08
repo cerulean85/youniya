@@ -166,6 +166,37 @@ extension AppModel {
         return star
     }
 
+    /// 글 수정: `PATCH /v1/stars/{id}` (mood only for kept stars). Mock: on device.
+    /// Returns nil when it failed, or whether the new writing shows a crisis signal (37).
+    @MainActor func editStar(_ id: StarItem.ID, mood: Mood?, title: String, body: String) async -> Bool? {
+        let t = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        func applyLocally() {
+            guard let i = stars.firstIndex(where: { $0.id == id }) else { return }
+            stars[i].title = t.isEmpty ? "제목 없는 별" : t
+            stars[i].body = body
+            if let mood { stars[i].mood = mood }
+        }
+        guard useLiveAPI else {
+            applyLocally()
+            return CrisisSignal.detected(in: t + " " + body)
+        }
+        struct Patch: Encodable { var title: String; var body: String; var mood: Mood? }
+        do {
+            // 200 {star, crisis, …}: the floated star's light, shape and report stay as they were.
+            let r: StarCreated = try await APIClient.shared.send("PATCH", "/v1/stars/\(id.apiID)",
+                                                                 body: Patch(title: t, body: body, mood: mood))
+            if let i = stars.firstIndex(where: { $0.id == id }), let s = StarItem(r.star, keeping: stars[i]) {
+                stars[i] = s
+            } else {
+                applyLocally()
+            }
+            return r.crisis != nil
+        } catch {
+            handle(error)
+            return nil
+        }
+    }
+
     /// Live 15: deletes on the server first, then here.
     @MainActor func deleteStarLive(_ id: StarItem.ID) async {
         do {

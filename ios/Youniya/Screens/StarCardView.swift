@@ -77,6 +77,8 @@ struct ComposeFlowView: View {
     var onOpenStar: (StarItem) -> Void
     /// 29 "코인 충전" → 28.
     var onCharge: () -> Void = {}
+    /// 12 "별 띄우기" on a kept star: skip writing, float it, then 06/07.
+    var floatingKept: StarItem? = nil
 
     /// 29 from 05: today's free float is used and coins are short.
     @State private var showShortage = false
@@ -227,6 +229,11 @@ struct ComposeFlowView: View {
         }
         #endif
         .toastCard($toast)
+        .onAppear {
+            if let kept = floatingKept, step == .writing {
+                float { floatKept(kept) } keep: { onClose() }
+            }
+        }
         // 29 코인 부족 (from 05)
         .sheet(isPresented: $showShortage) {
             ActionSheetContent(
@@ -303,6 +310,35 @@ struct ComposeFlowView: View {
             _ = model.spendCoins(AppModel.floatCost, for: "별 띄우기")
         }
         go()
+    }
+
+    /// 12 "별 띄우기" on a kept star: `POST /v1/stars/{id}/float` (mock: on device).
+    private func floatKept(_ kept: StarItem) {
+        guard model.useLiveAPI else {
+            if let s = model.floatKeptMock(kept.id) { advance(after: s, floated: true) }
+            return
+        }
+        withAnimation(.easeInOut(duration: 0.5)) { step = .reading }
+        Task { @MainActor in
+            do {
+                let s = try await model.floatAgain(kept.id)
+                Task { await model.loadCoins() }
+                withAnimation(.easeInOut(duration: 0.5)) {
+                    // A crisis signal: the server keeps it unscored (37, then 13).
+                    step = s.isFloated && s.analysis != nil ? .analyzing(s) : .crisis(s, floated: false)
+                }
+            } catch let e as APIError where e.status == 402 {
+                await model.loadCoins()
+                shortageKeep = { onClose() }
+                showShortage = true
+            } catch let e as APIError where ["too_short", "already_floated"].contains(e.code) {
+                model.apiMessage = e.message
+                onClose()
+            } catch {
+                model.handle(error)
+                onClose()
+            }
+        }
     }
 
     private func advance(after star: StarItem, floated: Bool) {

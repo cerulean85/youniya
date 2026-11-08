@@ -11,6 +11,10 @@ struct StarDetailView: View {
     var onReviewShare: () -> Void
     /// After 15 "영구 삭제"; the parent closes the page and shows a 42 toast.
     var onDeleted: (() -> Void)? = nil
+    /// "글 수정"
+    var onEdit: () -> Void = {}
+    /// A kept star's "별 띄우기" → 06/07.
+    var onFloat: () -> Void = {}
 
     @State private var confirmDelete = DebugScreen.is("15")
     @State private var confirmShare = DebugScreen.is("19")
@@ -81,8 +85,27 @@ struct StarDetailView: View {
                     .foregroundStyle(Color.textTertiary)
             }
 
-            Button("이 주제로 다시 쓰기") { onRewrite() }
-                .buttonStyle(.primary)
+            if !star.isFloated {
+                // A kept star can be floated later (once); 50 characters or more.
+                let long = star.body.count >= AppModel.minFloatLength
+                Button(model.floatButtonTitle, action: onFloat)
+                    .buttonStyle(.primary)
+                    .disabled(!long)
+                if !long {
+                    Text("\(AppModel.minFloatLength)자 이상이면 띄울 수 있어요")
+                        .textStyle(.caption).foregroundStyle(Color.textTertiary)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            if star.isFloated {
+                Button("이 주제로 다시 쓰기") { onRewrite() }
+                    .buttonStyle(.primary)
+            } else {
+                // Figma 12-1: 다시 쓰기 follows a report's question, so a kept star
+                // (no analysis) offers 글 수정 here instead.
+                Button("글 수정", action: onEdit)
+                    .buttonStyle(.secondary)
+            }
             if star.isFloated {
                 if star.isShared {
                     Button("우주 광장에서 거두기") { model.setShared(false, for: starID) }
@@ -98,6 +121,11 @@ struct StarDetailView: View {
                     Text("내보내기")
                 }
                 .buttonStyle(.ghost)
+
+                if star.isFloated {
+                    Button("글 수정", action: onEdit)
+                        .buttonStyle(.ghost)
+                }
 
                 Button("삭제") { confirmDelete = true }
                     .buttonStyle(.ghost)

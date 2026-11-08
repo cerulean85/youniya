@@ -208,6 +208,9 @@ struct StarItem: Identifiable, Hashable, Codable {
         return f.string(from: createdAt)
     }
 
+    /// The kept sample's writing (over 50 characters, so it can be floated later).
+    static let keptSampleBody = "오늘도 끝내 그 말을 꺼내지 못했어요. 괜찮다고 웃었지만 마음 한쪽이 계속 무거웠어요. 언젠가는 천천히 말할 수 있을 것 같아요."
+
     /// Sample stars from the Figma `04 Home` frame.
     static let samples: [StarItem] = [
         StarItem(title: "느리게 흘러간 하루", dateText: "11월 3일 · 21:30", state: .floated(starlight: 742),
@@ -216,7 +219,8 @@ struct StarItem: Identifiable, Hashable, Codable {
                                         observation: "그런 마음이 머물렀군요.\n오늘의 별은 조용히 숨을 고르고 있어요.",
                                         telescopeTeaser: "기다림 속에 작은 안도가 섞여 있어요.",
                                         tones: [.calm, .sorrow])),
-        StarItem(title: "말하지 못한 이야기", dateText: "11월 2일 · 23:10", state: .kept),
+        StarItem(title: "말하지 못한 이야기", dateText: "11월 2일 · 23:10", state: .kept,
+                 body: Self.keptSampleBody),
         StarItem(title: "비 오는 날의 안도", dateText: "11월 1일 · 22:04", state: .floated(starlight: 742)),
         StarItem(title: "다시 꺼내본 약속", dateText: "10월 30일 · 20:48", state: .floated(starlight: 742)),
     ]
@@ -976,8 +980,8 @@ final class AppModel {
     var floatedCount: Int { stars.filter(\.isFloated).count }
     var deepCount: Int { stars.filter { $0.analysis?.isDeep == true }.count }
     var supernovaCount: Int { stars.filter { $0.analysis?.isSupernova == true }.count }
-    /// 104/105: a star can be floated (analyzed) from 1,000 characters; keeping has no minimum.
-    static let minFloatLength = 1000
+    /// 104/105: a star can be floated (analyzed) from 50 characters; keeping has no minimum.
+    static let minFloatLength = 50
     /// Deep stars needed to reach the next nebula stage.
     static let nextStageDeepStars = 15
 
@@ -1024,6 +1028,16 @@ final class AppModel {
         stars.insert(star, at: 0)
         saveDraft(StarDraft())
         return star
+    }
+
+    /// Mock 12 "별 띄우기" on a kept star: analyzed now, same writing date.
+    func floatKeptMock(_ id: StarItem.ID) -> StarItem? {
+        guard let i = stars.firstIndex(where: { $0.id == id }), !stars[i].isFloated else { return nil }
+        let s = stars[i]
+        let analysis = StarAnalysis.mock(for: StarDraft(mood: s.mood, title: s.title, body: s.body))
+        stars[i].analysis = analysis
+        stars[i].state = .floated(starlight: analysis.starlight)
+        return stars[i]
     }
 
     private func makeStar(_ d: StarDraft, floated: Bool) -> StarItem {

@@ -59,6 +59,8 @@ struct MainView: View {
         case collection // 79·80
         case sharedStars // 87 › 나눈 별
         case blockedKeepers // 87-3 차단한 별지기
+        case editStar(StarItem.ID)  // 글 수정
+        case floatKept(StarItem.ID) // a kept star's "별 띄우기" → 06/07
         case monthlyReport(String?)  // 123 (v1.1): a month, or the mock sample
         case page(String)
     }
@@ -152,6 +154,21 @@ struct MainView: View {
                 }
                 push(.coinHistory)
             case "missingStar": push(.detail(UUID()))     // 122
+            // 글 수정 / 간직한 별 띄우기 (2026-11-08)
+            case "keptStar", "keptShort":
+                // keptStar: over 50 characters (can float); keptShort: under 50.
+                if let i = model.stars.firstIndex(where: { !$0.isFloated }) {
+                    model.stars[i].body = UserDefaults.standard.string(forKey: "debugRoute") == "keptShort"
+                        ? "말하지 못한 말이 남았어요." : StarItem.keptSampleBody
+                    push(.detail(model.stars[i].id))
+                }
+            case "editStar":
+                if let star = model.stars.first(where: \.isFloated) { push(.editStar(star.id)) }
+            case "editKept":
+                if let i = model.stars.firstIndex(where: { !$0.isFloated }) {
+                    model.stars[i].body = StarItem.keptSampleBody
+                    push(.editStar(model.stars[i].id))
+                }
             default: break
             }
         }
@@ -252,7 +269,9 @@ struct MainView: View {
                 onDeleted: {
                     pop()
                     toast = ToastCardMessage(title: "삭제되었어요", detail: "되돌릴 수 없어요")
-                }
+                },
+                onEdit: { push(.editStar(id)) },
+                onFloat: { replace(with: .floatKept(id)) }
             )
             .edgeSwipeBack(onBack: pop)
         case .report(let id):
@@ -417,6 +436,17 @@ struct MainView: View {
                 }
             )
             .edgeSwipeBack(onBack: pop)
+        case .editStar(let id):
+            StarEditView(starID: id, onClose: pop)
+        case .floatKept(let id):
+            ComposeFlowView(
+                onClose: pop,
+                onShowNebula: { tab = .nebula; pop() },
+                onTelescope: { openReport($0, replacing: true) },
+                onOpenStar: { replace(with: .detail($0.id)) },
+                onCharge: { push(.coins) },
+                floatingKept: model.stars.first { $0.id == id }
+            )
         case .blockedKeepers:
             BlockedKeepersView(onBack: pop)
                 .edgeSwipeBack(onBack: pop)

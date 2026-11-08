@@ -54,7 +54,7 @@ struct RewriteView: View {
                     .frame(height: 260, alignment: .top)
                     .focusCard(angle: .init(x: 0.25, y: 0), end: .init(x: 0.75, y: 1))
 
-                // Figma 105: "13자 · 987자 더 쓰면 띄울 수 있어요" (05/104 use the same form).
+                // Figma 105: "13자 · 37자 더 쓰면 띄울 수 있어요" (05/104 use the same form).
                 Text(text.count >= AppModel.minFloatLength
                      ? "\(text.count.formatted())자"
                      : "\(text.count.formatted())자 · \((AppModel.minFloatLength - text.count).formatted())자 더 쓰면 띄울 수 있어요")

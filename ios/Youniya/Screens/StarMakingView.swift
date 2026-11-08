@@ -21,7 +21,7 @@ struct StarMakingView: View {
     private var canPublish: Bool {
         !draft.body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
-    /// 104: floating (analysis) needs 1,000 characters; keeping does not.
+    /// 104: floating (analysis) needs 50 characters; keeping does not.
     private var canFloat: Bool { draft.body.count >= AppModel.minFloatLength }
 
     var body: some View {
@@ -53,7 +53,7 @@ struct StarMakingView: View {
 
             bodyEditor
 
-            // Figma 05 "1,248자"; 104 "14자 · 986자 더 쓰면 띄울 수 있어요".
+            // Figma 05 "1,248자"; 104 "14자 · 36자 더 쓰면 띄울 수 있어요".
             Text(canFloat
                  ? "\(draft.body.count.formatted())자"
                  : "\(draft.body.count.formatted())자 · \((AppModel.minFloatLength - draft.body.count).formatted())자 더 쓰면 띄울 수 있어요")
