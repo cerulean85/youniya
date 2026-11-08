@@ -45,8 +45,14 @@ vercel deploy --prod   # from this folder, linked to youniya-app
    checked) and Google (Google Identity Services button → `/auth/google`). The API verifies the ID tokens:
    `com.dycdyp.youniya.web` is in `APPLE_CLIENT_IDS` and the web client ID in `GOOGLE_CLIENT_IDS`.
    Tokens live in httpOnly cookies; `proxy.ts` refreshes them and sends signed-out visits to `/login`.
-   **Done**, except Apple, which waits on the Services ID's return URL.
+   **Done** (both checked on production, 2026-11-08).
 3. Home, writing (drafts in the database), floating, star detail: **done**. Records: next.
 4. Plaza, nebulae, mind telescope, settings, contact, states.
+   Nebula rules (server, 2026-11-08): at least 3 floated stars (the next button stays off until then;
+   subtitle "N개 골랐어요 · 3개 이상이면 돼요"), names up to 20 characters, and `PATCH /v1/nebulae/{id}`
+   reshapes a drawn nebula (`plaza_updated` when it is shared; changing its stars drops the polished
+   story). Mobile designs: 08-1, 08-2, 84-2; ask the Figma session for the desktop version.
+   Writing rules: a star floats from 50 characters (`MIN_FLOAT_LENGTH`); `PATCH /v1/stars/{id}` edits
+   (a floated star's mood is fixed: 409 `mood_fixed`); `POST /v1/stars/{id}/float` floats a kept star.
 5. Coins through Toss Payments: new server endpoints (order, confirm, webhook, refund) and the policy
    updates that come with a PG.
