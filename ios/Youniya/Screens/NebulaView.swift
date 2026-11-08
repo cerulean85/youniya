@@ -257,7 +257,10 @@ struct NebulaArt: View {
             let size: CGFloat = [8, 10, 9][i % 3]
             ZStack {
                 if star.id == selectedStar {
-                    Circle().strokeBorder(Color.starBright, lineWidth: 1.2).frame(width: size + 10, height: size + 10)
+                    // Figma 77 `Target Ring`: dashed, about twice the star, so it
+                    // can't be taken for a guest's solid ring.
+                    Circle().strokeBorder(Color.starBright, style: StrokeStyle(lineWidth: 1.2, dash: [3, 3]))
+                        .frame(width: size * 2.4, height: size * 2.4)
                 }
                 Circle().fill(star.mood.color)
                     .frame(width: size, height: size)
@@ -272,7 +275,11 @@ struct NebulaArt: View {
         } else if i - stars.count < guests.count {
             let guest = guests[i - stars.count]
             ZStack {
-                Circle().strokeBorder(Color.starBright, lineWidth: guest.title == selectedGuest ? 2 : 1.2)
+                if guest.title == selectedGuest {
+                    Circle().strokeBorder(Color.starBright, style: StrokeStyle(lineWidth: 1.2, dash: [3, 3]))
+                        .frame(width: 26, height: 26)
+                }
+                Circle().strokeBorder(Color.starBright, lineWidth: 1.2)
                     .frame(width: 16, height: 16)
                 Circle().fill(guest.color).frame(width: 8, height: 8)
             }
