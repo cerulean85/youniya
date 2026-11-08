@@ -290,6 +290,6 @@ def report_share(kind: Kind, target_id: str, body: ReportIn, user: User = Depend
 def tonight(user: User = Depends(consented_user), db: Session = Depends(get_db)):
     """69 오늘 밤, N개의 마음이 모였어요: every star floated today (Korean time), no writing."""
     start = datetime.now(KST).replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
-    floated_today = select(func.count()).select_from(Star).where(Star.state == "floated", Star.created_at >= start)
+    floated_today = select(func.count()).select_from(Star).where(Star.state == "floated", Star.floated_at >= start)
     return {"count": db.scalar(floated_today),
             "mine": db.scalar(floated_today.where(Star.user_id == user.id))}

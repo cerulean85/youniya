@@ -95,3 +95,24 @@ def test_cannot_edit_someone_elses_star(client):
     owner, other = sign_in(client, "owner"), sign_in(client, "other")
     star = float_star(client, owner)
     assert client.patch(f"/v1/stars/{star['id']}", json={"title": "x"}, headers=other).status_code == 404
+
+
+def test_tonight_counts_stars_by_when_they_floated(client):
+    """69 오늘 밤: a star kept yesterday and floated today counts; one floated yesterday does not."""
+    from datetime import timedelta
+
+    from youniya_api.models import Star
+
+    h = sign_in(client)
+    kept = client.post("/v1/stars", json={"mood": "calm", "body": SHORT, "mode": "keep"}, headers=h).json()["star"]
+    old = client.post("/v1/stars", json={"mood": "calm", "body": SHORT, "mode": "float"}, headers=h).json()["star"]
+    with client.app.state.sessions() as db:
+        for star_id in (kept["id"], old["id"]):
+            row = db.get(Star, star_id)
+            row.created_at -= timedelta(days=2)
+            if row.floated_at:
+                row.floated_at -= timedelta(days=2)
+        db.commit()
+    assert client.get("/v1/plaza/tonight", headers=h).json() == {"count": 0, "mine": 0}
+    client.post(f"/v1/stars/{kept['id']}/float", headers=h)
+    assert client.get("/v1/plaza/tonight", headers=h).json() == {"count": 1, "mine": 1}

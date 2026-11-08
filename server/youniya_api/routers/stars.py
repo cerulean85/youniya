@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..deps import ApiError, consented_user, get_cipher, get_db
-from ..models import Draft, Nebula, Star, User
+from ..models import Draft, Nebula, Star, User, now
 from ..prism.filters import CRISIS_GUIDANCE, has_crisis_signal
 from .. import ai_cost, allowance, coins, membership
 from ..rules import (DEEP_DEPTH_SCORE, FIRST_STAGE_STARS, STAGE_NAMES, STAR_FLOAT_COST, SUPERNOVA_STARLIGHT,
@@ -54,6 +54,7 @@ def owned_star(db: Session, user: User, star_id: str) -> Star:
 
 def _apply(star: Star, analysis: dict, cipher: Cipher) -> None:
     star.state = "floated"
+    star.floated_at = now()
     star.starlight = analysis["starlight"]
     star.depth_score = analysis["scores"]["depth"]
     star.analysis_enc = cipher.enc_json(analysis)
