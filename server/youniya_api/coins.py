@@ -1,6 +1,8 @@
 """Coin balance changes. Every change writes a 33 코인 사용 내역 entry."""
 
-from sqlalchemy import select, update
+from datetime import datetime, timedelta, timezone
+
+from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from .models import CoinEntry, User
@@ -41,3 +43,15 @@ def take_back(db: Session, user: User, amount: int, title: str, transaction_id: 
             db.refresh(user)
             return taken
     raise RuntimeError("balance kept changing")
+
+
+# 전자상거래법: payment records are kept 5 years. After an account is deleted only its store purchases and
+# refunds stay (user_id NULL, 개인정보 처리방침 3); this is how long. 5 × 365 days plus a leap day or two.
+DETACHED_KEEP = timedelta(days=5 * 365 + 2)
+
+
+def purge_detached(db: Session, now: datetime | None = None) -> int:
+    """Deletes the purchase records of deleted accounts once they are older than DETACHED_KEEP.
+    Records of living accounts are their own history and stay. Returns how many rows went."""
+    cutoff = (now or datetime.now(timezone.utc)) - DETACHED_KEEP
+    return db.execute(delete(CoinEntry).where(CoinEntry.user_id.is_(None), CoinEntry.created_at < cutoff)).rowcount

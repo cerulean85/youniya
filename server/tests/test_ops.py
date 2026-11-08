@@ -226,3 +226,27 @@ def test_purchase_records_outlive_the_account(make_app):
     other = sign_in(client, "again")
     r = client.post("/v1/coins/purchases", json={"signed_transaction": apple.jws(transactionId="910")}, headers=other)
     assert r.status_code == 409 and r.json()["error"]["code"] == "transaction_used"
+
+
+def test_detached_purchase_records_go_after_five_years(client):
+    """Only deleted accounts' records (user_id NULL) older than 5 years are deleted; a living account's
+    history stays however old it is."""
+    from datetime import datetime, timedelta, timezone
+
+    from youniya_api import coins
+    from youniya_api.models import CoinEntry
+
+    h = sign_in(client)
+    client.post("/v1/coins/purchases", json={"product_id": "coin_110", "transaction_id": "mine"}, headers=h)
+    now = datetime.now(timezone.utc)
+    with client.app.state.sessions() as db:
+        old = now - coins.DETACHED_KEEP - timedelta(days=1)
+        db.add_all([CoinEntry(user_id=None, title="코인 충전", delta=110, transaction_id="old", created_at=old),
+                    CoinEntry(user_id=None, title="코인 충전", delta=110, transaction_id="new",
+                              created_at=now - timedelta(days=365))])
+        mine = db.query(CoinEntry).filter_by(transaction_id="mine").one()
+        mine.created_at = now - timedelta(days=10 * 365)
+        db.commit()
+        assert coins.purge_detached(db, now) == 1
+        db.commit()
+        assert sorted(r.transaction_id for r in db.query(CoinEntry)) == ["mine", "new"]
