@@ -89,6 +89,8 @@ class Star(Base):
     analysis_enc: Mapped[str | None] = mapped_column(Text)
     analysis_failed: Mapped[bool] = mapped_column(Boolean, default=False)
     crisis: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Set when the owner edits the writing; null for one never edited.
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class StarShare(Base):

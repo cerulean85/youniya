@@ -37,6 +37,7 @@ def star_view(star: Star, cipher: Cipher, shared: bool = False, body: bool = Tru
         "mood": star.mood,
         "state": star.state,
         "created_at": iso(star.created_at),
+        "updated_at": iso(star.updated_at),
         "starlight": star.starlight,
         "rewrite_of": star.rewrite_of,
         "analysis_failed": star.analysis_failed,

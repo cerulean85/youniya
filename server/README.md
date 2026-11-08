@@ -28,7 +28,7 @@ The prism keeps the Protoss pipeline:
 
 YOUNIYA-only rules come from the screens and `ios/Youniya/App/AppModel.swift`:
 
-- 1,000 characters to float a star.
+- 50 characters to float a star (1,000 until 20261108).
 - Floating a star is free once a Korean day, then 5 coins.
 - The telescope costs 20 coins; one a month and one at sign-up are free.
 - Story polish costs 10 coins; the first one is free.
@@ -136,7 +136,7 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
 | App | `GET /v1/app/status` | 40, 41 |
 | Auth | `POST /v1/auth/{apple,google}`, `POST /v1/auth/invite` (`INVITE_LOGIN=1`), `/refresh`, `/logout` | 02, 39 |
 | Account | `GET /v1/me`, `POST /v1/me/consent`, `PATCH /v1/me/settings`, `PUT /v1/me/devices`, `DELETE /v1/me/devices/{token}`, `DELETE /v1/me`, `GET /v1/me/export?format=text\|pdf`, `GET·DELETE /v1/me/shares`, `POST /v1/inquiries` | 11, 87, 91–94, 113, 114, 32 |
-| Stars | `POST /v1/stars` (`mode: float \| keep`), `GET /v1/stars` (`state`, `mood`, `q`, `month`, `before`), `GET /v1/stars/summary`, `GET·DELETE /v1/stars/{id}`, `POST /v1/stars/{id}/float` | 05, 07, 12–16, 36, 104, 105, 115–119 |
+| Stars | `POST /v1/stars` (`mode: float \| keep`), `GET /v1/stars` (`state`, `mood`, `q`, `month`, `before`), `GET /v1/stars/summary`, `GET·PATCH·DELETE /v1/stars/{id}`, `POST /v1/stars/{id}/float` (a kept star, later) | 05, 07, 12–16, 36, 104, 105, 115–119 |
 | Draft | `GET·PUT·DELETE /v1/drafts/current` | 34 |
 | Growth | `GET /v1/starlight/trend`, `GET /v1/growth` (`stage` 0 below 12 stars, then 1–4) | 08, 65, 66, 82, 86, 109 |
 | Telescope | `GET /v1/telescope/offer`, `POST·GET /v1/telescope/reports`, `GET /v1/telescope/reports/{id}`, `POST …/save` | 10, 24–27, 29, 88, 98 |
@@ -150,8 +150,9 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
 ### Behaviour worth knowing
 
 - **Floating a star** (`POST /v1/stars`, `mode: float`):
-  - Text under 1,000 characters gets `422 too_short` and nothing is stored, so the app keeps the draft (104).
+  - Text under 50 characters gets `422 too_short` and nothing is stored, so the app keeps the draft (104).
   - If the model fails, the star is stored as kept with `analysis_failed: true`, and `POST /v1/stars/{id}/float` retries it (36).
+  - `PATCH /v1/stars/{id}` (글 수정) takes any of `title`, `body`, `mood`. A floated star keeps its mood (`409 mood_fixed`), shape, starlight, analysis and reports; nothing is read again or charged. Plaza shares keep the sentence copied when shared. The crisis check runs again; stars carry `updated_at` (null until edited).
 - **Crisis signals:** The writing is saved as written, but it is never scored or shared. The response carries `crisis` with the 109 line (37).
 - **Prices and free uses** (1 coin = 10 KRW): floating a star is free once a Korean day, then 5 coins (keeping is always free). The telescope costs 20 coins, free once a calendar month (no carry-over) plus once at sign-up. Story polish costs 10 coins, free once at sign-up. `GET /v1/me` and `GET /v1/coins` show `free_star_today`, `free_telescope` and `free_story`; a float, report or polish answers `charged` and `coins`. Products on sale: `coin_110` (1,100원), `coin_330` (3,300원), `coin_1100` (9,900원, 100 bonus). `coin_50`, `coin_120` and `coin_300` are no longer listed but are still accepted and refunded.
 - **Coins:** Charged only after a result exists. A failed report or polish charges nothing (Protoss 4.4). The balance never goes below zero, even with requests racing.
@@ -196,4 +197,4 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
 
 ## Not done yet
 
-- **Reliability protocol:** `tools/eval_prism.py` runs a scaled-down `design.md` 6장 (22 texts, passed 20261107). The full protocol (30 texts × 20 runs, two human raters on 100 texts) has not been run. The check texts are a few hundred characters; real stars are 1,000+.
+- **Reliability protocol:** `tools/eval_prism.py` runs a scaled-down `design.md` 6장 (22 texts, passed 20261107). The full protocol (30 texts × 20 runs, two human raters on 100 texts) has not been run. The check texts are a few hundred characters; real stars can be as short as 50 characters.

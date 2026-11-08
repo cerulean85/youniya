@@ -948,6 +948,60 @@
           }
         }
       },
+      "patch": {
+        "tags": [
+          "stars"
+        ],
+        "summary": "Edit Star",
+        "description": "글 수정. A kept star: title, body and mood. A floated star: title and body only; its mood, shape,\nstarlight, analysis and telescope reports stay as first read (nothing is read again or charged).\nPlaza shares keep the sentence copied when shared. The crisis check runs again on the new text.",
+        "operationId": "edit_star_v1_stars__star_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "star_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Star Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StarEdit"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "delete": {
         "tags": [
           "stars"
@@ -4022,6 +4076,55 @@
           "id_token"
         ],
         "title": "SignIn"
+      },
+      "StarEdit": {
+        "properties": {
+          "mood": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "calm",
+                  "sorrow",
+                  "anger",
+                  "insight"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mood"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "body": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20000,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          }
+        },
+        "type": "object",
+        "title": "StarEdit",
+        "description": "Only what is given changes. `mood` only while the star is kept."
       },
       "StarIn": {
         "properties": {

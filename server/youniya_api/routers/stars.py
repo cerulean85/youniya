@@ -1,7 +1,7 @@
 """Stars: 05 별 만들기, 07 별 카드, 12 별 상세, 14–16 다시 쓰기, 15 삭제, 34 임시 저장,
 115–119 기록, 82 밝기 흐름, 08/86/66 성장."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -30,6 +30,13 @@ class StarIn(BaseModel):
     body: str = Field(..., min_length=1, max_length=20000)
     mode: Literal["float", "keep"]  # 별 띄우기 | 조용히 간직하기
     rewrite_of: str | None = None  # 14 다시 쓰기
+
+
+class StarEdit(BaseModel):
+    """Only what is given changes. `mood` only while the star is kept."""
+    mood: Mood | None = None
+    title: str | None = Field(None, max_length=60)
+    body: str | None = Field(None, min_length=1, max_length=20000)
 
 
 class DraftIn(BaseModel):
@@ -198,6 +205,30 @@ def get_star(star_id: str, user: User = Depends(consented_user), db: Session = D
              cipher: Cipher = Depends(get_cipher)):
     star = owned_star(db, user, star_id)
     return star_view(star, cipher, shared=star.id in shared_star_ids(db, user.id))
+
+
+@router.patch("/stars/{star_id}", dependencies=[per_user("star_edit", 60, 3600)])
+def edit_star(star_id: str, body: StarEdit, user: User = Depends(consented_user), db: Session = Depends(get_db),
+              cipher: Cipher = Depends(get_cipher)):
+    """글 수정. A kept star: title, body and mood. A floated star: title and body only; its mood, shape,
+    starlight, analysis and telescope reports stay as first read (nothing is read again or charged).
+    Plaza shares keep the sentence copied when shared. The crisis check runs again on the new text."""
+    star = owned_star(db, user, star_id)
+    if body.mood is not None and body.mood != star.mood and star.state == "floated":
+        raise ApiError(409, "mood_fixed", "띄운 별의 기분은 바꿀 수 없어요.")
+    if body.body is not None and not body.body.strip():
+        raise ApiError(422, "empty_body", "본문을 비울 수는 없어요.")
+    if body.title is not None:
+        star.title_enc = cipher.enc(body.title.strip() or "제목 없는 별")
+    if body.body is not None:
+        star.body_enc = cipher.enc(body.body)
+    if body.mood is not None:
+        star.mood = body.mood
+    crisis = has_crisis_signal(f"{cipher.dec(star.title_enc)}\n{cipher.dec(star.body_enc)}")
+    star.crisis = crisis
+    star.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    return _response(db, star, cipher, crisis)
 
 
 @router.delete("/stars/{star_id}", status_code=204)

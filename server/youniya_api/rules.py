@@ -3,8 +3,8 @@
 MOODS = ("calm", "sorrow", "anger", "insight")  # 평온 · 슬픔 · 분노 · 통찰
 MOOD_LABELS = {"calm": "평온", "sorrow": "슬픔", "anger": "분노", "insight": "통찰"}
 
-# 104/105: floating (analysis) needs 1,000 characters; keeping has no minimum.
-MIN_FLOAT_LENGTH = 1000
+# 104/105: floating (analysis) needs 50 characters (1,000 until 20261108); keeping has no minimum.
+MIN_FLOAT_LENGTH = 50
 
 # Prices (기획 확정 20261107, 1 coin = 10 KRW). Free uses: youniya_api/allowance.py.
 STAR_FLOAT_COST = 5  # 별 띄우기 after the day's free one
