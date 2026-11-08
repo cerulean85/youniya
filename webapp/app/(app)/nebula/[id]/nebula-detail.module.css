@@ -1,0 +1,26 @@
+.back { display: inline-flex; align-items: center; gap: 6px; font: 500 14px/20px var(--sans); color: var(--text-2); margin-bottom: -8px; }
+.loading { min-height: 560px; opacity: 0.5; }
+.body { display: flex; gap: 40px; align-items: flex-start; }
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.born { display: inline-flex; align-items: center; gap: 8px; font: 500 14px/20px var(--sans); color: var(--gold); }
+.figure { border-radius: 24px; aspect-ratio: 640 / 460; padding: 8px; margin-top: 8px; }
+.story { border-radius: 20px; padding: 28px 32px; display: flex; flex-direction: column; gap: 12px; }
+.storyHead { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.polish { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.link { color: var(--primary-text); font-weight: 500; }
+.entries { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 18px; }
+.entries li { display: flex; flex-direction: column; gap: 4px; }
+.bridge { font: 400 14px/22px var(--serif); color: var(--gold); padding: 8px 0 0 4px; }
+.side { width: 360px; flex: none; display: flex; flex-direction: column; gap: 20px; position: sticky; top: 48px; }
+.share { padding: 22px 24px; border-radius: 16px; display: flex; flex-direction: column; gap: 10px; }
+.check { display: flex; gap: 10px; align-items: center; font: 400 13px/20px var(--sans); color: var(--text-2); cursor: pointer; }
+.check input { accent-color: var(--primary); width: 18px; height: 18px; }
+.stars { display: flex; flex-direction: column; gap: 8px; }
+.star { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; background: rgba(19, 26, 42, 0.7); border: 1px solid var(--border); }
+.star:hover { border-color: rgba(133, 85, 239, 0.6); }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.starText { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+@media (max-width: 1100px) { .body { flex-direction: column; } .side { width: 100%; position: static; } }
+.figure { position: relative; }
+.chip { position: absolute; top: 16px; right: 16px; padding: 6px 14px; border-radius: 999px; font: 500 12px/18px var(--sans); background: var(--raised); border: 1px solid var(--border); }
+.chip:hover { border-color: var(--gold); color: var(--gold); }

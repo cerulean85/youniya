@@ -50,7 +50,10 @@ vercel deploy --prod   # from this folder, linked to youniya-app
    calendar): **done**.
 4. Plaza stars (grid, new or similar, the other person's star with resonance, keep beside, report
    with optional block, block; sharing one masked sentence from a star): **done**.
-   Next: plaza nebulae, nebulae, mind telescope, settings, contact, states.
+   Nebulae: my nebula (W-41, W-42 before the first), detail with story and polishing, sharing to the
+   sky, drawing (W-27 flow), reshaping (W-43 with PATCH), plaza nebula tab and another person's nebula
+   with 별빛 한 줄: **done**. Drawn like iOS NebulaFigure (`lib/nebula.ts`).
+   Next: mind telescope, coins, settings, contact, states.
    Nebula rules (server, 2026-11-08): at least 3 floated stars (the next button stays off until then;
    subtitle "N개 골랐어요 · 3개 이상이면 돼요"), names up to 20 characters, and `PATCH /v1/nebulae/{id}`
    reshapes a drawn nebula (`plaza_updated` when it is shared; changing its stars drops the polished

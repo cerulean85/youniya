@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { NebulaFigure } from "@/components/NebulaFigure";
 import { StarGlyph } from "@/components/StarGlyph";
 import { Heart } from "@/components/icons";
 import { api } from "@/lib/api";
-import type { PlazaStar } from "@/lib/types";
+import type { Dot } from "@/lib/nebula";
+import type { PlazaNebula, PlazaStar } from "@/lib/types";
 import styles from "./plaza.module.css";
 
 export const metadata: Metadata = { title: "우주 광장" };
@@ -28,6 +30,7 @@ async function Plaza({ searchParams }: Pick<PageProps<"/plaza">, "searchParams">
   const sp = await searchParams;
   const tab = sp.tab === "nebula" ? "nebula" : "star";
   const sort = sp.sort === "similar" ? "similar" : "new";
+  const filter = sp.filter === "new" || sp.filter === "beside" ? sp.filter : "similar";
   const notice = sp.reported ? "신고를 받았어요. 그 별은 이제 보이지 않아요." : sp.blocked ? "차단했어요. 서로의 별이 더 이상 보이지 않아요." : null;
   return (
     <>
@@ -38,6 +41,13 @@ async function Plaza({ searchParams }: Pick<PageProps<"/plaza">, "searchParams">
           <Link href="/plaza?tab=nebula" aria-current={tab === "nebula" ? "page" : undefined}>성운</Link>
         </nav>
         <span className={styles.spacer} />
+        {tab === "nebula" && (
+          <nav className={styles.sorts} aria-label="거르기">
+            <Link href="/plaza?tab=nebula" aria-current={filter === "similar" ? "true" : undefined}>나와 비슷한 결</Link>
+            <Link href="/plaza?tab=nebula&filter=new" aria-current={filter === "new" ? "true" : undefined}>새로 띄운 성운</Link>
+            <Link href="/plaza?tab=nebula&filter=beside" aria-current={filter === "beside" ? "true" : undefined}>곁에 둔 성운</Link>
+          </nav>
+        )}
         {tab === "star" && (
           <nav className={styles.sorts} aria-label="정렬">
             <Link href="/plaza" aria-current={sort === "new" ? "true" : undefined}>새로 뜬 것</Link>
@@ -45,12 +55,7 @@ async function Plaza({ searchParams }: Pick<PageProps<"/plaza">, "searchParams">
           </nav>
         )}
       </div>
-      {tab === "star" ? <Stars sort={sort} /> : (
-        <div className={`card ${styles.empty}`}>
-          <p className="h3">성운 광장은 곧 열려요</p>
-          <p className="body-m muted">성운 화면을 만들 때 함께 열어요. 지금은 별 광장을 둘러봐 주세요.</p>
-        </div>
-      )}
+      {tab === "star" ? <Stars sort={sort} /> : <Nebulae filter={filter} />}
     </>
   );
 }
@@ -73,6 +78,33 @@ async function Stars({ sort }: { sort: string }) {
           <span className="label-m">{s.name}</span>
           <span className={`body-s muted ${styles.quote}`}>{s.quote}</span>
           <span className={styles.foot} data-on={s.resonated}><Heart size={14} />{s.resonated ? "공명했어요" : "공명"}</span>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+async function Nebulae({ filter }: { filter: string }) {
+  const { items } = await api<{ items: PlazaNebula[] }>(`/v1/plaza/nebulae?filter=${filter}&limit=40`);
+  if (items.length === 0) {
+    return (
+      <div className={`card ${styles.empty}`}>
+        <p className="h3">{filter === "beside" ? "아직 곁에 둔 성운이 없어요" : "아직 하늘에 뜬 성운이 없어요"}</p>
+        <p className="body-m muted">{filter === "beside" ? "마음이 닿은 성운을 곁에 두면 이곳에 모여요." : "나의 성운에서 하늘에 띄우면 이곳에 떠올라요."}</p>
+      </div>
+    );
+  }
+  return (
+    <div className={styles.grid}>
+      {items.map((n) => (
+        <Link key={n.id} href={`/plaza/nebulae/${n.id}`} className={`card ${styles.card}`} prefetch={false}>
+          <div className={styles.sky}>
+            <NebulaFigure width={240} height={128} compact label={n.name}
+              figure={{ silhouette: n.shape.silhouette, edges: n.shape.edges, dots: n.shape.stars.map((s): Dot => ({ mood: s.mood })) }} />
+          </div>
+          <span className="label-m">{n.name}</span>
+          <span className={`body-s muted ${styles.quote}`}>{n.quote ?? `별 ${n.shape.stars.length}개 · 깊이 ${n.depth_level}`}</span>
+          <span className={styles.foot} data-on={n.resonated}><Heart size={14} />{n.resonated ? "공명했어요" : "공명"}</span>
         </Link>
       ))}
     </div>

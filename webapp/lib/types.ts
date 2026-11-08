@@ -66,3 +66,29 @@ export type PlazaStar = {
   resonated: boolean;
   beside: boolean;
 };
+
+export type NebulaSummary = {
+  id: string; name: string; silhouette: string | null; star_count: number; depth_level: number;
+  shared: boolean; created_at: string; updated_at: string | null;
+};
+export type NebulaStar = { id: string; index: number; title: string; mood: Mood; starlight: number; shape: PlazaStar["shape"]; depth_level: number; created_at: string };
+export type Nebula = {
+  id: string; name: string; silhouette: string | null; edges: number[][]; stars: NebulaStar[];
+  star_count: number; depth_level: number; moods: Mood[]; guests: { share_id?: string; mood?: Mood; name?: string }[];
+  shared: boolean; created_at: string; updated_at: string | null;
+};
+export type Growth = {
+  stage: number; stage_name: string | null; floated: number; deep: number; supernova: number;
+  next: { stage: number; stage_name: string; needs: Record<string, [number, number]> } | null;
+  milestones: { key: string; title: string; at: string }[];
+};
+export type Story = {
+  name: string; since: string; star_count: number;
+  entries: { star_id: string; date: string; title: string; sentence: string }[];
+  bridges: string[] | null; polished: boolean; polish_cost: number; polish_free: boolean;
+};
+export type PlazaNebula = {
+  id: string; name: string; quote: string | null; moods: Mood[]; depth_level: number;
+  shape: { silhouette: string | null; edges: number[][]; stars: { mood: Mood; depth_level?: number }[] };
+  receive_lines: boolean; created_at: string; resonated: boolean; beside: boolean;
+};
