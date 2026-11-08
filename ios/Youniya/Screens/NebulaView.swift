@@ -188,113 +188,46 @@ struct NebulaGlowBackground: View {
     }
 }
 
-/// 08-1 / 70 / 77: the user's own nebula, as in the 사용자 시안. Stars along
-/// the silhouette joined by thin gold lines, a gold star at the top, guests
-/// with gold rings, and faint places still waiting for stars. Drawn by hand,
-/// it shows the picked stars and their lines. 70/77 pass taps and a selection.
+/// 08-1 / 70 / 77: the user's own nebula (`NebulaFigureView`): its stars,
+/// guests, empty places and lines, nothing decorative. 70/77 pass taps and a
+/// selection.
 struct NebulaArt: View {
     @Environment(AppModel.self) private var model
     var nebula: DrawnNebula
     var selectedStar: StarItem.ID? = nil
     var selectedGuest: String? = nil
+    var compact = false
     var onTapStar: ((StarItem) -> Void)? = nil
     var onTapGuest: ((GuestStar) -> Void)? = nil
 
-    /// The drawing area inside a canvas of `size` (shared by the drawing and `anchor`).
-    static func area(_ size: CGSize) -> CGRect {
-        CGRect(origin: .zero, size: size).insetBy(dx: 44, dy: size.height * 0.14)
+    private var stars: [StarItem] {
+        let floated = model.stars.filter(\.isFloated)
+        return nebula.starIDs.compactMap { id in floated.first { $0.id == id } }
+    }
+    private var guests: [GuestStar] {
+        nebula.template == nil ? [] : model.guestCandidates.filter { nebula.guests.contains($0.title) }
     }
 
-    /// 77: where a place sits, as a unit point, so zooming keeps it in view.
-    static func anchor(slot index: Int, of template: NebulaSilhouette, in size: CGSize) -> UnitPoint {
-        let slots = template.slots(in: area(size))
-        guard slots.indices.contains(index), size.width > 0, size.height > 0 else { return .center }
-        return UnitPoint(x: slots[index].x / size.width, y: slots[index].y / size.height)
+    var figure: NebulaFigure { NebulaFigure(nebula: nebula, stars: stars, guests: guests) }
+
+    /// 77: where a dot sits, as a unit point, so zooming keeps it in view.
+    static func anchor(dot index: Int, of figure: NebulaFigure, in size: CGSize) -> UnitPoint {
+        let places = figure.places(in: size)
+        guard places.indices.contains(index), size.width > 0, size.height > 0 else { return .center }
+        return UnitPoint(x: places[index].x / size.width, y: places[index].y / size.height)
     }
 
     var body: some View {
-        let floated = model.stars.filter(\.isFloated)
-        if let template = nebula.template {
-            let stars = nebula.starIDs.compactMap { id in floated.first { $0.id == id } }
-            let guests = model.guestCandidates.filter { nebula.guests.contains($0.title) }
-            GeometryReader { geo in
-                let rect = Self.area(geo.size)
-                let slots = template.slots(in: rect)
-                let filled = min(slots.count, stars.count + guests.count)
-                let apex = template.fitted(in: rect).min { $0.y < $1.y }
-                ZStack(alignment: .topLeading) {
-                    // Gold lines through the stars, in order along the outline.
-                    if filled > 1 {
-                        Path { p in
-                            p.move(to: slots[0])
-                            for i in 1..<filled { p.addLine(to: slots[i]) }
-                        }
-                        .stroke(Color.starBright.opacity(0.55), lineWidth: 1)
-                    }
-                    ForEach(slots.indices, id: \.self) { i in
-                        slot(i, stars: stars, guests: guests).position(slots[i])
-                    }
-                    if let apex {
-                        Image(.nebulaTopStar).resizable().frame(width: 22, height: 22)
-                            .shadow(color: Color.starBright.opacity(0.7), radius: 6)
-                            .position(apex)
-                            .allowsHitTesting(false)
-                    }
-                }
-            }
-            .accessibilityElement(children: onTapStar == nil ? .ignore : .contain)
-            .accessibilityLabel("\(nebula.name), \(template.name) 모양. 내 별 \(stars.count)개, 손님별 \(guests.count)개")
-        } else {
-            StarStage(stars: floated, picked: nebula.starIDs, edges: nebula.edges, interactive: onTapStar != nil) { star in
-                if nebula.starIDs.contains(star.id) { onTapStar?(star) }
-            }
-        }
-    }
-
-    @ViewBuilder private func slot(_ i: Int, stars: [StarItem], guests: [GuestStar]) -> some View {
-        if i < stars.count {
-            let star = stars[i]
-            let size: CGFloat = [8, 10, 9][i % 3]
-            ZStack {
-                if star.id == selectedStar {
-                    // Figma 77 `Target Ring`: dashed, about twice the star, so it
-                    // can't be taken for a guest's solid ring.
-                    Circle().strokeBorder(Color.starBright, style: StrokeStyle(lineWidth: 1.2, dash: [3, 3]))
-                        .frame(width: size * 2.4, height: size * 2.4)
-                }
-                Circle().fill(star.mood.color)
-                    .frame(width: size, height: size)
-                    .shadow(color: star.mood.color.opacity(0.8), radius: 5)
-            }
-            .frame(width: 28, height: 28)
-            .contentShape(.circle)
-            .onTapGesture { onTapStar?(star) }
-            .accessibilityElement()
-            .accessibilityLabel("내 별 \(star.title)")
-            .accessibilityAddTraits(onTapStar == nil ? [] : .isButton)
-        } else if i - stars.count < guests.count {
-            let guest = guests[i - stars.count]
-            ZStack {
-                if guest.title == selectedGuest {
-                    Circle().strokeBorder(Color.starBright, style: StrokeStyle(lineWidth: 1.2, dash: [3, 3]))
-                        .frame(width: 26, height: 26)
-                }
-                Circle().strokeBorder(Color.starBright, lineWidth: 1.2)
-                    .frame(width: 16, height: 16)
-                Circle().fill(guest.color).frame(width: 8, height: 8)
-            }
-            .frame(width: 28, height: 28)
-            .contentShape(.circle)
-            .onTapGesture { onTapGuest?(guest) }
-            .accessibilityElement()
-            .accessibilityLabel("손님별")
-            .accessibilityAddTraits(onTapGuest == nil ? [] : .isButton)
-        } else {
-            // Places still waiting: faint, so the lit stars lead.
-            Circle().strokeBorder(Color.textTertiary.opacity(0.35), style: StrokeStyle(lineWidth: 1, dash: [2, 2]))
-                .frame(width: 8, height: 8)
-                .accessibilityHidden(true)
-        }
+        let stars = stars, guests = guests
+        let selected: Int? = selectedStar.flatMap { id in stars.firstIndex { $0.id == id } }
+            ?? selectedGuest.flatMap { t in guests.firstIndex { $0.title == t }.map { stars.count + $0 } }
+        NebulaFigureView(figure: NebulaFigure(nebula: nebula, stars: stars, guests: guests),
+                         compact: compact, selected: selected,
+                         onTap: onTapStar == nil && onTapGuest == nil ? nil : { i in
+                             if i < stars.count { onTapStar?(stars[i]) } else { onTapGuest?(guests[i - stars.count]) }
+                         })
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(nebula.name), \(nebula.template.map { "\($0.name) 모양" } ?? "직접 그린 성운"). 내 별 \(stars.count)개, 손님별 \(guests.count)개")
     }
 }
 

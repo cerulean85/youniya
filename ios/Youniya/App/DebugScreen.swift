@@ -38,7 +38,7 @@ enum DebugScreen {
     1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 28-1 29 31 32 33 34 35 36 37 38
     39 40 41 43 44 45 46 47 48 49 50 51 56 61 62 65 66 67-1 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83
     86 87 89 90 91 92 93 94 95 96 97 98 99 100 101 102 104 105 106 107 108 109 110 111 112 113 114 115 116 117
-    118 119 120 120-1 121 122 122-1 86-1 19-1 71-1 87-1 87-2 3-1 2-1 75-1 75-2 87-3 M1 28-2 68-1 87-4 123 84-1
+    118 119 120 120-1 121 122 122-1 86-1 19-1 71-1 87-1 87-2 3-1 2-1 75-1 75-2 87-3 M1 28-2 68-1 87-4 123 84-1 5-3 5-4 87-5 12-2
     """.split(whereSeparator: \.isWhitespace).map(String.init))
 
     /// App-wide state for the screen, before the first page shows.
@@ -67,6 +67,8 @@ enum DebugScreen {
             model.memberActive = s == "87-4" || s == "123"
             model.memberRenewal = Calendar.current.date(from: DateComponents(year: 2026, month: 12, day: 7))
         }
+        // 05-4: today's free float is used (a star floated today).
+        if s == "5-4", let i = model.stars.firstIndex(where: \.isFloated) { model.stars[i].createdAt = .now }
         if s == "87-3" && model.blockedKeepers.isEmpty { model.blockedKeepers = BlockedKeeper.samples }
         if s == "3" || s == "3-1" {
             model.stars = []

@@ -15,6 +15,25 @@ struct PlazaNebula: Identifiable, Hashable {
     var order: Int
     /// Live: the plaza share id.
     var serverID: String? = nil
+    /// Live: the star's shape, mood and depth (1–5) from the plaza.
+    var starShape: StarShapeSpec? = nil
+    var mood: Mood? = nil
+    var depthLevel: Int? = nil
+
+    /// 09 card: the server's values, or steady samples from the name.
+    var cardShape: StarShapeSpec {
+        if let starShape { return starShape }
+        var rng = SeededRandom(seed: name)
+        let sharp = StarShapeSpec.Sharpness.allCases
+        return StarShapeSpec(points: 4 + Int(rng.next(in: 0...3).rounded()),
+                             sharpness: sharp[Int(rng.next(in: 0...Double(sharp.count - 1)).rounded())])
+    }
+    var cardMood: Mood {
+        if let mood { return mood }
+        var rng = SeededRandom(seed: "mood-" + name)
+        return Mood.allCases[Int(rng.next(in: 0...Double(Mood.allCases.count - 1)).rounded())]
+    }
+    var cardDepth: Int { depthLevel ?? 3 }
 
     static func == (l: Self, r: Self) -> Bool { l.name == r.name }
     func hash(into h: inout Hasher) { h.combine(name) }
@@ -83,7 +102,7 @@ struct PlazaView: View {
                     LazyVGrid(columns: [GridItem(.flexible(), spacing: Space.md), GridItem(.flexible(), spacing: Space.md)],
                               spacing: Space.md) {
                         ForEach(items) { item in
-                            NebulaCard(item: item, resonated: model.resonated.contains(item.id),
+                            StarShareCard(item: item, resonated: model.resonated.contains(item.id),
                                        onOpen: { onOpen(item.name) },
                                        onResonate: { model.toggleResonance(item.id) })
                         }
@@ -139,8 +158,9 @@ struct PlazaView: View {
     }
 }
 
-/// Figma `Nebula Card`: silhouette, depth bar, name, one line, resonance.
-struct NebulaCard: View {
+/// 09 star card: the shared star (shape · mood · depth), name, one line,
+/// depth bar, resonance. Separate from the nebula cards.
+struct StarShareCard: View {
     var item: PlazaNebula
     var resonated: Bool
     var onOpen: () -> Void
@@ -150,9 +170,15 @@ struct NebulaCard: View {
         VStack(alignment: .leading, spacing: Space.sm) {
             Button(action: onOpen) {
                 VStack(alignment: .leading, spacing: Space.sm) {
-                    Image(item.pattern == .a ? .plazaSilhouetteA : .plazaSilhouetteB)
-                        .resizable()
+                    // The shared star: its shape, its mood's color, and a glow
+                    // that grows with its depth (1–5).
+                    Color.clear
                         .aspectRatio(141 / 110, contentMode: .fit)
+                        .overlay {
+                            ShapeStar(spec: item.cardShape, color: item.cardMood.color, size: 44, halo: false)
+                                .shadow(color: item.cardMood.color.opacity(0.75), radius: 3 + CGFloat(item.cardDepth) * 2.5)
+                        }
+                        .accessibilityHidden(true)
                     Text(item.name)
                         .textStyle(.labelS)
                         .foregroundStyle(Color.textPrimary)

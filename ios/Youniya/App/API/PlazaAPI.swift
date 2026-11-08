@@ -2,12 +2,23 @@ import Foundation
 
 // MARK: - Payloads
 
+/// The plaza's star shape: {"points": 6, "sharpness": "sharp"}.
+private struct ShapeOut: Decodable {
+    var points: Int
+    var sharpness: String
+    var spec: StarShapeSpec {
+        let s: StarShapeSpec.Sharpness = sharpness == "sharp" ? .sharp : sharpness == "soft" ? .soft : .normal
+        return StarShapeSpec(points: points, sharpness: s)
+    }
+}
+
 private struct PlazaStarItem: Decodable {
     var id: String
     var name: String
     var quote: String
     var mood: Mood
     var depthLevel: Int?
+    var shape: ShapeOut?
     var resonated: Bool
     var beside: Bool
 }
@@ -17,6 +28,7 @@ private struct PlazaNebulaItem: Decodable {
     var name: String
     var quote: String?
     var depthLevel: Int?
+    var shape: PlazaNebulaShape?
     var receiveLines: Bool
     var resonated: Bool
     var beside: Bool
@@ -45,7 +57,8 @@ private extension PlazaNebula {
     init(_ s: PlazaStarItem, order: Int, similarity: Double) {
         var rng = SeededRandom(seed: s.id)
         self.init(name: s.name, line: s.quote, pattern: rng.next(in: 0...1) < 0.5 ? .a : .b,
-                  similarity: similarity, order: order, serverID: s.id)
+                  similarity: similarity, order: order, serverID: s.id,
+                  starShape: s.shape?.spec, mood: s.mood, depthLevel: s.depthLevel)
     }
 }
 
@@ -55,7 +68,7 @@ private extension GalaxyNebula {
         self.init(name: n.name, stage: max(1, n.depthLevel ?? 1), resonance: 0, quote: n.quote ?? "",
                   order: order, similarity: similarity,
                   spot: CGPoint(x: rng.next(in: 0.15...0.85), y: rng.next(in: 0.15...0.85)),
-                  serverID: n.id, receiveLines: n.receiveLines)
+                  serverID: n.id, receiveLines: n.receiveLines, shape: n.shape)
     }
 }
 

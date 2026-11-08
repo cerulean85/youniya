@@ -171,13 +171,18 @@ struct CollectionView: View {
                 } else {
                     ForEach(drawn.reversed()) { n in
                         nebulaCard(name: n.name, detail: "별 \(n.starIDs.count + n.guests.count)개 · \(model.growthStage > 0 ? "\(model.growthStage)단계" : model.stageLabel)",
-                                   seed: n.id.uuidString, action: onOpenMyNebula)
+                                   seed: n.id.uuidString, action: onOpenMyNebula) {
+                            NebulaArt(nebula: n, compact: true)
+                        }
                     }
                 }
             }
             if filter != .mine {
                 ForEach(kept) { n in
-                    nebulaCard(name: n.name, detail: "곁에 둔 · \(n.stage)단계", seed: n.name, kept: true) { onOpenOtherNebula(n) }
+                    nebulaCard(name: n.name, detail: "곁에 둔 · \(n.stage)단계", seed: n.name, kept: true,
+                               action: { onOpenOtherNebula(n) }) {
+                        NebulaFigureView(figure: n.figure, compact: true)
+                    }
                 }
             }
         }
@@ -198,11 +203,12 @@ struct CollectionView: View {
         }
     }
 
-    private func nebulaCard(name: String, detail: String, seed: String, kept: Bool = false,
-                            action: @escaping () -> Void) -> some View {
+    /// 80 card: the nebula drawn from its data (my nebula, or the share's shape).
+    private func nebulaCard<Art: View>(name: String, detail: String, seed: String, kept: Bool = false,
+                                       action: @escaping () -> Void, @ViewBuilder art: () -> Art) -> some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: Space.xs) {
-                MiniShapeNebula(seed: seed).frame(height: 100)
+                art().frame(height: 100).accessibilityHidden(true)
                 Text(name).textStyle(.labelM).foregroundStyle(Color.textPrimary).lineLimit(1)
                 Text(detail).textStyle(.caption).foregroundStyle(Color.textTertiary).lineLimit(1)
             }
@@ -261,34 +267,6 @@ struct CollectionView: View {
         let f = DateFormatter()
         f.dateFormat = "M/d"
         return f.string(from: d)
-    }
-}
-
-/// Figma 80 `Mini Nebula`: a few star shapes joined by a thin line.
-private struct MiniShapeNebula: View {
-    var seed: String
-
-    var body: some View {
-        GeometryReader { geo in
-            var rng = SeededRandom(seed: seed)
-            let colors: [Color] = [.starBright, .brandPrimary, .brandWarm, .starClear, .emotionCalm, .emotionSorrow]
-            let pts: [CGPoint] = (0..<6).map { _ in
-                CGPoint(x: rng.next(in: 0.1...0.9) * geo.size.width, y: rng.next(in: 0.12...0.88) * geo.size.height)
-            }
-            let sizes = (0..<6).map { _ in rng.next(in: 9...17) }
-            ZStack(alignment: .topLeading) {
-                Path { p in
-                    p.move(to: pts[0])
-                    for q in pts.dropFirst() { p.addLine(to: q) }
-                }
-                .stroke(Color.textSecondary.opacity(0.7), lineWidth: 1)
-                ForEach(0..<6, id: \.self) { i in
-                    ShapeStar(spec: .init(points: 4 + i % 3, sharpness: .normal), color: colors[i], size: sizes[i], halo: false)
-                        .position(pts[i])
-                }
-            }
-        }
-        .accessibilityHidden(true)
     }
 }
 

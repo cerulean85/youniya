@@ -80,6 +80,9 @@ struct ComposeFlowView: View {
     /// 12 "별 띄우기" on a kept star: skip writing, float it, then 06/07.
     var floatingKept: StarItem? = nil
 
+    /// 05-3 / 05-4: what floating does and what it costs, before 06.
+    @State private var confirmFloat: (() -> Void)?
+    @State private var confirmHeight: CGFloat = 330
     /// 29 from 05: today's free float is used and coins are short.
     @State private var showShortage = false
     @State private var shortageKeep: (() -> Void)?
@@ -115,7 +118,10 @@ struct ComposeFlowView: View {
         ZStack {
             switch step {
             case .writing:
-                if let previous = rewriteOf {
+                if floatingKept != nil {
+                    // A kept star: no editor behind the 05-3 / 05-4 sheet.
+                    Color.clear.background { StarField() }
+                } else if let previous = rewriteOf {
                     RewriteView(previous: previous, question: model.rewriteQuestion(for: previous), onBack: onClose) { body, floated in
                         let publish = { (floated: Bool) in
                             if model.useLiveAPI {
@@ -230,9 +236,31 @@ struct ComposeFlowView: View {
         #endif
         .toastCard($toast)
         .onAppear {
+            if DebugScreen.is("5-3", "5-4") { confirmFloat = {} }
             if let kept = floatingKept, step == .writing {
                 float { floatKept(kept) } keep: { onClose() }
             }
+        }
+        // 05-3 / 05-4 이 글을 별로 띄울까요?
+        .sheet(isPresented: Binding(get: { confirmFloat != nil }, set: { if !$0 { confirmFloat = nil } }),
+               onDismiss: { if floatingKept != nil && step == .writing { onClose() } }) {
+            ActionSheetContent(
+                title: "이 글을 별로 띄울까요?",
+                message: "별빛 프리즘이 글을 읽고 별의 모양과 빛을 정해요. 한 번 띄운 별은 다시 띄울 수 없고, 나중에 글을 고쳐도 별의 모양은 그대로예요.\n\(floatCostLine)",
+                primary: (model.isFloatFree ? "별 띄우기" : "코인 \(AppModel.floatCost)개로 띄우기", {
+                    let go = confirmFloat
+                    confirmFloat = nil
+                    go?()
+                }),
+                secondary: ("조금 더 쓸게요", { confirmFloat = nil }),
+                ghost: nil
+            )
+            .fixedSize(horizontal: false, vertical: true)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { confirmHeight = $0 }
+            .presentationDetents([.height(confirmHeight)])
+            .presentationDragIndicator(.hidden)
+            .presentationCornerRadius(Radius.xl)
+            .presentationBackground { SheetBackground(seed: "float-confirm") }
         }
         // 29 코인 부족 (from 05)
         .sheet(isPresented: $showShortage) {
@@ -306,10 +334,25 @@ struct ComposeFlowView: View {
             showShortage = true
             return
         }
-        if !model.useLiveAPI && !model.isFloatFree {
-            _ = model.spendCoins(AppModel.floatCost, for: "별 띄우기")
+        // 05-3 / 05-4 first; the star is floated only on 「별 띄우기」.
+        confirmFloat = {
+            if !model.useLiveAPI && !model.isFloatFree {
+                _ = model.spendCoins(AppModel.floatCost, for: "별 띄우기")
+            }
+            go()
         }
-        go()
+    }
+
+    /// 05-3: "오늘 무료 별 띄우기가 N번 남았어요." (members: today's member uses).
+    /// 05-4: the coins it takes.
+    private var floatCostLine: String {
+        if model.isFloatFree {
+            let left = model.memberHasStar
+                ? (model.memberLeftToday.stars ?? max(1, AppModel.memberDailyLimit - model.floatedToday))
+                : 1
+            return "오늘 무료 별 띄우기가 \(left)번 남았어요."
+        }
+        return "오늘 무료 별 띄우기를 다 썼어요. 코인 \(AppModel.floatCost)개가 사용돼요(지금 \(model.coins)개)."
     }
 
     /// 12 "별 띄우기" on a kept star: `POST /v1/stars/{id}/float` (mock: on device).

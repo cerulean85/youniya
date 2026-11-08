@@ -66,6 +66,7 @@ struct SettingsView: View {
     private enum Sheet: Identifiable {
         case deleteAccount, withdrawShares, export, sound
         case reminderTime // 87-2
+        case signOut // 87-5
         case notificationsOff // iOS notifications are turned off for the app
         case exporting(DataExport.Format) // 114
         var id: String { "\(self)" }
@@ -162,7 +163,7 @@ struct SettingsView: View {
                             if let url = URL(string: "tel://109") { openURL(url) }
                         }
                         SettingsRow(icon: .iconFile, title: "약관 및 정책") { showPolicies = true }
-                        SettingsRow(icon: .iconLogout, title: "로그아웃") { model.signOut() }
+                        SettingsRow(icon: .iconLogout, title: "로그아웃") { sheet = .signOut }
                     }
                 }
                 .padding(Space.xl)
@@ -184,6 +185,7 @@ struct SettingsView: View {
             if DebugScreen.is("92") { sheet = .withdrawShares }
             if DebugScreen.is("93") { sheet = .export }
             if DebugScreen.is("94") { sheet = .sound }
+            if DebugScreen.is("87-5") { sheet = .signOut }
             if DebugScreen.is("87-1") || DebugScreen.is("87-2") {
                 // As in Figma: the reminder on, 새 기능·혜택 알림 off.
                 model.settings.starReminder = true
@@ -271,6 +273,8 @@ struct SettingsView: View {
                 secondary: ("닫기", { close() }),
                 ghost: nil
             )
+        case .signOut: // 87-5 로그아웃할까요?
+            SignOutSheet(onSignOut: { close { model.signOut() } }, onCancel: { close() })
         case .reminderTime: // 87-2
             ReminderTimeSheet(
                 minutes: model.settings.reminderMinutes,
@@ -338,6 +342,34 @@ struct SettingsView: View {
 }
 
 /// Figma settings section: small grey header, rows, optional note.
+/// 87-5 로그아웃할까요?: the writing stays; signing in again brings it back.
+private struct SignOutSheet: View {
+    var onSignOut: () -> Void
+    var onCancel: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Space.lg) {
+            Capsule().fill(Color.borderDefault).frame(width: 40, height: 4)
+                .frame(maxWidth: .infinity).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: Space.sm) {
+                Text("로그아웃할까요?").textStyle(.h3).foregroundStyle(Color.textPrimary)
+                Text("쓴 글과 별은 그대로 남아 있어요. 다시 로그인하면 이어서 볼 수 있어요.")
+                    .textStyle(.bodyM).foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isHeader)
+            VStack(spacing: Space.md) {
+                Button("로그아웃", action: onSignOut).buttonStyle(.primary)
+                Button("취소", action: onCancel).buttonStyle(.ghost)
+            }
+        }
+        .padding(.horizontal, Space.xl)
+        .padding(.top, Space.md)
+        .padding(.bottom, Space.xxl)
+    }
+}
+
 private struct SettingsSection<Rows: View>: View {
     var title: String
     var note: String?

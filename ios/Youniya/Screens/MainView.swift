@@ -279,7 +279,8 @@ struct MainView: View {
                     toast = ToastCardMessage(title: "삭제되었어요", detail: "되돌릴 수 없어요")
                 },
                 onEdit: { push(.editStar(id)) },
-                onFloat: { replace(with: .floatKept(id)) }
+                onFloat: { replace(with: .floatKept(id)) },
+                onTelescope: { if let s = model.stars.first(where: { $0.id == id }) { openReport(s) } }
             )
             .edgeSwipeBack(onBack: pop)
         case .report(let id):
@@ -506,7 +507,20 @@ struct MainView: View {
             push(.compose())
         case "14", "16", "105": if let floated { push(.compose(rewriteOf: floated.id)) }
         case "10": if let floated { push(.report(floated.id)) }
-        case "12", "15", "19", "19-1", "48": if let floated { push(.detail(floated.id)) }
+        case "12":
+            // 12: a floated star without a report (「마음 망원경 켜기」); 12-2 has one.
+            if let i = model.stars.firstIndex(where: { $0.isFloated && model.report(for: $0.id) == nil }) {
+                // The sample has no writing or card yet: give it both, like a real star.
+                if model.stars[i].analysis == nil {
+                    let body = StarItem.samples[0].body
+                    model.stars[i].body = body
+                    model.stars[i].analysis = StarAnalysis.mock(for: StarDraft(mood: model.stars[i].mood, title: model.stars[i].title, body: body))
+                }
+                push(.detail(model.stars[i].id))
+            } else if let floated {
+                push(.detail(floated.id))
+            }
+        case "15", "19", "19-1", "48": if let floated { push(.detail(floated.id)) }
         case "20": if let floated { push(.privacy(floated.id)) }
         case "24", "29": if let s = fresh ?? floated { push(.telescopeConfirm(s.id)) }
         case "25": if let s = fresh ?? floated { push(.scanning(s.id)) }
@@ -541,13 +555,16 @@ struct MainView: View {
         case "74", "99", "100", "101", "106", "107": push(.galaxyLines(nebula.name))
         case "75", "75-1", "75-2": push(.galaxyStar(nebula: nebula.name, star: nebula.stars[0].title))
         case "87-3": push(.blockedKeepers)
+        case "5-3", "5-4": push(.compose())
+        case "12-2":
+            if let s = model.stars.first(where: { $0.isFloated && model.report(for: $0.id) != nil }) { push(.detail(s.id)) }
         case "M1", "28-2": push(.coins)
         case "68-1": push(.sky)
         case "84-1": push(.drawNebula)
         case "87-4": push(.settings)
         case "123": push(.monthlyReport(nil))
         case "79", "80", "96", "97", "110": push(.collection)
-        case "87", "87-1", "87-2", "91", "92", "93", "94", "95", "114": push(.settings)
+        case "87", "87-1", "87-2", "87-5", "91", "92", "93", "94", "95", "114": push(.settings)
         case "122": push(.detail(UUID()))
         case "122-1": push(.report(UUID()))
         default: break
@@ -599,7 +616,12 @@ struct MainView: View {
     /// goes through 24 (spend coins) and 25 (scanning); the very first one
     /// is free and goes straight to 25.
     private func openReport(_ star: StarItem, replacing: Bool = false) {
-        guard star.isFloated else { return }
+        // 07 may hold the star as it was before floating: use the model's copy.
+        let star = model.stars.first { $0.id == star.id } ?? star
+        guard star.isFloated else {
+            toast = ToastCardMessage(title: "아직 망원경을 켤 수 없어요", detail: "별을 띄운 뒤에 다시 시도해 주세요")
+            return
+        }
         let route: Route
         if model.report(for: star.id) != nil {
             route = .report(star.id)

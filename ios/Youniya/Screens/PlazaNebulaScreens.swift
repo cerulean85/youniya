@@ -19,7 +19,12 @@ struct GalaxyNebula: Identifiable, Hashable {
     /// Live: the plaza share id, and whether the owner takes lines (74).
     var serverID: String? = nil
     var receiveLines = true
+    /// Live: the share's `shape` (silhouette, edges, stars' moods).
+    var shape: PlazaNebulaShape? = nil
     var id: String { name }
+
+    /// How to draw it (80 곁에 둔, cards): the share's shape, or a steady sample.
+    var figure: NebulaFigure { shape.map(NebulaFigure.init(plaza:)) ?? .sample(seed: name) }
 
     struct Line: Identifiable, Hashable {
         var hoursAgo: Double
@@ -134,8 +139,10 @@ struct PlazaNebulaField: View {
                                         Circle().strokeBorder(Color.starBright, style: StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
                                             .frame(width: 100 * level, height: 100 * level)
                                     }
-                                    MiniConstellation(nebula: n, dot: on ? 6 : 5)
+                                    // The share's real shape (silhouette, edges, moods), like 80.
+                                    NebulaFigureView(figure: n.figure, compact: true)
                                         .frame(width: (on ? 76 : 60) * level, height: (on ? 64 : 50) * level)
+                                        .allowsHitTesting(false)
                                 }
                                 .frame(width: max(64, 100 * level), height: max(64, 100 * level))
                                 .contentShape(.circle)
@@ -184,34 +191,6 @@ struct PlazaNebulaField: View {
                 .buttonStyle(.plain)
             }
         }
-    }
-}
-
-/// A nebula's constellation drawn small: lines and colored dots.
-struct MiniConstellation: View {
-    var nebula: GalaxyNebula
-    var dot: CGFloat
-    var lineColor: Color = Color.textSecondary.opacity(0.75)
-
-    var body: some View {
-        GeometryReader { geo in
-            let stars = nebula.stars
-            let at: (CGPoint) -> CGPoint = { CGPoint(x: $0.x * geo.size.width, y: $0.y * geo.size.height) }
-            ZStack(alignment: .topLeading) {
-                Path { p in
-                    guard let f = stars.first else { return }
-                    p.move(to: at(f.point))
-                    for s in stars.dropFirst().prefix(7) { p.addLine(to: at(s.point)) }
-                }
-                .stroke(lineColor, lineWidth: 1.2)
-                ForEach(stars.indices, id: \.self) { i in
-                    Circle().fill(stars[i].color)
-                        .frame(width: dot * (i % 3 == 0 ? 1.3 : 1), height: dot * (i % 3 == 0 ? 1.3 : 1))
-                        .position(at(stars[i].point))
-                }
-            }
-        }
-        .accessibilityHidden(true)
     }
 }
 

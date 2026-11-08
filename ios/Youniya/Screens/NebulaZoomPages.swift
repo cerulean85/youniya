@@ -316,13 +316,13 @@ struct MyNebulaZoomView: View {
     }
 
     private func zoomAnchor(_ nebula: DrawnNebula) -> UnitPoint {
-        guard let template = nebula.template else { return .center }
         let index: Int?
         if let selectedID { index = stars.firstIndex { $0.id == selectedID } }
-        else if let g = selectedGuest { index = guests.firstIndex(of: g).map { stars.count + $0 } }
+        else if let g = selectedGuest, nebula.template != nil { index = guests.firstIndex(of: g).map { stars.count + $0 } }
         else { index = nil }
         guard let index else { return .center }
-        return NebulaArt.anchor(slot: index, of: template, in: CGSize(width: 342, height: isShortScreen ? 200 : 280))
+        let figure = NebulaFigure(nebula: nebula, stars: stars, guests: nebula.template == nil ? [] : guests)
+        return NebulaArt.anchor(dot: index, of: figure, in: CGSize(width: 342, height: isShortScreen ? 200 : 280))
     }
 
     /// Figma 70 `Info`: 내 별 · 빈 자리 (실루엣만) · 평균 깊이 · 빛깔, for this nebula.

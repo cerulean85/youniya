@@ -15,6 +15,8 @@ struct StarDetailView: View {
     var onEdit: () -> Void = {}
     /// A kept star's "별 띄우기" → 06/07.
     var onFloat: () -> Void = {}
+    /// 12 「마음 망원경 켜기」 (24/25) or 12-2 「망원경 리포트 보기 ›」 (10).
+    var onTelescope: () -> Void = {}
 
     @State private var confirmDelete = DebugScreen.is("15")
     @State private var confirmShare = DebugScreen.is("19")
@@ -83,6 +85,13 @@ struct StarDetailView: View {
                 Text("조용히 간직한 별이에요. 분석 없이 그대로 남겨 두었어요.")
                     .textStyle(.bodyS)
                     .foregroundStyle(Color.textTertiary)
+            }
+
+            // Figma 12 / 12-2: straight to the telescope from a floated star.
+            if star.isFloated {
+                Button(model.report(for: star.id) == nil ? "마음 망원경 켜기" : "망원경 리포트 보기 ›",
+                       action: onTelescope)
+                    .buttonStyle(.secondary)
             }
 
             if !star.isFloated {
