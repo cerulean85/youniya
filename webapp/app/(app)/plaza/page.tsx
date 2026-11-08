@@ -3,7 +3,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { StarGlyph } from "@/components/StarGlyph";
-import { api, ApiError } from "@/lib/api";
+import { api } from "@/lib/api";
 import type { PlazaNebula, PlazaStar } from "@/lib/types";
 import { NebulaField } from "./NebulaField";
 import styles from "./plaza.module.css";
@@ -39,11 +39,7 @@ async function Plaza({ searchParams }: Pick<PageProps<"/plaza">, "searchParams">
   const [tonight, nebulae, stars] = await Promise.all([
     api<{ count: number; mine: number }>("/v1/plaza/tonight"),
     api<{ items: PlazaNebula[] }>(`/v1/plaza/nebulae?filter=${filter}&limit=24`),
-    // sort=beside for stars is on the development server; until production has it (422), the list says so.
-    api<{ items: PlazaStar[] }>(`/v1/plaza/stars?sort=${filter}&limit=40`).catch((e) => {
-      if (e instanceof ApiError && e.status === 422) return null;
-      throw e;
-    }),
+    api<{ items: PlazaStar[] }>(`/v1/plaza/stars?sort=${filter}&limit=40`),
   ]);
   const notice = sp.reported ? "신고를 받았어요. 이제 보이지 않아요." : sp.blocked ? "차단했어요. 서로의 별과 성운이 더 이상 보이지 않아요." : null;
   return (
@@ -71,15 +67,14 @@ async function Plaza({ searchParams }: Pick<PageProps<"/plaza">, "searchParams">
         <section className={styles.records} aria-labelledby="records-title">
           <h2 id="records-title" className="h2">별 기록</h2>
           <p className="body-s muted">누군가 골라 나눈 한 문장이에요. 눌러서 읽고, 마음이 닿으면 공명을 남겨 보세요.</p>
-          <StarList stars={stars?.items ?? null} filter={filter} />
+          <StarList stars={stars.items} filter={filter} />
         </section>
       </div>
     </>
   );
 }
 
-async function StarList({ stars, filter }: { stars: PlazaStar[] | null; filter: Filter }) {
-  if (stars === null) return <p className={`body-s faint ${styles.listEmpty}`}>곁에 둔 별 보기는 곧 열려요.</p>;
+async function StarList({ stars, filter }: { stars: PlazaStar[]; filter: Filter }) {
   if (stars.length === 0) return <p className={`body-s faint ${styles.listEmpty}`}>{filter === "beside" ? "아직 곁에 둔 별이 없어요." : "아직 광장에 뜬 별이 없어요."}</p>;
   await connection(); // "12분 전" is relative to the request
   const rows = withAgo(stars);
