@@ -46,7 +46,8 @@ vercel deploy --prod   # from this folder, linked to youniya-app
    `com.dycdyp.youniya.web` is in `APPLE_CLIENT_IDS` and the web client ID in `GOOGLE_CLIENT_IDS`.
    Tokens live in httpOnly cookies; `proxy.ts` refreshes them and sends signed-out visits to `/login`.
    **Done** (both checked on production, 2026-11-08).
-3. Home, writing (drafts in the database), floating, star detail: **done**. Records: next.
+3. Home, writing (drafts in the database), floating, star detail, records (list, search, filters,
+   calendar): **done**.
 4. Plaza, nebulae, mind telescope, settings, contact, states.
    Nebula rules (server, 2026-11-08): at least 3 floated stars (the next button stays off until then;
    subtitle "N개 골랐어요 · 3개 이상이면 돼요"), names up to 20 characters, and `PATCH /v1/nebulae/{id}`

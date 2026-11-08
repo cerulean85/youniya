@@ -23,5 +23,19 @@ export function dateTime(iso: string) {
 }
 /** "11월 3일 화요일" */
 export const longDate = (iso: string) => parts(iso, { month: "long", day: "numeric", weekday: "long" });
-/** "2026-11" in KST */
-export const monthKey = (iso: string) => parts(iso, { year: "numeric", month: "2-digit" }).replace(/\. ?/g, "-").replace(/-$/, "");
+/** Year, month and day of a moment, in Korean time. */
+export function kst(iso: string | Date) {
+  const d = typeof iso === "string" ? new Date(iso) : iso;
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", { timeZone: KST, year: "numeric", month: "2-digit", day: "2-digit" })
+      .formatToParts(d).map((x) => [x.type, x.value]),
+  );
+  return { y: Number(p.year), m: Number(p.month), d: Number(p.day), month: `${p.year}-${p.month}` };
+}
+/** "2026-11" → "2026년 11월" */
+export const monthLabel = (month: string) => `${month.slice(0, 4)}년 ${Number(month.slice(5))}월`;
+/** "2026-11" ± n months */
+export function shiftMonth(month: string, n: number) {
+  const d = new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5)) - 1 + n, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
