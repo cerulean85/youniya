@@ -19,7 +19,7 @@ type LineList = { items: { id: string; text: string; created_at: string; mine: b
 export default function PlazaNebulaPage({ params }: PageProps<"/plaza/nebulae/[id]">) {
   return (
     <>
-      <Link href="/plaza?tab=nebula" className={styles.back}><ChevronLeft size={18} />우주 광장</Link>
+      <Link href="/plaza" className={styles.back}><ChevronLeft size={18} />우주 광장</Link>
       <Suspense fallback={<div className={`card ${styles.card}`} aria-busy="true" style={{ minHeight: 520 }} />}>
         <Detail params={params} />
       </Suspense>

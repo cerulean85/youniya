@@ -3,11 +3,12 @@ import { places, type Figure } from "@/lib/nebula";
 
 // Draws a nebula from its data, like the iOS NebulaFigureView: mood-coloured stars on the silhouette's
 // places, guests with gold rings, faint empty places, and thin gold lines.
-export function NebulaFigure({ figure, width = 400, height = 400, compact = false, label }: { figure: Figure; width?: number; height?: number; compact?: boolean; label?: string }) {
+/** `dotScale` enlarges the dots for small thumbnails, where point-sized dots would vanish. */
+export function NebulaFigure({ figure, width = 400, height = 400, compact = false, dotScale = 1, label }: { figure: Figure; width?: number; height?: number; compact?: boolean; dotScale?: number; label?: string }) {
   const pts = places(figure, width, height);
   const filled = Math.min(pts.length, figure.dots.length);
   // iOS sizes are points on a ~340pt-wide canvas; scale them with this canvas.
-  const k = (compact ? 0.6 : 1) * (width / 340);
+  const k = (compact ? 0.6 : 1) * (width / 340) * dotScale;
   const line = figure.silhouette
     ? pts.slice(0, filled).map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(" ")
     : figure.edges.filter((e) => e.length === 2 && e.every((i) => i < filled)).map(([a, b]) => `M${pts[a][0]} ${pts[a][1]} L${pts[b][0]} ${pts[b][1]}`).join(" ");

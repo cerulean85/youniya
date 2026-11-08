@@ -30,14 +30,14 @@ export async function reportShare(kind: Kind, shareId: string, form: FormData) {
     body: JSON.stringify({ reason: reasonOf(form), block: form.get("block") === "on" }),
   });
   refresh();
-  redirect(`/plaza?${kind === "nebula" ? "tab=nebula&" : ""}reported=1`);
+  redirect("/plaza?reported=1");
 }
 
 /** 75-2 차단: neither sees the other's shares anywhere. */
 export async function blockOwner(kind: Kind, shareId: string) {
   await api("/v1/blocks", { method: "POST", body: JSON.stringify(kind === "star" ? { star_id: shareId } : { nebula_id: shareId }) });
   refresh();
-  redirect(`/plaza?${kind === "nebula" ? "tab=nebula&" : ""}blocked=1`);
+  redirect("/plaza?blocked=1");
 }
 
 export type LineState = { error?: string; code?: string; ok?: boolean } | null;
