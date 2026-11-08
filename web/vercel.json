@@ -1,4 +1,18 @@
 {
   "cleanUrls": true,
-  "trailingSlash": false
+  "trailingSlash": false,
+  "redirects": [
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "youniya.vercel.app" }],
+      "destination": "https://youniya.dycdyp.com/",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "youniya.vercel.app" }],
+      "destination": "https://youniya.dycdyp.com/:path*",
+      "permanent": true
+    }
+  ]
 }
