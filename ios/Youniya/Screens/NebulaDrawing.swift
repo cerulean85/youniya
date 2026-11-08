@@ -17,8 +17,13 @@ struct DrawnNebula: Codable, Identifiable, Equatable {
     var guestShareIDs: [String] = []
     var shared = false
     var createdAt = Date.now
+    /// Set when the shape was changed (08 shows the latest of updated/created).
+    var updatedAt: Date? = nil
     /// Live: the server's nebula id, set once it is saved there.
     var serverID: String? = nil
+
+    var lastTouched: Date { updatedAt ?? createdAt }
+    var template: NebulaSilhouette? { silhouette.flatMap(NebulaSilhouette.init(rawValue:)) }
 }
 
 /// 84 silhouettes: Figma `Mini` outlines, drawn in their own box.
@@ -154,10 +159,17 @@ struct NebulaDrawingFlow: View {
     var onClose: () -> Void
     var onHome: () -> Void
     var onShare: () -> Void
+    /// 08 「모양 바꾸기」: the nebula being reshaped. The flow starts at 84
+    /// with its shape, stars, guests and name already chosen, then saves it
+    /// in place (PATCH) and closes.
+    var editing: DrawnNebula? = nil
 
     private enum Step: Hashable { case start, shape, guests, pick, connect, name, done }
 
     @State private var steps: [Step] = DebugScreen.is("84-1") ? [.start, .shape] : [.start]
+    @State private var prefilled = false
+    /// Reshape: new stars clear a polished story, so ask once first.
+    @State private var confirmClearStory = false
     @State private var silhouette: NebulaSilhouette? = .lighthouse
     /// 84-1: M1 from a locked season silhouette.
     @State private var showMembership = false
@@ -175,13 +187,22 @@ struct NebulaDrawingFlow: View {
     }
 
     /// Stars that sit on the silhouette (the newest ones if there are too many).
-    private var placed: [StarItem] { Array(floated.suffix(NebulaSilhouette.slotCount)) }
+    /// Reshaping: the stars picked again on 52, in their floated order.
+    private var placed: [StarItem] {
+        if editing != nil { return Array(floated.filter { picked.contains($0.id) }.suffix(NebulaSilhouette.slotCount)) }
+        return Array(floated.suffix(NebulaSilhouette.slotCount))
+    }
+    /// The silhouette that will be saved: nil for 직접 그리기.
+    private var chosenTemplate: NebulaSilhouette? {
+        if editing != nil { return silhouette }
+        return steps.contains(.pick) ? nil : silhouette
+    }
     private var emptySlots: Int { max(0, NebulaSilhouette.slotCount - placed.count) }
 
     var body: some View {
         VStack(spacing: 0) {
             if step != .done {
-                TopAppBar(title: "성운 그리기", onBack: back)
+                TopAppBar(title: editing == nil ? "성운 그리기" : "성운 모양 바꾸기", onBack: back)
             }
             ZStack {
                 switch step {
@@ -199,7 +220,20 @@ struct NebulaDrawingFlow: View {
         }
         .background { StarField() }
         .membershipSheet(isPresented: $showMembership)
-        .task { await model.loadGuestCandidates() }
+        .onAppear {
+            // 84 (reshape): the current choices, already selected.
+            guard let e = editing, !prefilled else { return }
+            prefilled = true
+            steps = [.shape]
+            silhouette = e.template
+            picked = e.starIDs
+            edges = e.edges
+            name = e.name
+        }
+        .task {
+            await model.loadGuestCandidates()
+            if let e = editing { guests = Set(model.guestCandidates.filter { e.guests.contains($0.title) }) }
+        }
         .edgeSwipeBack(enabled: step != .done, onBack: back)
     }
 
@@ -233,7 +267,12 @@ struct NebulaDrawingFlow: View {
 
     private var shapeView: some View {
         VStack(alignment: .leading, spacing: 14) {
-            header("어떤 모양으로 모일까요?", "틀을 고르면 별들이 띄운 순서대로 자리를 잡아요.")
+            if let e = editing {
+                header("모양을 바꿀까요?",
+                       "지금은 \(e.template?.name ?? "직접 그린") 모양이에요. 다른 틀을 고르거나 별을 다시 골라 이을 수 있어요.")
+            } else {
+                header("어떤 모양으로 모일까요?", "틀을 고르면 별들이 띄운 순서대로 자리를 잡아요.")
+            }
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Space.md), count: 3), spacing: Space.md) {
                 ForEach(NebulaSilhouette.basic) { s in
                     tile(s.name, selected: silhouette == s) { SilhouetteMini(silhouette: s, selected: silhouette == s) }
@@ -308,12 +347,23 @@ struct NebulaDrawingFlow: View {
                 .accessibilityElement(children: .combine)
             }
 
+            if editing != nil {
+                Text("우주 광장에 띄운 성운이면, 광장에서도 새 모양으로 바뀌어요.\n별을 바꾸면 다듬은 성운 이야기는 지워지고, 문장만 엮은 이야기로 돌아가요.")
+                    .textStyle(.caption).foregroundStyle(Color.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             Spacer(minLength: 0)
             actions {
-                Button(silhouette == nil ? "직접 그리기" : "이 모양으로 그리기") {
-                    if silhouette == nil { go(.pick) } else if emptySlots > 0 { go(.guests) } else { go(.name) }
+                if editing != nil {
+                    Button("다음 · 별 다시 고르기") { go(.pick) }
+                        .buttonStyle(.primary)
+                } else {
+                    Button(silhouette == nil ? "직접 그리기" : "이 모양으로 그리기") {
+                        if silhouette == nil { go(.pick) } else if emptySlots > 0 { go(.guests) } else { go(.name) }
+                    }
+                    .buttonStyle(.primary)
                 }
-                .buttonStyle(.primary)
             }
         }
         .padding(Space.xl)
@@ -428,9 +478,16 @@ struct NebulaDrawingFlow: View {
             .frame(height: 320)
             Spacer(minLength: 0)
             actions {
-                Button("이어 보기") { edges = []; go(.connect) }
-                    .buttonStyle(.primary)
-                    .disabled(picked.count < 2)
+                if editing != nil, silhouette != nil {
+                    // Reshape onto a silhouette: guests for the empty places, then the name.
+                    Button("다음") { if emptySlots > 0 { go(.guests) } else { go(.name) } }
+                        .buttonStyle(.primary)
+                        .disabled(picked.isEmpty)
+                } else {
+                    Button("이어 보기") { edges = []; go(.connect) }
+                        .buttonStyle(.primary)
+                        .disabled(picked.count < 2)
+                }
             }
         }
         .padding(Space.xl)
@@ -465,9 +522,21 @@ struct NebulaDrawingFlow: View {
             NameField(text: $name)
             Spacer(minLength: 0)
             actions {
-                Button("저장하기") { save() }
-                    .buttonStyle(.primary)
-                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                Button("저장하기") {
+                    if let e = editing, model.storyPolished, e.starIDs != newStarIDs {
+                        confirmClearStory = true
+                    } else {
+                        save()
+                    }
+                }
+                .buttonStyle(.primary)
+                .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                .alert("다듬은 이야기가 지워져요", isPresented: $confirmClearStory) {
+                    Button("그대로 두기", role: .cancel) {}
+                    Button("바꾸기") { save() }
+                } message: {
+                    Text("별을 바꾸면 다듬은 성운 이야기는 지워지고, 문장만 엮은 이야기로 돌아가요.")
+                }
             }
         }
         .padding(Space.xl)
@@ -506,7 +575,7 @@ struct NebulaDrawingFlow: View {
     @ViewBuilder private var drawing: some View {
         // After saving, the steps are gone: read the template from the saved nebula.
         let template = saved.map { $0.silhouette.flatMap(NebulaSilhouette.init(rawValue:)) }
-            ?? (steps.contains(.pick) ? nil : silhouette)
+            ?? chosenTemplate
         if let template {
             SilhouettePreview(silhouette: template, stars: placed, guests: model.guestCandidates.filter(guests.contains))
         } else {
@@ -514,8 +583,23 @@ struct NebulaDrawingFlow: View {
         }
     }
 
+    /// The stars the nebula will hold once saved.
+    private var newStarIDs: [UUID] { chosenTemplate == nil ? picked : placed.map(\.id) }
+
     private func save() {
-        let template = steps.contains(.pick) ? nil : silhouette
+        let template = chosenTemplate
+        if var e = editing {
+            // 08 「모양 바꾸기」: the same nebula, reshaped.
+            e.name = name.trimmingCharacters(in: .whitespaces)
+            e.silhouette = template?.rawValue
+            e.starIDs = template == nil ? picked : placed.map(\.id)
+            e.edges = template == nil ? edges : []
+            e.guests = template == nil ? [] : model.guestCandidates.filter(guests.contains).map(\.title)
+            e.guestShareIDs = template == nil ? [] : model.guestCandidates.filter(guests.contains).compactMap(\.shareID)
+            model.updateDrawnNebula(e)
+            onClose()
+            return
+        }
         let nebula = DrawnNebula(
             name: name.trimmingCharacters(in: .whitespaces),
             silhouette: template?.rawValue,
@@ -560,6 +644,8 @@ struct StarStage: View {
     var picked: [UUID]
     var edges: [[Int]]
     var interactive: Bool
+    /// 08-2: every star in its mood color (nothing picked yet).
+    var moodColors = false
     var onTap: (StarItem) -> Void = { _ in }
 
     /// Figma 52 star centers in the 342×320 stage, then two extra places.
@@ -592,7 +678,7 @@ struct StarStage: View {
                 ForEach(Array(shown.enumerated()), id: \.element.id) { i, star in
                     let on = picked.contains(star.id)
                     Button { onTap(star) } label: {
-                        Circle().fill(on ? Color.starBright : Color.textTertiary)
+                        Circle().fill(on ? Color.starBright : moodColors ? star.mood.color : Color.textTertiary)
                             .frame(width: on ? 14 : 8, height: on ? 14 : 8)
                             .shadow(color: on ? Color.starBright.opacity(0.5) : .clear, radius: 14)
                             .frame(width: 44, height: 44)

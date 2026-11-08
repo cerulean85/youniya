@@ -825,6 +825,21 @@ final class AppModel {
         if useLiveAPI { Task { @MainActor in createNebulaLive(n) } }
     }
 
+    /// 08: the nebula shown on 나의 성운, the latest drawn or reshaped.
+    var latestNebula: DrawnNebula? { drawnNebulae.max { $0.lastTouched < $1.lastTouched } }
+
+    /// 08 「모양 바꾸기」: saves the reshaped nebula in place.
+    func updateDrawnNebula(_ n: DrawnNebula) {
+        guard let i = drawnNebulae.firstIndex(where: { $0.id == n.id }) else { return }
+        var updated = n
+        updated.updatedAt = .now
+        // New stars, or the same ones in another order: the server clears the
+        // polished story (bridges), so do it here too.
+        if drawnNebulae[i].starIDs != n.starIDs { storyPolished = false }
+        drawnNebulae[i] = updated
+        if useLiveAPI { Task { @MainActor in await updateNebulaLive(updated) } }
+    }
+
     /// 71 하늘에 띄우기: floats my newest nebula. Live: on the server, and only
     /// once it is there; without a drawn nebula there is nothing to float yet.
     /// `quote`: the line picked on 71-1 when "가린 한 문장 함께 보이기" is on.

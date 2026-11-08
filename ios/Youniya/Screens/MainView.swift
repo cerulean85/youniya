@@ -60,6 +60,7 @@ struct MainView: View {
         case sharedStars // 87 › 나눈 별
         case blockedKeepers // 87-3 차단한 별지기
         case editStar(StarItem.ID)  // 글 수정
+        case reshapeNebula          // 08 「모양 바꾸기」 → 84 … 54
         case floatKept(StarItem.ID) // a kept star's "별 띄우기" → 06/07
         case monthlyReport(String?)  // 123 (v1.1): a month, or the mock sample
         case page(String)
@@ -154,6 +155,22 @@ struct MainView: View {
                 }
                 push(.coinHistory)
             case "missingStar": push(.detail(UUID()))     // 122
+            // 08-1 / 08-2 / 84 reshape (2026-11-08)
+            case "nebulaDrawn", "reshapeNebula":
+                // A fresh mock nebula every time (an older one may point at stars
+                // that are gone), with every mood and two guests.
+                if model.stars.filter(\.isFloated).count < 3 { model.fillSampleStars() }
+                let moods: [Mood] = [.calm, .sorrow, .anger, .insight]
+                for (k, i) in model.stars.indices.filter({ model.stars[$0].isFloated }).enumerated() {
+                    model.stars[i].mood = moods[k % moods.count]
+                }
+                let ids = model.stars.filter(\.isFloated).map(\.id)
+                model.drawnNebulae = [DrawnNebula(name: "느린 저녁의 성운", silhouette: NebulaSilhouette.lighthouse.rawValue,
+                                                  starIDs: ids, guests: GuestStar.candidates.prefix(2).map(\.title))]
+                if UserDefaults.standard.string(forKey: "debugRoute") == "reshapeNebula" { push(.reshapeNebula) } else { tab = .nebula }
+            case "nebulaEmpty":
+                model.drawnNebulae = []
+                tab = .nebula
             // 글 수정 / 간직한 별 띄우기 (2026-11-08)
             case "keptStar", "keptShort":
                 // keptStar: over 50 characters (can float); keptShort: under 50.
@@ -369,6 +386,7 @@ struct MainView: View {
                 switch title {
                 case "성운 이야기": push(.nebulaStory)
                 case "성운 그리기": push(.drawNebula)
+        case "모양 바꾸기": push(.reshapeNebula)
                 case "자라는 모습": push(.growth)
                 default: push(.page(title))
                 }
@@ -436,6 +454,8 @@ struct MainView: View {
                 }
             )
             .edgeSwipeBack(onBack: pop)
+        case .reshapeNebula:
+            NebulaDrawingFlow(onClose: pop, onHome: pop, onShare: pop, editing: model.latestNebula)
         case .editStar(let id):
             StarEditView(starID: id, onClose: pop)
         case .floatKept(let id):
