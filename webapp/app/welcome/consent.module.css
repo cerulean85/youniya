@@ -1,0 +1,6 @@
+.form { display: flex; flex-direction: column; gap: 4px; }
+.row { display: flex; align-items: center; gap: 12px; padding: 10px 0; cursor: pointer; }
+.row input { width: 20px; height: 20px; accent-color: var(--primary); flex: none; }
+.all { border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.view { margin-left: auto; color: var(--text-3); display: inline-flex; }
+.form button { margin-top: 16px; }

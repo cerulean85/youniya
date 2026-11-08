@@ -1,0 +1,21 @@
+.header { display: flex; flex-direction: column; gap: 8px; }
+.loading { min-height: 560px; opacity: 0.5; }
+.body { display: flex; gap: 32px; flex: 1; min-height: 0; }
+.left { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 24px; }
+.sky { flex: 1; padding: 28px 32px; border-radius: 24px; display: flex; flex-direction: column; min-height: 420px; }
+.skyHead { display: flex; align-items: center; justify-content: space-between; }
+.canvas { flex: 1; display: grid; place-items: center; }
+.canvas svg { max-height: 420px; }
+.stats { display: flex; gap: 16px; }
+.stat { flex: 1; padding: 20px 24px; border-radius: 16px; display: flex; flex-direction: column; gap: 6px; }
+.recent { width: 400px; flex: none; display: flex; flex-direction: column; gap: 12px; }
+.recentHead { display: flex; align-items: center; justify-content: space-between; padding-bottom: 4px; }
+.all { display: inline-flex; align-items: center; gap: 4px; font: 500 12px/16px var(--sans); color: var(--primary-text); }
+.empty { flex: 1; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 48px; text-align: center; min-height: 560px; }
+.waiting { width: 160px; height: 160px; border-radius: 50%; border: 1px dashed rgba(226, 232, 240, 0.25); display: grid; place-items: center; color: var(--text-3); box-shadow: inset 0 0 0 25px transparent, inset 0 0 0 26px rgba(226, 232, 240, 0.12); }
+.step { display: flex; gap: 14px; padding: 18px 20px; border-radius: 16px; align-items: flex-start; }
+.stepIcon { display: inline-flex; padding: 10px; border-radius: 999px; flex: none; }
+@media (max-width: 1100px) {
+  .body { flex-direction: column; }
+  .recent { width: auto; }
+}

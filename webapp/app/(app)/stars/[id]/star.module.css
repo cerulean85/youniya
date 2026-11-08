@@ -1,0 +1,23 @@
+.back { display: inline-flex; align-items: center; gap: 6px; font: 500 14px/20px var(--sans); color: var(--text-2); margin-bottom: -8px; }
+.loading { min-height: 560px; opacity: 0.5; }
+.body { display: flex; gap: 48px; align-items: flex-start; }
+.article { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.born { display: inline-flex; align-items: center; gap: 8px; font: 500 14px/20px var(--sans); color: var(--gold); }
+.meta { display: flex; align-items: center; gap: 12px; }
+.mood { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; font: 500 12px/16px var(--sans); border: 1px solid var(--c); }
+.mood::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--c); }
+.text { white-space: pre-wrap; color: var(--text-2); padding-top: 8px; }
+.care { display: flex; gap: 12px; align-items: flex-start; padding: 18px 20px; border-radius: 16px; background: var(--tint-calm); border: 1px solid rgba(52, 211, 153, 0.4); }
+.care svg { color: var(--calm); flex: none; }
+.side { width: 360px; flex: none; display: flex; flex-direction: column; gap: 16px; position: sticky; top: 48px; }
+.question { color: var(--text-2); padding: 0 4px; }
+.keptCard { padding: 24px; border-radius: 20px; display: flex; flex-direction: column; gap: 12px; }
+.floatForm { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
+.link { color: var(--primary-text); font-weight: 500; }
+.more { display: flex; justify-content: center; }
+.dialog { max-width: 440px; padding: 32px; color: var(--text); }
+.dialog::backdrop { background: rgba(11, 15, 25, 0.7); }
+.dialog form { display: flex; flex-direction: column; gap: 16px; }
+.dialogActions { display: flex; justify-content: flex-end; gap: 8px; padding-top: 8px; }
+.danger { color: #fff; background: linear-gradient(180deg, #bc5457, #a5202a); }
+@media (max-width: 1100px) { .body { flex-direction: column; } .side { width: 100%; position: static; } }

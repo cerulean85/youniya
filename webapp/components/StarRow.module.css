@@ -1,0 +1,12 @@
+.row { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-radius: 16px; }
+.row:hover { border-color: rgba(133, 85, 239, 0.6); }
+.glyph { display: inline-flex; color: var(--text-3); }
+.glyph[data-floated="true"] { color: var(--sorrow); filter: drop-shadow(0 0 6px rgba(165, 180, 252, 0.6)); }
+.text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.text > :first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge {
+  display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px;
+  background: var(--tint); border: 1px solid rgba(133, 85, 239, 0.5); font: 500 13px/20px var(--sans);
+}
+.badge svg { color: var(--sorrow); }
+.badge small { font-size: 11px; color: var(--text-2); }
