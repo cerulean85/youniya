@@ -1,6 +1,6 @@
 import SwiftUI
 
-// MARK: - Shared pieces (76, 77)
+// MARK: - Shared pieces (70, 77)
 
 /// Figma `Zoom Controls`: + / level / −, 36pt circles. − is filled violet.
 struct ZoomControls: View {
@@ -113,26 +113,6 @@ private struct ZoomPanCanvas<Content: View>: View {
 }
 
 /// Figma 69 `Stat`: a gold number over a small label.
-private struct GalaxyStat: View {
-    var value: Int
-    var label: String
-
-    var body: some View {
-        VStack(spacing: Space.sm) {
-            Text("\(value)").textStyle(.h2).foregroundStyle(Color.starBright)
-                .contentTransition(.numericText())
-            Text(label).textStyle(.caption).foregroundStyle(Color.textTertiary)
-                .lineLimit(1).minimumScaleFactor(0.85)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, Space.xs)
-        .padding(.vertical, Space.lg)
-        .itemCard(seed: "stat-\(label)", minHeight: 0, flatBorder: true)
-        .accessibilityElement(children: .combine)
-    }
-}
-
-/// Figma 70 `Info`: key on the left, value on the right.
 private struct NebulaInfoTable: View {
     var rows: [(String, String)]
 
@@ -358,196 +338,6 @@ struct MyNebulaZoomView: View {
     }
 }
 
-// MARK: - 76 Galaxy, zoomed
-
-/// 76 은하 확대: everyone's stars tonight, mine ringed in gold.
-struct GalaxyZoomView: View {
-    @Environment(AppModel.self) private var model
-    var onBack: () -> Void
-    var onOpenStar: (StarItem) -> Void
-    var onMyNebula: () -> Void
-    var onPlaza: () -> Void
-
-    /// Figma 69 opens at 1× on the whole galaxy; 76 is the zoomed-in, picked state.
-    @State private var level: CGFloat = DebugScreen.is("76") ? 2.6 : 1
-    @State private var showMine = DebugScreen.is("76")
-    /// iPhone SE (Figma "Mobile · SE"): 26pt title, 210pt field.
-    @State private var isShortScreen = false
-
-    /// Live: today's floated stars across everyone (`/v1/plaza/tonight`); mock: Figma's sample.
-    private var tonight: Int { model.useLiveAPI ? model.tonightCount ?? 0 : 1284 }
-
-    var body: some View {
-        // My stars in everyone's galaxy are the ones shared to the plaza (19).
-        let mine = model.stars.filter { $0.isFloated && $0.isShared }
-        VStack(alignment: .leading, spacing: isShortScreen ? Space.sm : Space.lg) {
-            Text("TONIGHT · \(tonight.formatted())개의 마음")
-                .textStyle(.labelS)
-                .foregroundStyle(Color.starBright)
-                .padding(.horizontal, Space.md)
-                .padding(.vertical, Space.xs)
-                .background(Color.tintGold, in: .capsule)
-            Text("오늘 밤,\n\(tonight.formatted())개의 마음이 모였어요")
-                .textStyle(.h1)
-                .font(isShortScreen ? .custom("NotoSerifKR-SemiBold", size: 26, relativeTo: .title) : nil)
-                .foregroundStyle(Color.textPrimary)
-                .lineLimit(2)
-                .minimumScaleFactor(0.8)
-                .fixedSize(horizontal: false, vertical: true)
-                .layoutPriority(1)
-                .accessibilityAddTraits(.isHeader)
-            Text(mine.isEmpty
-                 ? "별을 우주 광장에 나누면 이 안에서 함께 빛나요. 별 하나하나는 익명이고, 글은 보이지 않아요."
-                 : "내 별 \(mine.count)개가 이 안에서 빛나고 있어요. 별 하나하나는 익명이고, 글은 보이지 않아요.")
-                .textStyle(.bodyS)
-                .foregroundStyle(Color.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            ZStack(alignment: .topTrailing) {
-                ZoomPanCanvas(level: $level, range: 1...3.4) { level in
-                    GalaxyField(mine: mine, level: level) {
-                        withAnimation(.snappy) { showMine.toggle() }
-                    }
-                }
-                ZoomControls(level: $level, range: 1...3.4)
-                    .padding(.top, 8)
-                    .padding(.trailing, 4)
-            }
-            .frame(height: isShortScreen ? 210 : 280)
-
-            // Below the field, so it never sits on the stars.
-            Text(showMine ? "별의 모양은 쓴 글의 결로 정해져요" : "두 손가락으로 확대 · 별을 눌러 보기")
-                .textStyle(.caption)
-                .foregroundStyle(Color.textTertiary)
-
-            // 69 Stats by default; tapping my star in the middle shows its card (76).
-            if showMine, let first = mine.first {
-                StarTooltip(star: first) { onOpenStar(first) }
-            } else {
-                HStack(spacing: Space.md) {
-                    GalaxyStat(value: model.useLiveAPI ? tonight : 86, label: "오늘 떠오른 별")
-                    GalaxyStat(value: model.resonated.filter { $0.hasPrefix("nebula:") }.count, label: "내가 곁에 둔 성운")
-                    GalaxyStat(value: model.useLiveAPI ? model.plazaNebulaeLive.count : 312, label: "모인 성운")
-                }
-            }
-
-            Spacer(minLength: 0)
-
-            VStack(spacing: Space.md) {
-                Button("나의 성운 보기", action: onMyNebula).buttonStyle(.primary)
-                Button("성운 광장 가기", action: onPlaza).buttonStyle(.secondary)
-            }
-        }
-        .padding(.horizontal, Space.xl)
-        .padding(.top, Space.sm)
-        .padding(.bottom, Space.xl)
-        // Measured on the full-screen background: the content itself can overflow.
-        .background {
-            StarField()
-                .onGeometryChange(for: Bool.self) { $0.size.height < 700 } action: { isShortScreen = $0 }
-        }
-        .task {
-            await model.loadTonight()
-            if model.plazaNebulaeLive.isEmpty { await model.loadPlaza() }
-        }
-        // No back button in Figma: edge swipe, and the VoiceOver escape gesture.
-        .accessibilityAction(.escape, onBack)
-    }
-}
-
-/// Figma `Galaxy`: a warm core, about two hundred anonymous star shapes,
-/// gold rings on my stars, and my newest star large in the middle.
-private struct GalaxyField: View {
-    var mine: [StarItem]
-    var level: CGFloat
-    var onTapMine: () -> Void = {}
-
-    private struct Other: Identifiable {
-        var id: Int
-        var point: CGPoint
-        var size: CGFloat
-        var color: Color
-        var opacity: Double
-        var spec: StarShapeSpec
-        var angle: Double
-    }
-
-    /// Seeded so the sky stays the same between visits.
-    private static let others: [Other] = {
-        var rng = SeededRandom(seed: "galaxy-76")
-        return (0..<200).map { i in
-            // Spread wide, like the Figma zoom layer: only some are in view at 2.6×.
-            let r = sqrt(rng.next(in: 0...1)) * 330
-            let a = rng.next(in: 0...(2 * .pi))
-            let tone = rng.next(in: 0...1)
-            let color: Color = tone < 0.86 ? .textPrimary : tone < 0.93 ? .emotionCalm : .emotionInsight
-            return Other(id: i,
-                         point: CGPoint(x: cos(a) * r, y: sin(a) * r * 0.85),
-                         size: rng.next(in: 16...22) / 2.6,
-                         color: color,
-                         opacity: rng.next(in: 0.4...0.9),
-                         spec: .init(points: 4 + Int(rng.next(in: 0...3.99)),
-                                     sharpness: StarShapeSpec.Sharpness(rawValue: Int(rng.next(in: 0...2.99)))!),
-                         angle: rng.next(in: 0...40))
-        }
-    }()
-
-    var body: some View {
-        GeometryReader { geo in
-            let c = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2 + 30)
-            let at: (CGPoint) -> CGPoint = { CGPoint(x: c.x + $0.x * level, y: c.y + $0.y * level) }
-            ZStack(alignment: .topLeading) {
-                Circle()
-                    .fill(RadialGradient(stops: [
-                        .init(color: Color.hex(0xFABF4D).opacity(0.5), location: 0),
-                        .init(color: Color.hex(0x8C5CF5).opacity(0.22), location: 0.5),
-                        .init(color: Color.hex(0x8C5CF5).opacity(0), location: 1),
-                    ], center: .center, startRadius: 0, endRadius: 130 * level))
-                    .frame(width: 260 * level, height: 260 * level)
-                    .position(c)
-
-                ForEach(Self.others) { o in
-                    ShapeStar(spec: o.spec, color: o.color, size: o.size * level, halo: false)
-                        .rotationEffect(.degrees(o.angle))
-                        .opacity(o.opacity)
-                        .position(at(o.point))
-                }
-
-                // My other stars: gold shapes with a ring.
-                ForEach(Array(mine.dropFirst().prefix(4).enumerated()), id: \.element.id) { i, star in
-                    var rng = SeededRandom(seed: star.id.uuidString)
-                    let p = CGPoint(x: rng.next(in: -120...120), y: rng.next(in: -90...60))
-                    ZStack {
-                        Circle().strokeBorder(Color.starBright, lineWidth: 1.5).frame(width: 20 * level, height: 20 * level)
-                        ShapeStar(spec: StarShapeSpec(star: star), color: .starBright, size: 15 * level, rays: i == 0)
-                    }
-                    .position(at(p))
-                    .accessibilityHidden(true)
-                }
-
-                if let hero = mine.first {
-                    // Hero: halo, an 8-ray burst, the star, and a target ring.
-                    ZStack {
-                        CurvedStar(points: 8, inner: 0.3)
-                            .fill(Color.starBright.opacity(0.35))
-                            .frame(width: 41 * level, height: 41 * level)
-                        ShapeStar(spec: StarShapeSpec(star: hero), color: .starBright, size: 26 * level, rays: true)
-                        Circle().strokeBorder(Color.starBright.opacity(0.7), lineWidth: 1.5)
-                            .frame(width: 76, height: 76)
-                    }
-                    .position(c)
-                    .onTapGesture(perform: onTapMine)
-                    .accessibilityElement()
-                    .accessibilityLabel("내 별, \(hero.title)")
-                    .accessibilityAddTraits(.isButton)
-                    .accessibilityAction { onTapMine() }
-                }
-            }
-        }
-        .accessibilityElement(children: .contain)
-    }
-}
-
 // MARK: - 83 Nebula story
 
 /// 83 성운 이야기: one core sentence per star, oldest first, left as written.
@@ -758,12 +548,6 @@ struct NebulaStoryView: View {
     let model = AppModel()
     model.fillSampleStars()
     return MyNebulaZoomView(onBack: {}, onOpenStar: { _ in }, onOpen: { _ in }).environment(model)
-}
-
-#Preview("76") {
-    let model = AppModel()
-    model.fillSampleStars()
-    return GalaxyZoomView(onBack: {}, onOpenStar: { _ in }, onMyNebula: {}, onPlaza: {}).environment(model)
 }
 
 #Preview("83") {

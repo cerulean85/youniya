@@ -46,7 +46,6 @@ struct MainView: View {
         case nebulaStars(NebulaStarsView.Kind) // 89/90
         case brightness // 82
         case milkyWay   // 81
-        case galaxyZoom // 76
         case myNebulaZoom // 77
         case nebulaStory // 83
         case drawNebula  // 51–55, 84, 85
@@ -133,7 +132,7 @@ struct MainView: View {
             case "plaza", "plazaNebula": tab = .plaza     // 09 / 72
             case "compose": push(.compose())              // 05
             case "myNebula": push(.myNebulaZoom)          // 77
-            case "galaxy": push(.galaxyZoom)              // 69
+            case "galaxy": tab = .plaza                  // 69 is now the plaza
             case "story": push(.nebulaStory)              // 83
             case "missingReport": push(.report(UUID()))   // 122-1
             // Visual review (mock data):
@@ -365,14 +364,6 @@ struct MainView: View {
         case .milkyWay:
             MilkyWayView(onBack: pop, onOpenStar: openStar)
                 .edgeSwipeBack(onBack: pop)
-        case .galaxyZoom:
-            GalaxyZoomView(onBack: pop, onOpenStar: openStar,
-                           onMyNebula: { replace(with: .myNebulaZoom) },
-                           onPlaza: {
-                               withAnimation(.easeInOut(duration: 0.32)) { stack.removeAll() }
-                               tab = .plaza
-                           })
-                .edgeSwipeBack(onBack: pop)
         case .myNebulaZoom:
             MyNebulaZoomView(onBack: pop, onOpenStar: openStar, onOpen: { title in
                 switch title {
@@ -542,7 +533,7 @@ struct MainView: View {
         case "66": push(.moments)
         case "86": push(.stages)
         case "68": push(.sky)
-        case "69", "76": push(.galaxyZoom)
+        case "69", "76": tab = .plaza
         case "70", "71", "71-1", "77", "112":
             ensureMockNebula()
             push(.myNebulaZoom)
@@ -640,7 +631,7 @@ struct MainView: View {
         push(.detail(star.id))
     }
 
-    /// 08 links: stat cards (89), 나의 은하수 (81), 모두의 은하 (76),
+    /// 08 links: stat cards (89), 나의 은하수 (81), 우주 광장 (tab),
     /// 자세히 보기 (77), 성운 이야기 (83), 성운 그리기 (51).
     private func openFromNebula(_ title: String) {
         switch title {
@@ -649,7 +640,10 @@ struct MainView: View {
         case "초신성": push(.nebulaStars(.supernova))
         case "나의 은하수": push(.milkyWay)
         case "성운 모음": push(.collection)
-        case "모두의 은하": push(.galaxyZoom)
+        case "우주 광장":
+            // 모두의 은하 (69) is merged into the plaza: switch tabs.
+            withAnimation(.easeInOut(duration: 0.32)) { stack.removeAll() }
+            tab = .plaza
         case "나의 성운 확대": push(.myNebulaZoom)
         case "성운 이야기": push(.nebulaStory)
         case "성운 그리기": push(.drawNebula)

@@ -71,7 +71,7 @@ struct NebulaView: View {
                 .accessibilityHint("성운이 자라는 네 걸음을 봐요")
 
                 HStack(spacing: Space.md) {
-                    Button("모두의 은하") { onOpen("모두의 은하") }
+                    Button("우주 광장") { onOpen("우주 광장") }
                         .buttonStyle(.secondary)
                     if model.latestNebula == nil {
                         Button("성운 그리기") { onOpen("성운 그리기") }

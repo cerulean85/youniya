@@ -333,7 +333,11 @@ struct AppSettings: Codable, Equatable {
 @Observable
 final class AppModel {
     var isSignedIn: Bool {
-        didSet { UserDefaults.standard.set(isSignedIn, forKey: "isSignedIn") }
+        didSet {
+            UserDefaults.standard.set(isSignedIn, forKey: "isSignedIn")
+            // Remember which server the session belongs to (see init).
+            if isSignedIn { UserDefaults.standard.set(APIConfig.baseURL.absoluteString, forKey: "signedInBaseURL") }
+        }
     }
     /// 11 Consent accepted (required terms). Asked once per device.
     var hasConsented: Bool {
@@ -485,6 +489,8 @@ final class AppModel {
     /// Live 85 guests and 69 tonight's count.
     var guestCandidatesLive: [GuestStar] = []
     var tonightCount: Int?
+    /// Of tonight's stars, how many are mine (`/v1/plaza/tonight` mine).
+    var tonightMine: Int?
     /// Live: `GET /v1/growth` stage (0–4).
     var serverGrowthStage: Int?
     /// Live: stars whose telescope report is being made on the server (25 → 10).
@@ -517,7 +523,22 @@ final class AppModel {
 
     init(store: LocalStore = LocalStore()) {
         self.store = store
-        isSignedIn = UserDefaults.standard.bool(forKey: "isSignedIn")
+        // A session from another server (e.g. the dev server moved) is no good
+        // here: start signed out instead of showing that server's leftovers.
+        var signedIn = UserDefaults.standard.bool(forKey: "isSignedIn")
+        let was = UserDefaults.standard.string(forKey: "signedInBaseURL")
+        #if DEBUG
+        let moved = was != APIConfig.baseURL.absoluteString  // also before this was recorded
+        #else
+        let moved = was.map { $0 != APIConfig.baseURL.absoluteString } ?? false
+        #endif
+        if Self.savedLiveAPI, signedIn, moved {
+            signedIn = false
+            UserDefaults.standard.set(false, forKey: "isSignedIn")
+            store.save([StarItem](), to: "stars-live")
+            Task { await APIClient.shared.forget() }
+        }
+        isSignedIn = signedIn
         hasConsented = UserDefaults.standard.bool(forKey: "hasConsented")
         marketingOptIn = UserDefaults.standard.bool(forKey: "marketingOptIn")
         hasSeenPlazaIntro = UserDefaults.standard.bool(forKey: "hasSeenPlazaIntro")
@@ -687,7 +708,9 @@ final class AppModel {
             return
         }
         switch e.code {
-        case "token_expired", "signed_out":
+        // `unauthorized`: a token the server can't use any more (its keys or
+        // database changed). Like an expired session: 39, then sign in again.
+        case "token_expired", "signed_out", "unauthorized":
             appNotice = .loginExpired
         case "update_required":
             appNotice = .updateRequired

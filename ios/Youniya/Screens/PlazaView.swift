@@ -54,6 +54,13 @@ struct PlazaView: View {
     /// 72 → 73
     var onOpenNebula: (GalaxyNebula) -> Void = { _ in }
 
+    /// Tonight's hearts and mine (live `/v1/plaza/tonight`; mock: Figma 69's sample,
+    /// with my shared floated stars).
+    private var tonight: (count: Int, mine: Int) {
+        if model.useLiveAPI { return (model.tonightCount ?? 0, model.tonightMine ?? 0) }
+        return (1284, model.stars.filter { $0.isFloated && $0.isShared }.count)
+    }
+
     private enum Segment: String, CaseIterable { case star = "별", nebula = "성운" }
     private enum Sort: String, CaseIterable { case newest = "새로 뜬 것", similar = "나와 결이 비슷한" }
 
@@ -89,6 +96,19 @@ struct PlazaView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
+                // 69 모두의 은하, merged here: tonight's hearts (hidden at 0).
+                if tonight.count > 0 {
+                    Text(tonight.mine > 0
+                         ? "오늘 밤, \(tonight.count.formatted())개의 마음이 모였어요 · 내 별 \(tonight.mine)개도 함께 빛나요"
+                         : "오늘 밤, \(tonight.count.formatted())개의 마음이 모였어요")
+                        .textStyle(.labelS)
+                        .foregroundStyle(Color.starBright)
+                        .padding(.horizontal, Space.md)
+                        .padding(.vertical, Space.xs)
+                        .background(Color.tintGold, in: .capsule)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
                 segmentControl
 
                 if segment == .star {
@@ -115,7 +135,10 @@ struct PlazaView: View {
             .padding(.vertical, Space.lg)
         }
         .scrollIndicators(.hidden)
-        .task { await model.loadPlaza() }
+        .task {
+            await model.loadPlaza()
+            await model.loadTonight()
+        }
     }
 
     /// Figma `Segment`: pill track, selected segment filled violet.
