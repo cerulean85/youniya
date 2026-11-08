@@ -1,0 +1,3 @@
+.shell { display: flex; min-height: 100vh; }
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 32px; padding: 48px 56px; }
+.accountSlot { min-height: 74px; }
