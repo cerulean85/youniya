@@ -198,3 +198,31 @@ def test_error_reports_carry_no_writing():
     assert out["request"]["headers"] == {"User-Agent": "YOUNIYA/1.0"}
     assert out["exception"]["values"][0]["type"] == "ValidationError"
     assert out["exception"]["values"][0]["stacktrace"]["frames"][0]["function"] == "evaluate"
+
+
+def test_purchase_records_outlive_the_account(make_app):
+    """개인정보 처리방침 3: deleting the account removes everything but the store purchases and refunds,
+    which stay for 5 years cut off from the person. A late REFUND or a replayed purchase still works."""
+    from youniya_api.models import CoinEntry
+
+    apple = FakeApple()
+    app = make_app(trust_purchases=False, apple_bundle_id=BUNDLE)
+    app.state.storekit = StoreKitVerifier(BUNDLE, root=apple.root)
+    client = TestClient(app)
+    h = sign_in(client)
+    client.post("/v1/coins/purchases", json={"signed_transaction": apple.jws(transactionId="910")}, headers=h)
+    float_star(client, h)
+    for _ in range(3):
+        client.post("/v1/telescope/reports", json={}, headers=h)  # two free, then 20 coins
+    assert client.delete("/v1/me", headers=h).status_code == 204
+
+    with app.state.sessions() as db:
+        rows = db.query(CoinEntry).all()
+        assert [(r.user_id, r.transaction_id, r.delta) for r in rows] == [(None, "910", 120)]
+
+    url = "/v1/storekit/notifications"
+    assert client.post(url, json={"signedPayload": _refund_note(apple, "910")}).json() == {"handled": True}
+    # The same purchase can't be added to a new account.
+    other = sign_in(client, "again")
+    r = client.post("/v1/coins/purchases", json={"signed_transaction": apple.jws(transactionId="910")}, headers=other)
+    assert r.status_code == 409 and r.json()["error"]["code"] == "transaction_used"

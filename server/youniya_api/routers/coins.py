@@ -89,7 +89,7 @@ def purchase(body: PurchaseIn, request: Request, user: User = Depends(consented_
     # Retried requests for the same store transaction add coins once.
     seen = db.scalar(select(CoinEntry).where(CoinEntry.transaction_id == transaction_id))
     if seen:
-        if seen.user_id != user.id:
+        if seen.user_id != user.id:  # another account's, or a deleted account's (user_id NULL)
             raise ApiError(409, "transaction_used", "이미 처리된 결제예요.")
         return {"coins": user.coins, "added": 0, "already_processed": True}
     added = package["coins"] * quantity
@@ -143,8 +143,8 @@ def app_store_notification(body: NotificationIn, request: Request, db: Session =
                                            data.get("environment") or tx.get("environment") or "Production")
     refund_id = f"refund:{transaction_id}"
     if db.scalar(select(CoinEntry.id).where(CoinEntry.transaction_id == refund_id)) is None:
-        user = db.get(User, purchase.user_id)
-        if user is not None:
+        user = db.get(User, purchase.user_id) if purchase.user_id else None
+        if user is not None:  # a deleted account has no coins left to take back
             coins.take_back(db, user, purchase.delta, "환불", transaction_id=refund_id)
             db.commit()
     return {"handled": True}
@@ -176,7 +176,7 @@ def _answer_consumption_request(request: Request, db: Session, purchase: CoinEnt
         logger.warning("CONSUMPTION_REQUEST for %s left unanswered: App Store API key not configured",
                        transaction_id)
         return {"handled": False, "reason": "not_configured"}
-    user = db.get(User, purchase.user_id)
+    user = db.get(User, purchase.user_id) if purchase.user_id else None  # None: the account was deleted
     info = consumption_info(purchase, user.coins if user else 0, datetime.now(timezone.utc))
     try:
         client.send_consumption(transaction_id, environment, info)

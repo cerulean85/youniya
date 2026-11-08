@@ -222,7 +222,10 @@ class CoinEntry(Base):
     __tablename__ = "coin_entries"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
-    user_id: Mapped[str] = user_fk()
+    # NULL once the account is deleted: store purchases and refunds (rows with a transaction_id) are
+    # kept for 5 years under 전자상거래법, cut off from the person (개인정보 처리방침 3).
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True,
+                                                nullable=True)
     title: Mapped[str] = mapped_column(String(40))
     delta: Mapped[int] = mapped_column(Integer)
     transaction_id: Mapped[str | None] = mapped_column(String(128), unique=True)

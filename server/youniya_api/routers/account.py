@@ -5,14 +5,14 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import Session
 
 from .. import allowance, membership
 from ..blocks import hidden_users
 from ..deps import ApiError, current_user, get_cipher, get_db
 from ..export import StarEntry, as_pdf, as_text
-from ..models import DeviceToken, Inquiry, Nebula, NebulaShare, Resonance, Star, StarlightLine, StarShare, User
+from ..models import CoinEntry, DeviceToken, Inquiry, Nebula, NebulaShare, Resonance, Star, StarlightLine, StarShare, User
 from ..rules import INQUIRY_KINDS, MOOD_LABELS, SKY_THEMES, SOUNDS
 from ..security import Cipher
 from ..views import iso, local
@@ -116,7 +116,10 @@ def update_settings(body: SettingsPatch, request: Request, user: User = Depends(
 @router.delete("/me", status_code=204)
 def delete_account(user: User = Depends(current_user), db: Session = Depends(get_db)):
     """91: stars, nebulae, the milky way and the account go, with no way back.
-    Everything hangs off users.id with ON DELETE CASCADE."""
+    Everything hangs off users.id with ON DELETE CASCADE, except the store purchase and refund
+    records: they stay, cut off from the account, for 5 years (전자상거래법; 개인정보 처리방침 3)."""
+    db.execute(update(CoinEntry).where(CoinEntry.user_id == user.id, CoinEntry.transaction_id.is_not(None))
+               .values(user_id=None))
     db.delete(user)
     db.commit()
 
