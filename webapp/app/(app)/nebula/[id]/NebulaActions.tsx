@@ -1,25 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
-import { polishStory, shareNebula, unshareNebula } from "../actions";
+import { shareNebula, unshareNebula } from "../actions";
 import styles from "./nebula-detail.module.css";
-
-export function PolishButton({ id, free, cost, coins }: { id: string; free: boolean; cost: number; coins: number }) {
-  const [pending, start] = useTransition();
-  const [error, setError] = useState<{ error?: string; code?: string } | null>(null);
-  return (
-    <div className={styles.polish}>
-      <button type="button" className="btn btn-secondary" disabled={pending}
-        onClick={() => start(async () => setError((await polishStory(id)) ?? null))}>
-        {pending ? "다듬는 중…" : free ? "서사 다듬기 · 처음 1번 무료" : `서사 다듬기 · ${cost}코인`}
-      </button>
-      {!free && <span className="caption faint">보유 {coins}코인</span>}
-      {error?.error && <span className="body-s" role="alert">{error.error} {error.code === "insufficient_coins" && <Link href="/coins" className={styles.link}>코인 충전하기</Link>}</span>}
-    </div>
-  );
-}
 
 // 71 하늘에 띄우기: the nebula's shape goes to the plaza; others may leave a 별빛 한 줄 if allowed.
 export function ShareNebula({ id, shared }: { id: string; shared: boolean }) {

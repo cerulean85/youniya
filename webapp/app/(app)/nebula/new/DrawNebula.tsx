@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { NebulaFigure } from "@/components/NebulaFigure";
 import { Check, Close } from "@/components/icons";
 import { dateTime, moodOf } from "@/lib/format";
@@ -14,7 +14,7 @@ type Step = "stars" | "shape" | "name";
 const LABEL: Record<Step, string> = { stars: "별 고르기", shape: "모양 고르기", name: "이름 짓기" };
 
 /** For W-43: the nebula being reshaped, opened with its current shape, stars and name. */
-export type Editing = { id: string; name: string; silhouette: string | null; starIds: string[]; guestIds: string[]; polished: boolean; shared: boolean };
+export type Editing = { id: string; name: string; silhouette: string | null; starIds: string[]; guestIds: string[]; shared: boolean };
 
 // New (W-27 → 84 → 54): stars, shape, name. Reshape (W-43): shape, stars, name, saved with PATCH.
 export function DrawNebula({ stars, guests, editing }: { stars: StarSummary[]; guests: Guest[]; editing?: Editing }) {
@@ -25,8 +25,7 @@ export function DrawNebula({ stars, guests, editing }: { stars: StarSummary[]; g
   const [silhouette, setSilhouette] = useState<string | null>(editing ? editing.silhouette : "tree");
   const [guestIds, setGuestIds] = useState<string[]>(editing?.guestIds ?? []);
   const [name, setName] = useState(editing?.name ?? "");
-  const confirm = useRef<HTMLDialogElement>(null);
-  const starsChanged = !!editing && (picked.length !== editing.starIds.length || picked.some((id, i) => id !== editing.starIds[i]));
+
   const [error, setError] = useState<string | null>(null);
   const [saving, start] = useTransition();
 
@@ -38,12 +37,10 @@ export function DrawNebula({ stars, guests, editing }: { stars: StarSummary[]; g
     dots: [...pickedStars.map((s): Dot => ({ mood: s.mood })), ...guestIds.map((): Dot => ({ guest: true }))],
   };
   const input = () => ({ name: name.trim(), silhouette, star_ids: picked, edges: figure.edges, guest_share_ids: guestIds });
-  const commit = () => start(async () => {
+  const save = () => start(async () => {
     const r = editing ? await editNebula(editing.id, input()) : await createNebula(input());
     if (r?.error) setError(r.error);
   });
-  // Mobile and Figma W-43: changing the stars of a nebula with a polished story asks first.
-  const save = () => (editing?.polished && starsChanged ? confirm.current?.showModal() : commit());
   const next = () => setAt((a) => a + 1);
   const prev = () => setAt((a) => a - 1);
 
@@ -117,7 +114,6 @@ export function DrawNebula({ stars, guests, editing }: { stars: StarSummary[]; g
                 <ul className={styles.notes}>
                   <li>띄운 별을 {MIN_STARS}개 이상 골라야 해요. 이름은 {MAX_NAME}자까지예요.</li>
                   {editing.shared && <li>우주 광장에 띄운 성운이라, 광장에서도 새 모양으로 바뀌어요.</li>}
-                  <li>별을 바꾸면 다듬은 성운 이야기는 지워지고, 문장만 엮은 이야기로 돌아가요.</li>
                 </ul>
               )}
               <div className={styles.nav}>
@@ -142,14 +138,6 @@ export function DrawNebula({ stars, guests, editing }: { stars: StarSummary[]; g
           )}
         </aside>
       </div>
-      <dialog ref={confirm} className={`card ${styles.dialog}`} aria-labelledby="drop-title">
-        <h2 id="drop-title" className="h2">다듬은 이야기가 지워져요</h2>
-        <p className="body-m muted">별을 바꾸면 다듬은 성운 이야기는 지워지고, 문장만 엮은 이야기로 돌아가요. 다시 다듬으려면 코인이 들 수 있어요.</p>
-        <div className={styles.dialogActions}>
-          <button type="button" className="btn btn-ghost" onClick={() => confirm.current?.close()}>그대로 두기</button>
-          <button type="button" className="btn btn-primary" onClick={() => { confirm.current?.close(); commit(); }}>바꾸기</button>
-        </div>
-      </dialog>
     </div>
   );
 }

@@ -18,17 +18,6 @@ export async function createNebula(input: NebulaInput): Promise<{ error: string 
   redirect(`/nebula/${id}?new=1`);
 }
 
-/** 83 서사 다듬기: 10 coins, the first one free. Adds lines only between the sentences. */
-export async function polishStory(id: string): Promise<{ error?: string; code?: string } | void> {
-  try {
-    await api(`/v1/nebulae/${id}/story/polish`, { method: "POST" });
-  } catch (e) {
-    if (e instanceof ApiError) return { error: e.message, code: e.code };
-    throw e;
-  }
-  refresh();
-}
-
 /** 71 하늘에 띄우기: shape, colours, depth and name go out; never the writing or dates. */
 export async function shareNebula(id: string, form: FormData) {
   await api(`/v1/nebulae/${id}/share`, { method: "PUT", body: JSON.stringify({ receive_lines: form.get("receive_lines") === "on" }) });
@@ -40,7 +29,7 @@ export async function unshareNebula(id: string) {
   refresh();
 }
 
-/** 성운 다시 그리기 (W-43). New stars drop the polished story; a shared nebula changes in the plaza too. */
+/** 성운 다시 그리기 (W-43). A shared nebula changes in the plaza too. */
 export async function editNebula(id: string, input: NebulaInput): Promise<{ error: string } | void> {
   let r: { plaza_updated: boolean };
   try {

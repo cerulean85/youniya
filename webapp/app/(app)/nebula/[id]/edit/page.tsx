@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ChevronLeft } from "@/components/icons";
 import { api, ApiError } from "@/lib/api";
-import type { Nebula, StarSummary, Story } from "@/lib/types";
+import type { Nebula, StarSummary } from "@/lib/types";
 import { DrawNebula } from "../../new/DrawNebula";
 
 export const metadata: Metadata = { title: "성운 모양 바꾸기" };
@@ -22,9 +22,9 @@ export default function EditNebulaPage({ params }: PageProps<"/nebula/[id]/edit"
 
 async function Load({ params }: Pick<PageProps<"/nebula/[id]/edit">, "params">) {
   const { id } = await params;
-  let n: Nebula, story: Story;
+  let n: Nebula;
   try {
-    [n, story] = await Promise.all([api<Nebula>(`/v1/nebulae/${id}`), api<Story>(`/v1/nebulae/${id}/story`)]);
+    n = await api<Nebula>(`/v1/nebulae/${id}`);
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) notFound();
     throw e;
@@ -42,7 +42,7 @@ async function Load({ params }: Pick<PageProps<"/nebula/[id]/edit">, "params">) 
         <ChevronLeft size={18} />{n.name}
       </Link>
       <DrawNebula stars={stars.items} guests={guests} editing={{
-        id, name: n.name, silhouette: n.silhouette, shared: n.shared, polished: story.polished,
+        id, name: n.name, silhouette: n.silhouette, shared: n.shared,
         starIds: [...n.stars].sort((a, b) => a.index - b.index).map((s) => s.id),
         guestIds: n.guests.map((g) => g.share_id!).filter(Boolean),
       }} />

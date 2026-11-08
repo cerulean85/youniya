@@ -85,7 +85,6 @@ export type Growth = {
 export type Story = {
   name: string; since: string; star_count: number;
   entries: { star_id: string; date: string; title: string; sentence: string }[];
-  bridges: string[] | null; polished: boolean; polish_cost: number; polish_free: boolean;
 };
 export type PlazaNebula = {
   id: string; name: string; quote: string | null; moods: Mood[]; depth_level: number;

@@ -7,13 +7,13 @@ import { NebulaFigure } from "@/components/NebulaFigure";
 import { api, ApiError } from "@/lib/api";
 import { dateTime, moodOf } from "@/lib/format";
 import { SILHOUETTES, type Dot } from "@/lib/nebula";
-import type { Me, Nebula, Story } from "@/lib/types";
-import { PolishButton, ShareNebula } from "./NebulaActions";
+import type { Nebula, Story } from "@/lib/types";
+import { ShareNebula } from "./NebulaActions";
 import styles from "./nebula-detail.module.css";
 
 export const metadata: Metadata = { title: "성운" };
 
-// Figma 70 (나의 성운 상세) and 83 (성운 이야기), on one desktop page.
+// Figma 70 (나의 성운 상세) and W-40 (성운 이야기: the sentences only, 문장만 엮어 두기), on one desktop page.
 export default function NebulaDetailPage({ params, searchParams }: PageProps<"/nebula/[id]">) {
   return (
     <>
@@ -27,9 +27,9 @@ export default function NebulaDetailPage({ params, searchParams }: PageProps<"/n
 
 async function Detail({ params, searchParams }: Pick<PageProps<"/nebula/[id]">, "params" | "searchParams">) {
   const [{ id }, sp] = await Promise.all([params, searchParams]);
-  let n: Nebula, story: Story, me: Me;
+  let n: Nebula, story: Story;
   try {
-    [n, story, me] = await Promise.all([api<Nebula>(`/v1/nebulae/${id}`), api<Story>(`/v1/nebulae/${id}/story`), api<Me>("/v1/me")]);
+    [n, story] = await Promise.all([api<Nebula>(`/v1/nebulae/${id}`), api<Story>(`/v1/nebulae/${id}/story`)]);
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) notFound();
     throw e;
@@ -50,15 +50,13 @@ async function Detail({ params, searchParams }: Pick<PageProps<"/nebula/[id]">, 
         <section className={`card ${styles.story}`} aria-labelledby="story">
           <div className={styles.storyHead}>
             <h2 id="story" className="h3">성운 이야기</h2>
-            {!story.polished && <PolishButton id={n.id} free={story.polish_free} cost={story.polish_cost} coins={me.coins} />}
           </div>
           <p className="caption faint">별마다 마음이 가장 또렷한 한 문장을 시간 순서로 엮었어요. 문장은 바꾸지 않아요.</p>
           <ol className={styles.entries}>
-            {story.entries.map((e, i) => (
+            {story.entries.map((e) => (
               <li key={e.star_id}>
                 <span className="caption faint">{dateTime(e.date)} · {e.title || "제목 없는 별"}</span>
                 <p className="journal">{e.sentence}</p>
-                {story.bridges?.[i] && i < story.entries.length - 1 && <p className={styles.bridge}>✦ {story.bridges[i]}</p>}
               </li>
             ))}
           </ol>
