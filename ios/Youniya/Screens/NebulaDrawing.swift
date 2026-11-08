@@ -86,6 +86,10 @@ enum NebulaSilhouette: String, CaseIterable, Identifiable {
 
     /// Places on the outline (Figma 등대: 12 stars + 6 empty).
     static let slotCount = 18
+    /// The server's MIN_NEBULA_STARS: a nebula holds at least 3 of my stars.
+    static let minStars = 3
+    /// The server's name limit (54 이 성운의 이름은요?).
+    static let maxNameLength = 20
 
     /// The outline scaled into `rect`, keeping its proportions.
     func fitted(in rect: CGRect) -> [CGPoint] {
@@ -256,8 +260,9 @@ struct NebulaDrawingFlow: View {
                 .frame(maxHeight: .infinity)
             actions {
                 Button("시작하기") { go(.shape) }.buttonStyle(.primary)
-                    .disabled(floated.isEmpty)
-                Button(floated.isEmpty ? "별을 먼저 띄워 주세요" : "나중에", action: onClose).buttonStyle(.ghost)
+                    .disabled(floated.count < NebulaSilhouette.minStars)
+                Button(floated.count < NebulaSilhouette.minStars ? "별을 \(NebulaSilhouette.minStars)개 이상 띄워 주세요" : "나중에",
+                       action: onClose).buttonStyle(.ghost)
             }
         }
         .padding(.horizontal, Space.xl).padding(.top, Space.xl).padding(.bottom, Space.xl)
@@ -469,7 +474,8 @@ struct NebulaDrawingFlow: View {
 
     private var pickView: some View {
         VStack(alignment: .leading, spacing: Space.lg) {
-            header("별을 골라 주세요", picked.isEmpty ? "몇 개를 골라도 괜찮아요" : "\(picked.count)개 골랐어요 · 몇 개를 골라도 괜찮아요")
+            header("별을 골라 주세요", picked.isEmpty ? "\(NebulaSilhouette.minStars)개 이상 골라 주세요"
+                   : "\(picked.count)개 골랐어요 · \(NebulaSilhouette.minStars)개 이상이면 돼요")
             StarStage(stars: floated, picked: picked, edges: [], interactive: true) { star in
                 withAnimation(.snappy) {
                     if let i = picked.firstIndex(of: star.id) { picked.remove(at: i) } else { picked.append(star.id) }
@@ -482,11 +488,11 @@ struct NebulaDrawingFlow: View {
                     // Reshape onto a silhouette: guests for the empty places, then the name.
                     Button("다음") { if emptySlots > 0 { go(.guests) } else { go(.name) } }
                         .buttonStyle(.primary)
-                        .disabled(picked.isEmpty)
+                        .disabled(picked.count < NebulaSilhouette.minStars)
                 } else {
                     Button("이어 보기") { edges = []; go(.connect) }
                         .buttonStyle(.primary)
-                        .disabled(picked.count < 2)
+                        .disabled(picked.count < NebulaSilhouette.minStars)
                 }
             }
         }
@@ -840,6 +846,8 @@ private struct NameField: View {
             .foregroundStyle(Color.textPrimary)
             .focused($focused)
             .submitLabel(.done)
+            // The server takes up to 20 characters.
+            .onChange(of: text) { if text.count > NebulaSilhouette.maxNameLength { text = String(text.prefix(NebulaSilhouette.maxNameLength)) } }
             .padding(.horizontal, Space.lg)
             .frame(height: 48)
             .cosmos("name-field", in: RoundedRectangle(cornerRadius: Radius.md), intensity: 0.6)
