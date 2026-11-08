@@ -87,7 +87,7 @@ async function Mine() {
             </div>
           )}
           <div className={styles.actions}>
-            <Link href="/plaza?tab=nebula" className="btn btn-secondary">모두의 은하</Link>
+            <Link href="/plaza" className="btn btn-secondary">우주 광장</Link>
             {latest && <Link href={`/nebula/${latest.id}`} className="btn btn-primary">자세히 보기</Link>}
           </div>
           {(list.mine.length > 0 || list.beside.length > 0) && (

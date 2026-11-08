@@ -31,10 +31,17 @@ async function Plaza({ searchParams }: Pick<PageProps<"/plaza">, "searchParams">
   const tab = sp.tab === "nebula" ? "nebula" : "star";
   const sort = sp.sort === "similar" ? "similar" : "new";
   const filter = sp.filter === "new" || sp.filter === "beside" ? sp.filter : "similar";
+  const tonight = await api<{ count: number; mine: number }>("/v1/plaza/tonight");
   const notice = sp.reported ? "신고를 받았어요. 그 별은 이제 보이지 않아요." : sp.blocked ? "차단했어요. 서로의 별이 더 이상 보이지 않아요." : null;
   return (
     <>
       {notice && <p className={styles.notice} role="status">{notice}</p>}
+      {/* 모두의 은하, folded into the plaza (2026-11-08): every star floated today, Korean time. */}
+      {tonight.count > 0 && (
+        <p className={styles.tonight}>
+          오늘 밤, <b>{tonight.count.toLocaleString("ko-KR")}개</b>의 마음이 모였어요{tonight.mine > 0 && <> · 내 별 <b>{tonight.mine}개</b>도 함께 빛나요</>}
+        </p>
+      )}
       <div className={styles.controls}>
         <nav className={styles.segment} aria-label="광장 종류">
           <Link href="/plaza" aria-current={tab === "star" ? "page" : undefined}>별</Link>

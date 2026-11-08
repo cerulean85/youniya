@@ -20,3 +20,5 @@
 .foot[data-on="true"] { color: var(--pink); }
 .empty { padding: 48px; display: flex; flex-direction: column; gap: 8px; }
 .notice { align-self: flex-start; padding: 10px 16px; border-radius: 12px; background: var(--tint-calm); border: 1px solid rgba(52, 211, 153, 0.4); font: 400 13px/20px var(--sans); }
+.tonight { margin-top: -16px; font: 400 14px/22px var(--sans); color: var(--text-2); }
+.tonight b { font-weight: 500; color: var(--gold); }
