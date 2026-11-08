@@ -12,6 +12,17 @@ _hasher = PasswordHasher()
 # Checked when the login does not exist, so a wrong login takes as long as a wrong password.
 _DUMMY = _hasher.hash(secrets.token_urlsafe(16))
 
+# Passwords a reviewer types by hand on a phone: two words and four digits, e.g. "moon-river-4827".
+# No look-alike letters, no symbols but "-". Sign-in is rate limited, so this is plenty.
+_WORDS = ("moon", "star", "river", "cloud", "ocean", "comet", "light", "night", "dream", "maple",
+          "snow", "wave", "bloom", "dawn", "sky", "orbit", "glow", "tide", "breeze", "forest",
+          "harbor", "meadow", "pebble", "lantern", "violet", "silver", "amber", "coral", "willow", "spark")
+
+
+def new_password() -> str:
+    a, b = secrets.SystemRandom().sample(_WORDS, 2)
+    return f"{a}-{b}-{secrets.randbelow(10_000):04d}"
+
 
 def check(db: Session, login: str, password: str) -> User | None:
     row = db.get(InviteAccount, login.strip().lower())
@@ -32,7 +43,7 @@ def create(db: Session, login: str, password: str | None = None) -> tuple[User, 
     login = login.strip().lower()
     if db.get(InviteAccount, login):
         raise ValueError(f"{login} already exists")
-    password = password or secrets.token_urlsafe(12)
+    password = password or new_password()
     user = User(provider="invite", provider_sub=login, settings={})
     db.add(user)
     db.flush()
@@ -45,7 +56,7 @@ def reset(db: Session, login: str) -> str:
     row = db.get(InviteAccount, login.strip().lower())
     if row is None:
         raise ValueError(f"{login} does not exist")
-    password = secrets.token_urlsafe(12)
+    password = new_password()
     row.password_hash = _hasher.hash(password)
     db.commit()
     return password
