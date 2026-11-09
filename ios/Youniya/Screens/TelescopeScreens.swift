@@ -167,6 +167,8 @@ struct ActionSheetContent: View {
     var ghost: (String, () -> Void)?
     /// 91 uses the Danger button for an irreversible primary action.
     var destructive = false
+    /// 05-3 / 05-4: the second action is a plain text button.
+    var secondaryIsGhost = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.lg) {
@@ -194,8 +196,11 @@ struct ActionSheetContent: View {
                     Button(primary.0, action: primary.1)
                         .buttonStyle(.primary)
                 }
-                Button(secondary.0, action: secondary.1)
-                    .buttonStyle(.secondary)
+                if secondaryIsGhost {
+                    Button(secondary.0, action: secondary.1).buttonStyle(.ghost)
+                } else {
+                    Button(secondary.0, action: secondary.1).buttonStyle(.secondary)
+                }
                 if let ghost {
                     Button(ghost.0, action: ghost.1)
                         .buttonStyle(.ghost)

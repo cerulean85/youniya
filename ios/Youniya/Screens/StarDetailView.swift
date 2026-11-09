@@ -15,6 +15,8 @@ struct StarDetailView: View {
     var onEdit: () -> Void = {}
     /// A kept star's "별 띄우기" → 06/07.
     var onFloat: () -> Void = {}
+    /// 05-2 고쳐 쓰기 (a star with starlight is locked, 2026-11-09).
+    var onRevise: () -> Void = {}
     /// 12 「마음 망원경 켜기」 (24/25) or 12-2 「망원경 리포트 보기 ›」 (10).
     var onTelescope: () -> Void = {}
 
@@ -23,6 +25,8 @@ struct StarDetailView: View {
     @State private var shareSheetHeight: CGFloat = 336
     /// 19-1: opens after 19 "익명으로 나누기" closes.
     @State private var pickQuote = DebugScreen.is("19-1")
+    /// 12-5: 별빛 풀이 folded at first (open for the 12-5 review).
+    @State private var showBreakdown = DebugScreen.is("12-5")
     @State private var wantsPick = false
     @State private var pickerHeight: CGFloat = 480
     @State private var screenHeight: CGFloat = 844
@@ -62,7 +66,7 @@ struct StarDetailView: View {
     private func content(_ star: StarItem) -> some View {
         VStack(alignment: .leading, spacing: Space.lg) {
             VStack(alignment: .leading, spacing: Space.xs) {
-                Text(star.longDateText)
+                Text(star.isFloated ? star.longDateText : star.longDateText + " · 별빛 없는 별")
                     .textStyle(.caption)
                     .foregroundStyle(Color.textTertiary)
                 Text(star.title)
@@ -88,11 +92,15 @@ struct StarDetailView: View {
             }
 
             if let analysis = star.analysis {
+                // 12 / 12-5: the 별빛 풀이 starts folded here; the card or the
+                // toggle opens it.
                 TodayStarCard(analysis: analysis)
-            } else if !star.isFloated {
-                Text("조용히 간직한 별이에요. 분석 없이 그대로 남겨 두었어요.")
-                    .textStyle(.bodyS)
-                    .foregroundStyle(Color.textTertiary)
+                    .onTapGesture { withAnimation(.easeInOut(duration: 0.3)) { showBreakdown.toggle() } }
+                if showBreakdown {
+                    StarlightBreakdown(analysis: analysis)
+                        .transition(.opacity)
+                }
+                BreakdownToggle(isOpen: $showBreakdown)
             }
 
             // Figma 12 / 12-2: straight to the telescope from a floated star.
@@ -103,16 +111,16 @@ struct StarDetailView: View {
             }
 
             if !star.isFloated {
-                // A kept star can be floated later (once); 50 characters or more.
+                // 12-1: a star without starlight can get it later (once), from
+                // 50 characters, at the same price as a new one.
                 let long = star.body.count >= AppModel.minFloatLength
-                Button(model.floatButtonTitle, action: onFloat)
+                Button("별빛 받기", action: onFloat)
                     .buttonStyle(.primary)
                     .disabled(!long)
-                if !long {
-                    Text("\(AppModel.minFloatLength)자 이상이면 띄울 수 있어요")
-                        .textStyle(.caption).foregroundStyle(Color.textTertiary)
-                        .frame(maxWidth: .infinity)
-                }
+                Text(long ? (model.isFloatFree ? "오늘 무료 1번 · 이후 " : "") + "한 번에 \(AppModel.floatCost)코인 · \(AppModel.minFloatLength)자부터 받을 수 있어요"
+                          : "\(AppModel.minFloatLength)자부터 별빛을 받을 수 있어요 · 지금 \(star.body.count)자")
+                    .textStyle(.caption).foregroundStyle(Color.textTertiary)
+                    .frame(maxWidth: .infinity)
             }
             if star.isFloated {
                 Button("이 주제로 다시 쓰기") { onRewrite() }
@@ -140,7 +148,7 @@ struct StarDetailView: View {
                 .buttonStyle(.ghost)
 
                 if star.isFloated {
-                    Button("글 수정", action: onEdit)
+                    Button("고쳐 쓰기", action: onRevise)
                         .buttonStyle(.ghost)
                 }
 

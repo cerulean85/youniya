@@ -196,6 +196,8 @@ struct TelescopeObserveView: View {
 /// (1.2s) and settles (1.7s). Then "별 보기".
 struct StarBirthView: View {
     @Environment(\.motionReduced) private var reduceMotion
+    /// 별빛 없이 띄운 별: ends as a small, faint star in its mood's color.
+    var unlitColor: Color? = nil
     var onShow: () -> Void
 
     @State private var phase = DebugScreen.is("62") ? 1 : 0
@@ -219,10 +221,12 @@ struct StarBirthView: View {
                     .fill((phase == 2 ? Color.brandPrimary : Color.starBright).opacity(0.16))
                     .frame(width: [0, 90, 140, 150][phase], height: [0, 90, 140, 150][phase])
                     .shadow(color: (phase == 2 ? Color.brandPrimary : Color.starBright).opacity(phase == 3 ? 0 : 0.45), radius: 14)
+                let core = unlitColor ?? Color.starBright
+                let sizes: [CGFloat] = unlitColor == nil ? [6, 16, 40, 48] : [6, 12, 20, 22]
                 Circle()
-                    .fill(Color.starBright.opacity(phase == 0 ? 0.9 : 1))
-                    .frame(width: [6, 16, 40, 48][phase], height: [6, 16, 40, 48][phase])
-                    .shadow(color: Color.starBright.opacity(phase == 0 ? 0 : 0.5), radius: 14)
+                    .fill(core.opacity(phase == 0 ? 0.9 : (unlitColor == nil ? 1 : 0.7)))
+                    .frame(width: sizes[phase], height: sizes[phase])
+                    .shadow(color: core.opacity(phase == 0 ? 0 : (unlitColor == nil ? 0.5 : 0.25)), radius: 14)
                 if done {
                     Circle().fill(Color.starClear).frame(width: 6, height: 6)
                         .shadow(color: Color.starClear.opacity(0.4), radius: 10)

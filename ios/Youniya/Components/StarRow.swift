@@ -26,7 +26,7 @@ struct StarRow: View {
             case .floated(let starlight):
                 StarlightBadge(value: starlight)
             case .kept:
-                Text("간직한 별")
+                Text("별빛 없는 별")
                     .textStyle(.labelS)
                     .foregroundStyle(Color.textSecondary)
             }

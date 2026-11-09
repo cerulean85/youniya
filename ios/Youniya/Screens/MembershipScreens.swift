@@ -146,7 +146,7 @@ struct MembershipSheet: View {
 
             // App Review 3.1.2: price, renewal, how to cancel, and the links.
             VStack(alignment: .leading, spacing: Space.md) {
-                Text("7일 무료 체험이 끝나면 선택한 요금으로 자동 결제돼요. 끝나기 24시간 전까지 언제든 해지할 수 있어요. 기록 쓰기와 조용히 간직하기는 멤버십 없이도 계속 무료예요.")
+                Text("7일 무료 체험이 끝나면 선택한 요금으로 자동 결제돼요. 끝나기 24시간 전까지 언제든 해지할 수 있어요. 기록 쓰기와 별빛 없이 띄우기는 멤버십 없이도 계속 무료예요.")
                     .textStyle(.caption).foregroundStyle(Color.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: Space.xs) {

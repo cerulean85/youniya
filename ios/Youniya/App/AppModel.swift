@@ -43,8 +43,21 @@ struct StarAnalysis: Hashable, Codable {
     var observation: String
     var telescopeTeaser: String
     var tones: [Mood]
+    /// 17.3 별빛 풀이: one or two sentences per score, and 2–4 sentences
+    /// overall. Nil until the server sends them (and for older stars).
+    var depthReason: String? = nil
+    var clarityReason: String? = nil
+    var weightReason: String? = nil
+    var interpretation: String? = nil
+    /// 17.6: how it was read, e.g. "별빛 프리즘 v1 · 2026년 11월 방식으로 읽었어요".
+    var prismVersion: String? = nil
 
     var isDeep: Bool { depth >= 0.7 }
+    /// 17.3: the three scores that add up to the starlight (깊이 0–400,
+    /// 선명함 0–300, 무게 0–300).
+    var depthScore: Int { Int((depth * 400).rounded()) }
+    var clarityScore: Int { Int((clarity * 300).rounded()) }
+    var weightScore: Int { Int((weight * 300).rounded()) }
 
     /// 06 while the server is still reading: empty meters.
     static let reading = StarAnalysis(starlight: 0, depth: 0, clarity: 0, weight: 0,
@@ -77,9 +90,22 @@ struct StarAnalysis: Hashable, Codable {
             weight: 0.2 + 0.6 * unit(5),
             observation: observations[draft.mood] ?? "",
             telescopeTeaser: "기다림 속에 작은 안도가 섞여 있어요.",
-            tones: second == draft.mood ? [draft.mood] : [draft.mood, second]
+            tones: second == draft.mood ? [draft.mood] : [draft.mood, second],
+            depthReason: sampleReasons.depth,
+            clarityReason: sampleReasons.clarity,
+            weightReason: sampleReasons.weight,
+            interpretation: sampleReasons.interpretation,
+            prismVersion: "별빛 프리즘 v1"
         )
     }
+
+    /// Figma 07-1 / 12-5 sample 별빛 풀이 (mock).
+    static let sampleReasons = (
+        depth: "사건을 늘어놓는 데서 멈추지 않고 '쉬고 싶었는지도 몰라요'처럼 그때 느낀 마음까지 내려갔어요.",
+        clarity: "'느리게', '싫지만은 않았어요'처럼 마음을 꽤 구체적으로 불렀지만, 서운함과 안도가 함께 섞여 있어 조금 흐릿한 곳도 있어요.",
+        weight: "기다림을 남 탓으로 돌리지 않고 '나는 쉬고 싶었다'고 내 마음으로 받아 안았어요.",
+        interpretation: "오늘의 글은 바쁜 하루 속에서 멈춰 선 자신을 알아차린 기록이에요. 기다림이 길었다는 사실보다, 그 느림 속에서 '쉬고 싶었다'는 마음을 스스로 찾아낸 점이 별빛을 밝혔어요. 서운함과 안도가 함께 있는 마음은 아직 이름이 섞여 있어서, 망원경으로 보면 그 결이 더 또렷해질 수 있어요."
+    )
 }
 
 /// Mind telescope report (10): a closer look at one floated star.
@@ -167,6 +193,8 @@ struct StarItem: Identifiable, Hashable, Codable {
     var dateText: String
     var state: State
     var mood: Mood = .calm
+    /// 17.5: the other moods picked when it was written (shown as chips).
+    var extraMoods: [Mood]? = nil
     var body: String = ""
     var analysis: StarAnalysis?
     var report: TelescopeReport?
@@ -218,10 +246,16 @@ struct StarItem: Identifiable, Hashable, Codable {
     static let samples: [StarItem] = [
         StarItem(title: "느리게 흘러간 하루", dateText: "11월 3일 · 21:30", state: .floated(starlight: 742),
                  body: "오늘은 마음이 조금 느리게 흘렀어요. 해야 할 일은 많았는데 자꾸만 창밖을 보게 됐어요.\n\n민지 언니를 기다리는 일이 이렇게 오래 걸릴 줄 몰랐어요. 그래도 그 느림이 싫지만은 않았어요. 어쩌면 나는 쉬고 싶었는지도 몰라요.",
-                 analysis: StarAnalysis(starlight: 742, depth: 0.82, clarity: 0.55, weight: 0.55,
+                 // Figma 07-1: 318 + 176 + 248 = 742.
+                 analysis: StarAnalysis(starlight: 742, depth: 318.0 / 400, clarity: 176.0 / 300, weight: 248.0 / 300,
                                         observation: "그런 마음이 머물렀군요.\n오늘의 별은 조용히 숨을 고르고 있어요.",
                                         telescopeTeaser: "기다림 속에 작은 안도가 섞여 있어요.",
-                                        tones: [.calm, .sorrow])),
+                                        tones: [.calm, .sorrow],
+                                        depthReason: StarAnalysis.sampleReasons.depth,
+                                        clarityReason: StarAnalysis.sampleReasons.clarity,
+                                        weightReason: StarAnalysis.sampleReasons.weight,
+                                        interpretation: StarAnalysis.sampleReasons.interpretation,
+                                        prismVersion: "별빛 프리즘 v1")),
         StarItem(title: "말하지 못한 이야기", dateText: "11월 2일 · 23:10", state: .kept,
                  body: Self.keptSampleBody),
         StarItem(title: "비 오는 날의 안도", dateText: "11월 1일 · 22:04", state: .floated(starlight: 742)),
@@ -231,9 +265,30 @@ struct StarItem: Identifiable, Hashable, Codable {
 
 /// The star being written in `05 Star Making`. Kept across close/reopen.
 struct StarDraft: Codable, Equatable {
+    /// The first mood picked: the star's color (17.5).
     var mood: Mood = .calm
+    /// 17.5: more moods picked after the first, in order. Optional so older
+    /// saved drafts still load.
+    var extraMoods: [Mood]? = nil
     var title: String = ""
     var body: String = ""
+
+    /// Every mood picked, the color first.
+    var moods: [Mood] { [mood] + (extraMoods ?? []) }
+
+    /// 05 mood chips: tap to add or remove; at least one stays, and removing
+    /// the first moves the color to the next one.
+    mutating func toggle(_ m: Mood) {
+        var all = moods
+        if let i = all.firstIndex(of: m) {
+            guard all.count > 1 else { return }
+            all.remove(at: i)
+        } else {
+            all.append(m)
+        }
+        mood = all[0]
+        extraMoods = all.count > 1 ? Array(all.dropFirst()) : nil
+    }
 
     var isEmpty: Bool {
         title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -476,8 +531,6 @@ final class AppModel {
     var accountID: String?
     /// Live 85 guests and 69 tonight's count.
     var guestCandidatesLive: [GuestStar] = []
-    /// 75: plaza stars let in as guests from their page (kept as 85 candidates).
-    var adoptedGuests: [GuestStar] = []
     var tonightCount: Int?
     /// Of tonight's stars, how many are mine (`/v1/plaza/tonight` mine).
     var tonightMine: Int?
@@ -757,8 +810,13 @@ final class AppModel {
     /// Live: today's free float is left (`free_star_today`, Korean day on the server).
     var serverFreeFloat: Bool?
     var isFloatFree: Bool { memberHasStar || ((useLiveAPI ? serverFreeFloat : nil) ?? (floatedToday == 0)) }
-    /// 05 "별 띄우기" / "별 띄우기 · 5코인"
-    var floatButtonTitle: String { isFloatFree ? "별 띄우기" : "별 띄우기 · \(Self.floatCost)코인" }
+    /// 05 「별빛 받고 띄우기」 (the price is on 05-3 / 05-4).
+    var floatButtonTitle: String { "별빛 받고 띄우기" }
+    /// 17.1: 별빛 없이 띄우기, free and up to ten a day.
+    static let unlitDailyLimit = 10
+    var unlitToday: Int {
+        stars.filter { !$0.isFloated && ($0.createdAt.map(Calendar.current.isDateInToday) ?? false) }.count
+    }
     /// 29 from 05: floating would need coins the user doesn't have.
     var floatNeedsCharge: Bool { !isFloatFree && coins < Self.floatCost }
 
@@ -935,7 +993,7 @@ final class AppModel {
     func exportText() -> String {
         var out = "YOUNIYA 기록 내보내기\n\n"
         for s in stars {
-            out += "■ \(s.title)\n\(s.dateText) · \(s.isFloated ? "띄운 별" : "간직한 별")\n"
+            out += "■ \(s.title)\n\(s.dateText) · \(s.isFloated ? "별빛 받은 별" : "별빛 없는 별")\n"
             if !s.body.isEmpty { out += "\n\(s.body)\n" }
             out += "\n"
         }
@@ -983,6 +1041,19 @@ final class AppModel {
     /// The question shown on 14 Rewrite: the report's question if there is one.
     func rewriteQuestion(for star: StarItem) -> String {
         star.report?.question ?? TelescopeReport.mock(for: star).question
+    }
+
+    /// 05-2 고쳐 쓰기: the working copy per original star (memory only; the
+    /// original stays as it is until a new star is floated).
+    var reviseDrafts: [StarItem.ID: StarDraft] = [:]
+
+    /// Mock 05-5: the rewritten text becomes a new star joined to the original.
+    func publishRevision(of original: StarItem, draft d: StarDraft, floated: Bool) -> StarItem {
+        var star = makeStar(d, floated: floated)
+        star.rewriteOf = original.id
+        stars.insert(star, at: 0)
+        reviseDrafts[original.id] = nil
+        return star
     }
 
     /// Saves a rewrite (14) as a new star with the same title and mood.
@@ -1068,6 +1139,7 @@ final class AppModel {
             dateText: Self.dateText(.now),
             state: floated ? .floated(starlight: analysis?.starlight) : .kept,
             mood: d.mood,
+            extraMoods: d.extraMoods,
             body: d.body,
             analysis: analysis,
             createdAt: .now

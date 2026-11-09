@@ -43,8 +43,8 @@ struct RecordsView: View {
                     Text("기록").textStyle(.h1).foregroundStyle(Color.textPrimary)
                         .accessibilityAddTraits(.isHeader)
                     Text(filter == .kept
-                         ? "분석 없이 조용히 간직한 별 \(model.stars.filter { !$0.isFloated }.count)개"
-                         : "지금까지 띄우고 간직한 별 \(model.stars.count)개")
+                         ? "별빛 없이 띄운 별 \(model.stars.filter { !$0.isFloated }.count)개"
+                         : "지금까지 띄운 별 \(model.stars.count)개")
                         .textStyle(.bodyM).foregroundStyle(Color.textSecondary)
                     LinkChip(title: "밝기 흐름 보기 ›", action: onBrightness)
                 }
@@ -132,7 +132,7 @@ struct RecordsView: View {
             HStack(spacing: Space.sm) {
                 plainChip("전체", .all)
                 plainChip("띄운 별", .floated)
-                plainChip("간직한 별", .kept)
+                plainChip("별빛 없는 별", .kept)
                 ForEach(Mood.allCases) { m in
                     DotChip(title: m.label, isSelected: filter == .mood(m), dot: m.color) {
                         withAnimation(.snappy) { filter = filter == .mood(m) ? .all : .mood(m) }
@@ -178,8 +178,8 @@ struct RecordsView: View {
         } else if stars.isEmpty {
             if filter == .kept {
                 // 119
-                empty(title: "아직 간직한 별이 없어요", message: "분석 없이 조용히 두고 싶은 글은\n여기에 모여요.",
-                      action: ("간직할 글 쓰기", onCompose), kept: true)
+                empty(title: "아직 별빛 없는 별이 없어요", message: "분석 없이 조용히 두고 싶은 글은\n여기에 모여요.",
+                      action: ("별 만들기", onCompose), kept: true)
             } else {
                 empty(title: "아직 별이 없어요", message: "오늘의 마음을 적으면\n이곳에 하나씩 모여요.", action: ("오늘의 별 만들기", onCompose))
             }
@@ -413,17 +413,17 @@ struct KeptView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            TopAppBar(title: "조용히 간직한 마음", onBack: onBack)
+            TopAppBar(title: "별빛 없는 별", onBack: onBack)
 
             VStack(alignment: .leading, spacing: Space.lg) {
-                Text("분석 없이 간직한 글이에요. 언제든 별로 띄울 수 있어요.")
+                Text("별빛 없이 띄운 별이에요. 언제든 별빛을 받을 수 있어요.")
                     .textStyle(.bodyM)
                     .foregroundStyle(Color.textSecondary)
 
                 KeptHero()
 
                 if kept.isEmpty {
-                    Text("아직 조용히 간직한 마음이 없어요.")
+                    Text("아직 별빛 없는 별이 없어요.")
                         .textStyle(.bodyM)
                         .foregroundStyle(Color.textTertiary)
                         .frame(maxWidth: .infinity)

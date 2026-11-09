@@ -142,7 +142,7 @@ struct FloatNebulaSheet: View {
 /// 75 다른 이의 별: one anonymous star, its 대표 문장 and (75-3) its whole text,
 /// resonance. Opened from a star inside a plaza nebula (73), or from a 별 기록
 /// row (09-3); from the plaza there's no owner nebula to open, so 「공명 남기기」
-/// leads and 「내 성운에 손님별로 들이기」 sits under it.
+/// is the only action.
 struct GalaxyStarView: View {
     @Environment(AppModel.self) private var model
     /// From 73: the nebula and the star's title. From 09-3: the plaza star.
@@ -152,11 +152,8 @@ struct GalaxyStarView: View {
     var onBack: () -> Void
     /// 75-2: back to the previous page with the "차단했어요" toast.
     var onBlocked: () -> Void = {}
-    /// 「성운을 먼저 그려 주세요」 → 51.
-    var onDraw: () -> Void = {}
 
     @State private var showMenu = DebugScreen.is("75-1")
-    @State private var toast: ToastCardMessage?
     /// Live 75-3: the whole text, from the plaza star's detail.
     @State private var liveText: (title: String, body: String)?
 
@@ -173,13 +170,6 @@ struct GalaxyStarView: View {
         guard let p = plazaStar, p.fullText else { return nil }
         if let liveText { return (liveText.title.isEmpty ? p.name : liveText.title, liveText.body) }
         return p.fullBody.map { (p.fullTitle ?? p.name, $0) }
-    }
-    private var guest: GuestStar? {
-        guard let p = plazaStar else { return nil }
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "ko_KR")
-        f.dateFormat = "M월 d일"
-        return GuestStar(title: p.name, source: "우주 광장", day: f.string(from: .now), color: p.cardMood.color, shareID: p.serverID)
     }
 
     var body: some View {
@@ -258,7 +248,6 @@ struct GalaxyStarView: View {
             .scrollIndicators(.hidden)
         }
         .background { StarField() }
-        .toastCard($toast)
         .task {
             if model.useLiveAPI, let p = plazaStar, p.fullText, let id = p.serverID {
                 liveText = await model.plazaStarText(id)
@@ -272,38 +261,16 @@ struct GalaxyStarView: View {
         let resonate = Button(resonated ? "공명했어요" : "공명 남기기") {
             withAnimation(.snappy) { model.toggleResonance(key) }
         }
-        if let guest {
-            VStack(spacing: Space.md) {
-                resonate.buttonStyle(.primary)
-                    .accessibilityAddTraits(resonated ? .isSelected : [])
-                let inside = model.isGuestInLatestNebula(guest)
-                Button(inside ? "손님별로 들어와 있어요" : "내 성운에 손님별로 들이기") { adopt(guest) }
-                    .buttonStyle(.ghost)
-                    .disabled(inside)
-            }
+        if plazaStar != nil {
+            // From the plaza: no owner nebula to open (손님별 들이기 left with 2026-11-09).
+            resonate.buttonStyle(.primary)
+                .accessibilityAddTraits(resonated ? .isSelected : [])
         } else {
             HStack(spacing: Space.md) {
                 resonate.buttonStyle(.secondary).frame(width: 140)
                 Button("이 사람의 성운 보기", action: onBack)
                     .buttonStyle(.primary)
             }
-        }
-    }
-
-    private func adopt(_ g: GuestStar) {
-        switch model.adoptGuest(g) {
-        case .added(let name):
-            toast = ToastCardMessage(title: "「\(name)」에 손님별로 들였어요")
-        case .noNebula:
-            toast = ToastCardMessage(title: "성운을 먼저 그려 주세요", detail: "성운 그리기로 이동해요")
-            Task {
-                try? await Task.sleep(for: .seconds(1.2))
-                onDraw()
-            }
-        case .full:
-            toast = ToastCardMessage(title: "손님별 자리가 다 찼어요", detail: "모양 바꾸기에서 정리할 수 있어요")
-        case .already:
-            break
         }
     }
 }
@@ -388,7 +355,7 @@ struct GrowthMomentsView: View {
         let byDate = model.stars.sorted { ($0.date ?? .now) < ($1.date ?? .now) }
         var out: [Moment] = []
         if let s = byDate.first(where: \.isFloated), let d = s.date { out.append(.init(title: "첫 별을 띄웠어요", date: d)) }
-        if let s = byDate.first(where: { !$0.isFloated }), let d = s.date { out.append(.init(title: "처음 조용히 간직했어요", date: d)) }
+        if let s = byDate.first(where: { !$0.isFloated }), let d = s.date { out.append(.init(title: "처음 별빛 없이 띄웠어요", date: d)) }
         for n in [10, 30, 50, 100] where byDate.count >= n {
             if let d = byDate[n - 1].date { out.append(.init(title: "별 \(n)개가 모였어요", date: d)) }
         }

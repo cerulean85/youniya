@@ -1,8 +1,9 @@
 import SwiftUI
 
 /// 글 수정 (from 12): the same editor as 05, with one "저장".
-/// Kept stars change mood, title and body; floated stars keep their mood (the
-/// star's shape and report stay as first floated).
+/// A star without starlight changes mood, title and body. A star with
+/// starlight is locked (2026-11-09): only its title changes; the text is
+/// rewritten with 「고쳐 쓰기」 as a new star instead.
 struct StarEditView: View {
     @Environment(AppModel.self) private var model
     var starID: StarItem.ID
@@ -35,7 +36,7 @@ struct StarEditView: View {
             FlowTopBar(title: "글 수정", onClose: onClose)
 
             if floated {
-                NoticeBanner(message: "별의 모양과 리포트는 처음 띄운 글 그대로 남아요.")
+                NoticeBanner(message: "별빛을 받은 글은 잠겨 있어 제목만 고칠 수 있어요. 글을 고치려면 '고쳐 쓰기'로 새 별을 만들어 주세요.")
             }
 
             ScrollView(.horizontal, showsIndicators: false) {
@@ -57,14 +58,26 @@ struct StarEditView: View {
                 .submitLabel(.next)
                 .onSubmit { focus = .body }
 
-            TextEditor(text: $text)
-                .textInputStyle(.journalBody)
-                .foregroundStyle(Color.textSecondary)
-                .scrollContentBackground(.hidden)
-                .focused($focus, equals: .body)
-                .padding(.horizontal, -5)
-                .padding(.top, -8)
+            if floated {
+                // Locked: shown, not editable.
+                ScrollView {
+                    Text(text)
+                        .textStyle(.journalBody)
+                        .foregroundStyle(Color.textTertiary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
                 .frame(maxHeight: .infinity)
+                .accessibilityHint("별빛을 받은 글은 고칠 수 없어요")
+            } else {
+                TextEditor(text: $text)
+                    .textInputStyle(.journalBody)
+                    .foregroundStyle(Color.textSecondary)
+                    .scrollContentBackground(.hidden)
+                    .focused($focus, equals: .body)
+                    .padding(.horizontal, -5)
+                    .padding(.top, -8)
+                    .frame(maxHeight: .infinity)
+            }
 
             Text("\(text.count.formatted())자")
                 .textStyle(.caption)
@@ -84,14 +97,14 @@ struct StarEditView: View {
             mood = star.mood
             title = star.title
             text = star.body
-            focus = .body
+            focus = floated ? .title : .body
         }
     }
 
     private func save() {
         saving = true
         Task { @MainActor in
-            let crisis = await model.editStar(starID, mood: floated ? nil : mood, title: title, body: text)
+            let crisis = await model.editStar(starID, mood: floated ? nil : mood, title: title, body: floated ? nil : text)
             saving = false
             guard let crisis else { return }
             if crisis {

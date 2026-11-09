@@ -27,6 +27,7 @@ struct MainView: View {
     enum Route: Equatable {
         /// 05 flow, or 14 Rewrite when a star ID is given.
         case compose(rewriteOf: StarItem.ID? = nil)
+        case revise(StarItem.ID)   // 05-2 고쳐 쓰기
         case detail(StarItem.ID)
         case report(StarItem.ID)
         case records   // 17
@@ -81,7 +82,7 @@ struct MainView: View {
                         } else if title == "별빛 기록" {
                             recordsFilter = .all
                             tab = .records
-                        } else if title == "간직한 별" {
+                        } else if title == "별빛 없는 별" {
                             recordsFilter = .kept
                             tab = .records
                         } else {
@@ -251,7 +252,11 @@ struct MainView: View {
                     pop()
                 },
                 onTelescope: { openReport($0, replacing: true) },
-                onOpenStar: { replace(with: .detail($0.id)) },
+                onOpenStar: { star in
+                    replace(with: .detail(star.id))
+                    // 별빛 없이 띄운 직후 (42 토스트).
+                    if !star.isFloated { toast = ToastCardMessage(title: "별빛 없이 띄웠어요") }
+                },
                 onCharge: { push(.coins) }
             )
         case .detail(let id):
@@ -265,7 +270,8 @@ struct MainView: View {
                     toast = ToastCardMessage(title: "삭제되었어요", detail: "되돌릴 수 없어요")
                 },
                 onEdit: { push(.editStar(id)) },
-                onFloat: { replace(with: .floatKept(id)) },
+                onFloat: { push(.floatKept(id)) },
+                onRevise: { push(.revise(id)) },
                 onTelescope: { if let s = model.stars.first(where: { $0.id == id }) { openReport(s) } }
             )
             .edgeSwipeBack(onBack: pop)
@@ -394,7 +400,7 @@ struct MainView: View {
             }
         case .plazaStar(let name):
             if let p = (model.plazaStarItems + model.plazaStarsBeside).first(where: { $0.name == name }) {
-                GalaxyStarView(plazaStar: p, onBack: pop, onBlocked: blocked, onDraw: { push(.drawNebula) })
+                GalaxyStarView(plazaStar: p, onBack: pop, onBlocked: blocked)
                     .edgeSwipeBack(onBack: pop)
             } else {
                 NotFoundView(onBack: pop)
@@ -413,6 +419,18 @@ struct MainView: View {
             NebulaDrawingFlow(onClose: pop, onHome: pop, onShare: pop, editing: model.latestNebula)
         case .editStar(let id):
             StarEditView(starID: id, onClose: pop)
+        case .revise(let id):
+            ComposeFlowView(
+                onClose: pop,
+                onShowNebula: { tab = .nebula; stack.removeAll() },
+                onTelescope: { openReport($0, replacing: true) },
+                onOpenStar: { star in
+                    replace(with: .detail(star.id))
+                    if !star.isFloated { toast = ToastCardMessage(title: "별빛 없이 띄웠어요") }
+                },
+                onCharge: { push(.coins) },
+                revising: model.stars.first { $0.id == id }
+            )
         case .floatKept(let id):
             ComposeFlowView(
                 onClose: pop,
@@ -462,7 +480,7 @@ struct MainView: View {
         case "115", "116", "117", "49": tab = .records
         case "118", "119": recordsFilter = .kept; tab = .records
         case "67-1": drawerOpen = true
-        case "5", "6", "7", "13", "35", "36", "37", "61", "62", "34":
+        case "5", "6", "7", "7-1", "13", "35", "36", "37", "61", "62", "34":
             if screen == "34" { model.saveDraft(StarDraft(mood: .calm, title: "쓰던 글", body: "오늘은 마음이 조금 느리게 흘렀어요.")) }
             push(.compose())
         case "104":
@@ -518,9 +536,17 @@ struct MainView: View {
         case "75", "75-1", "75-2": push(.galaxyStar(nebula: nebula.name, star: nebula.stars[0].title))
         case "87-3": push(.blockedKeepers)
         case "5-3", "5-4": push(.compose())
+        case "5-2", "5-5":
+            if let s = DebugScreen.floatedStar(model) { push(.revise(s.id)) }
+        case "12-1":
+            if let s = DebugScreen.keptStar(model) { push(.detail(s.id)) }
+        case "12-10":
+            if let s = DebugScreen.keptStar(model) { push(.floatKept(s.id)) }
         case "12-3":
             if let s = model.stars.first(where: \.isFloated) { push(.detail(s.id)) }
         case "75-3": push(.plazaStar(PlazaNebula.samples[0].name))
+        case "12-5":
+            if let s = model.stars.first(where: { $0.analysis?.interpretation != nil }) ?? model.stars.first(where: \.isFloated) { push(.detail(s.id)) }
         case "12-2":
             if let s = model.stars.first(where: { $0.isFloated && model.report(for: $0.id) != nil }) { push(.detail(s.id)) }
         case "M1", "28-2": push(.coins)

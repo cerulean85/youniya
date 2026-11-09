@@ -8,6 +8,8 @@ struct ServerStar: Decodable {
     var id: String
     var title: String
     var mood: Mood
+    /// 17.5: every mood, the color first (newer servers).
+    var moods: [Mood]?
     var state: String          // "floated" | "kept"
     var createdAt: Date
     var starlight: Int?
@@ -16,6 +18,8 @@ struct ServerStar: Decodable {
     var shared: Bool
     var body: String?
     var analysis: ServerAnalysis?
+    /// 17.6: how the starlight was read.
+    var prismVersion: String?
 }
 
 /// The prism result. Only the fields the app shows today are read.
@@ -30,6 +34,11 @@ struct ServerAnalysis: Decodable {
     var observation: String
     var telescopeTeaser: String
     var rewriteQuestion: String?
+    /// 17.3 별빛 풀이 (newer servers; nil until then).
+    var depthReason: String?
+    var clarityReason: String?
+    var weightReason: String?
+    var interpretation: String?
 }
 
 /// POST /v1/stars and /v1/stars/{id}/float
@@ -50,6 +59,8 @@ private struct StarList: Decodable {
 
 private struct StarIn: Encodable {
     var mood: Mood
+    /// 17.5 (2026-11-09): every mood, the color first. Older servers ignore it.
+    var moods: [Mood]
     var title: String
     var body: String
     var mode: String
@@ -82,13 +93,15 @@ extension StarItem {
     /// report, until that moves to the API) from `local`.
     init?(_ s: ServerStar, keeping local: StarItem? = nil) {
         guard let id = UUID(uuidString: s.id) else { return nil }
-        let analysis = s.analysis.map(StarAnalysis.init)
+        var analysis = s.analysis.map(StarAnalysis.init)
+        analysis?.prismVersion = s.prismVersion.map { "별빛 프리즘 \($0)" }
         self.init(
             id: id,
             title: s.title,
             dateText: StarItem.dateText(s.createdAt),
             state: s.state == "floated" ? .floated(starlight: s.starlight ?? analysis?.starlight) : .kept,
             mood: s.mood,
+            extraMoods: s.moods.map { Array($0.dropFirst()) }.flatMap { $0.isEmpty ? nil : $0 } ?? local?.extraMoods,
             body: s.body ?? local?.body ?? "",
             analysis: analysis ?? local?.analysis,
             report: local?.report,
@@ -118,7 +131,11 @@ extension StarAnalysis {
             weight: a.weight,
             observation: a.observation,
             telescopeTeaser: a.telescopeTeaser,
-            tones: a.moods.sorted { $0.share > $1.share }.map(\.mood)
+            tones: a.moods.sorted { $0.share > $1.share }.map(\.mood),
+            depthReason: a.depthReason,
+            clarityReason: a.clarityReason,
+            weightReason: a.weightReason,
+            interpretation: a.interpretation
         )
     }
 }
@@ -154,7 +171,8 @@ extension AppModel {
     /// Returns the saved star and whether 37 Crisis Care should show.
     /// The server clears the draft; so does this.
     @MainActor func publishLive(_ d: StarDraft, floated: Bool, rewriteOf: StarItem.ID? = nil) async throws -> (StarItem, crisis: Bool) {
-        let body = StarIn(mood: d.mood, title: d.title.trimmingCharacters(in: .whitespacesAndNewlines),
+        // mode stays float/keep until the server ships lit/unlit (same meaning).
+        let body = StarIn(mood: d.mood, moods: d.moods, title: d.title.trimmingCharacters(in: .whitespacesAndNewlines),
                           body: d.body, mode: floated ? "float" : "keep", rewriteOf: rewriteOf?.apiID)
         let r: StarCreated = try await APIClient.shared.post("/v1/stars", body: body)
         guard let star = StarItem(r.star) else { throw APIError.badResponse }
@@ -171,21 +189,24 @@ extension AppModel {
         return star
     }
 
-    /// 글 수정: `PATCH /v1/stars/{id}` (mood only for kept stars). Mock: on device.
-    /// Returns nil when it failed, or whether the new writing shows a crisis signal (37).
-    @MainActor func editStar(_ id: StarItem.ID, mood: Mood?, title: String, body: String) async -> Bool? {
+    /// 글 수정: `PATCH /v1/stars/{id}`. A star without starlight changes mood,
+    /// title and body; a star with starlight is locked (17, 2026-11-09), so only
+    /// its title goes (`body` nil; the server answers 409 star_locked otherwise).
+    /// Mock: on device. Returns nil when it failed, or whether the new writing
+    /// shows a crisis signal (37).
+    @MainActor func editStar(_ id: StarItem.ID, mood: Mood?, title: String, body: String?) async -> Bool? {
         let t = title.trimmingCharacters(in: .whitespacesAndNewlines)
         func applyLocally() {
             guard let i = stars.firstIndex(where: { $0.id == id }) else { return }
             stars[i].title = t.isEmpty ? "제목 없는 별" : t
-            stars[i].body = body
+            if let body { stars[i].body = body }
             if let mood { stars[i].mood = mood }
         }
         guard useLiveAPI else {
             applyLocally()
-            return CrisisSignal.detected(in: t + " " + body)
+            return CrisisSignal.detected(in: t + " " + (body ?? ""))
         }
-        struct Patch: Encodable { var title: String; var body: String; var mood: Mood? }
+        struct Patch: Encodable { var title: String; var body: String?; var mood: Mood? }
         do {
             // 200 {star, crisis, …}: the floated star's light, shape and report stay as they were.
             let r: StarCreated = try await APIClient.shared.send("PATCH", "/v1/stars/\(id.apiID)",
