@@ -13,7 +13,8 @@ from .monitoring import init_sentry
 from .prism import PrismEngine
 from .push import ApnsClient
 from .ratelimit import RateLimiter
-from .routers import account, admin, auth, blocks, coins, cron, membership, nebulae, plaza, stars, telescope
+from .routers import (account, admin, auth, blocks, coins, constellations, cron, membership, nebulae, plaza, stars,
+                      telescope)
 from .security import Cipher, IdTokenVerifier
 from .storekit import AppStoreClient, StoreKitVerifier
 
@@ -99,7 +100,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         }
 
     for router in (auth.router, account.router, stars.router, telescope.router, coins.router, coins.notifications,
-                   nebulae.router, plaza.router, blocks.router, membership.router, admin.router, cron.router):
+                   nebulae.router, plaza.router, blocks.router, membership.router, admin.router, cron.router,
+                   constellations.router):
         app.include_router(router)
     return app
 

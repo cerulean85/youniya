@@ -142,6 +142,7 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
 | Telescope | `GET /v1/telescope/offer`, `POST·GET /v1/telescope/reports`, `GET /v1/telescope/reports/{id}`, `POST …/save` | 10, 24–27, 29, 88, 98 |
 | Coins | `GET /v1/coins`, `GET /v1/coins/history`, `POST /v1/coins/purchases` | 28, 33, 38, 102, 108 |
 | Nebulae | `POST·GET /v1/nebulae`, `GET /v1/nebulae/guest-candidates`, `GET·PATCH /v1/nebulae/{id}` (다시 그리기: same checks as drawing; a shared one updates its plaza snapshot unless a star carries a crisis signal), `GET /v1/nebulae/{id}/story`, `PUT·DELETE …/share` | 51–55, 70, 71, 80, 83–85, 96 |
+| Constellations | `GET /v1/constellations`, `GET /v1/constellations/{YYYY-MM}`, `GET /v1/constellations/{YYYY-MM}/story` (16장: that month's stars fill its template in the order written; templates in `youniya_api/constellation_templates.json`) | 16장 |
 | Refunds | `POST /v1/storekit/notifications` (App Store Server Notifications V2 URL) | — |
 | Operator | `GET /v1/admin/status`, `POST /v1/admin/push-test`, `POST /v1/admin/error-test`, `POST /v1/admin/announcements`, `GET /v1/admin/reports`, `POST /v1/admin/lines/{id}/hide·restore`, `GET /v1/admin/inquiries`, `GET /v1/admin/logs` | — |
 | Blocks | `POST·GET /v1/blocks`, `DELETE /v1/blocks/{id}` | 87-3, 100 |

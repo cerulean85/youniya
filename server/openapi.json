@@ -3847,6 +3847,125 @@
           }
         }
       }
+    },
+    "/v1/constellations": {
+      "get": {
+        "tags": [
+          "constellations"
+        ],
+        "summary": "Months",
+        "description": "나의 은하수: every month since joining, newest first, with how full each is.",
+        "operationId": "months_v1_constellations_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/constellations/{month}": {
+      "get": {
+        "tags": [
+          "constellations"
+        ],
+        "summary": "Constellation",
+        "description": "{month, key, name, slots:[{index, x, y, star|null}], lines, extra, filled, total, complete, lit, unlit,\ndeep}. A month before joining or after this one is 404; a past month with no stars has empty slots.\n`deep`: lit stars with a depth score of 280 or more (70% of 400).",
+        "operationId": "constellation_v1_constellations__month__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+              "title": "Month"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/constellations/{month}/story": {
+      "get": {
+        "tags": [
+          "constellations"
+        ],
+        "summary": "Story",
+        "description": "별자리 이야기: each star's key sentence in time order, never changed. A lit star gives the sentence\nthe prism chose; one without starlight, its first sentence.",
+        "operationId": "story_v1_constellations__month__story_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+              "title": "Month"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
