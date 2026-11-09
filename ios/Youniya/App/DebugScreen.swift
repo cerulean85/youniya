@@ -40,7 +40,7 @@ enum DebugScreen {
  1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 23 24 25 26 27 28 28-1 29 31 32 33 34 35 36 37 38
  39 40 41 43 44 45 46 47 48 49 50 56 61 62 67-1 68 69 70 72 74 75 76 77 81 82 83
  87 89 90 91 92 93 95 98 99 100 101 102 104 105 106 107 108 109 111 113 114 115 116 117
- 118 119 120 120-1 121 122 122-1 19-1 87-1 87-2 3-1 2-1 75-1 75-2 87-3 M1 28-2 68-1 87-4 123 5-3 5-4 87-5 12-1 12-2 12-3 12-5 12-10 7-1 5-2 5-5 75-3 77-2 12-6 12-7 12-8 21-1 21-2 87-6 87-7 75-4 76-1 9-5 12-4
+ 118 119 120 120-1 121 122 122-1 19-1 87-1 87-2 3-1 2-1 75-1 75-2 87-3 M1 28-2 68-1 87-4 123 5-3 5-4 87-5 12-1 12-2 12-3 12-5 12-10 7-1 5-2 5-5 75-3 77-2 12-6 12-7 12-8 21-1 21-2 87-6 87-7 75-4 76-1 9-5 12-4 9-6 9-7 4-1 87-8 130 131
  """.split(whereSeparator: \.isWhitespace).map(String.init))
 
     /// App-wide state for the screen, before the first page shows.
@@ -118,6 +118,13 @@ enum DebugScreen {
                     ReceivedLine(id: "l2", text: "천천히 와도 괜찮다는 말을 여기서 배웠어요.", nickname: "창가고양이", createdAt: .now.addingTimeInterval(-3 * 3600)),
                 ]
             }
+        case "9-6", "9-7":
+            if model.nickname == nil { model.nickname = "느린고래" }
+            model.plazaRestrictedUntil = Calendar.current.date(byAdding: .day, value: 7, to: .now)
+            if s == "9-7" { model.showPlazaRestricted = true }
+        case "4-1", "87-8":
+            if model.nickname == nil { model.nickname = "느린고래" }
+            model.nicknameRenameRequired = true
         case "12-3":
             // A shared star whose edited text lost its 대표 문장.
             if let i = model.stars.firstIndex(where: \.isFloated) {

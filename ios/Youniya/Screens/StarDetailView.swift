@@ -157,7 +157,7 @@ struct StarDetailView: View {
                     Button("우주 광장에서 거두기") { model.setShared(false, for: starID) }
                         .buttonStyle(.secondary)
                 } else {
-                    Button("우주 광장에 나누기") { confirmShare = true }
+                    Button("우주 광장에 나누기") { if model.plazaAllowed() { confirmShare = true } }
                         .buttonStyle(.secondary)
                 }
             }

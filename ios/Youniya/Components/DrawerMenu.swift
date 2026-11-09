@@ -19,6 +19,8 @@ struct DrawerMenu: View {
     private let items: [Item] = [
         Item(title: "별빛 기록", subtitle: "지나온 별들", icon: .iconStar),
         Item(title: "별빛 없는 별", subtitle: "별빛 없이 띄운 별", icon: .iconArchive),
+        // 130: operator actions and notices.
+        Item(title: "알림", subtitle: "운영자 조치 · 공지", icon: .iconBell),
         Item(title: "코인", subtitle: "충전 · 사용 내역", icon: .iconCoin),
         Item(title: "설정", subtitle: "알림 · 데이터 · 약관", icon: .iconSettings),
         // Not in the 67 drawer; 30 Menu lists it. Reaches 32 Inquiry.
@@ -58,8 +60,16 @@ struct DrawerMenu: View {
             header
 
             ForEach(items) { item in
-                Button { onSelect(item.title) } label: { row(item) }
-                    .buttonStyle(.plain)
+                Button { onSelect(item.title) } label: {
+                    row(item).overlay(alignment: .topLeading) {
+                        // Unread notifications: a gold dot by the icon.
+                        if item.title == "알림" && model.inboxUnread > 0 {
+                            Circle().fill(Color.starBright).frame(width: 7, height: 7).offset(x: 6, y: 8)
+                                .accessibilityLabel("읽지 않은 알림")
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
             }
 
             Spacer()

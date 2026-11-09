@@ -128,6 +128,13 @@ struct PlazaView: View {
                 .accessibilityElement(children: .combine)
                 .accessibilityAddTraits(.isHeader)
 
+                // 09-6 광장 이용 제한 중
+                if model.isPlazaRestricted {
+                    OperatorBanner(title: "광장 이용이 \(model.restrictedText(withTime: false))까지 멈춰요",
+                                   message: "별을 나누거나 공명·곁에 두기·별빛 한 줄을 남길 수 없어요. 내 기록과 별은 그대로이고, 다른 별은 계속 읽을 수 있어요.",
+                                   link: "자세히") { model.showPlazaRestricted = true }
+                }
+
                 // 69 모두의 은하, merged here: tonight's hearts (hidden at 0).
                 if tonight.count > 0 {
                     Text(tonight.mine > 0

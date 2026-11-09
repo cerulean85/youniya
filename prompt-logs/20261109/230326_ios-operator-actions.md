@@ -1,0 +1,29 @@
+# iOS: 운영자 조치 4가지 (Figma 09-6 523:14263, 09-7 523:14441, 04-1 523:14579, 87-8 523:14750, 130 523:15104, 131 523:15239)
+
+- 요청: 사용자가 "지금 넣어"라고 했다. 시안은 youniya-66, 서버는 API Dev Session이 보냈다(운영 배포 db5dce6).
+- 광장 이용 제한
+  - /v1/me의 plaza_restricted_until을 읽는다.
+  - 403 plaza_restricted를 받으면 until을 저장하고 09-7을 띄운다(handle).
+  - 09-6: 광장 설명 아래 금색 배너 「광장 이용이 M월 d일까지 멈춰요」와 「자세히 ›」(→ 09-7)를 둔다.
+  - 75의 공명과 별빛 한 줄 건네기, 별 상세의 「우주 광장에 나누기」: 제한 중이면 흐리게 보이고, 누르면 09-7이 뜬다.
+  - 별빛 한 줄 보내기가 403을 받아도 09-7이 뜬다.
+  - 09-7 시트: 「M월 d일 a h시까지 …」, 버튼은 「확인 / 문의하기(→ 32)」. MainView에서 전역으로 띄운다.
+- 별지기 이름 바꾸기 요청
+  - /v1/me의 nickname_rename_required를 읽는다.
+  - 04-1: 홈 헤더 아래 금색 배너 「별지기 이름을 바꿔 주세요」 + 「바꾸기 ›」(→ 87-8)
+  - 87-8: NicknameView의 operatorRequest 모드. 30일 제한 없이 바꿀 수 있고, 금색 안내를 둔다. 바꾸면 요청 표시가 꺼진다.
+  - 서버(plaza.py)가 요청 중에는 광장 공유를 막고 있어서, 배너 둘째 문장은 남겼다.
+  - 설정의 「별지기 이름」도 요청 중이면 87-8로 간다.
+- 문의 앱 정보: 모든 요청에 X-App-Platform: ios와 X-Device-Model(utsname, 시뮬레이터는 SIMULATOR_MODEL_IDENTIFIER)을 붙인다. X-App-Version은 원래 붙이고 있었다.
+- 알림함과 공지
+  - 서버에 이미 GET /v1/me/notifications와 POST /v1/me/notifications/read가 있어서, 기기 저장 대신 이 API를 쓴다(목업은 Figma 샘플).
+  - 130 InboxView: 종류 라벨(색), 제목, 두 줄, 「시간 · 이동할 곳 ›」. 읽지 않은 항목은 진한 점이다. 빈 상태 문구는 youniya-66이 정했다.
+  - 서랍 「알림 · 운영자 조치 · 공지」를 코인 위에 두고, 읽지 않은 게 있으면 금색 점을 단다.
+  - 131 NoticeDetailView: GET /v1/notices에서 날짜 · 공지, 제목, 본문을 보여 준다.
+  - 이동(target.screen): star → 12, nickname → 87-8, plaza_restricted → 09-7, plaza → 광장 탭, coin_history → 33, notice → 131, notification_settings → 87, notifications → 알림함(이동 없음)
+  - 푸시를 탭하면 userInfo의 target으로 같은 곳에 간다. 로컬 별 만들기 알림은 그대로 둔다.
+- 새 디버그 화면: 9-6, 9-7, 4-1, 87-8, 130, 131
+- 확인
+  - Debug 빌드 성공.
+  - 여섯 화면을 캡처해서 시안과 맞는지 봤다.
+  - 실제 푸시와 서버 응답, 탭 이동은 확인하지 못했다.

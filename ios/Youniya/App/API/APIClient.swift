@@ -3,6 +3,13 @@ import Foundation
 // MARK: - Configuration
 
 enum APIConfig {
+    /// "iPhone16,2" (the simulator reports the model it runs as).
+    static let deviceModel: String = {
+        if let sim = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"] { return sim }
+        var u = utsname()
+        uname(&u)
+        return withUnsafeBytes(of: &u.machine) { String(decoding: $0.prefix { $0 != 0 }, as: UTF8.self) }
+    }()
     /// Debug: the home-desktop dev server over Tailscale, port 8000 (dev sign-in,
     /// trusted purchases, minimum version 0.1); reachable from the simulator and
     /// from a phone on Tailscale. (For part of 2026-11-08 it was the MacBook,
@@ -220,6 +227,9 @@ actor APIClient {
         request.timeoutInterval = 20
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue(APIConfig.appVersion, forHTTPHeaderField: "X-App-Version")
+        // 18장 A-07: the operator sees which app an inquiry came from.
+        request.setValue("ios", forHTTPHeaderField: "X-App-Platform")
+        request.setValue(APIConfig.deviceModel, forHTTPHeaderField: "X-Device-Model")
         if let body {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = try JSONCoding.encoder.encode(body)

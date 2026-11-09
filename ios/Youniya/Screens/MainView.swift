@@ -22,6 +22,7 @@ struct MainView: View {
     /// 115/118: the records tab filter (the menu's "간직한 별" opens it on .kept).
     @State private var recordsFilter: RecordsFilter = .all
     /// 42 toast shown over whatever page is on top.
+    @State private var restrictedHeight: CGFloat = 320
     @State private var toast: ToastCardMessage?
     /// 03-1 환영 안내 (once, over 03).
     @State private var showWelcome = false
@@ -35,6 +36,8 @@ struct MainView: View {
         case linkStars(StarItem.ID) // 12-7 이을 별 고르기
         case nickname(NicknameView.Mode) // 21-1 (plaza) / 87-7
         case keeper(String) // 76-1 별지기 페이지
+        case inbox // 130 알림
+        case notice(String) // 131 공지 상세
         case starLine(String) // 74 별빛 한 줄 건네기 (plaza star by name)
         case receivedLines(StarItem.ID) // 12-4 받은 별빛 한 줄
         case detail(StarItem.ID)
@@ -69,7 +72,9 @@ struct MainView: View {
                 .edgeSwipeDrawer(isOpen: $drawerOpen, enabled: stack.isEmpty) {
                     DrawerMenu(onSelect: { title in
                         drawerOpen = false
-                        if title == "코인" {
+                        if title == "알림" {
+                            push(.inbox)
+                        } else if title == "코인" {
                             push(.coins)
                         } else if title == "설정" {
                             push(.settings)
@@ -104,6 +109,21 @@ struct MainView: View {
             }
         }
         .toastCard($toast)
+        // 09-7 광장 이용 제한 안내, from anywhere a plaza action was refused.
+        .sheet(isPresented: Bindable(model).showPlazaRestricted) {
+            PlazaRestrictedSheet(onInquiry: { push(.inquiry) })
+                .fixedSize(horizontal: false, vertical: true)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { restrictedHeight = $0 }
+                .presentationDetents([.height(restrictedHeight)])
+                .presentationDragIndicator(.hidden)
+                .presentationCornerRadius(Radius.xl)
+                .presentationBackground { SheetBackground(seed: "plaza-restricted") }
+        }
+        // A tapped push opens what it is about (130 routing).
+        .onReceive(NotificationCenter.default.publisher(for: .openNotificationTarget)) { note in
+            if let t = note.object as? NotificationTarget { open(t) }
+        }
+        .task { await model.loadInbox() }
         #if DEBUG
         // `-debugRoute <name>`: open a page on launch, for checking screens without taps
         // (names in the switch below).
@@ -175,7 +195,8 @@ struct MainView: View {
                     LoadingGate {
                         HomeView(onCompose: { push(.compose()) }, onOpenStar: openStar,
                                  onSeeAll: { recordsFilter = .all; tab = .records },
-                                 onConstellation: { tab = .nebula })
+                                 onConstellation: { tab = .nebula },
+                                 onRename: { push(.nickname(.operatorRequest)) })
                     } placeholder: { HomeSkeleton() }
                 }
             case .nebula:
@@ -306,7 +327,7 @@ struct MainView: View {
             SettingsView(onBack: pop, onOpen: { title in
                              switch title {
                              case "차단한 별지기": push(.blockedKeepers)
-                             case "별지기 이름": push(.nickname(model.nickname == nil ? .plaza : .change))
+                             case "별지기 이름": push(.nickname(model.nickname == nil ? .plaza : model.nicknameRenameRequired ? .operatorRequest : .change))
                              case "내 별지기 페이지 미리 보기": if let n = model.nickname { push(.keeper(n)) }
                              default: push(.sharedStars)
                              }
@@ -363,6 +384,12 @@ struct MainView: View {
             }
         case .receivedLines(let id):
             ReceivedLinesView(starID: id, onBack: pop)
+                .edgeSwipeBack(onBack: pop)
+        case .inbox:
+            InboxView(onBack: pop, onOpen: open)
+                .edgeSwipeBack(onBack: pop)
+        case .notice(let id):
+            NoticeDetailView(noticeID: id, onBack: pop)
                 .edgeSwipeBack(onBack: pop)
         case .keeper(let name):
             KeeperPageView(nickname: name, onBack: pop, onOpen: { push(.plazaStar($0.name)) })
@@ -491,6 +518,12 @@ struct MainView: View {
         case "87-7": push(.nickname(.change))
         case "12-4", "100", "101":
             if let s = DebugScreen.floatedStar(model) { push(.receivedLines(s.id)) }
+        case "9-6", "9-7": tab = .plaza
+        case "4-1": tab = .sky
+        case "87-8": push(.nickname(.operatorRequest))
+        case "130": push(.inbox)
+        case "131":
+            Task { await model.loadNotices(); push(.notice(AppModel.mockNotices[0].id)) }
         case "12-1":
             if let s = DebugScreen.keptStar(model) { push(.detail(s.id)) }
         case "12-10":
@@ -584,6 +617,22 @@ struct MainView: View {
     private func finishTelescope(_ id: StarItem.ID) {
         let before = stack.dropLast().last?.route
         if before == .detail(id) { pop() } else { replace(with: .detail(id)) }
+    }
+
+    /// 130 / push: where a notification leads.
+    private func open(_ target: NotificationTarget) {
+        switch target {
+        case .star(let id): push(.detail(id))
+        case .nickname: push(.nickname(.operatorRequest))
+        case .plazaRestricted: model.showPlazaRestricted = true
+        case .plaza:
+            withAnimation(.easeInOut(duration: 0.32)) { stack.removeAll() }
+            tab = .plaza
+        case .coinHistory: push(.coinHistory)
+        case .notice(let id): push(.notice(id))
+        case .notificationSettings: push(.settings)
+        case .inbox: if stack.last?.route != .inbox { push(.inbox) }
+        }
     }
 
     /// 12 Star Detail

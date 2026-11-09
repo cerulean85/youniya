@@ -54,6 +54,9 @@ extension AppModel {
         } catch let e as APIError {
             switch e.code {
             case "already_left": return .already
+            case "plaza_restricted":
+                handle(e)
+                return .rejected("광장 이용이 잠시 멈춰 있어요")
             case "lines_closed": return .closed
             case "hurtful": return .rejected("상처가 될 수 있는 말이 있어 건네지 못했어요")
             case "contact": return .rejected("연락처는 별빛 한 줄에 담을 수 없어요")

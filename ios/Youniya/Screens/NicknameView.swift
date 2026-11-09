@@ -4,7 +4,7 @@ import SwiftUI
 /// accounts) and 87-7 별지기 이름 바꾸기. The name is checked as it is typed:
 /// 「✓ 쓸 수 있는 이름이에요 · 4/12」 or why not (21-2, red).
 struct NicknameView: View {
-    enum Mode { case signup, plaza, change }
+    enum Mode { case signup, plaza, change, operatorRequest }
 
     @Environment(AppModel.self) private var model
     var mode: Mode
@@ -18,7 +18,7 @@ struct NicknameView: View {
     @FocusState private var focused: Bool
 
     private var trimmed: String { name.trimmingCharacters(in: .whitespaces) }
-    private var tooSoon: Bool { mode == .change && model.nicknameNextChangeText != nil }
+    private var tooSoon: Bool { mode == .change && !model.nicknameRenameRequired && model.nicknameNextChangeText != nil }
     private var canSave: Bool {
         if case .ok = result, !checking, !saving, !tooSoon, trimmed != model.nickname { return true }
         return false
@@ -26,11 +26,11 @@ struct NicknameView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            TopAppBar(title: mode == .change ? "별지기 이름" : "가입", onBack: onBack)
+            TopAppBar(title: mode == .change || mode == .operatorRequest ? "별지기 이름" : "가입", onBack: onBack)
 
             VStack(alignment: .leading, spacing: Space.lg) {
                 VStack(alignment: .leading, spacing: Space.sm) {
-                    Text(mode == .change ? "별지기 이름 바꾸기" : "별지기 이름을 정해 주세요")
+                    Text(mode == .change || mode == .operatorRequest ? "별지기 이름 바꾸기" : "별지기 이름을 정해 주세요")
                         .textStyle(.h1).foregroundStyle(Color.textPrimary)
                     Text(subtitle).textStyle(.bodyM).foregroundStyle(Color.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -64,7 +64,7 @@ struct NicknameView: View {
 
                 Spacer(minLength: 0)
 
-                Button(mode == .change ? "바꾸기" : "이 이름으로 시작하기", action: save)
+                Button(mode == .change || mode == .operatorRequest ? "바꾸기" : "이 이름으로 시작하기", action: save)
                     .buttonStyle(.primary)
                     .disabled(!canSave)
             }
@@ -74,7 +74,7 @@ struct NicknameView: View {
         }
         .background { StarField() }
         .onAppear {
-            if mode == .change, let n = model.nickname { name = n }
+            if mode == .change || mode == .operatorRequest, let n = model.nickname { name = n }
             focused = !tooSoon
         }
         // Checked shortly after typing stops.
@@ -93,6 +93,7 @@ struct NicknameView: View {
         case .signup: "우주 광장에 별을 나누면 이 이름이 함께 보여요. 내가 건넨 별빛 한 줄에도 이 이름이 보여요."
         case .plaza: "우주 광장을 쓰려면 별지기 이름이 필요해요. 나눈 별과 건넨 별빛 한 줄에 이 이름이 보여요."
         case .change: "바꾸면 지금까지 나눈 별과 남긴 별빛 한 줄에도 새 이름이 보여요."
+        case .operatorRequest: "운영자가 이름을 바꿔 달라고 요청했어요. 사칭이나 불편을 줄 수 있는 이름이라는 신고가 확인됐어요. 바꾸면 나눈 별과 남긴 별빛 한 줄에도 새 이름이 보여요."
         }
     }
 
@@ -102,7 +103,10 @@ struct NicknameView: View {
     }
 
     @ViewBuilder private var statusLine: some View {
-        if tooSoon, let day = model.nicknameNextChangeText {
+        if mode == .operatorRequest && (result == nil || trimmed == model.nickname) {
+            // 87-8
+            Text("운영자 요청이라 30일 제한 없이 지금 바로 바꿀 수 있어요").textStyle(.labelS).foregroundStyle(Color.starBright)
+        } else if tooSoon, let day = model.nicknameNextChangeText {
             Text("다음 변경은 \(day)부터 할 수 있어요").textStyle(.labelS).foregroundStyle(Color.emotionCalm)
         } else if case .problem(let why) = result {
             Text(why).textStyle(.labelS).foregroundStyle(Color.brandWarm)

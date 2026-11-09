@@ -55,12 +55,14 @@ extension AppModel {
             if let p = Self.nicknameFormProblem(name) { return .problem(p) }
             nickname = name
             nicknameNextChange = Calendar.current.date(byAdding: .day, value: 30, to: .now)
+            nicknameRenameRequired = false
             return .ok
         }
         do {
             let r: NicknameOut = try await APIClient.shared.send("PUT", "/v1/me/nickname", body: NicknameIn(name: name))
             nickname = r.nickname
             nicknameNextChange = r.nextChange
+            nicknameRenameRequired = false
             return .ok
         } catch let e as APIError {
             switch e.code {

@@ -434,6 +434,15 @@ final class AppModel {
     }
     /// 21-1 follows 11 right after sign-up; older accounts are asked on the plaza.
     var justConsented = false
+    /// 18.3 / 04-1: an operator asked for a new name (no 30-day wait).
+    var nicknameRenameRequired = false
+    /// 09-6: plaza actions are off until then.
+    var plazaRestrictedUntil: Date?
+    /// 09-7 sheet, shown over the app.
+    var showPlazaRestricted = false
+    /// 130 알림함 and 131 공지.
+    var inbox: [InboxItem] = []
+    var notices: [AppNoticeItem] = []
     /// Optional "새 기능·혜택 알림" consent.
     var marketingOptIn: Bool {
         didSet { UserDefaults.standard.set(marketingOptIn, forKey: "marketingOptIn") }
@@ -687,6 +696,8 @@ final class AppModel {
             coins = me.coins
             nickname = me.nickname
             nicknameNextChange = me.nicknameNextChange
+            nicknameRenameRequired = me.nicknameRenameRequired ?? false
+            plazaRestrictedUntil = me.plazaRestrictedUntil
             applyFreeUses(telescopeAvailable: me.freeTelescopeAvailable, star: me.freeStarToday,
                           telescope: me.freeTelescope)
         } catch {
@@ -753,6 +764,10 @@ final class AppModel {
             appNotice = .maintenance(e.until.map(Self.maintenanceText) ?? "곧 다시 열어요")
         case "consent_required":
             hasConsented = false
+        case "plaza_restricted":
+            // 09-7
+            plazaRestrictedUntil = e.until ?? plazaRestrictedUntil
+            showPlazaRestricted = true
         case "rate_limited":
             retryAvailableAt = e.retryAfter.map { Date.now.addingTimeInterval(TimeInterval($0)) }
             appNotice = .rateLimited
@@ -933,6 +948,9 @@ final class AppModel {
         hasConsented = false
         nickname = nil
         nicknameNextChange = nil
+        nicknameRenameRequired = false
+        plazaRestrictedUntil = nil
+        inbox = []
         isSignedIn = false
         appNotice = .accountDeleted
     }
@@ -1104,4 +1122,6 @@ struct MeResponse: Decodable {
     /// 15장 (newer servers).
     var nickname: String?
     var nicknameNextChange: Date?
+    var nicknameRenameRequired: Bool?
+    var plazaRestrictedUntil: Date?
 }

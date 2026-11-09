@@ -129,13 +129,19 @@ struct PlazaStarView: View {
 
     @ViewBuilder private var actions: some View {
         let resonate = Button(resonated ? "공명했어요" : "공명 남기기") {
+            guard model.plazaAllowed() else { return }
             withAnimation(.snappy) { model.toggleResonance(key) }
         }
+        // 09-6: while restricted these look dimmed and open 09-7.
+        let dim = model.isPlazaRestricted ? 0.45 : 1
         // 75-4: 공명 남기기, 별빛 한 줄 건네기, and the keeper's page.
         VStack(spacing: Space.md) {
             resonate.buttonStyle(.primary)
+                .opacity(dim)
                 .accessibilityAddTraits(resonated ? .isSelected : [])
-            Button("별빛 한 줄 건네기", action: onLine).buttonStyle(.secondary)
+            Button("별빛 한 줄 건네기") { if model.plazaAllowed() { onLine() } }
+                .buttonStyle(.secondary)
+                .opacity(dim)
             if let name = star.nickname {
                 Button("\(name)의 밤하늘") { onKeeper(name) }.buttonStyle(.secondary)
             }

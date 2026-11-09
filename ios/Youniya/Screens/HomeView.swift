@@ -9,11 +9,20 @@ struct HomeView: View {
     var onSeeAll: () -> Void = {}
     /// 04 이번 달 별자리 카드 → the 별자리 tab
     var onConstellation: () -> Void = {}
+    /// 04-1 → 87-8
+    var onRename: () -> Void = {}
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Space.lg) {
                 SkyHeader(subtitle: "\(Self.todayText) · 오늘은 어떤 마음이 머물렀나요?")
+
+                // 04-1 운영자의 별지기 이름 바꾸기 요청
+                if model.nicknameRenameRequired {
+                    OperatorBanner(title: "별지기 이름을 바꿔 주세요",
+                                   message: "운영자 요청이 있어요. 지금 이름으로는 우주 광장에 별을 나눌 수 없어요.",
+                                   link: "바꾸기", action: onRename)
+                }
 
                 Button("오늘의 별 만들기", action: onCompose)
                     .buttonStyle(.primary)

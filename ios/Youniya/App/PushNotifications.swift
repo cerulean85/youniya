@@ -30,9 +30,15 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         [.banner, .sound, .list]
     }
 
-    /// A tap opens the app. Neither kind has its own screen yet: the 101 result
-    /// is in the notification text, and announcements open the night sky.
-    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {}
+    /// A tap opens what `target.screen` names (130 routing); without one, the 알림함.
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+        let info = response.notification.request.content.userInfo
+        guard info["kind"] != nil || info["target"] != nil else { return }  // e.g. the local 별 만들기 알림
+        let target = NotificationTarget(info["target"] as? [String: Any]) ?? .inbox
+        await MainActor.run {
+            NotificationCenter.default.post(name: .openNotificationTarget, object: target)
+        }
+    }
 }
 
 enum PushRegistration {
