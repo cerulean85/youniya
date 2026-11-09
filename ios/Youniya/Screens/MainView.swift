@@ -12,6 +12,10 @@ struct MainView: View {
         let id = UUID()
         var route: Route
     }
+    /// Plaza stars as they were when their page (75, 75-4 별빛 한 줄) opened.
+    /// 차단하기 hides the star from the plaza before the page has slid away, so
+    /// the closing page reads from here instead of turning into 122.
+    @State private var openedPlazaStars: [String: PlazaNebula] = [:]
     @State private var drawerOpen = false
     /// The home-indicator inset, for the tab bar (0 on iPhone SE).
     @State private var bottomSafeArea: CGFloat = 0
@@ -339,7 +343,7 @@ struct MainView: View {
                             month: month)
                 .edgeSwipeBack(onBack: pop)
         case .plazaStar(let name):
-            if let p = (model.plazaStarItems + model.plazaStarsBeside).first(where: { $0.name == name }) {
+            if let p = plazaStar(named: name) {
                 PlazaStarView(star: p, onBack: pop, onBlocked: blocked,
                                onKeeper: { push(.keeper($0)) },
                                onLine: { push(.starLine(p.name)) })
@@ -351,7 +355,7 @@ struct MainView: View {
         case .editStar(let id):
             StarEditView(starID: id, onClose: pop)
         case .starLine(let name):
-            if let p = (model.plazaStarItems + model.plazaStarsBeside).first(where: { $0.name == name }) {
+            if let p = plazaStar(named: name) {
                 StarLineComposeView(star: p, onBack: pop)
                     .edgeSwipeBack(onBack: pop)
             } else {
@@ -524,7 +528,22 @@ struct MainView: View {
     }
 
     private func push(_ r: Route) {
+        switch r {
+        case .plazaStar(let name), .starLine(let name):
+            if let p = livePlazaStar(named: name) { openedPlazaStars[name] = p }
+        default: break
+        }
         withAnimation(.easeInOut(duration: 0.32)) { stack.append(Entry(route: r)) }
+    }
+
+    private func livePlazaStar(named name: String) -> PlazaNebula? {
+        (model.plazaStarItems + model.plazaStarsBeside).first { $0.name == name }
+    }
+
+    /// The plaza star a 75 / 별빛 한 줄 page shows: the plaza's copy, else the one
+    /// kept when the page opened (still there while a blocked page slides away).
+    private func plazaStar(named name: String) -> PlazaNebula? {
+        livePlazaStar(named: name) ?? openedPlazaStars[name]
     }
 
     private func pop() {

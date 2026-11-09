@@ -181,7 +181,7 @@ struct BlockConfirmSheet: View {
                 .frame(maxWidth: .infinity).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: Space.sm) {
                 Text("이 별지기를 차단할까요?").textStyle(.h3).foregroundStyle(Color.textPrimary)
-                Text("차단하면 이 사람의 별·성운·별빛 한 줄이 내 화면에 더 이상 보이지 않아요. 상대에게는 알리지 않고, 설정 › 차단한 별지기에서 언제든 풀 수 있어요.")
+                Text("차단하면 이 사람의 별과 별빛 한 줄이 내 화면에 더 이상 보이지 않아요. 상대에게는 알리지 않고, 설정 › 차단한 별지기에서 언제든 풀 수 있어요.")
                     .textStyle(.bodyM).foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -372,7 +372,7 @@ struct BlockedKeepersView: View {
                         )
                         .padding(.top, Space.xxxl)
                     } else {
-                        Text("차단한 별지기 \(keepers.count)명이에요. 이 사람들의 별·성운·별빛 한 줄은 내 화면에 보이지 않아요. 풀면 다시 보여요.")
+                        Text("차단한 별지기 \(keepers.count)명이에요. 이 사람들의 별과 별빛 한 줄은 내 화면에 보이지 않아요. 풀면 다시 보여요.")
                             .textStyle(.bodyM).foregroundStyle(Color.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                         LazyVStack(spacing: Space.md) {
