@@ -35,6 +35,8 @@ export type Me = {
   id: string;
   provider: string;
   needs_consent: boolean;
+  /** 별지기 이름 (기획서 15장); absent until the API ships it. */
+  nickname?: string | null;
   coins: number;
   free_star_today: number;
   free_telescope: number;

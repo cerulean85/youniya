@@ -50,7 +50,7 @@ async function Sky() {
         </section>
         <div className={styles.stats}>
           <Stat label="띄운 별" value={summary.floated} color="var(--gold)" />
-          <Stat label="조용히 간직한 별" value={summary.kept} color="var(--text)" />
+          <Stat label="별빛 없는 별" value={summary.kept} color="var(--text)" />
           <Stat label="깊은 별" value={summary.deep} color="var(--primary-text)" />
         </div>
       </div>
@@ -76,9 +76,9 @@ function Stat({ label, value, color }: { label: string; value: number; color: st
 
 function EmptySky() {
   const steps = [
-    { icon: <Pen size={20} />, tint: "var(--tint)", color: "var(--primary-text)", title: "1. 오늘의 마음을 적어요", body: "50자를 넘으면 별로 띄울 수 있어요. 짧은 날은 조용히 간직해요." },
+    { icon: <Pen size={20} />, tint: "var(--tint)", color: "var(--primary-text)", title: "1. 오늘의 마음을 적어요", body: "50자를 넘으면 별빛을 받을 수 있어요. 짧은 날은 별빛 없이 띄워요." },
     { icon: <Star size={20} />, tint: "var(--tint-gold)", color: "var(--gold)", title: "2. 별빛 프리즘이 별을 빚어요", body: "마음의 깊이와 선명함, 무게를 읽어 밝기와 색을 정해요." },
-    { icon: <Nebula size={20} />, tint: "var(--tint-calm)", color: "var(--calm)", title: "3. 별을 이어 성운을 그려요", body: "별이 모이면 이어서 나만의 성운을 만들 수 있어요." },
+    { icon: <Nebula size={20} />, tint: "var(--tint-calm)", color: "var(--calm)", title: "3. 별이 모여 별자리를 채워요", body: "이달의 별자리 자리를 띄운 별로 하나씩 채워요." },
   ];
   return (
     <div className={styles.body}>
@@ -87,7 +87,7 @@ function EmptySky() {
         <h2 className="h2">아직 떠 있는 별이 없어요</h2>
         <p className="body-l muted">마음에 머무는 이야기를 적으면<br />첫 별이 조용히 떠올라요.</p>
         <Link href="/write" className="btn btn-primary">첫 별 만들기</Link>
-        <p className="caption faint">별 띄우기는 하루 한 번 무료예요</p>
+        <p className="caption faint">별빛 받기는 하루 한 번 무료예요</p>
       </section>
       <section className={styles.recent}>
         <h2 className="label-m muted">처음이라면 이렇게 시작해요</h2>

@@ -19,7 +19,7 @@ export default function LoginPage() {
         <div className={styles.brandBody}>
           <div className={styles.orb} aria-hidden="true"><StarFilled size={56} /></div>
           <h1 className="display">텍스트로 시각화한<br />우리 모두의 우주</h1>
-          <p className="body-l muted">하루를 적으면 별이 되고, 별이 모이면 나만의 성운이 돼요.</p>
+          <p className="body-l muted">하루를 적으면 별이 되고, 별이 모이면 그달의 별자리를 채워요.</p>
         </div>
         <nav className={styles.links} aria-label="정책">
           <a href={`${SITE}/terms`}>이용약관</a>

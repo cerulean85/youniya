@@ -33,7 +33,7 @@ function Header({ total }: { total: number | null }) {
   return (
     <header className={styles.header}>
       <h1 className="h1">기록</h1>
-      <p className="body-m muted">{total == null ? " " : `지금까지 띄우고 간직한 별 ${total}개`}</p>
+      <p className="body-m muted">{total == null ? " " : `지금까지 띄운 별 ${total}개`}</p>
     </header>
   );
 }
@@ -67,8 +67,8 @@ async function Records({ searchParams }: Pick<PageProps<"/records">, "searchPara
 function Filters({ p }: { p: Params }) {
   const chips: { label: string; to: Params; on: boolean; color?: string }[] = [
     { label: "전체", to: { q: p.q }, on: !p.state && !p.mood },
-    { label: "띄운 별", to: { q: p.q, state: "floated" }, on: p.state === "floated" },
-    { label: "간직한 별", to: { q: p.q, state: "kept" }, on: p.state === "kept" },
+    { label: "별빛 받은 별", to: { q: p.q, state: "floated" }, on: p.state === "floated" },
+    { label: "별빛 없는 별", to: { q: p.q, state: "kept" }, on: p.state === "kept" },
     ...MOODS.map((m) => ({ label: m.label, to: { q: p.q, mood: m.key }, on: p.mood === m.key, color: m.color })),
   ];
   return (
@@ -164,8 +164,8 @@ async function CalendarView({ p }: { p: Params }) {
         {picked.map((s) => <StarRow key={s.id} star={s} />)}
         <div className={`card ${styles.monthSum}`}>
           <span className="label-m">{m}월에는</span>
-          <div><span className="body-s muted">띄운 별</span><span className="label-s">{floated.length}개</span></div>
-          <div><span className="body-s muted">간직한 별</span><span className="label-s">{list.items.length - floated.length}개</span></div>
+          <div><span className="body-s muted">별빛 받은 별</span><span className="label-s">{floated.length}개</span></div>
+          <div><span className="body-s muted">별빛 없는 별</span><span className="label-s">{list.items.length - floated.length}개</span></div>
           {brightest && <div><span className="body-s muted">가장 밝은 별</span><span className="label-s">{brightest.title || "제목 없는 별"} · {brightest.starlight}</span></div>}
         </div>
       </aside>

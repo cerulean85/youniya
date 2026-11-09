@@ -50,17 +50,17 @@ export function WriteForm({ draft, freeStarToday, coins }: { draft: Draft; freeS
         <textarea name="body" className={`journal ${styles.text}`} placeholder="오늘은 어떤 마음이 머물렀나요? 떠오르는 대로 적어 주세요."
           value={body} maxLength={20000} onChange={(e) => setBody(e.target.value)} aria-label="본문" />
         <div className={styles.footer}>
-          <span className="caption faint">{length.toLocaleString("ko-KR")}자{!canFloat && length > 0 ? ` · ${MIN_FLOAT_LENGTH - length}자 더 쓰면 띄울 수 있어요` : ""}</span>
+          <span className="caption faint">{length.toLocaleString("ko-KR")}자{!canFloat && length > 0 ? ` · ${MIN_FLOAT_LENGTH - length}자 더 쓰면 별빛을 받을 수 있어요` : ""}</span>
           <span className={styles.spacer} />
           {saved && <span className="caption faint">{saved}</span>}
-          <Submit mode="keep" label="조용히 간직하기" style="btn-secondary" disabled={length === 0} />
-          <Submit mode="float" label="별 띄우기" style="btn-primary" disabled={!canFloat} />
+          <Submit mode="keep" label="별빛 없이 띄우기" style="btn-secondary" disabled={length === 0} />
+          <Submit mode="float" label="별빛 받고 띄우기" style="btn-primary" disabled={!canFloat} />
         </div>
       </div>
       <aside className={styles.side}>
         <div className={styles.banner}>
           <Info size={18} />
-          {freeLeft ? "오늘 무료 별 띄우기가 1번 남았어요." : `오늘 무료 띄우기를 썼어요. 띄우면 ${STAR_COST}코인이 들어요 (보유 ${coins}).`}
+          {freeLeft ? "오늘 무료 별빛 받기가 1번 남았어요." : `오늘 무료 별빛 받기를 썼어요. 별빛을 받으면 ${STAR_COST}코인이 들어요 (보유 ${coins}).`}
         </div>
         {state?.error && (
           <div className={styles.error} role="alert">
@@ -72,8 +72,8 @@ export function WriteForm({ draft, freeStarToday, coins }: { draft: Draft; freeS
           <span className="label-m">쓰는 동안</span>
           <ul>
             <li>떠오르는 대로 적어도 괜찮아요. 맞춤법은 신경 쓰지 않아도 돼요.</li>
-            <li>{MIN_FLOAT_LENGTH}자를 넘으면 별로 띄울 수 있어요. 짧은 날은 조용히 간직해도 괜찮아요.</li>
-            <li>띄우면 별이 되고, 간직하면 분석 없이 기록만 남아요.</li>
+            <li>{MIN_FLOAT_LENGTH}자를 넘으면 별빛을 받을 수 있어요. 짧은 날은 별빛 없이 띄워도 괜찮아요.</li>
+            <li>별빛을 받으면 별빛 프리즘이 마음의 결을 읽어 별빛을 매겨요. 별빛 없이 띄우면 글만 별이 돼요.</li>
           </ul>
         </div>
         <p className={`caption faint ${styles.privacy}`}><Lock size={16} />글은 나에게만 보여요. 우주 광장에는 내가 고른 한 줄만 나가요.</p>

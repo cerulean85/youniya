@@ -17,7 +17,7 @@ export function StarRow({ star }: { star: StarSummary }) {
       {floated && star.starlight != null ? (
         <span className={styles.badge}><StarFilled size={12} />{star.starlight}<small>별빛</small></span>
       ) : (
-        <span className="label-s muted">{star.analysis_failed ? "다시 띄워 주세요" : "간직한 별"}</span>
+        <span className="label-s muted">{star.analysis_failed ? "다시 띄워 주세요" : "별빛 없는 별"}</span>
       )}
     </Link>
   );

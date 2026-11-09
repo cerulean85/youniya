@@ -14,7 +14,7 @@ export async function Account() {
     <div className={styles.box}>
       <div className={styles.row}>
         <div className={styles.who}>
-          <span className="label-m">별지기</span>
+          <span className="label-m">{me.nickname || "별지기"}</span>
           <span className="caption faint">{PROVIDER[me.provider] ?? me.provider}</span>
         </div>
         <a href="/coins" className={styles.coins} aria-label={`보유 코인 ${me.coins}`}><Coin size={16} />{me.coins.toLocaleString("ko-KR")}</a>

@@ -1,18 +1,17 @@
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
-import { Archive, Coin, Mail, Moon, Nebula, Settings, Star, Telescope } from "./icons";
+import { Archive, Coin, Mail, Moon, Nebula, Settings, Star } from "./icons";
 import { NavLinks } from "./NavLinks";
 import styles from "./Sidebar.module.css";
 
-// Figma: Web/Sidebar (W-10 to W-19). The main tabs of the iOS Tab Bar v2 plus its drawer menu.
+// Figma: Web/Sidebar. The main tabs of the iOS tab bar plus its drawer menu (2026-11-09: 별자리, no 마음 망원경).
 export const MAIN_NAV = [
   { href: "/", label: "나의 밤하늘", icon: <Moon /> },
-  { href: "/nebula", label: "성운", icon: <Nebula /> },
+  { href: "/constellation", label: "별자리", icon: <Nebula /> },
   { href: "/plaza", label: "우주 광장", icon: <Star /> },
   { href: "/records", label: "기록", icon: <Archive /> },
 ];
 export const MORE_NAV = [
-  { href: "/telescope", label: "마음 망원경", icon: <Telescope /> },
   { href: "/coins", label: "코인", icon: <Coin /> },
   { href: "/settings", label: "설정", icon: <Settings /> },
   { href: "/contact", label: "문의하기", icon: <Mail /> },
