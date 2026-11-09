@@ -11,6 +11,8 @@ export async function createOrder(packageId: string): Promise<OrderResult> {
     return { order: await api<Order>("/v1/payments/toss/orders", { method: "POST", body: JSON.stringify({ package_id: packageId }) }) };
   } catch (e) {
     if (e instanceof ApiError && (e.status === 405 || e.status === 503 || (e.status === 404 && e.code !== "unknown_product"))) return { soon: true, error: "웹 결제는 곧 열려요." };
+    // While the test key is in use, only operator, invite and listed test accounts may pay (403 payments_not_open).
+    if (e instanceof ApiError && e.code === "payments_not_open") return { soon: true, error: e.message || "지금은 웹 충전을 준비 중이에요. 앱에서 충전해 주세요." };
     if (e instanceof ApiError && e.code === "unknown_product") return { error: "지금은 판매하지 않는 상품이에요. 새로고침해 주세요." };
     if (e instanceof ApiError) return { error: e.message };
     throw e;

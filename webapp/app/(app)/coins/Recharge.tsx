@@ -61,9 +61,10 @@ export function Recharge({ packages, available, site }: { packages: CoinsInfo["p
         <span>(필수) 결제·환불 정책에 동의해요</span>
         <a href={`${site}/refund`} target="_blank" rel="noreferrer" aria-label="결제·환불 정책 보기"><ChevronRight size={16} /></a>
       </label>
+      {!ready && <p className="body-s muted" role="status">지금은 웹 충전을 준비 중이에요. 앱에서 충전해 주세요.</p>}
       {error && <p className="body-s" role="alert" style={{ color: "var(--anger)" }}>{error}</p>}
       <button type="button" className="btn btn-primary btn-block" disabled={!ready || !agreed || !pack || pending} onClick={pay}>
-        {!ready ? "웹 결제는 곧 열려요" : pending ? "결제창을 여는 중…" : `${pack?.price.toLocaleString("ko-KR")}원 충전하기`}
+        {!ready ? "웹 충전 준비 중" : pending ? "결제창을 여는 중…" : `${pack?.price.toLocaleString("ko-KR")}원 충전하기`}
       </button>
     </section>
   );
