@@ -30,8 +30,10 @@ export default async function CoinsPage({ searchParams }: PageProps<"/coins">) {
       <div className="stats">
         <Stat label="충전" value={won(s.charge_krw)} sub={`${num(s.charge_count)}건`} />
         <Stat label="환불 회수" value={won(s.refund_krw)} tone="red" sub={`${s.refund_count}건`} />
-        <Stat label="코인 사용" value={`별빛 받기 ${s.usage_share.starlight}%`} sub={`망원경 ${s.usage_share.telescope}%`} />
-        <Stat label="무료 몫 사용" value={`별빛 받기 ${num(s.free_used.starlight)}`} sub={`망원경 ${num(s.free_used.telescope)}`} />
+        {s.usage_share ? <Stat label="코인 사용" value={`별빛 받기 ${s.usage_share.starlight}%`} sub={`망원경 ${s.usage_share.telescope}%`} />
+          : <Stat label="코인 사용" value={`${num(Math.abs(s.spend_coins ?? 0))}코인`} />}
+        {s.free_used ? <Stat label="무료 몫 사용" value={`별빛 받기 ${num(s.free_used.starlight)}`} sub={`망원경 ${num(s.free_used.telescope)}`} />
+          : <Stat label="운영자 지급" value={`${num(s.grant_coins ?? 0)}코인`} />}
       </div>
       <div className="card table-card">
         <table className="table">
@@ -40,7 +42,7 @@ export default async function CoinsPage({ searchParams }: PageProps<"/coins">) {
             {l.items.map((x, i) => (
               <tr key={i}>
                 <td>{when(x.at)}</td>
-                <td><Link href={`/keepers/${encodeURIComponent(x.keeper.id)}`}>{x.keeper.nickname ?? x.keeper.no}</Link></td>
+                <td><Link href={x.keeper.id ? `/keepers/${encodeURIComponent(x.keeper.id)}` : `/keepers?q=${encodeURIComponent(x.keeper.no.startsWith("#") ? x.keeper.no : `#${x.keeper.no}`)}`}>{x.keeper.nickname ?? x.keeper.no}</Link></td>
                 <td><span className={`badge ${KIND[x.kind][0]}`}>{KIND[x.kind][1]}</span></td>
                 <td>{x.detail}</td>
                 <td>{x.coins > 0 ? `+${num(x.coins)}` : `−${num(-x.coins)}`}</td>

@@ -143,13 +143,87 @@ async function owned<T>(f: (t: string) => T, path: string, init?: RequestInit, p
   return authed<T>(path, init);
 }
 
-export const getDashboard = (range: Range) => owned<Dashboard>((t) => own.dashboard(t, range), `/v1/admin/dashboard?range=${range}`);
-export const getLedger = (month: string) => owned<Ledger>((t) => own.ledger(t, month), `/v1/admin/coins?month=${month}`);
-export const getAi = (month: string) => owned<AiUsage>((t) => own.ai(t, month), `/v1/admin/ai?month=${month}`);
-export const getPrism = () => owned<Prism>((t) => own.prism(t), "/v1/admin/prism");
+// The API's owner shapes (server/docs/admin_api_plan.md, step 7-3) turned into what the screens show.
+/* eslint-disable @typescript-eslint/no-explicit-any */
+const ALERT: Record<string, [string, Dashboard["events"][number]["status"]]> = {
+  report_instant: ["개인정보·자해 신고 · 바로 숨겼어요", "hidden"], report_hidden: ["신고 3건 누적 · 자동으로 숨겼어요", "hidden"],
+  ai_cost: ["멤버 원가 경보", "alert"], refund: ["App Store 환불", "done"], nickname_report: ["별지기 이름 신고", "pending"], crisis: ["위기 신호 감지", "ok"],
+};
+function toDashboard(d: any): Dashboard {
+  const n = (v: any) => (typeof v === "number" ? v : v?.count ?? 0);
+  return {
+    date: d.since ?? new Date().toISOString(),
+    stars: { total: d.stars?.total ?? 0, lit: d.stars?.lit ?? 0, unlit: d.stars?.unlit ?? 0 },
+    new_keepers: { count: n(d.new_keepers), delta: d.new_keepers?.delta ?? null },
+    reports_pending: { count: n(d.reports_pending), overdue: d.reports_pending?.overdue ?? null },
+    inquiries_new: { count: n(d.inquiries_new), avg_first_reply_hours: d.inquiries_new?.avg_first_reply_hours ?? null },
+    ai_cost_month: { krw: d.ai_cost_month_krw ?? d.ai_cost_month?.krw ?? 0 },
+    crisis_stars: d.crisis_stars,
+    events: (d.alerts ?? d.events ?? []).map((a: any) => a.text ? a : {
+      at: a.at, text: `${ALERT[a.kind]?.[0] ?? a.kind}${a.target_id ? ` · ${a.target_id}` : ""}`, status: ALERT[a.kind]?.[1] ?? "pending",
+    }),
+    payments_today: d.payments_today ?? { charge_krw: d.payments?.krw_estimate ?? 0, charge_count: d.payments?.count ?? 0, coins: d.payments?.coins },
+  };
+}
+const LEDGER_KIND: Record<string, Ledger["items"][number]["kind"]> = { purchase: "charge", charge: "charge", spend: "use", use: "use", refund: "refund", grant: "grant" };
+function toLedger(d: any, month: string): Ledger {
+  if (d.summary) return d;
+  const t = d.totals ?? {};
+  return {
+    month: d.month ?? month,
+    summary: { charge_krw: t.purchase?.krw_estimate ?? 0, charge_count: t.purchase?.count ?? 0, refund_krw: t.refund?.krw_estimate ?? 0, refund_count: t.refund?.count ?? 0, spend_coins: t.spend?.coins, grant_coins: t.grant?.coins },
+    items: (d.items ?? []).map((x: any) => ({
+      at: x.at, keeper: { id: null, no: x.keeper_no, nickname: null }, kind: LEDGER_KIND[x.kind] ?? "use", detail: x.title ?? x.detail ?? "",
+      coins: x.coins, krw_estimate: x.krw_estimate ?? null, reference: x.transaction_id ?? null, source: x.source ?? null,
+    })),
+  };
+}
+function toAi(d: any, month: string): AiUsage {
+  if (d.summary) return d;
+  const f = (k: string) => (d.features ?? []).find((x: any) => x.feature === k);
+  const calls = (d.features ?? []).reduce((s: number, x: any) => s + (x.calls ?? 0), 0);
+  const attempts = (d.features ?? []).reduce((s: number, x: any) => s + (x.attempts ?? 0), 0);
+  const failures = (d.features ?? []).reduce((s: number, x: any) => s + (x.failures ?? 0), 0);
+  return {
+    month: d.month ?? month, model: d.model ?? null, thinking: d.thinking ?? null, krw_per_usd: d.krw_per_usd ?? null,
+    summary: {
+      cost_krw: d.total_krw ?? 0, calls, failure_rate: attempts ? Math.round((failures / attempts) * 1000) / 10 : 0,
+      per_starlight_krw: Math.round(((f("prism")?.krw_per_request ?? 0) + (f("prism_reading")?.krw_per_request ?? 0)) * 10) / 10,
+      cache_hit: f("prism")?.cache_hit_rate != null ? Math.round(f("prism").cache_hit_rate * 100) : null,
+      per_telescope_krw: Math.round((f("telescope")?.krw_per_request ?? 0) * 10) / 10,
+      member_alerts: (d.over_alert ?? []).length, member_limit_krw: d.alert_krw ?? 2000,
+    },
+    features: (d.features ?? []).map((x: any) => ({
+      feature: x.feature, calls: x.calls ?? x.requests ?? null, attempts: x.attempts, failures: x.failures,
+      avg_in: x.avg_input_tokens ?? null, avg_out: x.avg_output_tokens ?? null, cost_krw: x.krw ?? 0,
+    })),
+    members: (d.over_alert ?? []).map((m: any) => ({ keeper_no: m.keeper_no, nickname: m.nickname, cost_krw: m.krw, alert: true })),
+  };
+}
+function toPrism(d: any): Prism {
+  if (d.versions?.[0]?.label) return d;
+  const status = (v: any): Prism["versions"][number]["status"] => (v.key === d.current ? "active" : v.status === "draft" || v.status === "held" ? v.status : "retired");
+  const t = (d.tests ?? []).at(-1);
+  return {
+    versions: (d.versions ?? []).map((v: any) => ({
+      key: v.key, label: v.key === d.current ? `${v.key} (지금)` : v.key, description: v.description ?? "",
+      deployed_at: v.first_at ? String(v.first_at).slice(0, 10) : null, stars: v.stars ?? null, status: status(v),
+    })),
+    test: t && typeof t.starlight_diff === "number" ? t : null,
+  };
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+export const getDashboard = async (range: Range) => toDashboard(await owned<unknown>((t) => own.dashboard(t, range), `/v1/admin/dashboard?range=${range}`));
+export const getLedger = async (month: string) => toLedger(await owned<unknown>((t) => own.ledger(t, month), `/v1/admin/coins?month=${month}`), month);
+export const getAi = async (month: string) => toAi(await owned<unknown>((t) => own.ai(t, month), `/v1/admin/ai?month=${month}`), month);
+export const getPrism = async () => toPrism(await owned<unknown>((t) => own.prism(t), "/v1/admin/prism"));
 export const testPrism = (key: string, reason: string) => owned((t) => own.prismTest(t, key, reason), `/v1/admin/prism/${key}/test`, post({ reason }));
 export const deployPrism = (key: string, reason: string) => owned((t) => own.prismDeploy(t, key, reason), `/v1/admin/prism/${key}/deploy`, post({ reason }));
-export const getInvites = () => owned<Invites>((t) => own.invites(t), "/v1/admin/invites");
+export const getInvites = async (): Promise<Invites> => {
+  const v = await owned<Invites>((t) => own.invites(t), "/v1/admin/invites");
+  return { ...v, items: v.items.map((i) => ({ ...i, last_login_at: i.last_login_at ?? (i as { last_seen_at?: string | null }).last_seen_at ?? null })) };
+};
 export const setInvitesEnabled = (on: boolean, reason: string) => owned((t) => own.invitesEnabled(t, on, reason), "/v1/admin/invites/settings", put({ enabled: on, reason }));
 export const createInvite = (loginId: string, memo: string, reason: string) =>
   owned<{ password: string }>((t) => own.createInvite(t, loginId, memo, reason), "/v1/admin/invites", post({ login_id: loginId, memo, reason }));
@@ -157,7 +231,17 @@ export const resetInvitePassword = (id: string, reason: string) =>
   owned<{ password: string }>((t) => own.resetInvite(t, id, reason), `/v1/admin/invites/${encodeURIComponent(id)}`, patch({ reset_password: true, reason }));
 export const setInvite = (id: string, on: boolean, reason: string) => owned((t) => own.setInvite(t, id, on, reason), `/v1/admin/invites/${encodeURIComponent(id)}`, patch({ enabled: on, reason }));
 export const reseedInvite = (id: string, reason: string) => owned((t) => own.reseed(t, id, reason), `/v1/admin/invites/${id}/reseed`, post({ reason }));
-export const getNotices = () => owned<Notices>((t) => own.notices(t), "/v1/admin/notices");
+export const getNotices = async (): Promise<Notices> => {
+  const n = await owned<Notices>((t) => own.notices(t), "/v1/admin/notices");
+  const m = n.maintenance as Notices["maintenance"] & { end?: string | null };
+  return {
+    ...n, maintenance: { on: m.on, until: m.until ?? m.end ?? null },
+    items: n.items.map((x) => {
+      const p = (x as { published?: boolean }).published;
+      return { ...x, status: x.status ?? (p === undefined ? "live" : p ? "live" : "scheduled") };
+    }),
+  };
+};
 export const setMaintenance = (on: boolean, reason: string, until?: string) => owned((t) => own.setMaintenance(t, on, reason, until), "/v1/admin/maintenance", put({ on, until, reason }));
 export const setMinVersion = (ios: string, reason: string) => owned((t) => own.setMinVersion(t, ios, reason), "/v1/admin/min-version", put({ ios, reason }));
 export const createNotice = (n: { title: string; body: string; publish_at?: string; push?: boolean }, reason: string) =>

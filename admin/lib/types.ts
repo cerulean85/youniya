@@ -75,26 +75,27 @@ export type Range = "today" | "week" | "month";
 export type Dashboard = {
   date: string;
   stars: { total: number; lit: number; unlit: number };
-  new_keepers: { count: number; delta: number };
-  reports_pending: { count: number; overdue: number };
+  new_keepers: { count: number; delta?: number | null };
+  reports_pending: { count: number; overdue?: number | null };
   inquiries_new: { count: number; avg_first_reply_hours: number | null };
-  ai_cost_month: { krw: number; starlight_share: number; telescope_share: number };
-  events: { at: string; text: string; status: "hidden" | "alert" | "done" | "pending" | "ok" }[];
-  payments_today: { charge_krw: number; charge_count: number; refund_krw: number; refund_count: number; used: { starlight: number; telescope: number } };
+  ai_cost_month: { krw: number; starlight_share?: number | null; telescope_share?: number | null };
+  crisis_stars?: number;
+  events: { at: string; text: string; status: "hidden" | "alert" | "done" | "pending" | "ok"; href?: string }[];
+  payments_today: { charge_krw: number; charge_count: number; refund_krw?: number | null; refund_count?: number | null; used?: { starlight: number; telescope: number } | null; coins?: number };
 };
 export type LedgerKind = "charge" | "use" | "refund" | "grant";
 export type Ledger = {
   month: string;
-  summary: { charge_krw: number; charge_count: number; refund_krw: number; refund_count: number; usage_share: { starlight: number; telescope: number }; free_used: { starlight: number; telescope: number } };
+  summary: { charge_krw: number; charge_count: number; refund_krw: number; refund_count: number; usage_share?: { starlight: number; telescope: number } | null; free_used?: { starlight: number; telescope: number } | null; spend_coins?: number; grant_coins?: number };
   /** `krw_estimate`: from the product price (the API's); `source`: app_store | server (toss once the web pays). */
-  items: { at: string; keeper: { id: string; no: string; nickname: string | null }; kind: LedgerKind; detail: string; coins: number; amount_krw?: number | null; krw_estimate?: number | null; reference: string | null; channel?: "app_store" | "toss" | "admin" | null; source?: string | null }[];
+  items: { at: string; keeper: { id: string | null; no: string; nickname: string | null }; kind: LedgerKind; detail: string; coins: number; amount_krw?: number | null; krw_estimate?: number | null; reference: string | null; channel?: "app_store" | "toss" | "admin" | null; source?: string | null }[];
 };
 export type AiUsage = {
-  month: string; model: string; thinking: string; krw_per_usd: number;
-  summary: { cost_krw: number; change_pct: number; calls: number; failure_rate: number; per_starlight_krw: number; cache_hit: number; per_telescope_krw: number; member_alerts: number; member_limit_krw: number };
+  month: string; model?: string | null; thinking?: string | null; krw_per_usd?: number | null;
+  summary: { cost_krw: number; change_pct?: number | null; calls: number; failure_rate: number; per_starlight_krw: number; cache_hit?: number | null; per_telescope_krw: number; member_alerts: number; member_limit_krw: number };
   /** Per feature this month; the failure rate is failures / attempts (ai_usage; the reading call is prism_reading). */
   features: { key?: string; feature?: "prism" | "prism_reading" | "telescope" | "monthly_report" | string; label?: string; calls: number | null; attempts?: number; failures?: number; avg_in: number | null; avg_out: number | null; cost_krw: number; note?: string }[];
-  members: { keeper_no: string; cost_krw: number; alert: boolean }[];
+  members: { keeper_no: string; nickname?: string | null; cost_krw: number; alert: boolean }[];
 };
 export type PrismStatus = "draft" | "held" | "active" | "retired";
 export type Prism = {
