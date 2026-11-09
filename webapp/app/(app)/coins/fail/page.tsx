@@ -11,6 +11,7 @@ const KNOWN: Record<string, string> = {
   order_expired: "주문이 만료됐어요(30분). 다시 충전해 주세요.",
   order_not_found: "주문을 찾지 못했어요. 다시 충전해 주세요.",
   order_used: "이미 다른 결제로 처리된 주문이에요.",
+  payment_key_used: "이미 사용된 결제예요. 다시 충전해 주세요.",
   order_canceled: "취소된 주문이에요.",
   order_in_progress: "결제를 처리하는 중이에요. 잠시 뒤 코인 내역을 확인해 주세요.",
   payment_unconfirmed: "결제 결과를 아직 받지 못했어요. 잠시 뒤 코인 내역을 확인하고, 코인이 없으면 문의해 주세요.",
