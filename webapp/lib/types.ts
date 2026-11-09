@@ -146,3 +146,11 @@ export type Story = {
 export type NotificationTarget = { screen: string; star_id?: string; notice_id?: string; until?: string };
 export type AppNotification = { id: string; kind: string; title: string; body: string; target: NotificationTarget | null; created_at: string; read: boolean };
 export type Notice = { id: string; title: string; body: string; published_at: string };
+
+/** GET /v1/coins: the balance, what's free today, and the packages on sale (the same as iOS). */
+export type CoinsInfo = {
+  coins: number; free_star_today: number; free_telescope: number; free_telescope_available?: boolean;
+  prices: { star: number; telescope: number };
+  packages: { product_id: string; coins: number; price: number; bonus: number }[];
+};
+export type CoinEntryRow = { id: string; kind: "purchase" | "spend" | "refund" | "grant" | string; title: string; delta: number; created_at: string; source?: string | null };
