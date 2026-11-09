@@ -3,8 +3,9 @@ import { redirect } from "next/navigation";
 import { API_URL, MOCK } from "./config";
 import * as mock from "./mock";
 import * as more from "./mock-more";
+import * as own from "./mock-owner";
 import { session } from "./session";
-import type { ActionKind, AuditEntry, InquiryDetail, InquiryRow, InquiryStatus, KeeperAction, KeeperDetail, KeeperRow, Operator, ReportDetail, ReportItem, ReportKind, ReportStatus } from "./types";
+import type { ActionKind, AiUsage, AuditEntry, Dashboard, InquiryDetail, Invites, Ledger, Notices, OperatorRow, Prism, Range, InquiryRow, InquiryStatus, KeeperAction, KeeperDetail, KeeperRow, Operator, ReportDetail, ReportItem, ReportKind, ReportStatus } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, public code: string, message: string, public data: Record<string, unknown> = {}) { super(message); }
@@ -129,3 +130,37 @@ export async function replyInquiry(id: string, body: string) {
   if (MOCK) { const t = await token(); return guard(() => more.reply(t, id, body)); }
   return authed(`/v1/admin/inquiries/${encodeURIComponent(id)}/reply`, { method: "POST", body: JSON.stringify({ body }) });
 }
+
+// ── Owner screens (A-02, A-08~A-12, A-14): proposed shapes, owners only (403 forbidden_role otherwise) ──
+
+const post = (body: unknown) => ({ method: "POST", body: JSON.stringify(body) });
+const put = (body: unknown) => ({ method: "PUT", body: JSON.stringify(body) });
+const patch = (body: unknown) => ({ method: "PATCH", body: JSON.stringify(body) });
+async function owned<T>(f: (t: string) => T, path: string, init?: RequestInit): Promise<T> {
+  if (MOCK) { const t = await token(); return guard(() => f(t)); }
+  return authed<T>(path, init);
+}
+
+export const getDashboard = (range: Range) => owned<Dashboard>((t) => own.dashboard(t, range), `/v1/admin/dashboard?range=${range}`);
+export const getLedger = (month: string) => owned<Ledger>((t) => own.ledger(t, month), `/v1/admin/coins?month=${month}`);
+export const getAi = (month: string) => owned<AiUsage>((t) => own.ai(t, month), `/v1/admin/ai?month=${month}`);
+export const getPrism = () => owned<Prism>((t) => own.prism(t), "/v1/admin/prism");
+export const testPrism = (key: string, reason: string) => owned((t) => own.prismTest(t, key, reason), `/v1/admin/prism/${key}/test`, post({ reason }));
+export const deployPrism = (key: string, reason: string) => owned((t) => own.prismDeploy(t, key, reason), `/v1/admin/prism/${key}/deploy`, post({ reason }));
+export const getInvites = () => owned<Invites>((t) => own.invites(t), "/v1/admin/invites");
+export const setInvitesEnabled = (on: boolean, reason: string) => owned((t) => own.invitesEnabled(t, on, reason), "/v1/admin/invites/settings", put({ enabled: on, reason }));
+export const createInvite = (loginId: string, memo: string, reason: string) =>
+  owned<{ password: string }>((t) => own.createInvite(t, loginId, memo, reason), "/v1/admin/invites", post({ login_id: loginId, memo, reason }));
+export const setInvite = (id: string, on: boolean, reason: string) => owned((t) => own.setInvite(t, id, on, reason), `/v1/admin/invites/${id}`, patch({ enabled: on, reason }));
+export const reseedInvite = (id: string, reason: string) => owned((t) => own.reseed(t, id, reason), `/v1/admin/invites/${id}/reseed`, post({ reason }));
+export const getNotices = () => owned<Notices>((t) => own.notices(t), "/v1/admin/notices");
+export const setMaintenance = (on: boolean, reason: string) => owned((t) => own.setMaintenance(t, on, reason), "/v1/admin/maintenance", put({ on, reason }));
+export const setMinVersion = (ios: string, reason: string) => owned((t) => own.setMinVersion(t, ios, reason), "/v1/admin/min-version", put({ ios, reason }));
+export const createNotice = (n: { title: string; body: string; audience: "all" | "ios" | "web"; starts_at: string; ends_at: string }, reason: string) =>
+  owned((t) => own.createNotice(t, n, reason), "/v1/admin/notices", post({ ...n, reason }));
+export const getOperators = async (): Promise<OperatorRow[]> =>
+  MOCK ? owned((t) => own.operators(t), "") : (await authed<{ items: OperatorRow[] }>("/v1/admin/operators")).items;
+export const inviteOperator = (email: string, role: "owner" | "moderator", reason: string) =>
+  owned((t) => own.inviteOperator(t, email, role, reason), "/v1/admin/operators/invite", post({ email, role, reason }));
+export const updateOperator = (id: string, p: { role?: "owner" | "moderator"; status?: "active" | "disabled" }, reason: string) =>
+  owned((t) => own.updateOperator(t, id, p, reason), `/v1/admin/operators/${id}`, patch({ ...p, reason }));

@@ -44,3 +44,13 @@ tr[aria-current="true"] td { background: var(--accent-tint); }
 .reply textarea { min-height: 140px; resize: vertical; }
 .thread { display: flex; flex-direction: column; gap: 8px; }
 .thread div { padding: 10px 12px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); }
+.stats.five { grid-template-columns: repeat(5, 1fr); }
+.badge-muted { background: var(--row); color: var(--text-2); }
+.badge-info { background: rgba(34, 211, 238, 0.14); color: #22d3ee; }
+.toggle-row { padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.toggle-row > div:first-child { display: flex; flex-direction: column; gap: 4px; }
+.steps { margin: 0; padding-left: 18px; display: grid; gap: 8px; color: var(--text-2); }
+.secret { font-family: ui-monospace, monospace; font-size: 16px; padding: 10px 12px; border-radius: 10px; background: var(--bg); border: 1px dashed var(--amber); color: var(--amber); }
+.split.rev { grid-template-columns: 380px 1fr; }
+.reason { display: flex; flex-direction: column; gap: 6px; }
+.head > .reason { align-items: flex-end; max-width: 420px; text-align: right; }

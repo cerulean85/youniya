@@ -38,12 +38,19 @@ telescope results.
 A-01 sign-in, the sidebar, A-03 report list, A-04 report detail with actions (reason required), A-05 별지기
 list (search by name or #번호, filters, CSV for owners), A-06 별지기 detail (counts, consents, sanctions; lift or
 extend a restriction, ask for a new name, and for owners grant coins or process a deletion request), A-07 문의
-(list and reply; masked email), A-13 audit log. The other screens are placeholders that name their Figma frame.
+(list and reply; masked email), A-13 audit log, and for owners A-02 대시보드, A-08 코인·결제 (App Store and
+Toss in one ledger), A-09 AI 사용량·원가, A-10 별빛 측정 방식 (test first; 배포 stays off until the test passes),
+A-11 초대 계정 (INVITE_LOGIN switch, new accounts with a one-time password, reseed the review account),
+A-12 공지·점검 (maintenance mode, minimum iOS version, notices) and A-14 운영자·권한 (invite, change role, stop;
+the last owner can't be removed). Every change asks for a reason.
 
 The 별지기 and 문의 endpoints were proposed by the web side (2026-11-09): `GET /v1/admin/keepers?q=&filter=`
 (`format=csv`), `GET /v1/admin/keepers/{id}`, `POST /v1/admin/keepers/{id}/actions {action, reason, amount?, days?}`,
 `GET /v1/admin/inquiries?status=new|answered`, `GET /v1/admin/inquiries/{id}`, `POST /v1/admin/inquiries/{id}/reply
-{body}`; shapes in `lib/types.ts`.
+{body}`; shapes in `lib/types.ts`. The owner screens' endpoints (also proposed by the web side, not yet in
+the API Dev Session's plan) are in `lib/api.ts`: `/v1/admin/dashboard`, `/coins`, `/ai`, `/prism` (`/test`,
+`/deploy`), `/invites` (`/settings`, `/{id}`, `/{id}/reseed`), `/notices`, `/maintenance`, `/min-version`,
+`/operators` (`/invite`, `/{id}`).
 
 ## Deploy
 

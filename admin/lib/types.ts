@@ -67,3 +67,40 @@ export type InquiryDetail = InquiryRow & {
   replies: { at: string; operator: string; body: string }[];
 };
 export const INQUIRY_KIND_LABEL: Record<string, string> = { payment: "결제", bug: "오류", account: "계정", idea: "제안", other: "기타" };
+
+// A-02, A-08~A-12, A-14 (owners only): the web console's proposal (2026-11-09).
+export type Range = "today" | "week" | "month";
+export type Dashboard = {
+  date: string;
+  stars: { total: number; lit: number; unlit: number };
+  new_keepers: { count: number; delta: number };
+  reports_pending: { count: number; overdue: number };
+  inquiries_new: { count: number; avg_first_reply_hours: number | null };
+  ai_cost_month: { krw: number; starlight_share: number; telescope_share: number };
+  events: { at: string; text: string; status: "hidden" | "alert" | "done" | "pending" | "ok" }[];
+  payments_today: { charge_krw: number; charge_count: number; refund_krw: number; refund_count: number; used: { starlight: number; telescope: number } };
+};
+export type LedgerKind = "charge" | "use" | "refund" | "grant";
+export type Ledger = {
+  month: string;
+  summary: { charge_krw: number; charge_count: number; refund_krw: number; refund_count: number; usage_share: { starlight: number; telescope: number }; free_used: { starlight: number; telescope: number } };
+  items: { at: string; keeper: { id: string; no: string; nickname: string | null }; kind: LedgerKind; detail: string; coins: number; amount_krw: number | null; reference: string | null; channel: "app_store" | "toss" | "admin" | null }[];
+};
+export type AiUsage = {
+  month: string; model: string; thinking: string; krw_per_usd: number;
+  summary: { cost_krw: number; change_pct: number; calls: number; failure_rate: number; per_starlight_krw: number; cache_hit: number; per_telescope_krw: number; member_alerts: number; member_limit_krw: number };
+  features: { key: string; label: string; calls: number | null; avg_in: number | null; avg_out: number | null; cost_krw: number; note?: string }[];
+  members: { keeper_no: string; cost_krw: number; alert: boolean }[];
+};
+export type PrismStatus = "draft" | "held" | "active" | "retired";
+export type Prism = {
+  versions: { key: string; label: string; description: string; deployed_at: string | null; stars: number | null; status: PrismStatus }[];
+  test: { version: string; sample_size: number; starlight_diff: number; threshold: number; rank_flips: number; depth: number; clarity: number; weight: number; passed: boolean } | null;
+};
+export type Invites = { enabled: boolean; items: { id: string; login_id: string; memo: string; created_at: string; last_login_at: string | null; enabled: boolean }[] };
+export type Notices = {
+  maintenance: { on: boolean };
+  min_version: { ios: string };
+  items: { id: string; title: string; body: string; audience: "all" | "ios" | "web"; starts_at: string; ends_at: string; status: "scheduled" | "live" | "ended" }[];
+};
+export type OperatorRow = { id: string; name: string; email_masked: string; role: Role; totp: boolean; last_seen_at: string | null; status: "active" | "invited" | "disabled" };
