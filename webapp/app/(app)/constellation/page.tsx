@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { ConstellationFigure } from "@/components/ConstellationFigure";
 import { ChevronRight, Nebula } from "@/components/icons";
 import { MONTH_NAMES } from "@/lib/constellation";
-import { countDeep, getConstellation } from "@/lib/constellation-data";
+import { getConstellation, listMonths } from "@/lib/constellation-data";
 import { kst, monthOnly, shiftMonth } from "@/lib/format";
 import styles from "./constellation.module.css";
 
@@ -25,32 +25,36 @@ async function Month({ searchParams }: Pick<PageProps<"/constellation">, "search
   await connection();
   const current = kst(new Date()).month;
   const asked = typeof sp.month === "string" && /^\d{4}-\d{2}$/.test(sp.month) ? sp.month : current;
-  const month = asked > current ? current : asked; // no future months
-  const { c, stars } = await getConstellation(month);
-  const deep = await countDeep(stars);
+  // From the month of sign-up (the oldest the server lists) to this month; never the future.
+  const months = await listMonths();
+  const first = months?.at(-1)?.month;
+  const month = asked > current ? current : first && asked < first ? first : asked;
+  const view = await getConstellation(month);
+  const c = view?.c ?? null, count = view?.count ?? 0;
   const prev = shiftMonth(month, -1), next = shiftMonth(month, 1);
+  const hasPrev = !first || prev >= first;
   const name = c?.name ?? MONTH_NAMES[month.slice(5)];
   return (
     <>
       <header className={styles.header}>
         <h1 className="h1">나의 별자리</h1>
-        <p className="body-m" style={{ color: "var(--gold)" }}>{monthOnly(month)}{name ? ` · ${name}자리` : ""} · 별 {stars.length}개</p>
+        <p className="body-m" style={{ color: "var(--gold)" }}>{monthOnly(month)}{name ? ` · ${name}자리` : ""} · 별 {count}개</p>
       </header>
       <div className={styles.body}>
         <section className={`card ${styles.figureCard}`} aria-label="별자리">
           <div className={styles.figure}>
-            {c ? <ConstellationFigure c={c} /> : <p className="body-m muted">{monthOnly(month)} 별자리의 모양을 준비하고 있어요.</p>}
+            {c ? <ConstellationFigure c={c} /> : <p className="body-m muted">{view ? `${monthOnly(month)} 별자리의 모양을 준비하고 있어요.` : "아직 열리지 않은 달이에요."}</p>}
           </div>
           <nav className={styles.months} aria-label="달 넘기기">
-            <Link href={`/constellation?month=${prev}`}>‹ {monthOnly(prev)}{MONTH_NAMES[prev.slice(5)] ? ` ${MONTH_NAMES[prev.slice(5)]}` : ""}</Link>
+            {hasPrev ? <Link href={`/constellation?month=${prev}`}>‹ {monthOnly(prev)}{MONTH_NAMES[prev.slice(5)] ? ` ${MONTH_NAMES[prev.slice(5)]}` : ""}</Link> : <span />}
             <span className="label-m">{c ? `${c.filled} / ${c.total}` : ""}</span>
             {month < current ? <Link href={`/constellation?month=${next}`}>{monthOnly(next)}{MONTH_NAMES[next.slice(5)] ? ` ${MONTH_NAMES[next.slice(5)]}` : ""} ›</Link> : <span />}
           </nav>
         </section>
         <aside className={styles.side}>
           <div className={styles.stats}>
-            <Stat label="떠 있는 별" value={stars.length} />
-            <Stat label="깊은 별" value={deep} />
+            <Stat label="떠 있는 별" value={count} />
+            <Stat label="깊은 별" value={view?.deep ?? 0} />
             <Stat label="남은 자리" value={c ? c.total - c.filled : 0} />
           </div>
           {c && (

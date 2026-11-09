@@ -33,13 +33,13 @@ async function Today() {
 async function Sky() {
   await connection();
   const month = kst(new Date()).month;
-  const [list, summary, { c, stars }] = await Promise.all([
+  const [list, summary, view] = await Promise.all([
     api<{ items: StarSummary[] }>("/v1/stars?limit=6"),
     api<Summary>("/v1/stars/summary"),
     getConstellation(month),
   ]);
   if (summary.total === 0) return <EmptySky />;
-  const unlit = stars.filter((s) => !(s.has_starlight ?? s.state === "floated")).length;
+  const c = view?.c ?? null;
   return (
     <div className={styles.body}>
       <div className={styles.left}>
@@ -53,8 +53,8 @@ async function Sky() {
           </div>
         </Link>
         <div className={styles.stats}>
-          <Stat label="이번 달 띄운 별" value={String(stars.length)} color="var(--gold)" />
-          <Stat label="별빛 없는 별" value={String(unlit)} color="var(--text)" />
+          <Stat label="이번 달 띄운 별" value={String(view?.count ?? 0)} color="var(--gold)" />
+          <Stat label="별빛 없는 별" value={String(view?.unlit ?? 0)} color="var(--text)" />
           <Stat label="채운 자리" value={c ? `${c.filled}/${c.total}` : "–"} color="var(--primary-text)" />
         </div>
       </div>

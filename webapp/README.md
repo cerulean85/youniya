@@ -68,8 +68,10 @@ vercel deploy --prod   # from this folder, linked to youniya-app
 
 1. Terms, sidebar, removed screens. **Done.**
 2. Writing (several moods), 별빛 받기 / 별빛 없이 띄우기, result (W-24), 별빛 풀이. **Done.**
-3. Monthly constellations (`lib/constellation.ts`, 12 shapes from Figma), 별자리 이야기, home preview. Stars fill
-   slots in date order on the web until `GET /v1/constellations` ships. **Done.**
+3. Monthly constellations, 별자리 이야기, home preview, from `GET /v1/constellations[/{month}[/story]]`
+   (`lib/constellation-data.ts`): months run from sign-up to now, a closed month is 404 `not_found`. Servers
+   without the API fall back to filling the shapes in `lib/constellation.ts` here. 나의 은하수 waits for a web
+   design. **Done.**
 4. Star detail: 마음 망원경 inside it (W-54, one-star report), 이어진 별 chips (`linked_stars`, cut with ×),
    별 잇기 (W-47; new writing with `link_to`, or pick written stars: W-51 list, W-52 calendar, W-53 preview,
    `POST /v1/stars/{id}/links`), 고쳐 쓰기 (`/write?rewrite=`, W-46, `rewrite_of`; its draft carries
