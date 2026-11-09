@@ -18,6 +18,13 @@ BASE = "https://generativelanguage.googleapis.com/v1beta"
 usage_listeners: list[Callable[[str, dict], None]] = []
 # (model, usageMetadata) of every call made while a request's cost is being metered (ai_cost.metered).
 meter: contextvars.ContextVar[list | None] = contextvars.ContextVar("ai_meter", default=None)
+# (feature, succeeded) of model steps while metered: kept per month for the failure rate (ai_cost.AiUsage).
+outcomes: contextvars.ContextVar[list | None] = contextvars.ContextVar("ai_outcomes", default=None)
+
+
+def note(feature: str, ok: bool) -> None:
+    if (seen := outcomes.get()) is not None:
+        seen.append((feature, ok))
 
 
 def thinking_config(model: str, thinking: str | None) -> dict | None:

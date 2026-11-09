@@ -418,6 +418,18 @@ class AiCost(Base):
     alerted: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
+class AiUsage(Base):
+    """How often a model step worked, per month and feature (관리자 A-09 실패율). prism_reading: the
+    별빛 풀이 call after the scores; a failure leaves the reasons out, never the star."""
+
+    __tablename__ = "ai_usage"
+
+    month: Mapped[str] = mapped_column(String(7), primary_key=True)
+    feature: Mapped[str] = mapped_column(String(32), primary_key=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    failures: Mapped[int] = mapped_column(Integer, default=0)
+
+
 class AiCache(Base):
     """An explicit Gemini context cache for one feature's fixed prompt, shared by every instance."""
 

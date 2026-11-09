@@ -664,7 +664,7 @@
           "account"
         ],
         "summary": "Export",
-        "description": "93 텍스트 파일로 · PDF로: every star and nebula. The file stays on the device.",
+        "description": "93 텍스트 파일로 · PDF로: every star with its 별빛 풀이, 망원경 결과 and linked stars, then each month's\n별자리 이야기 and the nebulae. The file stays on the device.",
         "operationId": "export_v1_me_export_get",
         "security": [
           {

@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from . import llm
 from .allowance import this_month
-from .models import AdminLog, AiCost, User
+from .models import AdminLog, AiCost, AiUsage, User
 from .rules import AI_COST_ALERT_KRW
 
 log = logging.getLogger(__name__)
@@ -42,13 +42,23 @@ def metered(db: Session, user: User):
     """Every model call inside is added to the account's month, even when the feature then fails
     (the model was paid for). Over AI_COST_ALERT_KRW the operator hears of it once a month."""
     entries: list = []
-    token = llm.meter.set(entries)
+    seen: list = []
+    token, seen_token = llm.meter.set(entries), llm.outcomes.set(seen)
     try:
         yield
     finally:
         llm.meter.reset(token)
+        llm.outcomes.reset(seen_token)
+        for feature, ok in seen:
+            usage = db.get(AiUsage, (this_month(), feature)) or AiUsage(month=this_month(), feature=feature,
+                                                                        attempts=0, failures=0)
+            usage.attempts += 1
+            usage.failures += 0 if ok else 1
+            db.add(usage)
         if entries:
             record(db, user.id, entries)
+        elif seen:
+            db.commit()
 
 
 def record(db: Session, user_id: str, entries: list) -> None:

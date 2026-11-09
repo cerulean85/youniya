@@ -25,3 +25,26 @@ def test_telescope_result_sits_on_the_star(client):
     assert depth["score"] == star["analysis"]["scores"]["depth"] and depth["reason"] == star["analysis"]["depth_reason"]
     assert set(t["mood_flow"]) == {"start", "middle", "end"} and t["fog_items"] == []
     assert t["mood_interpretation"]
+
+
+def test_a_lost_reading_is_counted_and_the_star_kept(client, monkeypatch):
+    from youniya_api.models import AiUsage
+    from youniya_api.prism import PrismEngine, engine
+    from youniya_api.prism.prompt import READING_PROMPT
+
+    from .conftest import DEEP_BODY
+
+    def fake(api_key, model, prompt, prefix="", **kw):
+        if prefix.startswith(READING_PROMPT[:20]):
+            raise TimeoutError("reading")
+        return engine.mock_sample("", DEEP_BODY).model_dump()
+
+    monkeypatch.setattr(engine, "generate_json", fake)
+    client.app.state.prism = PrismEngine("key", "gemini-3.8-flash", 1)
+    h = sign_in(client)
+    star = float_star(client, h)
+    a = star["analysis"]
+    assert star["starlight"] > 0 and star["has_starlight"] and a["depth_reason"]  # the star is lit all the same
+    with client.app.state.sessions() as db:
+        u = db.query(AiUsage).one()
+        assert (u.feature, u.attempts, u.failures) == ("prism_reading", 1, 1)

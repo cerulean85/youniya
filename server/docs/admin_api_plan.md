@@ -39,7 +39,16 @@ is built against these shapes with mock data. Agreed with the Web Dev Session, 2
   purchase:{transaction_id, status}|null, replies:[{at, operator, body}]}
 - POST /v1/admin/inquiries/{id}/reply {body} → email to the address given, status answered
 
-## 나머지 (shapes to propose when built)
-- A-02 dashboard, A-08 coin ledger (App Store + Toss), A-09 AI usage/cost, A-10 prism versions and tests,
-  A-11 invite accounts, A-12 notices/maintenance/min version, A-13 audit (CSV), A-14 operators and roles.
+## owner 화면 (A-02, A-08~A-12, A-14; owner only, every change needs a reason; console f7d29f4)
+- GET /v1/admin/dashboard?range=today|week|month
+- GET /v1/admin/coins?month= — App Store, Toss and operator grants in one ledger
+- GET /v1/admin/ai?month= — per feature calls, tokens, cost, cache hits, failure rate (ai_usage: prism_reading
+  attempts/failures since 20261109), members over the ₩2,000 alert
+- GET /v1/admin/prism · POST /v1/admin/prism/{key}/test · POST /v1/admin/prism/{key}/deploy (409 before a passed test;
+  the test is tools/compare_prism.py and costs model calls)
+- GET /v1/admin/invites · PUT /v1/admin/invites/settings {enabled} · POST /v1/admin/invites {login_id, memo} → {password}
+  (shown once) · PATCH /v1/admin/invites/{id} {enabled} · POST /v1/admin/invites/{id}/reseed
+- GET /v1/admin/notices · PUT /v1/admin/maintenance {on} · PUT /v1/admin/min-version {ios} · POST /v1/admin/notices
+- GET /v1/admin/operators · POST /v1/admin/operators/invite {email, role} · PATCH /v1/admin/operators/{id} {role|status}
+  (409 for the last owner)
 - Audit: GET /v1/admin/audit?from=&to=&operator=&format=json|csv → {items:[{at, operator, action, target, reason}]}

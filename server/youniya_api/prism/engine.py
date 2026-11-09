@@ -7,7 +7,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
-from ..llm import generate_json
+from ..llm import generate_json, note
 from ..rules import MIN_FLOAT_LENGTH
 from .calculator import final_scores
 from .filters import foul_reason, has_crisis_signal
@@ -63,9 +63,11 @@ class PrismEngine:
                                 timeout=25.0, retries=1)
         except Exception as e:  # noqa: BLE001
             log.warning("prism reading failed: %s", type(e).__name__)
+            note("prism_reading", False)
             return {}
         keys = ("depth_reason", "clarity_reason", "weight_reason", "interpretation")
         got = {k: out[k].strip() for k in keys if isinstance(out.get(k), str) and out[k].strip()}
+        note("prism_reading", len(got) == len(keys))
         return got | ({} if got.get("depth_reason") else {"depth_reason": analysis["level_evidence"]})
 
     def _samples(self, title: str, body: str) -> list[PrismSample]:

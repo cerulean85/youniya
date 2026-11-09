@@ -13,7 +13,9 @@ from .. import allowance, marketing, membership, nickname
 from ..blocks import hidden_users
 from ..deps import ApiError, current_user, get_cipher, get_db
 from ..export import StarEntry, as_pdf, as_text
-from ..models import StarLine, CoinEntry, DeviceToken, Inquiry, Nebula, NebulaShare, Resonance, Star, StarlightLine, StarShare, User
+from ..prism.engine import split_sentences
+from .constellations import TEMPLATES
+from ..models import StarLine, StarLink, TelescopeReport, CoinEntry, DeviceToken, Inquiry, Nebula, NebulaShare, Resonance, Star, StarlightLine, StarShare, User
 from ..rules import INQUIRY_KINDS, MOOD_LABELS, SKY_THEMES, SOUNDS
 from ..security import Cipher
 from ..views import iso, local
@@ -234,21 +236,51 @@ def withdraw_all(user: User = Depends(current_user), db: Session = Depends(get_d
 @router.get("/me/export")
 def export(format: Literal["text", "pdf"] = "text", user: User = Depends(current_user),
            db: Session = Depends(get_db), cipher: Cipher = Depends(get_cipher)):
-    """93 텍스트 파일로 · PDF로: every star and nebula. The file stays on the device."""
+    """93 텍스트 파일로 · PDF로: every star with its 별빛 풀이, 망원경 결과 and linked stars, then each month's
+    별자리 이야기 and the nebulae. The file stays on the device."""
     rows = db.scalars(select(Star).where(Star.user_id == user.id).order_by(Star.created_at)).all()
-    stars = []
-    for s in rows:
-        when = local(s.created_at).strftime("%Y년 %-m월 %-d일 %H:%M")
-        state = f"별빛 {s.starlight}" if s.starlight is not None else "간직한 별"
-        stars.append(StarEntry(cipher.dec(s.title_enc), f"{when} · {MOOD_LABELS[s.mood]} · {state}",
-                               cipher.dec(s.body_enc)))
     titles = {s.id: cipher.dec(s.title_enc) for s in rows}
+    links: dict[str, list[str]] = {}
+    for a, b in db.execute(select(StarLink.star_a, StarLink.star_b).where(StarLink.user_id == user.id)):
+        links.setdefault(a, []).append(b)
+        links.setdefault(b, []).append(a)
+    scopes: dict[str, dict] = {}
+    for r in db.scalars(select(TelescopeReport).where(TelescopeReport.user_id == user.id)
+                        .order_by(TelescopeReport.created_at)):
+        if len(r.star_ids) == 1:
+            scopes[r.star_ids[0]] = cipher.dec_json(r.report_enc)  # the latest wins
+    stars, stories = [], {}
+    for s in rows:
+        t = local(s.created_at)
+        state = f"별빛 {s.starlight}" if s.starlight is not None else "별빛 없는 별"
+        moods = " · ".join(MOOD_LABELS[m] for m in (s.moods or [s.mood]))
+        a = cipher.dec_json(s.analysis_enc) if s.state == "floated" and s.analysis_enc else None
+        extra = []
+        if a:
+            for key, label in (("depth_reason", "별의 깊이"), ("clarity_reason", "빛의 선명함"),
+                               ("weight_reason", "마음의 무게"), ("interpretation", "별빛 풀이")):
+                if a.get(key):
+                    extra.append(f"{label}: {a[key]}")
+        if (scope := scopes.get(s.id)) is not None:
+            extra.append(f"마음 망원경: {scope['star_name']} · {scope.get('mood_interpretation') or scope['question']}")
+            extra += [f"  {f['label']}: {f['sentence']}" for f in scope.get("fog_items") or []]
+        if s.id in links:
+            extra.append("이어진 별: " + ", ".join(titles[i] for i in links[s.id] if i in titles))
+        stars.append(StarEntry(cipher.dec(s.title_enc), f"{t.year}년 {t.month}월 {t.day}일 {t:%H:%M} · {moods} · {state}",
+                               cipher.dec(s.body_enc), extra))
+        body = cipher.dec(s.body_enc)
+        sentence = a["impact_quote"] if a else (split_sentences(body) or [body.strip()])[0]
+        stories.setdefault(t.strftime("%Y-%m"), []).append(f"  {t.day}일 · {sentence}")
+    constellations = []
+    for month, entries in stories.items():
+        constellations += [f"{month[:4]}년 {int(month[5:])}월 · {TEMPLATES[int(month[5:])]['name']}"] + entries
     nebulae = [f"- {n.name}: " + ", ".join(titles[i] for i in n.star_ids if i in titles)
                for n in db.scalars(select(Nebula).where(Nebula.user_id == user.id).order_by(Nebula.created_at))]
+    sections = [("별자리 이야기", constellations), ("성운", nebulae)]
     if format == "pdf":
-        return Response(as_pdf(stars, nebulae), media_type="application/pdf",
+        return Response(as_pdf(stars, sections), media_type="application/pdf",
                         headers={"Content-Disposition": 'attachment; filename="youniya-export.pdf"'})
-    return Response(as_text(stars, nebulae), media_type="text/plain; charset=utf-8",
+    return Response(as_text(stars, sections), media_type="text/plain; charset=utf-8",
                     headers={"Content-Disposition": 'attachment; filename="youniya-export.txt"'})
 
 
