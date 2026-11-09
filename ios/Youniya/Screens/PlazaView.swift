@@ -26,6 +26,14 @@ struct PlazaNebula: Identifiable, Hashable {
     var fullText = false
     var fullTitle: String? = nil
     var fullBody: String? = nil
+    /// 15장: the keeper's name, and the title they gave the star (09-5 row).
+    var nickname: String? = nil
+    var starTitle: String? = nil
+    /// 17.2: shared without starlight (faint, listed last, not in 「나와 결이 비슷한」).
+    var hasStarlight = true
+    /// 10.1 별빛 한 줄: the owner takes lines, and whether I already left one.
+    var receiveLines = true
+    var lineLeft = false
 
     /// 09 card: the server's values, or steady samples from the name.
     var cardShape: StarShapeSpec {
@@ -47,20 +55,24 @@ struct PlazaNebula: Identifiable, Hashable {
 
     /// Mock samples from Figma `09-2 우주 광장 · 합친 화면`.
     static let samples: [PlazaNebula] = [
-        PlazaNebula(name: "고요한 새벽의 고래자리", line: "괜찮다는 말 뒤에 숨는 건 이제 그만하고 싶다.", pattern: .a, similarity: 0.62, order: 0,
+        PlazaNebula(name: "고요한 새벽의 별", line: "괜찮다는 말 뒤에 숨는 건 이제 그만하고 싶다.", pattern: .a, similarity: 0.62, order: 0,
                     sharedAt: .now.addingTimeInterval(-20), fullText: true, fullTitle: "새벽에 깬 날",
-                    fullBody: "새벽 네 시에 눈이 떠졌다. 다시 잠들려고 애쓰다가 그냥 창가에 앉았다. 민지가 보낸 메시지를 몇 번이나 다시 읽었다. 괜찮다는 말 뒤에 숨는 건 이제 그만하고 싶다. 내일은 서울숲에 가서 천천히 걸어 볼 생각이다. 연락은 ●●●로 주면 된다고 적어 두었다."),
-        PlazaNebula(name: "늦은 밤의 등대자리", line: "오늘도 여기까지 왔어요.", pattern: .b, similarity: 0.91, order: 1,
-                    sharedAt: .now.addingTimeInterval(-12 * 60), fullText: true, fullTitle: "긴 하루의 끝",
-                    fullBody: "아침부터 일이 겹쳐서 점심도 제대로 못 먹었다. 집에 오는 길에 편의점 불빛이 유난히 따뜻해 보였다. 오늘도 여기까지 왔어요. 그걸로 됐다고 말해 주고 싶다."),
-        PlazaNebula(name: "비를 기다리는 나무자리", line: "느려도 괜찮은 밤이에요.", pattern: .b, similarity: 0.78, order: 2,
-                    sharedAt: .now.addingTimeInterval(-3600)),
-        PlazaNebula(name: "천천히 날아오른 새자리", line: "당신의 별빛이 닿았어요.", pattern: .a, similarity: 0.45, order: 3,
-                    sharedAt: .now.addingTimeInterval(-2 * 3600)),
-        PlazaNebula(name: "창가에 앉은 고양이자리", line: "잠깐 멈춰도 괜찮다는 말을 들었어요.", pattern: .b, similarity: 0.7, order: 4,
-                    sharedAt: .now.addingTimeInterval(-3 * 3600)),
-        PlazaNebula(name: "첫눈을 기다리는 사슴자리", line: "말끝을 흐려도 마음은 남아 있었어요.", pattern: .a, similarity: 0.55, order: 5,
-                    sharedAt: .now.addingTimeInterval(-5 * 3600)),
+                    fullBody: "새벽 네 시에 눈이 떠졌다. 다시 잠들려고 애쓰다가 그냥 창가에 앉았다. 민지가 보낸 메시지를 몇 번이나 다시 읽었다. 괜찮다는 말 뒤에 숨는 건 이제 그만하고 싶다. 내일은 서울숲에 가서 천천히 걸어 볼 생각이다. 연락은 ●●●로 주면 된다고 적어 두었다.",
+                    nickname: "고요한새벽", starTitle: "그 말을 삼킨 저녁"),
+        PlazaNebula(name: "늦은 밤의 등대별", line: "오늘도 여기까지 왔어요.", pattern: .b, similarity: 0.91, order: 1,
+                    sharedAt: .now.addingTimeInterval(-12 * 60), fullText: true, fullTitle: "퇴근길 버스 창가",
+                    fullBody: "아침부터 일이 겹쳐서 점심도 제대로 못 먹었다. 집에 오는 길에 편의점 불빛이 유난히 따뜻해 보였다. 오늘도 여기까지 왔어요. 그걸로 됐다고 말해 주고 싶다.",
+                    nickname: "밤바다", starTitle: "퇴근길 버스 창가"),
+        PlazaNebula(name: "비를 기다리는 별", line: "느려도 괜찮은 밤이에요.", pattern: .b, similarity: 0.78, order: 2,
+                    sharedAt: .now.addingTimeInterval(-3600), nickname: "느린고래", starTitle: "괜찮은 척한 하루"),
+        PlazaNebula(name: "천천히 날아오른 별", line: "당신의 별빛이 닿았어요.", pattern: .a, similarity: 0.45, order: 3,
+                    sharedAt: .now.addingTimeInterval(-2 * 3600), nickname: "바람결", starTitle: "오랜만에 웃은 날"),
+        PlazaNebula(name: "창가에 앉은 별", line: "잠깐 멈춰도 괜찮다는 말을 들었어요.", pattern: .b, similarity: 0.7, order: 4,
+                    sharedAt: .now.addingTimeInterval(-3 * 3600), nickname: "창가고양이", starTitle: "잠깐 멈춘 오후",
+                    hasStarlight: false),
+        PlazaNebula(name: "첫눈을 기다리는 별", line: "말끝을 흐려도 마음은 남아 있었어요.", pattern: .a, similarity: 0.55, order: 5,
+                    sharedAt: .now.addingTimeInterval(-5 * 3600), nickname: "첫눈사슴", starTitle: "첫눈 오기 전날",
+                    hasStarlight: false),
     ]
 }
 
@@ -69,13 +81,14 @@ enum PlazaFilter: String, CaseIterable {
     case newest = "새로 뜬 것", similar = "나와 결이 비슷한", kept = "곁에 둔 것"
 }
 
-/// 09-3 / 09-4 우주 광장: two tabs. 별 기록 (default) lists the shared stars;
-/// 성운 fills the screen with the nebula field (no page scroll, so its drag
-/// and pinch don't fight the scroll). No rankings or comments.
+/// 09-5 우주 광장 (428:17651): the stars keepers shared, as one list. Each row
+/// shows its 대표 문장, the keeper's name and the star's title; stars without
+/// starlight sit below. 새로 뜬 것 / 나와 결이 비슷한 / 곁에 둔 것. No rankings,
+/// and others' resonance counts are never shown. A keeper needs a name first.
 struct PlazaView: View {
     var onOpen: (_ title: String) -> Void
-    /// Field → 73
-    var onOpenNebula: (GalaxyNebula) -> Void = { _ in }
+    /// 21-1 for older accounts.
+    var onNickname: () -> Void = {}
 
     /// Tonight's hearts and mine (live `/v1/plaza/tonight`; mock: Figma 69's sample,
     /// with my shared floated stars).
@@ -84,142 +97,95 @@ struct PlazaView: View {
         return (1284, model.stars.filter { $0.isFloated && $0.isShared }.count)
     }
 
-    private enum Segment: String, CaseIterable { case stars = "별 기록", nebula = "성운" }
-
-    @State private var segment: Segment = {
-        #if DEBUG
-        UserDefaults.standard.string(forKey: "debugRoute") == "plazaNebula" || DebugScreen.is("72") ? .nebula : .stars
-        #else
-        .stars
-        #endif
-    }()
-    /// Each tab keeps its own filter.
-    @State private var starFilter: PlazaFilter = .newest
-    @State private var nebulaFilter: PlazaFilter = .newest
+    @State private var filter: PlazaFilter = .newest
     /// "더 보기": rows shown so far.
     @State private var shown = Self.page
     private static let page = 20
     @Environment(AppModel.self) private var model
 
     private var stars: [PlazaNebula] {
-        switch starFilter {
-        case .newest: model.plazaStarItems.sorted { $0.order < $1.order }
-        case .similar: model.plazaStarItems.sorted { $0.similarity > $1.similarity }
-        // Live: the server's beside list (most recently kept first); mock: the
-        // stars I left a resonance on.
-        case .kept: model.useLiveAPI ? model.plazaStarsBeside
+        let all: [PlazaNebula]
+        switch filter {
+        case .newest: all = model.plazaStarItems.sorted { $0.order < $1.order }
+        // 17.2: stars without starlight can't be compared.
+        case .similar: return model.plazaStarItems.filter(\.hasStarlight).sorted { $0.similarity > $1.similarity }
+        case .kept: all = model.useLiveAPI ? model.plazaStarsBeside
             : model.plazaStarItems.filter { model.resonated.contains($0.id) }.sorted { $0.order < $1.order }
         }
+        // Stars without starlight go below (stable within each group).
+        return all.filter(\.hasStarlight) + all.filter { !$0.hasStarlight }
     }
 
     var body: some View {
-        Group {
-            if segment == .stars {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: Space.lg) {
-                        header
-                        starList
-                    }
-                    .padding(.horizontal, Space.xl)
-                    .padding(.vertical, Space.lg)
-                }
-                .scrollIndicators(.hidden)
-            } else {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Space.lg) {
                 VStack(alignment: .leading, spacing: Space.lg) {
-                    header
-                    PlazaNebulaField(filter: nebulaFilter, fills: true, onOpen: onOpenNebula)
+                    Text("우주 광장").textStyle(.h1).foregroundStyle(Color.textPrimary)
+                    Text("별지기들이 나눈 별이에요. 눌러서 글을 읽고, 마음이 닿으면 공명을 남겨 보세요.")
+                        .textStyle(.bodyS).foregroundStyle(Color.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(.horizontal, Space.xl)
-                .padding(.top, Space.lg)
-                .padding(.bottom, Space.xl)
-                .frame(maxHeight: .infinity, alignment: .top)
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits(.isHeader)
+
+                // 69 모두의 은하, merged here: tonight's hearts (hidden at 0).
+                if tonight.count > 0 {
+                    Text(tonight.mine > 0
+                         ? "오늘 밤, \(tonight.count.formatted())개의 마음이 모였어요 · 내 별 \(tonight.mine)개도 함께 빛나요"
+                         : "오늘 밤, \(tonight.count.formatted())개의 마음이 모였어요")
+                        .textStyle(.labelS)
+                        .foregroundStyle(Color.starBright)
+                        .padding(.horizontal, Space.md)
+                        .padding(.vertical, Space.xs)
+                        .background(Color.tintGold, in: .capsule)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if model.nickname == nil {
+                    nicknameGate
+                } else {
+                    FlowRow(spacing: Space.sm) {
+                        ForEach(PlazaFilter.allCases, id: \.self) { f in
+                            DotChip(title: f.rawValue, isSelected: filter == f) {
+                                withAnimation(.snappy) { filter = f; shown = Self.page }
+                            }
+                        }
+                    }
+                    starList
+                }
             }
+            .padding(.horizontal, Space.xl)
+            .padding(.vertical, Space.lg)
         }
+        .scrollIndicators(.hidden)
         .task {
             await model.loadPlaza()
             await model.loadTonight()
         }
     }
 
-    /// Title, the tab's line, tonight's tag, the tabs and the tab's filters.
-    private var header: some View {
-        VStack(alignment: .leading, spacing: Space.lg) {
-            VStack(alignment: .leading, spacing: Space.lg) {
-                Text("우주 광장")
-                    .textStyle(.h1)
-                    .foregroundStyle(Color.textPrimary)
-                Text(segment == .stars
-                     ? "누군가 나눈 별이에요. 눌러서 글을 읽고, 마음이 닿으면 공명을 남겨 보세요. 순위나 인기는 없어요."
-                     : "모인 성운의 모양을 둘러보세요. 순위나 인기는 없어요.")
-                    .textStyle(.bodyS)
-                    .foregroundStyle(Color.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .accessibilityElement(children: .combine)
-            .accessibilityAddTraits(.isHeader)
-
-            // 69 모두의 은하, merged here: tonight's hearts (hidden at 0).
-            if tonight.count > 0 {
-                Text(tonight.mine > 0
-                     ? "오늘 밤, \(tonight.count.formatted())개의 마음이 모였어요 · 내 별 \(tonight.mine)개도 함께 빛나요"
-                     : "오늘 밤, \(tonight.count.formatted())개의 마음이 모였어요")
-                    .textStyle(.labelS)
-                    .foregroundStyle(Color.starBright)
-                    .padding(.horizontal, Space.md)
-                    .padding(.vertical, Space.xs)
-                    .background(Color.tintGold, in: .capsule)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            segmentControl
-
-            FlowRow(spacing: Space.sm) {
-                ForEach(PlazaFilter.allCases, id: \.self) { f in
-                    let on = (segment == .stars ? starFilter : nebulaFilter) == f
-                    DotChip(title: f.rawValue, isSelected: on) {
-                        withAnimation(.snappy) {
-                            if segment == .stars { starFilter = f; shown = Self.page } else { nebulaFilter = f }
-                        }
-                    }
-                }
-            }
+    /// 15.1: older accounts pick a name before using the plaza.
+    private var nicknameGate: some View {
+        VStack(alignment: .leading, spacing: Space.md) {
+            Text("별지기 이름이 필요해요").textStyle(.h3).foregroundStyle(Color.textPrimary)
+            Text("우주 광장에서는 나눈 별과 건넨 별빛 한 줄에 별지기 이름이 함께 보여요. 기록 쓰기와 별 띄우기는 이름 없이도 그대로예요.")
+                .textStyle(.bodyM).foregroundStyle(Color.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Button("별지기 이름 정하기", action: onNickname).buttonStyle(.primary)
         }
+        .padding(Space.lg)
+        .itemCard(seed: "nickname-gate", minHeight: 0)
     }
 
-    /// Figma `Segment`: pill track, selected segment filled violet.
-    private var segmentControl: some View {
-        HStack(spacing: Space.xs) {
-            ForEach(Segment.allCases, id: \.self) { s in
-                let on = segment == s
-                Button { withAnimation(.snappy) { segment = s } } label: {
-                    Text(s.rawValue)
-                        .textStyle(.labelM)
-                        .foregroundStyle(on ? Color.textOnBrand : Color.textSecondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, Space.sm)
-                        .background(on ? Color.brandPrimary : .clear, in: .capsule)
-                        .contentShape(.capsule)
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(on ? .isSelected : [])
-            }
-        }
-        .padding(Space.xs)
-        .cosmos("segment", in: Capsule())
-        .background(Color.bgSurfaceRaised, in: .capsule)
-        .overlay(Capsule().strokeBorder(Color.borderDefault, lineWidth: 1))
-    }
-
-    /// 별 기록: one row per shared star, thin lines between them.
     @ViewBuilder private var starList: some View {
         let stars = self.stars
         if stars.isEmpty {
             Group {
-                if starFilter == .kept {
+                if filter == .kept {
                     EmptyStateView(title: "곁에 둔 별이 아직 없어요",
                                    message: "마음이 닿은 별에 공명을 남기면\n여기서 다시 모아 볼 수 있어요.",
                                    action: ("새로 뜬 것 둘러보기", .outline, {
-                                       withAnimation(.snappy) { starFilter = .newest }
+                                       withAnimation(.snappy) { filter = .newest }
                                    }))
                 } else {
                     EmptyStateView(title: "아직 나눠진 별이 없어요", message: "누군가 별을 나누면 여기에 한 문장씩 모여요.")
@@ -256,8 +222,11 @@ struct PlazaStarRow: View {
     var body: some View {
         Button(action: onOpen) {
             HStack(spacing: 14) {
-                ShapeStar(spec: item.cardShape, color: item.cardMood.color, size: 22, halo: false)
-                    .shadow(color: item.cardMood.color.opacity(0.75), radius: 1 + CGFloat(item.cardDepth) * 1.2)
+                // 17.2: a star without starlight is the faint default star.
+                ShapeStar(spec: item.hasStarlight ? item.cardShape : StarShapeSpec(points: 4, sharpness: .soft),
+                          color: item.cardMood.color.opacity(item.hasStarlight ? 1 : 0.5),
+                          size: item.hasStarlight ? 22 : 14, halo: false)
+                    .shadow(color: item.cardMood.color.opacity(item.hasStarlight ? 0.75 : 0), radius: 1 + CGFloat(item.cardDepth) * 1.2)
                     .frame(width: 44, height: 44)
                     .background(Color.bgSurfaceRaised, in: .rect(cornerRadius: 12))
                     .accessibilityHidden(true)
@@ -267,7 +236,8 @@ struct PlazaStarRow: View {
                         .foregroundStyle(Color.textPrimary)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
-                    Text(item.sharedAt.map { "\(item.name) · \(Self.when($0))" } ?? item.name)
+                    // 09-5: "{별지기} 「{제목}」 · {시각 | 별빛 없음}"
+                    Text(subtitle)
                         .textStyle(.caption)
                         .foregroundStyle(Color.textSecondary)
                         .lineLimit(1)
@@ -284,6 +254,12 @@ struct PlazaStarRow: View {
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(resonated ? .isSelected : [])
+    }
+
+    private var subtitle: String {
+        let who = item.nickname.map { "\($0)  「\(item.starTitle ?? item.name)」" } ?? item.name
+        let tail = item.hasStarlight ? item.sharedAt.map(Self.when) : "별빛 없음"
+        return tail.map { "\(who) · \($0)" } ?? who
     }
 
     /// "방금", "12분 전", "1시간 전", "3일 전".

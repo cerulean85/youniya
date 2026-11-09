@@ -21,6 +21,8 @@ struct StarDetailView: View {
     var onLinkExisting: () -> Void = {}
     /// 「이어진 별」 chip → that star
     var onOpenLinked: (StarItem) -> Void = { _ in }
+    /// 12-4 「받은 별빛 한 줄 N개 ›」
+    var onLines: () -> Void = {}
     /// 12 「마음 망원경 켜기」 (24/25) or 12-2 「망원경 리포트 보기 ›」 (10).
     var onTelescope: () -> Void = {}
 
@@ -132,6 +134,13 @@ struct StarDetailView: View {
                     .textStyle(.caption).foregroundStyle(Color.textTertiary)
                     .frame(maxWidth: .infinity)
             }
+            // 12 / 12-4: lines others left on this star (only I read them).
+            let lineCount = star.lineCount ?? model.mockReceivedLines[star.id]?.count ?? 0
+            if star.isShared || lineCount > 0 {
+                Button(lineCount > 0 ? "받은 별빛 한 줄 \(lineCount)개 ›" : "받은 별빛 한 줄 ›", action: onLines)
+                    .buttonStyle(.secondary)
+            }
+
             linkedGroup(star)
 
             if star.isFloated {

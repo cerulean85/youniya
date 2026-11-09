@@ -40,7 +40,7 @@ enum DebugScreen {
  1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 23 24 25 26 27 28 28-1 29 31 32 33 34 35 36 37 38
  39 40 41 43 44 45 46 47 48 49 50 56 61 62 67-1 68 69 70 72 73 74 75 76 77 78 81 82 83
  87 89 90 91 92 93 94 95 98 99 100 101 102 104 105 106 107 108 109 111 113 114 115 116 117
- 118 119 120 120-1 121 122 122-1 19-1 87-1 87-2 3-1 2-1 75-1 75-2 87-3 M1 28-2 68-1 87-4 123 5-3 5-4 87-5 12-1 12-2 12-3 12-5 12-10 7-1 5-2 5-5 75-3 77-2 12-6 12-7 12-8
+ 118 119 120 120-1 121 122 122-1 19-1 87-1 87-2 3-1 2-1 75-1 75-2 87-3 M1 28-2 68-1 87-4 123 5-3 5-4 87-5 12-1 12-2 12-3 12-5 12-10 7-1 5-2 5-5 75-3 77-2 12-6 12-7 12-8 21-1 21-2 87-6 87-7 75-4 76-1 9-5 12-4
  """.split(whereSeparator: \.isWhitespace).map(String.init))
 
     /// App-wide state for the screen, before the first page shows.
@@ -89,9 +89,8 @@ enum DebugScreen {
         case "120-1":
             model.retryAvailableAt = .now.addingTimeInterval(170)  // "3분 뒤"
             model.appNotice = .rateLimited
-        case "99", "100", "106":
-            model.nebulaLines[GalaxyNebula.samples[0].name] = nil  // not left a line yet
-            model.reportedLines.remove("그 문장, 저도 오늘 쓰고 싶던 말이에요.")
+        case "99", "106":
+            model.sentStarLines[PlazaNebula.samples[0].name] = nil  // not left a line yet
         case "12-2", "12-6", "12-7", "12-8", "77-2":
             // Mock 이어진 별 for the review: the sample star joined to two others.
             if let star = floatedStar(model) {
@@ -103,6 +102,21 @@ enum DebugScreen {
             if let a = model.stars.first(where: { $0.date.map { cal.component(.month, from: $0) } == 11 }),
                let b = model.stars.first(where: { $0.date.map { cal.component(.month, from: $0) } == 10 }) {
                 model.linkLocally(a.id, [b.id])
+            }
+        case "21-1": model.nickname = nil
+        case "21-2": model.nickname = nil
+        case "87-6", "87-7":
+            if model.nickname == nil { model.nickname = "느린고래" }
+            model.nicknameNextChange = Calendar.current.date(byAdding: .day, value: 29, to: .now)
+        case "9", "9-5", "75-4", "76-1":
+            if model.nickname == nil { model.nickname = "느린고래" }
+        case "12", "12-4", "100", "101":
+            // Figma 12-4 sample lines on the sample star.
+            if let star = floatedStar(model) {
+                model.mockReceivedLines[star.id] = [
+                    ReceivedLine(id: "l1", text: "그 문장, 저도 오늘 쓰고 싶던 말이에요.", nickname: "바람결", createdAt: .now.addingTimeInterval(-3600)),
+                    ReceivedLine(id: "l2", text: "천천히 와도 괜찮다는 말을 여기서 배웠어요.", nickname: "창가고양이", createdAt: .now.addingTimeInterval(-3 * 3600)),
+                ]
             }
         case "12-3":
             // A shared star whose edited text lost its 대표 문장.
@@ -125,10 +139,8 @@ enum DebugScreen {
         case "109":
             // Fewer than three floated stars.
             model.stars = model.stars.filter { !$0.isFloated } + model.stars.filter(\.isFloated).prefix(2)
-        case "101":
-            model.reportedLines.insert("그 문장, 저도 오늘 쓰고 싶던 말이에요.")
         case "107":
-            model.nebulaLines[GalaxyNebula.samples[0].name] = "천천히 와도 괜찮아요."
+            model.sentStarLines[PlazaNebula.samples[0].name] = "천천히 와도 괜찮아요."
         case "119":
             model.stars = model.stars.filter(\.isFloated)
         case "121":

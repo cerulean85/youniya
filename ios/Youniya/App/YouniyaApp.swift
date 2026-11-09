@@ -37,6 +37,11 @@ struct RootView: View {
                 ConsentView(onBack: model.signOut)
                     .edgeSwipeBack(onBack: model.signOut)
                     .transition(.move(edge: .trailing))
+            } else if model.isSignedIn && model.justConsented && model.nickname == nil {
+                // 21-1 right after sign-up.
+                NicknameView(mode: .signup, onBack: { model.justConsented = false },
+                             onDone: { model.justConsented = false })
+                    .transition(.move(edge: .trailing))
             } else if model.isSignedIn {
                 MainView()
                     .transition(.opacity)

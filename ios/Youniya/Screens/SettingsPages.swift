@@ -442,7 +442,7 @@ struct SharedStarsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     if !shared.isEmpty {
-                        Text("우주 광장에 익명으로 나눈 별 \(shared.count)개예요. 거두면 광장에서 바로 사라지고, 받은 공명과 별빛 한 줄은 그대로 간직돼요.")
+                        Text("우주 광장에 나눈 별 \(shared.count)개예요. 거두면 광장에서 바로 사라지고, 받은 공명과 별빛 한 줄은 그대로 간직돼요.")
                             .textStyle(.bodyM)
                             .foregroundStyle(Color.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)

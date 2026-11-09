@@ -26,6 +26,12 @@ private struct PlazaStarItem: Decodable {
     var createdAt: Date?
     /// 75-3: shared with its whole text (shares from 2026-11-08).
     var fullText: Bool?
+    /// 15장 / 17.2 (newer servers).
+    var nickname: String?
+    var title: String?
+    var hasStarlight: Bool?
+    var receiveLines: Bool?
+    var lineLeft: Bool?
 }
 
 private struct PlazaNebulaItem: Decodable {
@@ -65,7 +71,9 @@ private extension PlazaNebula {
         self.init(name: s.name, line: s.quote ?? "", pattern: rng.next(in: 0...1) < 0.5 ? .a : .b,
                   similarity: similarity, order: order, serverID: s.id,
                   starShape: s.shape?.spec, mood: s.mood, depthLevel: s.depthLevel,
-                  sharedAt: s.createdAt, fullText: s.fullText ?? false)
+                  sharedAt: s.createdAt, fullText: s.fullText ?? false,
+                  nickname: s.nickname, starTitle: s.title, hasStarlight: s.hasStarlight ?? true,
+                  receiveLines: s.receiveLines ?? true, lineLeft: s.lineLeft ?? false)
     }
 }
 
@@ -209,6 +217,22 @@ extension AppModel {
         guard let d: Detail = try? await APIClient.shared.get("/v1/plaza/stars/\(shareID)"),
               let body = d.bodyMasked else { return nil }
         return (d.titleMasked ?? "", body)
+    }
+
+    /// 76-1 별지기 페이지: GET /v1/keepers/{nickname} (only their shared stars).
+    /// Nil when it can't be shown (blocked either way: 404). Mock: the samples.
+    @MainActor func keeperStars(_ nickname: String) async -> [PlazaNebula]? {
+        guard useLiveAPI else { return plazaStarItems.filter { $0.nickname == nickname } }
+        struct Page: Decodable { var nickname: String; var mine: Bool?; var items: [PlazaStarItem] }
+        do {
+            let r: Page = try await APIClient.shared.get("/v1/keepers/\(nickname)")
+            return r.items.enumerated().map { i, s in PlazaNebula(s, order: i, similarity: 0) }
+        } catch let e as APIError where e.status == 404 {
+            return nil
+        } catch {
+            handle(error)
+            return nil
+        }
     }
 
     /// Live: takes one star back from the plaza.

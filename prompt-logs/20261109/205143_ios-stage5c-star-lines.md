@@ -1,0 +1,31 @@
+# iOS 5단계 5C: 별에 남기는 별빛 한 줄 (기획 10.1, Figma 74 33:5748, 99, 106, 107, 12-4, 100 204:11898, 101)
+
+- 요청: 사용자가 "5C 진행"이라고 했다.
+- 데이터 (App/StarLines.swift)
+  - sendStarLine: POST /v1/plaza/stars/{share_id}/lines {text | chip}. 칩은 empathize / me_too / thanks다.
+  - 422 사유(hurtful, contact, judging, advice, too_long)는 문구로 바꾸고, 409 already_left는 107, 403 lines_closed는 받지 않음으로 처리한다.
+  - 목업은 몇 가지 말(상처, 연락처, 조언)을 걸러 99를 흉내 낸다.
+  - receivedLines: GET /v1/stars/{id}/lines
+  - deleteLine: DELETE …/lines/{line_id}
+  - reportLine: POST …/lines/{line_id}/report {reason: hurtful | personal_info | spam | other, block}
+  - 광장 별의 receive_lines와 line_left, 별 상세의 line_count를 읽는다.
+- 74 StarLineComposeView
+  - 위에서부터 「별빛 한 줄 · 「제목」」, 안내, 내가 건넨 한 줄이다.
+  - 아래는 빠른 칩 셋, 입력 칸(60자, 보내기 버튼), 「상처 주는 말은 별빛이 되지 못해요…」다.
+  - 상태 안내: 99 거절 문구, 106 「N / 60자 · 60자 안으로 줄여 주세요」, 107 「이 별에는 이미 한 줄을 건넸어요」, 받지 않는 별 안내
+  - 75-4의 「별빛 한 줄 건네기」로 연다.
+- 12-4 ReceivedLinesView
+  - 「받은 별빛 한 줄 · 「제목」」에 「{별지기} · 시각」과 한 줄을 카드로 보여 준다.
+  - 길게 누르면 지우기와 신고하기가 나온다.
+  - 12 별 상세: 나눈 별이거나 받은 한 줄이 있으면 「받은 별빛 한 줄 N개 ›」 버튼을 둔다.
+- 100 LineReportSheet: 사유 넷과 「이 별지기도 차단하기」, 「신고하기 / 취소」. 신고하면 바로 목록에서 빠지고 101 토스트를 띄운다.
+- 문구: 19 「…내 별지기 이름과 함께 올라가요」 / 「광장에 나누기」, 03-1 「…별지기 이름과 함께 올라가요」, 17 「우주 광장에 나눈 별 N개예요」 (Figma 문구)
+- 정리: GalaxyLinesView(성운 별빛 한 줄), LineCard, HiddenLineCard, LineFilter, 쓰지 않는 Anim을 지웠다.
+- 디버그
+  - 12-4 / 100 / 101은 샘플 별에 받은 한 줄 두 개를 둔다.
+  - 74 / 99 / 106 / 107은 광장 첫 별의 74를 연다(107은 이미 건넨 상태).
+- 확인
+  - Debug 빌드 성공.
+  - 74, 99, 12-4, 100을 캡처해서 Figma와 맞는지 봤다.
+  - 보내기, 지우기, 신고는 눌러 보지 못했다.
+- 하지 않은 것: 나눌 때 「별빛 한 줄 받기」 끄기(기획 10.1). Figma 19에 아직 그 줄이 없어서 넣지 않았다.

@@ -29,6 +29,10 @@ struct MainView: View {
         case compose(rewriteOf: StarItem.ID? = nil)
         case revise(StarItem.ID)   // 05-2 고쳐 쓰기
         case linkStars(StarItem.ID) // 12-7 이을 별 고르기
+        case nickname(NicknameView.Mode) // 21-1 (plaza) / 87-7
+        case keeper(String) // 76-1 별지기 페이지
+        case starLine(String) // 74 별빛 한 줄 건네기 (plaza star by name)
+        case receivedLines(StarItem.ID) // 12-4 받은 별빛 한 줄
         case detail(StarItem.ID)
         case records   // 17
         case kept      // 18
@@ -47,9 +51,6 @@ struct MainView: View {
         case milkyWay   // 81
         case constellation(String) // 70 / 77 / 77-2, "YYYY-MM"
         case constellationStory(String) // 83, "YYYY-MM"
-        case galaxyNebula(String) // 73/78, by name
-        case galaxyLines(String)  // 74
-        case galaxyStar(nebula: String, star: String) // 75, from 73
         case plazaStar(String)                        // 75, from a 09-3 row (by name)
         case sharedStars // 87 › 나눈 별
         case blockedKeepers // 87-3 차단한 별지기
@@ -182,7 +183,7 @@ struct MainView: View {
             case .plaza:
                 LoadingGate {
                     PlazaView(onOpen: { push(.plazaStar($0)) },
-                              onOpenNebula: { push(.galaxyNebula($0.name)) })
+                              onNickname: { push(.nickname(.plaza)) })
                 } placeholder: { ListSkeleton(titleWidth: 160, rowHeight: 100, rows: 3) }
             case .records:
                 LoadingGate {
@@ -261,6 +262,7 @@ struct MainView: View {
                 onRevise: { push(.revise(id)) },
                 onLinkExisting: { push(.linkStars(id)) },
                 onOpenLinked: { push(.detail($0.id)) },
+                onLines: { push(.receivedLines(id)) },
                 onTelescope: { if let s = model.stars.first(where: { $0.id == id }) { openReport(s) } }
             )
             .edgeSwipeBack(onBack: pop)
@@ -300,7 +302,14 @@ struct MainView: View {
             CoinHistoryView(onBack: pop)
                 .edgeSwipeBack(onBack: pop)
         case .settings:
-            SettingsView(onBack: pop, onOpen: { push($0 == "차단한 별지기" ? .blockedKeepers : .sharedStars) },
+            SettingsView(onBack: pop, onOpen: { title in
+                             switch title {
+                             case "차단한 별지기": push(.blockedKeepers)
+                             case "별지기 이름": push(.nickname(model.nickname == nil ? .plaza : .change))
+                             case "내 별지기 페이지 미리 보기": if let n = model.nickname { push(.keeper(n)) }
+                             default: push(.sharedStars)
+                             }
+                         },
                          onSky: { push(.sky) }, onPolicy: { push(.policy($0)) })
                 .edgeSwipeBack(onBack: pop)
         case .inquiry:
@@ -332,27 +341,11 @@ struct MainView: View {
                             },
                             month: month)
                 .edgeSwipeBack(onBack: pop)
-        case .galaxyNebula(let name):
-            if let n = model.galaxyNebulae.first(where: { $0.name == name }) {
-                GalaxyNebulaView(nebula: n, onBack: pop,
-                                 onLines: { push(.galaxyLines(name)) },
-                                 onOpenStar: { push(.galaxyStar(nebula: name, star: $0)) },
-                                 onBlocked: blocked)
-                    .edgeSwipeBack(onBack: pop)
-            }
-        case .galaxyLines(let name):
-            if let n = model.galaxyNebulae.first(where: { $0.name == name }) {
-                GalaxyLinesView(nebula: n, onBack: pop)
-                    .edgeSwipeBack(onBack: pop)
-            }
-        case .galaxyStar(let name, let star):
-            if let n = model.galaxyNebulae.first(where: { $0.name == name }) {
-                GalaxyStarView(nebula: n, starTitle: star, onBack: pop, onBlocked: blocked)
-                    .edgeSwipeBack(onBack: pop)
-            }
         case .plazaStar(let name):
             if let p = (model.plazaStarItems + model.plazaStarsBeside).first(where: { $0.name == name }) {
-                GalaxyStarView(plazaStar: p, onBack: pop, onBlocked: blocked)
+                GalaxyStarView(plazaStar: p, onBack: pop, onBlocked: blocked,
+                               onKeeper: { push(.keeper($0)) },
+                               onLine: { push(.starLine(p.name)) })
                     .edgeSwipeBack(onBack: pop)
             } else {
                 NotFoundView(onBack: pop)
@@ -360,6 +353,25 @@ struct MainView: View {
             }
         case .editStar(let id):
             StarEditView(starID: id, onClose: pop)
+        case .starLine(let name):
+            if let p = (model.plazaStarItems + model.plazaStarsBeside).first(where: { $0.name == name }) {
+                StarLineComposeView(star: p, onBack: pop)
+                    .edgeSwipeBack(onBack: pop)
+            } else {
+                NotFoundView(onBack: pop).edgeSwipeBack(onBack: pop)
+            }
+        case .receivedLines(let id):
+            ReceivedLinesView(starID: id, onBack: pop)
+                .edgeSwipeBack(onBack: pop)
+        case .keeper(let name):
+            KeeperPageView(nickname: name, onBack: pop, onOpen: { push(.plazaStar($0.name)) })
+                .edgeSwipeBack(onBack: pop)
+        case .nickname(let mode):
+            NicknameView(mode: mode, onBack: pop) {
+                pop()
+                toast = ToastCardMessage(title: mode == .change ? "별지기 이름을 바꿨어요" : "별지기 이름을 정했어요")
+            }
+            .edgeSwipeBack(onBack: pop)
         case .linkStars(let id):
             LinkStarsView(starID: id, onBack: pop) { n in
                 pop()
@@ -412,12 +424,11 @@ struct MainView: View {
         guard let screen = DebugScreen.current, DebugScreen.supported.contains(screen) else { return }
         let floated = DebugScreen.floatedStar(model)
         let fresh = model.stars.first { $0.isFloated && $0.report == nil }
-        let nebula = GalaxyNebula.samples[0]
         switch screen {
         case "3", "4", "47": tab = .sky
         case "3-1": tab = .sky; showWelcome = true
         case "8", "56": tab = .nebula
-        case "9", "21", "50", "72": tab = .plaza
+        case "9", "9-5", "21", "50", "72": tab = .plaza
         case "115", "116", "117", "49": tab = .records
         case "118", "119": recordsFilter = .kept; tab = .records
         case "67-1": drawerOpen = true
@@ -464,9 +475,8 @@ struct MainView: View {
         case "83": push(.constellationStory(MonthConstellation.monthKey(.now)))
         case "89": push(.nebulaStars(.floated))
         case "90": push(.nebulaStars(.supernova))
-        case "73", "78": push(.galaxyNebula(nebula.name))
-        case "74", "99", "100", "101", "106", "107": push(.galaxyLines(nebula.name))
-        case "75", "75-1", "75-2": push(.galaxyStar(nebula: nebula.name, star: nebula.stars[0].title))
+        case "74", "99", "106", "107": push(.starLine(PlazaNebula.samples[0].name))
+        case "75", "75-1", "75-2": push(.plazaStar(PlazaNebula.samples[0].name))
         case "87-3": push(.blockedKeepers)
         case "5-3", "5-4": push(.compose())
         case "5-2", "5-5":
@@ -475,13 +485,19 @@ struct MainView: View {
             if let s = DebugScreen.floatedStar(model) { push(.detail(s.id)) }
         case "12-7", "12-8", "12-9":
             if let s = DebugScreen.floatedStar(model) { push(.linkStars(s.id)) }
+        case "21-1", "21-2": push(.nickname(.plaza))
+        case "87-6": push(.settings)
+        case "87-7": push(.nickname(.change))
+        case "12-4", "100", "101":
+            if let s = DebugScreen.floatedStar(model) { push(.receivedLines(s.id)) }
         case "12-1":
             if let s = DebugScreen.keptStar(model) { push(.detail(s.id)) }
         case "12-10":
             if let s = DebugScreen.keptStar(model) { push(.floatKept(s.id)) }
         case "12-3":
             if let s = model.stars.first(where: \.isFloated) { push(.detail(s.id)) }
-        case "75-3": push(.plazaStar(PlazaNebula.samples[0].name))
+        case "75-3", "75-4": push(.plazaStar(PlazaNebula.samples[0].name))
+        case "76-1": push(.keeper(PlazaNebula.samples[0].nickname ?? ""))
         case "12-5":
             if let s = model.stars.first(where: { $0.analysis?.interpretation != nil }) ?? model.stars.first(where: \.isFloated) { push(.detail(s.id)) }
         case "12-2":
@@ -502,7 +518,7 @@ struct MainView: View {
         withAnimation(.easeInOut(duration: 0.32)) {
             stack.removeAll {
                 switch $0.route {
-                case .galaxyStar, .plazaStar, .galaxyNebula, .galaxyLines: true
+                case .plazaStar, .keeper, .starLine: true
                 default: false
                 }
             }

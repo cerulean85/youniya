@@ -231,6 +231,8 @@ struct StarItem: Identifiable, Hashable, Codable {
     var rewriteOf: UUID?
     /// Shared anonymously to the plaza (19). Optional so older saves still load.
     var sharedToPlaza: Bool?
+    /// 10.1: lines received on this star (detail's line_count).
+    var lineCount: Int? = nil
     /// 별 잇기 (11.5): the stars joined to this one, both ways, no direction.
     var linkedIDs: [UUID]? = nil
     /// 12-3: the text was edited and the shared 대표 문장 is no longer in it
@@ -430,6 +432,16 @@ final class AppModel {
     var hasConsented: Bool {
         didSet { UserDefaults.standard.set(hasConsented, forKey: "hasConsented") }
     }
+    /// 15장 별지기 이름 (2–12자, unique). Nil until chosen.
+    var nickname: String? = UserDefaults.standard.string(forKey: "nickname") {
+        didSet { UserDefaults.standard.set(nickname, forKey: "nickname") }
+    }
+    /// The first day it can change again (30 days after the last change).
+    var nicknameNextChange: Date? = UserDefaults.standard.object(forKey: "nicknameNextChange") as? Date {
+        didSet { UserDefaults.standard.set(nicknameNextChange, forKey: "nicknameNextChange") }
+    }
+    /// 21-1 follows 11 right after sign-up; older accounts are asked on the plaza.
+    var justConsented = false
     /// Optional "새 기능·혜택 알림" consent.
     var marketingOptIn: Bool {
         didSet { UserDefaults.standard.set(marketingOptIn, forKey: "marketingOptIn") }
@@ -549,6 +561,10 @@ final class AppModel {
     var retryAvailableAt: Date?
     /// Live plaza (09, 72, 74), loaded by `loadPlaza()` / `loadLines(for:)`.
     var plazaStarsLive: [PlazaNebula] = []
+    /// 74: the line I left on each plaza star (by name; memory).
+    var sentStarLines: [String: String] = [:]
+    /// Mock 12-4: lines received on my stars.
+    var mockReceivedLines: [StarItem.ID: [ReceivedLine]] = [:]
     /// Live 08-3: month constellations by "YYYY-MM".
     var liveConstellations: [String: MonthConstellation] = [:]
     var plazaNebulaeLive: [GalaxyNebula] = []
@@ -685,6 +701,7 @@ final class AppModel {
 
     /// 11 가입 동의
     func acceptConsent(marketing: Bool) {
+        justConsented = true
         guard useLiveAPI else {
             marketingOptIn = marketing
             hasConsented = true
@@ -710,6 +727,8 @@ final class AppModel {
             hasConsented = !me.needsConsent
             marketingOptIn = me.marketingOptIn
             coins = me.coins
+            nickname = me.nickname
+            nicknameNextChange = me.nicknameNextChange
             applyFreeUses(telescopeAvailable: me.freeTelescopeAvailable, star: me.freeStarToday,
                           telescope: me.freeTelescope)
         } catch {
@@ -1016,6 +1035,8 @@ final class AppModel {
         hasSeenPlazaIntro = false
         marketingOptIn = false
         hasConsented = false
+        nickname = nil
+        nicknameNextChange = nil
         isSignedIn = false
         appNotice = .accountDeleted
     }
@@ -1223,4 +1244,7 @@ struct MeResponse: Decodable {
     var freeTelescopeAvailable: Bool
     var freeStarToday: Int?
     var freeTelescope: Int?
+    /// 15장 (newer servers).
+    var nickname: String?
+    var nicknameNextChange: Date?
 }

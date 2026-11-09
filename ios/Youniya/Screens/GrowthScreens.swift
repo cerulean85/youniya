@@ -17,6 +17,10 @@ struct GalaxyStarView: View {
     var onBack: () -> Void
     /// 75-2: back to the previous page with the "차단했어요" toast.
     var onBlocked: () -> Void = {}
+    /// 75-4: the keeper's name → 76-1.
+    var onKeeper: (String) -> Void = { _ in }
+    /// 74 별빛 한 줄 건네기.
+    var onLine: () -> Void = {}
 
     @State private var showMenu = DebugScreen.is("75-1")
     /// Live 75-3: the whole text, from the plaza star's detail.
@@ -47,8 +51,19 @@ struct GalaxyStarView: View {
                         .textStyle(.h2).foregroundStyle(Color.textPrimary)
                         .accessibilityAddTraits(.isHeader)
                     HStack(spacing: Space.sm) {
-                        Tag(text: "익명의 별지기", tone: .neutral)
-                        Tag(text: "깊이 \(depth)단계", tone: .gold)
+                        if let name = plazaStar?.nickname {
+                            // 75-4: the keeper's name opens their page.
+                            Button { onKeeper(name) } label: { Tag(text: "\(name) ›", tone: .neutral) }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("\(name)의 밤하늘 보기")
+                        } else {
+                            Tag(text: "익명의 별지기", tone: .neutral)
+                        }
+                        if plazaStar?.hasStarlight == false {
+                            Tag(text: "별빛 없는 별", tone: .neutral)
+                        } else {
+                            Tag(text: "깊이 \(depth)단계", tone: .gold)
+                        }
                     }
 
                     // Figma `Hero`: the star in gold, a dotted orbit, four small stars.
@@ -126,10 +141,16 @@ struct GalaxyStarView: View {
         let resonate = Button(resonated ? "공명했어요" : "공명 남기기") {
             withAnimation(.snappy) { model.toggleResonance(key) }
         }
-        if plazaStar != nil {
-            // From the plaza: no owner nebula to open (손님별 들이기 left with 2026-11-09).
-            resonate.buttonStyle(.primary)
-                .accessibilityAddTraits(resonated ? .isSelected : [])
+        if let p = plazaStar {
+            // 75-4: 공명 남기기, 별빛 한 줄 건네기, and the keeper's page.
+            VStack(spacing: Space.md) {
+                resonate.buttonStyle(.primary)
+                    .accessibilityAddTraits(resonated ? .isSelected : [])
+                Button("별빛 한 줄 건네기", action: onLine).buttonStyle(.secondary)
+                if let name = p.nickname {
+                    Button("\(name)의 밤하늘") { onKeeper(name) }.buttonStyle(.secondary)
+                }
+            }
         } else {
             HStack(spacing: Space.md) {
                 resonate.buttonStyle(.secondary).frame(width: 140)

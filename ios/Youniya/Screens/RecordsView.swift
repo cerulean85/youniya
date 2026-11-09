@@ -504,14 +504,14 @@ struct ShareConsentSheet: View {
                 Text("우주 광장에 나눌까요?")
                     .textStyle(.h3)
                     .foregroundStyle(Color.textPrimary)
-                Text("고른 대표 문장과 함께 글 전체가 익명으로 올라가요. 전화번호와 이메일은 자동으로 가려져요. 다른 사람은 '공명'만 남길 수 있고, 언제든 거둘 수 있어요.")
+                Text("고른 대표 문장과 함께 글 전체가 내 별지기 이름과 함께 올라가요. 전화번호와 이메일은 자동으로 가려져요. 다른 사람은 '공명'만 남길 수 있고, 언제든 거둘 수 있어요.")
                     .textStyle(.bodyM)
                     .foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
             VStack(spacing: Space.md) {
-                Button("익명으로 나누기", action: onShare)
+                Button("광장에 나누기", action: onShare)
                     .buttonStyle(.primary)
                 Button("내용 먼저 확인", action: onReview)
                     .buttonStyle(.secondary)

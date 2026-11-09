@@ -116,6 +116,14 @@ struct SettingsView: View {
                         MembershipSettingsSection(onLearnMore: { showMembership = true })
                     }
 
+                    // 87-6 계정: 별지기 이름 (15장)
+                    SettingsSection("계정") {
+                        SettingsRow(icon: .iconStar, title: "별지기 이름", value: model.nickname ?? "정하기") { onOpen("별지기 이름") }
+                        if model.nickname != nil {
+                            SettingsRow(icon: .iconNebula, title: "내 별지기 페이지 미리 보기") { onOpen("내 별지기 페이지 미리 보기") }
+                        }
+                    }
+
                     SettingsSection("화면과 움직임") {
                         SettingsRow(icon: .iconMoon, title: "우주의 색") { onSky() }
                         SettingsToggleRow(icon: .iconStar, title: "애니메이션 줄이기", isOn: $model.settings.reduceAnimations)

@@ -16,6 +16,8 @@ struct ServerStar: Decodable {
     var rewriteOf: String?
     var analysisFailed: Bool
     var shared: Bool
+    /// 10.1 별빛 한 줄 received (detail only).
+    var lineCount: Int?
     /// 별 잇기: the stars joined to this one (detail only).
     var linkedStars: [LinkedOut]?
     struct LinkedOut: Decodable { var id: String }
@@ -113,6 +115,7 @@ extension StarItem {
             createdAt: s.createdAt,
             rewriteOf: s.rewriteOf.flatMap(UUID.init(uuidString:)),
             sharedToPlaza: s.shared,
+            lineCount: s.lineCount ?? local?.lineCount,
             linkedIDs: s.linkedStars.map { $0.compactMap { UUID(uuidString: $0.id) } } ?? local?.linkedIDs,
             // Known only from the edit's answer; kept until a new pick.
             shareQuoteMissing: s.shared ? local?.shareQuoteMissing : nil

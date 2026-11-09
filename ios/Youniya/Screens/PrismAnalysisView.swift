@@ -120,21 +120,6 @@ private struct OrbitLoader: View {
     }
 }
 
-/// Timing helpers for the prism timeline.
-enum Anim {
-    /// 0 before `a`, 1 after `b`, linear in between.
-    static func ramp(_ p: Double, _ a: Double, _ b: Double) -> Double {
-        min(1, max(0, (p - a) / (b - a)))
-    }
-    static func easeOut(_ x: Double) -> Double { 1 - pow(1 - x, 3) }
-    static func easeInOut(_ x: Double) -> Double { x < 0.5 ? 4 * x * x * x : 1 - pow(-2 * x + 2, 3) / 2 }
-    /// Slight overshoot, like Figma's cubic-bezier(0.45, 1.45, 0.8, 1).
-    static func easeOutBack(_ x: Double) -> Double {
-        let c1 = 1.70158, c3 = c1 + 1
-        return 1 + c3 * pow(x - 1, 3) + c1 * pow(x - 1, 2)
-    }
-}
-
 #Preview {
     PrismAnalysisView(analysis: StarItem.samples[0].analysis!, onFinish: {})
 }
