@@ -2,8 +2,9 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { API_URL, MOCK } from "./config";
 import * as mock from "./mock";
+import * as more from "./mock-more";
 import { session } from "./session";
-import type { ActionKind, AuditEntry, Operator, ReportDetail, ReportItem, ReportKind, ReportStatus } from "./types";
+import type { ActionKind, AuditEntry, InquiryDetail, InquiryRow, InquiryStatus, KeeperAction, KeeperDetail, KeeperRow, Operator, ReportDetail, ReportItem, ReportKind, ReportStatus } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, public code: string, message: string, public data: Record<string, unknown> = {}) { super(message); }
@@ -85,4 +86,46 @@ export async function act(kind: ReportKind, id: string, action: ActionKind, reas
 export async function audit(): Promise<AuditEntry[]> {
   if (MOCK) { const t = await token(); return guard(() => mock.audit(t)); }
   return (await authed<{ items: AuditEntry[] }>("/v1/admin/audit?format=json")).items;
+}
+
+// ── 별지기 (A-05, A-06) and 문의 (A-07): the shape proposed to the API Dev Session ──
+
+
+export async function listKeepers(q = "", filter = "all"): Promise<KeeperRow[]> {
+  if (MOCK) { const t = await token(); return guard(() => more.listKeepers(t, q, filter)); }
+  return (await authed<{ items: KeeperRow[] }>(`/v1/admin/keepers?${new URLSearchParams({ q, filter })}`)).items;
+}
+
+export async function keepersCsv(): Promise<string> {
+  if (MOCK) { const t = await token(); return guard(() => more.keepersCsv(t)); }
+  const s = await session();
+  if (!s) redirect("/login");
+  const res = await fetch(`${API_URL}/v1/admin/keepers?format=csv`, { headers: { Authorization: `Bearer ${s.token}` }, cache: "no-store" });
+  if (!res.ok) throw new ApiError(res.status, "error", "내보내지 못했어요.");
+  return res.text();
+}
+
+export async function getKeeper(id: string): Promise<KeeperDetail> {
+  if (MOCK) { const t = await token(); return guard(() => more.getKeeper(t, id)); }
+  return authed(`/v1/admin/keepers/${encodeURIComponent(id)}`);
+}
+
+export async function keeperAction(id: string, action: KeeperAction, reason: string, amount?: number, days?: number) {
+  if (MOCK) { const t = await token(); return guard(() => more.keeperAction(t, id, action, reason, amount, days)); }
+  return authed(`/v1/admin/keepers/${encodeURIComponent(id)}/actions`, { method: "POST", body: JSON.stringify({ action, reason, amount, days }) });
+}
+
+export async function listInquiries(status: InquiryStatus): Promise<{ items: InquiryRow[]; counts?: Record<InquiryStatus, number> }> {
+  if (MOCK) { const t = await token(); return guard(() => more.listInquiries(t, status)); }
+  return authed(`/v1/admin/inquiries?status=${status}`);
+}
+
+export async function getInquiry(id: string): Promise<InquiryDetail> {
+  if (MOCK) { const t = await token(); return guard(() => more.getInquiry(t, id)); }
+  return authed(`/v1/admin/inquiries/${encodeURIComponent(id)}`);
+}
+
+export async function replyInquiry(id: string, body: string) {
+  if (MOCK) { const t = await token(); return guard(() => more.reply(t, id, body)); }
+  return authed(`/v1/admin/inquiries/${encodeURIComponent(id)}/reply`, { method: "POST", body: JSON.stringify({ body }) });
 }

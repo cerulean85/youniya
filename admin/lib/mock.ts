@@ -40,7 +40,7 @@ function seed(): State {
   reports.get("star:119870")!.actions.push({ at: ago(1300), operator: "owner@youniya.test", action: "restore", target: "star:119870", reason: "운영 정책에 어긋나지 않음" });
   return { fails: new Map(), challenges: new Map(), tokens: new Map(), reports };
 }
-const state = () => (g.__mock ??= seed());
+export const state = () => (g.__mock ??= seed());
 
 export class MockError extends Error {
   constructor(public status: number, public code: string, message: string, public data: Record<string, unknown> = {}) { super(message); }
@@ -74,7 +74,7 @@ export function totp(challenge: string, code: string) {
 
 export function logout(token: string) { state().tokens.delete(token); }
 
-function operatorOf(token: string) {
+export function operatorOf(token: string) {
   const op = state().tokens.get(token);
   if (!op) throw new MockError(401, "unauthorized", "다시 로그인해 주세요.");
   return op;

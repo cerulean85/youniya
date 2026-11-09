@@ -33,3 +33,37 @@ export const ACTION_LABEL: Record<string, string> = {
 };
 /** 18.3: personal_info and self_harm hide at the first report; the rest at three. */
 export const INSTANT_REASONS = ["personal_info", "self_harm"];
+
+// 별지기 (A-05, A-06) and 문의 (A-07): the web console's proposal, sent to the API Dev Session (2026-11-09).
+export type KeeperStatus = "active" | "restricted";
+export type KeeperRow = {
+  id: string; no: string; nickname: string | null; joined_at: string; provider: "apple" | "google" | "invite" | string;
+  stars: number; shared: number; reports: number; coins: number; status: KeeperStatus; restricted_until: string | null;
+};
+export type KeeperDetail = KeeperRow & {
+  last_seen_at: string | null;
+  star_counts: { lit: number; unlit: number };
+  consents: { terms_at: string | null; terms_version: string | null; sensitive_at: string | null; marketing: { opt_in: boolean; at: string | null } };
+  nickname_next_change: string | null;
+  deletion_requested_at: string | null;
+  history: AuditEntry[];
+};
+export type KeeperAction = "lift_restriction" | "extend_restriction" | "request_rename" | "grant_coins" | "process_deletion";
+export const KEEPER_ACTION_LABEL: Record<KeeperAction, string> = {
+  lift_restriction: "제한 풀기", extend_restriction: "제한 늘리기", request_rename: "별지기 이름 바꾸기 요청",
+  grant_coins: "코인 지급", process_deletion: "계정 삭제 요청 처리",
+};
+/** Moderators may restrict or lift plaza use and ask for a new name; coins and deletion are owners'. */
+export const MODERATOR_KEEPER_ACTIONS: KeeperAction[] = ["lift_restriction", "extend_restriction", "request_rename"];
+export const PROVIDER_LABEL: Record<string, string> = { apple: "Apple", google: "Google", invite: "초대", dev: "테스트" };
+
+export type InquiryStatus = "new" | "answered";
+export type InquiryRow = { id: string; kind: string; title: string; created_at: string; status: InquiryStatus };
+export type InquiryDetail = InquiryRow & {
+  body: string; email_masked: string;
+  keeper: { id: string; no: string; nickname: string | null } | null;
+  app: { platform: string; version: string; device: string } | null;
+  purchase: { transaction_id: string; status: string } | null;
+  replies: { at: string; operator: string; body: string }[];
+};
+export const INQUIRY_KIND_LABEL: Record<string, string> = { payment: "결제", bug: "오류", account: "계정", idea: "제안", other: "기타" };

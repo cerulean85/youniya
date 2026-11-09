@@ -31,3 +31,16 @@ dialog.card[open] { display: flex; flex-direction: column; gap: 14px; }
 dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
 dialog form { display: flex; flex-direction: column; gap: 14px; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.toolbar { display: flex; gap: 12px; align-items: center; }
+.search { flex: 1; }
+.search input { width: 100%; height: 40px; padding: 0 14px; border-radius: 10px; background: var(--card); border: 1px solid var(--border); color: var(--text); font: inherit; outline: none; }
+.search input:focus { border-color: var(--accent); }
+.stack { display: flex; flex-direction: column; gap: 16px; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.stat { padding: 16px 18px; display: flex; flex-direction: column; gap: 4px; }
+.stat b { font-size: 24px; font-weight: 500; }
+.split { display: grid; grid-template-columns: 1fr 440px; gap: 16px; align-items: start; }
+tr[aria-current="true"] td { background: var(--accent-tint); }
+.reply textarea { min-height: 140px; resize: vertical; }
+.thread { display: flex; flex-direction: column; gap: 8px; }
+.thread div { padding: 10px 12px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); }

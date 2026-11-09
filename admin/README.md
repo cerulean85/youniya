@@ -35,8 +35,15 @@ telescope results.
 
 ## Done so far
 
-A-01 sign-in, the sidebar, A-03 report list, A-04 report detail with actions (reason required), A-13 audit
-log. The other screens are placeholders that name their Figma frame.
+A-01 sign-in, the sidebar, A-03 report list, A-04 report detail with actions (reason required), A-05 별지기
+list (search by name or #번호, filters, CSV for owners), A-06 별지기 detail (counts, consents, sanctions; lift or
+extend a restriction, ask for a new name, and for owners grant coins or process a deletion request), A-07 문의
+(list and reply; masked email), A-13 audit log. The other screens are placeholders that name their Figma frame.
+
+The 별지기 and 문의 endpoints were proposed by the web side (2026-11-09): `GET /v1/admin/keepers?q=&filter=`
+(`format=csv`), `GET /v1/admin/keepers/{id}`, `POST /v1/admin/keepers/{id}/actions {action, reason, amount?, days?}`,
+`GET /v1/admin/inquiries?status=new|answered`, `GET /v1/admin/inquiries/{id}`, `POST /v1/admin/inquiries/{id}/reply
+{body}`; shapes in `lib/types.ts`.
 
 ## Deploy
 
