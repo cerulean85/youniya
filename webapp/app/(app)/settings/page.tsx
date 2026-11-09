@@ -60,7 +60,8 @@ async function Settings() {
           <Blocks blocks={blocks.items.map((b) => ({ id: b.id, when: longDate(b.created_at), where: b.source === "line" ? "별빛 한 줄에서" : b.source === "nebula" ? "성운에서" : "광장의 별에서" }))} />
         </Group>
         <Group title="데이터">
-          <a href="/settings/export" className={styles.row} download><span>데이터 내보내기</span><span className={styles.value}>텍스트 파일<ChevronRight size={16} /></span></a>
+          <a href="/settings/export" className={styles.row} download><span>데이터 내보내기 · 텍스트</span><span className={styles.value}>별빛 풀이·망원경·이어진 별 포함<ChevronRight size={16} /></span></a>
+          <a href="/settings/export?format=pdf" className={styles.row} download><span>데이터 내보내기 · PDF</span><ChevronRight size={16} /></a>
           <DangerZone shared={shares.stars.length} />
         </Group>
         <Group title="도움">
