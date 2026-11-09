@@ -21,6 +21,17 @@ export async function listMonths(): Promise<MonthItem[] | null> {
   }
 }
 
+/** 나의 은하수: the months plus pairs of months joined by 별 잇기 (earlier month first); null without the API. */
+export async function getGalaxy(): Promise<{ items: MonthItem[]; cross_links: [string, string][] } | null> {
+  try {
+    const r = await api<{ items: MonthItem[]; cross_links?: [string, string][] }>("/v1/constellations");
+    return { items: r.items, cross_links: r.cross_links ?? [] };
+  } catch (e) {
+    if (missing(e)) return null;
+    throw e;
+  }
+}
+
 /** The month's constellation, or null for a month that isn't open (before sign-up, or not yet come). */
 export async function getConstellation(month: string): Promise<MonthView | null> {
   try {

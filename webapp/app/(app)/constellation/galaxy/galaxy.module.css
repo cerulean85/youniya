@@ -1,7 +1,12 @@
 .back { display: inline-flex; align-items: center; gap: 6px; font: 500 14px/20px var(--sans); color: var(--text-2); margin-bottom: -8px; }
 .loading { min-height: 320px; }
 .header { display: flex; flex-direction: column; gap: 8px; }
-.cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, 200px); gap: 16px; }
+.sectionHead { display: flex; align-items: baseline; justify-content: space-between; }
+.scroller { overflow-x: auto; padding-bottom: 8px; }
+.arcs { display: block; }
+.arcs path { fill: none; stroke: #e2e8f0; stroke-opacity: 0.45; stroke-width: 1.5; stroke-dasharray: 2 5; stroke-linecap: round; }
+.cards { list-style: none; margin: 0; padding: 0; display: flex; gap: 16px; }
+.cards > li { flex: none; width: 200px; }
 .card { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 16px; background: var(--surface, rgba(19, 26, 42, 0.6)); border: 1px solid var(--border); }
 .card:hover { border-color: rgba(133, 85, 239, 0.6); }
 .card[data-now] { border-color: var(--gold); box-shadow: 0 0 24px rgba(251, 191, 36, 0.12); }
