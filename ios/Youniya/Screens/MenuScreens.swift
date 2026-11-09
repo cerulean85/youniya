@@ -244,7 +244,7 @@ struct SettingsView: View {
             )
         case .exporting(let format): // 114
             ExportProgressSheet(
-                detail: "별 \(model.stars.count)개와 성운 이야기 \(max(1, model.drawnNebulae.count))편을 \(format == .pdf ? "PDF" : "텍스트") 파일로 모으고 있어요. 창을 닫아도 이어서 만들어요.",
+                detail: "별 \(model.stars.count)개와 별자리 이야기를 \(format == .pdf ? "PDF" : "텍스트") 파일로 모으고 있어요. 창을 닫아도 이어서 만들어요.",
                 progress: exportProgress,
                 // "창을 닫아도 이어서 만들어요": closing still finishes the file.
                 onClose: { close { export(format) } }

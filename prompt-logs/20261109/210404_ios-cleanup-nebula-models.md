@@ -1,0 +1,24 @@
+# iOS 정리: 남은 성운 모델과 API, 12-11
+
+- 요청: 사용자가 "커밋하고 남은 정리 진행해줘"라고 했다. 6단계는 af94064로 커밋했다(다른 세션의 admin/ 변경은 넣지 않았다).
+- 75: GalaxyStarView를 광장 별 전용 PlazaStarView(Screens/PlazaStarView.swift)로 옮겼다. 73 안의 별을 보던 모드를 뺐다.
+- PlazaAPI
+  - 성운 피드(new / similar / beside)를 지웠다.
+  - 성운 별빛 한 줄(loadLines, leaveLine)과 PlazaNebulaItem, LineItem, LineList, LineIn, PlazaKind를 지웠다.
+  - 공명은 별에만 보낸다(PUT/DELETE /v1/plaza/star/{id}/resonance + beside).
+  - 목업 차단은 광장 별 목록에서 가린다.
+- AppModel
+  - 지운 것: drawnNebulae, skyShare, NebulaSkyShare, nebulaLines, reportedLines, nebulaName, defaultNebulaName, latestNebula, saveDrawnNebula, updateDrawnNebula, floatMyNebula, shareDrawnNebula, plazaNebulaeLive / Beside, liveLines, guestCandidatesLive, nebulaCreates, 성장 단계(growthStage, stageNames, serverGrowthStage, loadGrowth, /v1/growth)
+  - 계정 삭제와 전환 때의 초기화도 같이 정리했다.
+- 지운 파일
+  - App/API/NebulaAPI.swift, DesignSystem/NebulaFigure.swift, Screens/NebulaDrawing.swift(DrawnNebula, NebulaSilhouette, GuestStar)
+  - Screens/PlazaNebulaScreens.swift → Components/Chips.swift(DotChip, Tag, FlowRow만 남겼다)
+  - Screens/GrowthScreens.swift
+- StoryAPI: ServerStory와 오늘 밤만 남겼다(성운 이야기와 손님별 후보를 지웠다).
+- 71-1 nebulaSentenceOptions를 지웠다. 114 문구는 「별 N개와 별자리 이야기를 … 모으고 있어요」로 바꿨다.
+- 디버그 지원 목록에서 73과 78을 뺐다.
+- 12-11 (516:14415): 새 별(prism_version 있음)인데 interpretation이 없으면 종합 해석 대신 「이번에는 별빛 풀이를 다 쓰지 못했어요. 별빛과 세 점수는 그대로예요.」를 보여 준다.
+- 확인
+  - Debug 빌드 성공. 참조 없는 구조체가 없는 것도 확인했다(@main과 원래 있던 InviteIn은 빼고).
+  - 04, 08, 09-5, 75-4, 12-5를 캡처해서 그대로 열리는 것을 확인했다.
+- 남겨 둔 것: 파일 이름이 예전 성운 이름인 화면들(NebulaView.swift의 NebulaGlowBackground, NebulaZoomPages.swift의 ZoomControls와 별자리 이야기, NebulaPages.swift의 은하수와 별 목록). 내용은 새 기획 기준이다.

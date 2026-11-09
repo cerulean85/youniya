@@ -132,9 +132,6 @@ struct MainView: View {
                 }
                 push(.coinHistory)
             case "missingStar": push(.detail(UUID()))     // 122
-            case "nebulaEmpty":
-                model.drawnNebulae = []
-                tab = .nebula
             // 글 수정 / 간직한 별 띄우기 (2026-11-08)
             case "keptStar", "keptShort":
                 // keptStar: over 50 characters (can float); keptShort: under 50.
@@ -343,7 +340,7 @@ struct MainView: View {
                 .edgeSwipeBack(onBack: pop)
         case .plazaStar(let name):
             if let p = (model.plazaStarItems + model.plazaStarsBeside).first(where: { $0.name == name }) {
-                GalaxyStarView(plazaStar: p, onBack: pop, onBlocked: blocked,
+                PlazaStarView(star: p, onBack: pop, onBlocked: blocked,
                                onKeeper: { push(.keeper($0)) },
                                onLine: { push(.starLine(p.name)) })
                     .edgeSwipeBack(onBack: pop)
@@ -576,7 +573,7 @@ struct MainView: View {
     }
 
     /// 08 links: stat cards (89), 나의 은하수 (81), 우주 광장 (tab),
-    /// 자세히 보기 (77), 성운 이야기 (83), 성운 그리기 (51).
+    /// 별자리 이야기 (83).
     private func openFromNebula(_ title: String) {
         switch title {
         case "떠 있는 별": push(.nebulaStars(.floated))

@@ -1,19 +1,10 @@
 import SwiftUI
 
-// MARK: - 71 Float to the sky
-
-// MARK: - 75 Someone's star
-
-/// 75 다른 이의 별: one anonymous star, its 대표 문장 and (75-3) its whole text,
-/// resonance. Opened from a star inside a plaza nebula (73), or from a 별 기록
-/// row (09-3); from the plaza there's no owner nebula to open, so 「공명 남기기」
-/// is the only action.
-struct GalaxyStarView: View {
+/// 75 / 75-3 / 75-4 다른 이의 별: one shared star — its 대표 문장 and whole text,
+/// the keeper's name (→ 76-1), resonance and 별빛 한 줄 (→ 74).
+struct PlazaStarView: View {
     @Environment(AppModel.self) private var model
-    /// From 73: the nebula and the star's title. From 09-3: the plaza star.
-    var nebula: GalaxyNebula? = nil
-    var starTitle: String = ""
-    var plazaStar: PlazaNebula? = nil
+    var star: PlazaNebula
     var onBack: () -> Void
     /// 75-2: back to the previous page with the "차단했어요" toast.
     var onBlocked: () -> Void = {}
@@ -26,17 +17,16 @@ struct GalaxyStarView: View {
     /// Live 75-3: the whole text, from the plaza star's detail.
     @State private var liveText: (title: String, body: String)?
 
-    private var title: String { plazaStar?.name ?? starTitle }
-    private var key: String { plazaStar?.id ?? "star:\(nebula?.name ?? ""):\(starTitle)" }
+    private var title: String { star.name }
+    private var key: String { star.id }
     private var resonated: Bool { model.resonated.contains(key) }
-    private var quote: String { plazaStar?.line ?? nebula?.quote ?? "" }
-    private var depth: Int { plazaStar?.cardDepth ?? max(1, (nebula?.stage ?? 2) - 1) }
-    private var spec: StarShapeSpec {
-        plazaStar?.cardShape ?? nebula?.stars.first { $0.title == starTitle }?.spec ?? .init(points: 5, sharpness: .normal)
-    }
+    private var quote: String { star.line }
+    private var depth: Int { star.cardDepth }
+    private var spec: StarShapeSpec { star.cardShape }
     /// 75-3: the whole star (title and body, contacts masked by the server).
     private var fullText: (title: String, body: String)? {
-        guard let p = plazaStar, p.fullText else { return nil }
+        let p = star
+        guard p.fullText else { return nil }
         if let liveText { return (liveText.title.isEmpty ? p.name : liveText.title, liveText.body) }
         return p.fullBody.map { (p.fullTitle ?? p.name, $0) }
     }
@@ -51,7 +41,7 @@ struct GalaxyStarView: View {
                         .textStyle(.h2).foregroundStyle(Color.textPrimary)
                         .accessibilityAddTraits(.isHeader)
                     HStack(spacing: Space.sm) {
-                        if let name = plazaStar?.nickname {
+                        if let name = star.nickname {
                             // 75-4: the keeper's name opens their page.
                             Button { onKeeper(name) } label: { Tag(text: "\(name) ›", tone: .neutral) }
                                 .buttonStyle(.plain)
@@ -59,7 +49,7 @@ struct GalaxyStarView: View {
                         } else {
                             Tag(text: "익명의 별지기", tone: .neutral)
                         }
-                        if plazaStar?.hasStarlight == false {
+                        if !star.hasStarlight {
                             Tag(text: "별빛 없는 별", tone: .neutral)
                         } else {
                             Tag(text: "깊이 \(depth)단계", tone: .gold)
@@ -129,41 +119,27 @@ struct GalaxyStarView: View {
         }
         .background { StarField() }
         .task {
-            if model.useLiveAPI, let p = plazaStar, p.fullText, let id = p.serverID {
+            if model.useLiveAPI, star.fullText, let id = star.serverID {
                 liveText = await model.plazaStarText(id)
             }
         }
-        .modifier(PlazaSafetyModifier(showMenu: $showMenu, target: .star, nebulaName: nebula?.name ?? title,
-                                       serverID: plazaStar?.serverID ?? nebula?.serverID, onBlocked: onBlocked))
+        .modifier(PlazaSafetyModifier(showMenu: $showMenu, target: .star, nebulaName: title,
+                                       serverID: star.serverID, onBlocked: onBlocked))
     }
 
     @ViewBuilder private var actions: some View {
         let resonate = Button(resonated ? "공명했어요" : "공명 남기기") {
             withAnimation(.snappy) { model.toggleResonance(key) }
         }
-        if let p = plazaStar {
-            // 75-4: 공명 남기기, 별빛 한 줄 건네기, and the keeper's page.
-            VStack(spacing: Space.md) {
-                resonate.buttonStyle(.primary)
-                    .accessibilityAddTraits(resonated ? .isSelected : [])
-                Button("별빛 한 줄 건네기", action: onLine).buttonStyle(.secondary)
-                if let name = p.nickname {
-                    Button("\(name)의 밤하늘") { onKeeper(name) }.buttonStyle(.secondary)
-                }
-            }
-        } else {
-            HStack(spacing: Space.md) {
-                resonate.buttonStyle(.secondary).frame(width: 140)
-                Button("이 사람의 성운 보기", action: onBack)
-                    .buttonStyle(.primary)
+        // 75-4: 공명 남기기, 별빛 한 줄 건네기, and the keeper's page.
+        VStack(spacing: Space.md) {
+            resonate.buttonStyle(.primary)
+                .accessibilityAddTraits(resonated ? .isSelected : [])
+            Button("별빛 한 줄 건네기", action: onLine).buttonStyle(.secondary)
+            if let name = star.nickname {
+                Button("\(name)의 밤하늘") { onKeeper(name) }.buttonStyle(.secondary)
             }
         }
     }
 }
-
-// MARK: - 65 Slowly growing nebula
-
-// MARK: - 66 Moments
-
-// MARK: - 86 Four stages
 

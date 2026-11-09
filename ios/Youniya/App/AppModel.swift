@@ -377,14 +377,6 @@ struct CoinEntry: Codable, Identifiable, Hashable {
 }
 
 /// 87 Settings values. New fields need defaults so old saves still decode.
-/// 71 하늘에 띄우기 options.
-struct NebulaSkyShare: Codable, Equatable {
-    var name: String
-    var receiveLines = true
-    var showQuote = false
-    var date = Date.now
-}
-
 /// Dev-only failure modes, to see 35, 36 and 38 without a server.
 enum SimulatedFailure: String, CaseIterable {
     case network = "연결 끊김"   // 35
@@ -504,26 +496,6 @@ final class AppModel {
     var savedLines: [String] {
         didSet { UserDefaults.standard.set(savedLines, forKey: "savedLines") }
     }
-    /// 100/101: other people's lines this user reported (hidden for them).
-    var reportedLines: Set<String> {
-        didSet { UserDefaults.standard.set(Array(reportedLines), forKey: "reportedLines") }
-    }
-    /// 71: my nebula floated to the sky, and what goes with it. TODO: Plaza API.
-    var skyShare: NebulaSkyShare? {
-        didSet { UserDefaults.standard.set(try? JSONEncoder().encode(skyShare), forKey: useLiveAPI ? "skyShare-live" : "skyShare") }
-    }
-    /// 74: my one line per plaza nebula, by nebula name. TODO: Plaza API.
-    var nebulaLines: [String: String] {
-        didSet { UserDefaults.standard.set(nebulaLines, forKey: "nebulaLines") }
-    }
-    /// Nebulae the user drew (51–55), newest last.
-    var drawnNebulae: [DrawnNebula] {
-        didSet { UserDefaults.standard.set(try? JSONEncoder().encode(drawnNebulae), forKey: useLiveAPI ? "drawnNebulae-live" : "drawnNebulae") }
-    }
-    /// Shown until the user draws and names one (08, 77, 83). TODO: From the backend.
-    static let defaultNebulaName = "늦은 밤의 등대자리"
-    /// The user's nebula name: the latest drawn one, or the default.
-    var nebulaName: String { drawnNebulae.last?.name ?? Self.defaultNebulaName }
     /// 39–41: a notice covering the whole app. Not saved.
     var appNotice: AppNotice?
     /// Dev only: makes analysis or payment fail until turned off (35, 36, 38).
@@ -559,28 +531,20 @@ final class AppModel {
     var retryAvailableAt: Date?
     /// Live plaza (09, 72, 74), loaded by `loadPlaza()` / `loadLines(for:)`.
     var plazaStarsLive: [PlazaNebula] = []
+    /// Live 「곁에 둔 것」: the server's beside list, most recently kept first.
+    var plazaStarsBeside: [PlazaNebula] = []
+    /// Live 08-3: month constellations by "YYYY-MM".
+    var liveConstellations: [String: MonthConstellation] = [:]
     /// 74: the line I left on each plaza star (by name; memory).
     var sentStarLines: [String: String] = [:]
     /// Mock 12-4: lines received on my stars.
     var mockReceivedLines: [StarItem.ID: [ReceivedLine]] = [:]
     /// Live 08-3: month constellations by "YYYY-MM".
-    var liveConstellations: [String: MonthConstellation] = [:]
-    var plazaNebulaeLive: [GalaxyNebula] = []
-    /// Live 09-2 「곁에 둔 것」: the server's beside lists, most recently kept first.
-    var plazaStarsBeside: [PlazaNebula] = []
-    var plazaNebulaeBeside: [GalaxyNebula] = []
-    var liveLines: [String: [GalaxyNebula.Line]] = [:]
-    /// Live 54 → 55/71: nebula creations still on their way to the server.
-    var nebulaCreates: [DrawnNebula.ID: Task<String?, Never>] = [:]
     /// Live: the server's account id (/v1/me), used as StoreKit's appAccountToken.
     var accountID: String?
-    /// Live 85 guests and 69 tonight's count.
-    var guestCandidatesLive: [GuestStar] = []
     var tonightCount: Int?
     /// Of tonight's stars, how many are mine (`/v1/plaza/tonight` mine).
     var tonightMine: Int?
-    /// Live: `GET /v1/growth` stage (0–4).
-    var serverGrowthStage: Int?
     /// Live: stars whose telescope report is being made on the server (25 → 10).
     var pendingReports: Set<StarItem.ID> = []
     /// The dev sign-in name; the same name is the same server account.
@@ -638,10 +602,6 @@ final class AppModel {
         savedLines = UserDefaults.standard.stringArray(forKey: "savedLines") ?? []
         usedFreeTelescope = UserDefaults.standard.bool(forKey: "usedFreeTelescope")
         monthlyFreeTelescopeMonth = UserDefaults.standard.string(forKey: "monthlyFreeTelescopeMonth")
-        nebulaLines = UserDefaults.standard.dictionary(forKey: "nebulaLines") as? [String: String] ?? [:]
-        reportedLines = Set(UserDefaults.standard.stringArray(forKey: "reportedLines") ?? [])
-        skyShare = Self.savedSkyShare(live: live)
-        drawnNebulae = Self.savedDrawnNebulae(live: live)
         coinHistory = Self.savedCoinHistory(live: live)
         var saved = UserDefaults.standard.data(forKey: "settings")
             .flatMap { try? JSONDecoder().decode(AppSettings.self, from: $0) } ?? AppSettings()
@@ -735,8 +695,6 @@ final class AppModel {
         }
         await loadStars()
         await loadReports()
-        await loadNebulae()
-        await loadGrowth()
         await loadDraft()
         await loadCoins()
         await loadBlocks()
@@ -750,15 +708,6 @@ final class AppModel {
         return UserDefaults.standard.integer(forKey: key)
     }
 
-    private static func savedSkyShare(live: Bool) -> NebulaSkyShare? {
-        UserDefaults.standard.data(forKey: live ? "skyShare-live" : "skyShare")
-            .flatMap { try? JSONDecoder().decode(NebulaSkyShare.self, from: $0) }
-    }
-
-    private static func savedDrawnNebulae(live: Bool) -> [DrawnNebula] {
-        UserDefaults.standard.data(forKey: live ? "drawnNebulae-live" : "drawnNebulae")
-            .flatMap { try? JSONDecoder().decode([DrawnNebula].self, from: $0) } ?? []
-    }
 
     private static func savedCoinHistory(live: Bool) -> [CoinEntry] {
         UserDefaults.standard.data(forKey: live ? "coinHistory-live" : "coinHistory")
@@ -776,8 +725,6 @@ final class AppModel {
         stars = store.load([StarItem].self, from: starsFile) ?? []
         coins = Self.savedCoins(live: on)
         coinHistory = Self.savedCoinHistory(live: on)
-        drawnNebulae = Self.savedDrawnNebulae(live: on)
-        skyShare = Self.savedSkyShare(live: on)
         guard on else { return }
         Task { @MainActor in
             if await APIClient.shared.isSignedIn {
@@ -935,48 +882,6 @@ final class AppModel {
         }
     }
 
-    /// 54 저장하기
-    func saveDrawnNebula(_ n: DrawnNebula) {
-        drawnNebulae.append(n)
-        if useLiveAPI { Task { @MainActor in createNebulaLive(n) } }
-    }
-
-    /// 08: the nebula shown on 나의 성운, the latest drawn or reshaped.
-    var latestNebula: DrawnNebula? { drawnNebulae.max { $0.lastTouched < $1.lastTouched } }
-
-    /// 08 「모양 바꾸기」: saves the reshaped nebula in place.
-    func updateDrawnNebula(_ n: DrawnNebula) {
-        guard let i = drawnNebulae.firstIndex(where: { $0.id == n.id }) else { return }
-        var updated = n
-        updated.updatedAt = .now
-        drawnNebulae[i] = updated
-        if useLiveAPI { Task { @MainActor in await updateNebulaLive(updated) } }
-    }
-
-    /// 71 하늘에 띄우기: floats my newest nebula. Live: on the server, and only
-    /// once it is there; without a drawn nebula there is nothing to float yet.
-    /// `quote`: the line picked on 71-1 when "가린 한 문장 함께 보이기" is on.
-    func floatMyNebula(receiveLines: Bool, quote: String?) {
-        let showQuote = quote != nil
-        let share = NebulaSkyShare(name: nebulaName, receiveLines: receiveLines, showQuote: showQuote)
-        guard useLiveAPI else { skyShare = share; return }
-        // 77: the nebula shown on 08 and 70/77 (the latest drawn or reshaped).
-        guard let latest = latestNebula else {
-            apiMessage = "먼저 성운을 그려 주세요. 그린 성운을 하늘에 띄울 수 있어요."
-            return
-        }
-        Task { @MainActor in
-            if await shareNebulaLive(latest.id, receiveLines: receiveLines, quote: quote) { skyShare = share }
-        }
-    }
-
-    /// 55 우주 광장에 나누기
-    func shareDrawnNebula(_ id: DrawnNebula.ID) {
-        if useLiveAPI { Task { @MainActor in _ = await shareNebulaLive(id) }; return }
-        guard let i = drawnNebulae.firstIndex(where: { $0.id == id }) else { return }
-        drawnNebulae[i].shared = true
-    }
-
     /// 36 "조용히 간직하기": the star stays, without starlight or analysis.
     func keepInstead(_ id: StarItem.ID) -> StarItem? {
         guard let i = stars.firstIndex(where: { $0.id == id }) else { return nil }
@@ -995,9 +900,6 @@ final class AppModel {
         }
         for i in stars.indices where stars[i].isShared {
             stars[i].sharedToPlaza = false
-        }
-        for i in drawnNebulae.indices where drawnNebulae[i].shared {
-            drawnNebulae[i].shared = false
         }
     }
 
@@ -1026,10 +928,6 @@ final class AppModel {
         coins = Self.starterCoins
         usedFreeTelescope = false
         monthlyFreeTelescopeMonth = nil
-        drawnNebulae = []
-        nebulaLines = [:]
-        reportedLines = []
-        skyShare = nil
         hasSeenPlazaIntro = false
         marketingOptIn = false
         hasConsented = false
@@ -1125,34 +1023,6 @@ final class AppModel {
     var supernovaCount: Int { stars.filter { $0.analysis?.isSupernova == true }.count }
     /// 104/105: a star can be floated (analyzed) from 50 characters; keeping has no minimum.
     static let minFloatLength = 50
-    /// Deep stars needed to reach the next nebula stage.
-    static let nextStageDeepStars = 15
-
-    /// Stars needed for the first stage (기획서 5.1 "별 12개가 모였을 때"), floated and kept.
-    static let firstStageStars = 12
-
-    /// 86 성운이 자라는 네 걸음. 0 아직 (별 12개 전) · 1 첫 별들 · 2 따뜻한 빛줄기 (깊은 별 6) ·
-    /// 3 짙어지는 성운 (깊은 별 15 · 별빛 900 이상 1번) · 4 온전한 은하수 (깊은 별 30 · 여러 감정의 결).
-    /// Live: the server's `/v1/growth` stage; the stages go in order, so every one needs the 12 stars.
-    var growthStage: Int {
-        if useLiveAPI, let serverGrowthStage { return serverGrowthStage }
-        guard stars.count >= Self.firstStageStars else { return 0 }
-        let bright = stars.contains { ($0.starlightValue ?? 0) >= 900 }
-        let moods = Set(stars.filter(\.isFloated).map(\.mood)).count
-        if deepCount >= 30 && moods >= 3 { return 4 }
-        if deepCount >= Self.nextStageDeepStars && bright { return 3 }
-        if deepCount >= 6 { return 2 }
-        return 1
-    }
-
-    static let stageNames = ["첫 별들", "따뜻한 빛줄기", "짙어지는 성운", "온전한 은하수"]
-    /// Nil at stage 0.
-    var stageName: String? { growthStage > 0 ? Self.stageNames[growthStage - 1] : nil }
-    /// "첫 별들", or "별 5/12" before the first stage.
-    var stageLabel: String {
-        stageName.map { "\(growthStage)단계 \($0)" } ?? "별 \(min(stars.count, Self.firstStageStars))/\(Self.firstStageStars)"
-    }
-
     func saveDraft(_ d: StarDraft) {
         if d != draft { syncDraft(d) }
         draft = d
@@ -1204,17 +1074,6 @@ final class AppModel {
         f.locale = Locale(identifier: "ko_KR")
         f.dateFormat = "M월 d일 · HH:mm"
         return f.string(from: date)
-    }
-}
-
-// MARK: - Growth (08, 86)
-
-extension AppModel {
-    /// Live: the server decides the stage (stage 0 below 12 stars).
-    @MainActor func loadGrowth() async {
-        guard useLiveAPI, isSignedIn else { return }
-        struct Growth: Decodable { var stage: Int }
-        if let g: Growth = try? await APIClient.shared.get("/v1/growth") { serverGrowthStage = g.stage }
     }
 }
 

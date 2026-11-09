@@ -34,34 +34,10 @@ private struct PlazaStarItem: Decodable {
     var lineLeft: Bool?
 }
 
-private struct PlazaNebulaItem: Decodable {
-    var id: String
-    var name: String
-    var quote: String?
-    var depthLevel: Int?
-    var shape: PlazaNebulaShape?
-    var receiveLines: Bool
-    var resonated: Bool
-    var beside: Bool
-}
-
 private struct Items<T: Decodable>: Decodable { var items: [T] }
-
-private struct LineItem: Decodable {
-    var id: String
-    var text: String
-    var createdAt: Date
-    var mine: Bool
-}
-
-private struct LineList: Decodable {
-    var items: [LineItem]
-    var canLeave: Bool
-}
 
 /// 19: the 대표 문장 and, from 2026-11-08, the whole text (`full_text`).
 private struct ShareIn: Encodable { var quote: String; var fullText = true }
-private struct LineIn: Encodable { var text: String }
 
 // MARK: - Mapping
 
@@ -77,117 +53,51 @@ private extension PlazaNebula {
     }
 }
 
-private extension GalaxyNebula {
-    init(_ n: PlazaNebulaItem, order: Int, similarity: Double) {
-        var rng = SeededRandom(seed: n.id)
-        self.init(name: n.name, stage: max(1, n.depthLevel ?? 1), resonance: 0, quote: n.quote ?? "",
-                  order: order, similarity: similarity,
-                  spot: CGPoint(x: rng.next(in: 0.15...0.85), y: rng.next(in: 0.15...0.85)),
-                  serverID: n.id, receiveLines: n.receiveLines, shape: n.shape)
-    }
-}
-
-/// The server's `kind` for resonance and 곁에 두기.
-private enum PlazaKind: String { case star, nebula }
-
 // MARK: - AppModel (live plaza)
 
 extension AppModel {
-    /// 09 / 72: the plaza's stars and nebulae, mock samples or the server's.
-    var plazaStarItems: [PlazaNebula] { useLiveAPI ? plazaStarsLive : PlazaNebula.samples }
-    /// Mock: a blocked keeper's nebula is hidden here (75-2); live, the server leaves it out.
-    var galaxyNebulae: [GalaxyNebula] {
-        useLiveAPI ? plazaNebulaeLive : GalaxyNebula.samples.filter { !blockedNebulaNames.contains($0.name) }
+    /// 09-5: the plaza's stars, mock samples or the server's. Mock: a blocked
+    /// keeper's star is hidden here (75-2); live, the server leaves it out.
+    var plazaStarItems: [PlazaNebula] {
+        useLiveAPI ? plazaStarsLive : PlazaNebula.samples.filter { !blockedNebulaNames.contains($0.name) }
     }
 
-    /// 73 / 74: others' lines on a nebula, newest first.
-    func lines(for nebula: GalaxyNebula) -> [GalaxyNebula.Line] {
-        useLiveAPI ? liveLines[nebula.name] ?? [] : nebula.lines
-    }
-
-    /// Live 09 / 72: loads both feeds. "새로 뜬 것" gives `order`, "나와 결이 비슷한" gives
+    /// Live 09-5: loads the star feeds. "새로 뜬 것" gives `order`, "나와 결이 비슷한" gives
     /// `similarity`, so the screens keep sorting the way they do with samples.
     @MainActor func loadPlaza() async {
         guard useLiveAPI, isSignedIn else { return }
         do {
             async let newStars: Items<PlazaStarItem> = APIClient.shared.get("/v1/plaza/stars", query: ["sort": "new"])
             async let similarStars: Items<PlazaStarItem> = APIClient.shared.get("/v1/plaza/stars", query: ["sort": "similar"])
-            async let newNebulae: Items<PlazaNebulaItem> = APIClient.shared.get("/v1/plaza/nebulae", query: ["filter": "new"])
-            async let similarNebulae: Items<PlazaNebulaItem> = APIClient.shared.get("/v1/plaza/nebulae", query: ["filter": "similar"])
             async let besideStars: Items<PlazaStarItem> = APIClient.shared.get("/v1/plaza/stars", query: ["sort": "beside"])
-            async let besideNebulae: Items<PlazaNebulaItem> = APIClient.shared.get("/v1/plaza/nebulae", query: ["filter": "beside"])
-            let (ns, ss, nn, sn, bs, bn) = try await (newStars, similarStars, newNebulae, similarNebulae, besideStars, besideNebulae)
+            let (ns, ss, bs) = try await (newStars, similarStars, besideStars)
 
             let starRank = Dictionary(ss.items.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { a, _ in a })
             plazaStarsLive = ns.items.enumerated().map { i, s in
                 PlazaNebula(s, order: i, similarity: 1 - Double(starRank[s.id] ?? ss.items.count) / Double(max(1, ss.items.count)))
             }
-            let nebulaRank = Dictionary(sn.items.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { a, _ in a })
-            plazaNebulaeLive = nn.items.enumerated().map { i, n in
-                GalaxyNebula(n, order: i, similarity: 1 - Double(nebulaRank[n.id] ?? sn.items.count) / Double(max(1, sn.items.count)))
-            }
             // 「곁에 둔 것」: the server's order (most recently kept first).
             plazaStarsBeside = bs.items.enumerated().map { i, s in PlazaNebula(s, order: i, similarity: 0) }
-            plazaNebulaeBeside = bn.items.enumerated().map { i, n in GalaxyNebula(n, order: i, similarity: 0) }
-            // The app keeps one "resonated" set: star names, and "nebula:" keys for
-            // nebulae the user resonated with or keeps beside (80).
+            // One "resonated" set of star names; a resonance also keeps the star beside.
             for s in ns.items where s.resonated { resonated.insert(s.name) }
-            for n in nn.items where n.resonated || n.beside { resonated.insert("nebula:" + n.name) }
         } catch {
             handle(error)
         }
     }
 
-    /// Live: sends a resonance toggle. It also keeps the star or nebula beside
-    /// (09-2 「곁에 둔 것」), as the app shows both as one "곁에 둔" state.
+    /// Live: sends a resonance toggle. It also keeps the star beside
+    /// (「곁에 둔 것」), as the app shows both as one "곁에 둔" state.
     @MainActor func sendResonance(key: String, on: Bool) {
-        let target: (PlazaKind, String)?
-        if key.hasPrefix("nebula:") {
-            let name = String(key.dropFirst("nebula:".count))
-            target = (plazaNebulaeLive + plazaNebulaeBeside).first { $0.name == name }?.serverID.map { (.nebula, $0) }
-        } else {
-            target = (plazaStarsLive + plazaStarsBeside).first { $0.name == key }?.serverID.map { (.star, $0) }
-        }
-        guard let (kind, id) = target else { return }  // e.g. a star inside a nebula: kept on device
+        guard let id = (plazaStarsLive + plazaStarsBeside).first(where: { $0.name == key })?.serverID else { return }
         Task { @MainActor in
             do {
                 let method = on ? "PUT" : "DELETE"
-                try await APIClient.shared.sendRaw(method, "/v1/plaza/\(kind.rawValue)/\(id)/resonance")
-                try await APIClient.shared.sendRaw(method, "/v1/plaza/\(kind.rawValue)/\(id)/beside")
+                try await APIClient.shared.sendRaw(method, "/v1/plaza/star/\(id)/resonance")
+                try await APIClient.shared.sendRaw(method, "/v1/plaza/star/\(id)/beside")
             } catch {
                 if on { resonated.remove(key) } else { resonated.insert(key) }
                 handle(error)
             }
-        }
-    }
-
-    /// Live 74: others' lines, and my own line (shown as mine on 73).
-    @MainActor func loadLines(for nebula: GalaxyNebula) async {
-        guard useLiveAPI, let id = nebula.serverID else { return }
-        do {
-            let r: LineList = try await APIClient.shared.get("/v1/plaza/nebulae/\(id)/lines")
-            liveLines[nebula.name] = r.items.filter { !$0.mine }.map {
-                GalaxyNebula.Line(hoursAgo: Date.now.timeIntervalSince($0.createdAt) / 3600, text: $0.text, serverID: $0.id)
-            }
-            if let mine = r.items.first(where: \.mine) { nebulaLines[nebula.name] = mine.text }
-        } catch {
-            handle(error)
-        }
-    }
-
-    /// Live 74 보내기. Returns the server's error code for 99/106/107, or nil when it was left.
-    @MainActor func leaveLine(_ text: String, on nebula: GalaxyNebula) async -> String? {
-        guard let id = nebula.serverID else { return "not_found" }
-        do {
-            let r: LineItem = try await APIClient.shared.post("/v1/plaza/nebulae/\(id)/lines", body: LineIn(text: text))
-            nebulaLines[nebula.name] = r.text
-            return nil
-        } catch let e as APIError where ["hurtful", "too_long", "already_left", "lines_closed", "own_share"].contains(e.code) {
-            if e.code != "hurtful" { apiMessage = e.message }
-            return e.code
-        } catch {
-            handle(error)
-            return "failed"
         }
     }
 

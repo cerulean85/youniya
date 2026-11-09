@@ -140,7 +140,6 @@ extension AppModel {
         do {
             try await APIClient.shared.delete("/v1/me/shares")
             for i in stars.indices where stars[i].isShared { stars[i].sharedToPlaza = false }
-            skyShare = nil
         } catch {
             handle(error)
         }

@@ -285,18 +285,4 @@ extension AppModel {
         return star.body.shareSentences.enumerated().map { SentenceOption(id: $0, sentence: $1) }
     }
 
-    /// 71-1: the sentences of the stars in my newest nebula (mock: my floated
-    /// stars), newest star first, each captioned "제목 · 날짜".
-    func nebulaSentenceOptions() -> [SentenceOption] {
-        let ids = drawnNebulae.last.map { Set($0.starIDs) }
-        var source = stars.filter { ids?.contains($0.id) ?? $0.isFloated }
-        if source.isEmpty { source = stars.filter(\.isFloated) }
-        var out: [SentenceOption] = []
-        for star in source.sorted(by: { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }) {
-            for s in star.body.shareSentences {
-                out.append(SentenceOption(id: out.count, caption: "\(star.title) · \(star.shortDateText)", sentence: s))
-            }
-        }
-        return out
-    }
 }

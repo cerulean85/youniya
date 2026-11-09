@@ -30,6 +30,13 @@ struct StarlightBreakdown: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .appear(reveal, delay: 3 * 0.18, reduceMotion: reduceMotion)
+            } else if analysis.prismVersion != nil {
+                // 12-11 (516:14415): only the 풀이 call failed; the scores stand.
+                Text("이번에는 별빛 풀이를 다 쓰지 못했어요. 별빛과 세 점수는 그대로예요.")
+                    .textStyle(.caption)
+                    .foregroundStyle(Color.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .appear(reveal, delay: 3 * 0.18, reduceMotion: reduceMotion)
             }
 
             VStack(alignment: .leading, spacing: Space.sm) {
