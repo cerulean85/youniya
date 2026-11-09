@@ -439,3 +439,60 @@ class AiCache(Base):
     key: Mapped[str] = mapped_column(String(64))  # model + prompt hash: a new prompt or model, a new cache
     name: Mapped[str | None] = mapped_column(String(128))  # None: too small to cache
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class Operator(Base):
+    """관리자 콘솔 운영자 (18장). Invited only; password (argon2id) and an authenticator app (TOTP).
+    Five failed sign-ins lock the account for 15 minutes."""
+
+    __tablename__ = "operators"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    email: Mapped[str] = mapped_column(String(254), unique=True)  # lower case
+    role: Mapped[str] = mapped_column(String(16))  # owner | moderator
+    status: Mapped[str] = mapped_column(String(16), default="invited")  # invited | active | disabled
+    password_hash: Mapped[str | None] = mapped_column(Text)
+    totp_secret_enc: Mapped[str | None] = mapped_column(Text)  # Fernet, like the writing
+    totp_last_step: Mapped[int | None] = mapped_column(Integer)  # a code works once
+    invite_hash: Mapped[str | None] = mapped_column(String(64))  # sha256 of the one-time setup token
+    invite_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    failed_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    invited_by: Mapped[str | None] = mapped_column(String(36))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class OperatorChallenge(Base):
+    """Between the password and the TOTP code: five minutes, once."""
+
+    __tablename__ = "operator_challenges"
+
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    operator_id: Mapped[str] = mapped_column(ForeignKey("operators.id", ondelete="CASCADE"), index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class OperatorSession(Base):
+    __tablename__ = "operator_sessions"
+
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    operator_id: Mapped[str] = mapped_column(ForeignKey("operators.id", ondelete="CASCADE"), index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class AdminAudit(Base):
+    """운영 기록 (18.1): every operator action, with its reason. Nothing deletes a row before it is a
+    year old: no endpoint changes or removes them."""
+
+    __tablename__ = "admin_audit_log"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+    operator_id: Mapped[str | None] = mapped_column(String(36), index=True)  # null: the ADMIN_TOKEN
+    operator_email: Mapped[str | None] = mapped_column(String(254))  # kept if the operator goes
+    action: Mapped[str] = mapped_column(String(40))
+    target: Mapped[str | None] = mapped_column(String(80))
+    reason: Mapped[str | None] = mapped_column(Text)
+    detail: Mapped[dict | None] = mapped_column(JSON)

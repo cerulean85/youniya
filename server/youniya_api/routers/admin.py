@@ -11,6 +11,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from ..deps import ApiError, get_cipher, get_db
+from .admin_auth import anyone, owner
 from ..models import (AdminLog, DeviceToken, Inquiry, LineReport, NebulaShare, ShareReport, StarlightLine, StarShare,
                       User)
 from .. import marketing
@@ -19,13 +20,9 @@ from ..security import Cipher
 from ..views import iso
 
 
-def operator(request: Request, x_admin_token: str | None = Header(None)) -> None:
-    expected = request.app.state.settings.admin_token
-    if not expected or not x_admin_token or not hmac.compare_digest(expected, x_admin_token):
-        raise ApiError(404, "not_found", "찾지 못했어요.")
-
-
-router = APIRouter(prefix="/v1/admin", tags=["admin"], dependencies=[Depends(operator)])
+# An operator session (Bearer) or the ADMIN_TOKEN: routers/admin_auth.py. Moderators reach only the
+# report screens; the rest is owner-only (기획서 18.3).
+router = APIRouter(prefix="/v1/admin", tags=["admin"], dependencies=[Depends(anyone)])
 
 
 def _log(db: Session, action: str, target_id: str | None = None) -> None:
@@ -33,7 +30,7 @@ def _log(db: Session, action: str, target_id: str | None = None) -> None:
     db.commit()
 
 
-@router.get("/status")
+@router.get("/status", dependencies=[Depends(owner)])
 def status(request: Request):
     """Which outside services this deployment is set up for. No secrets, only whether each is on."""
     state, settings = request.app.state, request.app.state.settings
@@ -56,7 +53,7 @@ class PushTestIn(BaseModel):
     user_id: str = Field(..., description="GET /v1/me id of the account signed in on the phone")
 
 
-@router.post("/push-test")
+@router.post("/push-test", dependencies=[Depends(owner)])
 def push_test(body: PushTestIn, request: Request, db: Session = Depends(get_db)):
     """Sends "시험 알림" to every device of one user and says what APNs answered for each.
     With no devices listed, the app has not registered yet. A device APNs calls dead is forgotten."""
@@ -83,7 +80,7 @@ class OperatorTestError(RuntimeError):
     """Raised on purpose by POST /v1/admin/error-test."""
 
 
-@router.post("/error-test")
+@router.post("/error-test", dependencies=[Depends(owner)])
 def error_test():
     """An unhandled error on purpose (500), to see a report arrive in Sentry. Nothing is written."""
     raise OperatorTestError("operator test")
@@ -175,7 +172,7 @@ class AnnouncementIn(BaseModel):
     dry_run: bool = Field(True, description="Count the recipients without sending")
 
 
-@router.post("/announcements")
+@router.post("/announcements", dependencies=[Depends(owner)])
 def announce(body: AnnouncementIn, request: Request, db: Session = Depends(get_db)):
     """새 기능·혜택 알림, only to users who opted in (11, 87).
     정보통신망법 50조: the title starts with (광고), the body ends with how to opt out,
@@ -200,7 +197,7 @@ def inquiries(db: Session = Depends(get_db), cipher: Cipher = Depends(get_cipher
                        "created_at": iso(r.created_at)} for r in rows]}
 
 
-@router.get("/logs")
+@router.get("/logs", dependencies=[Depends(owner)])
 def logs(db: Session = Depends(get_db)):
     rows = db.scalars(select(AdminLog).order_by(AdminLog.created_at.desc()).limit(500)).all()
     return {"items": [{"action": r.action, "target_id": r.target_id, "at": iso(r.created_at)} for r in rows]}

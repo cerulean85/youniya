@@ -15,6 +15,18 @@ is built against these shapes with mock data. Agreed with the Web Dev Session, 2
 - POST /v1/admin/auth/login {email, password} → {challenge}
 - POST /v1/admin/auth/totp {challenge, code} → {token, expires_at, operator:{id, email, role}}; then Authorization: Bearer
 - 423 locked {until}; 401 → sign in again; 403 forbidden_role; POST /v1/admin/auth/logout
+- Built (step 7-1): also GET /v1/admin/auth/me; 401 invalid_credentials | challenge_expired | invalid_code
+  (with a fresh `challenge`) | session_expired. Sessions last 12 hours; a TOTP code works once.
+- Invitation: POST /v1/admin/operators/invite {email, role, reason} → {operator, setup_token, expires_at} (3 days,
+  shown once; no email yet, the console shows a link). POST /v1/admin/auth/setup {invite_token, password (12+)}
+  → {totp_secret, otpauth_uri}; POST /v1/admin/auth/setup/confirm {invite_token, code} → operator (active).
+  The first owner: tools/admin_operator.py invite EMAIL.
+- GET /v1/admin/operators → {items:[{id, email, role, status, totp, last_seen_at, created_at}]};
+  PATCH /v1/admin/operators/{id} {role?, status?: active|disabled, reason} (409 last_owner; disabling ends sessions).
+- GET /v1/admin/audit?from=&to=&operator=&action=&format=json|csv → {items:[{id, at, operator, operator_id, action,
+  target, reason, detail}]} (owner). No route changes or deletes it.
+- The ADMIN_TOKEN header still works, as an owner. Existing /v1/admin routes: reports, lines/shares actions and
+  inquiries are for both roles; status, push-test, error-test, announcements and logs are owner-only.
 
 ## 신고 (A-03·04)
 - GET /v1/admin/reports?status=pending|hidden|done&kind=star|star_line|line|nickname
