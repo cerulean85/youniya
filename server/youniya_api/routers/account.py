@@ -9,7 +9,7 @@ from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from .. import allowance, membership, nickname
+from .. import allowance, marketing, membership, nickname
 from ..blocks import hidden_users
 from ..deps import ApiError, current_user, get_cipher, get_db
 from ..export import StarEntry, as_pdf, as_text
@@ -84,6 +84,7 @@ def me(request: Request, user: User = Depends(current_user), db: Session = Depen
         "provider": user.provider,
         "needs_consent": user.consented_at is None,
         "marketing_opt_in": user.marketing_opt_in,
+        "marketing": marketing.view(user),  # 14.3: {opt_in, consented_at, revoked_at, reconfirm_due}
         "nickname": user.nickname,  # 별지기 이름 (15장); null until chosen
         "nickname_next_change": iso(nickname.next_change(user)),
         "coins": user.coins,
@@ -126,12 +127,25 @@ def set_nickname(body: NicknameIn, user: User = Depends(current_user), db: Sessi
 
 
 @router.post("/me/consent")
-def consent(body: Consent, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def consent(body: Consent, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
     user.consented_at = user.consented_at or datetime.now(timezone.utc)
-    user.marketing_opt_in = body.marketing
+    marketing.set_consent(db, request.app.state.push, user, body.marketing)
     db.add(user)
     db.commit()
     return {"needs_consent": False, "marketing_opt_in": user.marketing_opt_in}
+
+
+class MarketingIn(BaseModel):
+    opt_in: bool
+
+
+@router.put("/me/marketing", dependencies=[per_user("marketing", 20, 3600)])
+def set_marketing(body: MarketingIn, request: Request, user: User = Depends(current_user),
+                  db: Session = Depends(get_db)):
+    """14.3 새 기능·혜택 알림 수신 동의, apart from the other consents. The result comes as an app notice."""
+    changed = marketing.set_consent(db, request.app.state.push, user, body.opt_in)
+    db.commit()
+    return marketing.view(user) | {"changed": changed}
 
 
 @router.patch("/me/settings")

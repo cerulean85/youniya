@@ -59,3 +59,19 @@ def test_months_outside_the_account_are_closed(client):
     assert len(months) >= 3 and months[-1]["filled"] == 0
     past = client.get(f"/v1/constellations/{months[-1]['month']}", headers=h).json()
     assert past["filled"] == 0 and past["extra"] == []
+
+
+def test_links_across_months(client):
+    h = sign_in(client)
+    a = client.post("/v1/stars", json={"mood": "calm", "body": "지난달 글", "mode": "unlit"}, headers=h).json()["star"]
+    b = client.post("/v1/stars", json={"mood": "calm", "body": "이번 달 글", "mode": "unlit"}, headers=h).json()["star"]
+    c = client.post("/v1/stars", json={"mood": "calm", "body": "또 이번 달", "mode": "unlit"}, headers=h).json()["star"]
+    with client.app.state.sessions() as db:
+        db.get(Star, a["id"]).created_at = datetime.now(timezone.utc) - timedelta(days=40)
+        db.get(User, db.get(Star, a["id"]).user_id).created_at = datetime.now(timezone.utc) - timedelta(days=41)
+        db.commit()
+    client.post(f"/v1/stars/{b['id']}/links", json={"star_ids": [a["id"], c["id"]]}, headers=h)
+    client.post(f"/v1/stars/{c['id']}/links", json={"star_ids": [a["id"]]}, headers=h)
+    got = client.get("/v1/constellations", headers=h).json()["cross_links"]
+    months = sorted({(datetime.now(KST) - timedelta(days=40)).strftime("%Y-%m"), datetime.now(KST).strftime("%Y-%m")})
+    assert got == [months]

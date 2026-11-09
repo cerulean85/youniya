@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from ..deps import ApiError, get_cipher, get_db
 from ..models import (AdminLog, DeviceToken, Inquiry, LineReport, NebulaShare, ShareReport, StarlightLine, StarShare,
                       User)
+from .. import marketing
 from ..push import Message, is_night_kst, notify
 from ..security import Cipher
 from ..views import iso
@@ -181,6 +182,8 @@ def announce(body: AnnouncementIn, request: Request, db: Session = Depends(get_d
     and nothing goes out between 21:00 and 08:00 KST."""
     if not body.dry_run and is_night_kst():
         raise ApiError(409, "night_time", "밤 9시부터 아침 8시까지는 광고 알림을 보낼 수 없어요.")
+    if not body.dry_run and marketing.ads_this_month(db) >= marketing.ADS_PER_MONTH:  # 14.3
+        raise ApiError(409, "monthly_limit", f"광고 알림은 한 달에 {marketing.ADS_PER_MONTH}번까지 보낼 수 있어요.")
     users = list(db.scalars(select(User.id).where(User.marketing_opt_in.is_(True))))
     message = Message(f"(광고) {body.title}", f"{body.body}\n수신거부: 설정 › 알림", "announcement")
     if body.dry_run:

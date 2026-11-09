@@ -8,10 +8,10 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, Path as PathParam
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from ..deps import ApiError, consented_user, get_cipher, get_db
-from ..models import Star, User
+from ..models import Star, StarLink, User
 from ..prism.engine import split_sentences
 from ..rules import DEEP_DEPTH_SCORE
 from ..security import Cipher
@@ -58,7 +58,8 @@ def _check(user: User, month: str) -> None:
 
 @router.get("")
 def months(user: User = Depends(consented_user), db: Session = Depends(get_db)):
-    """나의 은하수: every month since joining, newest first, with how full each is."""
+    """나의 은하수: every month since joining, newest first, with how full each is. `cross_links`: pairs of
+    months whose stars are linked to each other (별 잇기 across months), earlier month first, once each."""
     stars = db.scalars(select(Star.created_at).where(Star.user_id == user.id)).all()
     counts: dict[str, int] = {}
     for at in stars:
@@ -69,7 +70,15 @@ def months(user: User = Depends(consented_user), db: Session = Depends(get_db)):
         n, total = counts.get(m, 0), len(t["slots"])
         out.append({"month": m, "key": t["key"], "name": t["name"], "filled": min(n, total), "total": total,
                     "complete": n >= total})
-    return {"items": out}
+    a, b = aliased(Star), aliased(Star)
+    pairs = set()
+    for at_a, at_b in db.execute(select(a.created_at, b.created_at).select_from(StarLink)
+                                 .join(a, a.id == StarLink.star_a).join(b, b.id == StarLink.star_b)
+                                 .where(StarLink.user_id == user.id)):
+        ma, mb = sorted((local(at_a).strftime("%Y-%m"), local(at_b).strftime("%Y-%m")))
+        if ma != mb:
+            pairs.add((ma, mb))
+    return {"items": out, "cross_links": [list(p) for p in sorted(pairs)]}
 
 
 @router.get("/{month}")

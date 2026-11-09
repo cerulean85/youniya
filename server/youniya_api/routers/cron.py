@@ -6,7 +6,7 @@ import hmac
 from fastapi import APIRouter, Depends, Header, Request
 from sqlalchemy.orm import Session
 
-from .. import coins
+from .. import coins, marketing
 from ..deps import ApiError, get_db
 from ..models import AdminLog
 
@@ -18,6 +18,15 @@ def vercel_cron(request: Request, authorization: str | None = Header(None)) -> N
 
 
 router = APIRouter(prefix="/v1/cron", tags=["cron"], dependencies=[Depends(vercel_cron)])
+
+
+@router.get("/marketing-reconfirm")
+def marketing_reconfirm(request: Request, db: Session = Depends(get_db)):
+    """Daily: users whose 새 기능·혜택 알림 consent turned two years old hear that it is still on (14.3)."""
+    sent = marketing.remind_due(db, request.app.state.push)
+    db.add(AdminLog(action="cron_marketing_reconfirm", target_id=str(sent)))
+    db.commit()
+    return {"reminded": sent}
 
 
 @router.get("/purge-purchase-records")

@@ -10,6 +10,10 @@
     {
       "path": "/v1/cron/purge-purchase-records",
       "schedule": "0 20 * * *"
+    },
+    {
+      "path": "/v1/cron/marketing-reconfirm",
+      "schedule": "0 1 * * *"
     }
   ]
 }

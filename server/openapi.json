@@ -439,6 +439,51 @@
         ]
       }
     },
+    "/v1/me/marketing": {
+      "put": {
+        "tags": [
+          "account"
+        ],
+        "summary": "Set Marketing",
+        "description": "14.3 새 기능·혜택 알림 수신 동의, apart from the other consents. The result comes as an app notice.",
+        "operationId": "set_marketing_v1_me_marketing_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarketingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/v1/me/settings": {
       "patch": {
         "tags": [
@@ -4016,6 +4061,54 @@
         }
       }
     },
+    "/v1/cron/marketing-reconfirm": {
+      "get": {
+        "tags": [
+          "cron"
+        ],
+        "summary": "Marketing Reconfirm",
+        "description": "Daily: users whose 새 기능·혜택 알림 consent turned two years old hear that it is still on (14.3).",
+        "operationId": "marketing_reconfirm_v1_cron_marketing_reconfirm_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/cron/purge-purchase-records": {
       "get": {
         "tags": [
@@ -4070,7 +4163,7 @@
           "constellations"
         ],
         "summary": "Months",
-        "description": "나의 은하수: every month since joining, newest first, with how full each is.",
+        "description": "나의 은하수: every month since joining, newest first, with how full each is. `cross_links`: pairs of\nmonths whose stars are linked to each other (별 잇기 across months), earlier month first, once each.",
         "operationId": "months_v1_constellations_get",
         "responses": {
           "200": {
@@ -4516,6 +4609,19 @@
           "star_ids"
         ],
         "title": "LinksIn"
+      },
+      "MarketingIn": {
+        "properties": {
+          "opt_in": {
+            "type": "boolean",
+            "title": "Opt In"
+          }
+        },
+        "type": "object",
+        "required": [
+          "opt_in"
+        ],
+        "title": "MarketingIn"
       },
       "MonthlyIn": {
         "properties": {

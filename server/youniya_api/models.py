@@ -36,6 +36,10 @@ class User(Base):
     # 11 가입 동의
     consented_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     marketing_opt_in: Mapped[bool] = mapped_column(Boolean, default=False)
+    # 14.3 새 기능·혜택 알림 수신 동의: when given and withdrawn, and the last two-yearly reminder.
+    marketing_consented_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    marketing_revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    marketing_reminded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     settings: Mapped[dict] = mapped_column(JSON, default=dict)
     coins: Mapped[int] = mapped_column(Integer, default=0)
     free_telescope_used: Mapped[bool] = mapped_column(Boolean, default=False)  # the sign-up one
