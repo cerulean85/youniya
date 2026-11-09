@@ -11,6 +11,9 @@ _PATTERNS = [
     # Phone numbers and email addresses
     # (digit lookarounds, not \b: Hangul counts as a word character, so "5678로" has no \b)
     ("contacts", r"(?<!\d)0\d{1,2}[-. ]?\d{3,4}[-. ]?\d{4}(?!\d)|[\w.+-]+@[\w-]+\.[A-Za-z.]+"),
+    # Identifying numbers, counted with contacts: 주민등록번호, card and account numbers
+    # (three or four groups of digits, 10 or more in all, so a date like 2026-11-08 stays; or 10–16 in a row).
+    ("contacts", r"(?<!\d)\d{6}[- ]?[1-8]\d{6}(?!\d)|(?<!\d)(?=(?:\d[- ]?){10,})\d{2,6}(?:[- ]\d{2,6}){2,3}(?!\d)|(?<!\d)\d{10,16}(?!\d)"),
     # A Korean name followed by a title or honorific (민지 씨, 지훈이 형)
     ("names", r"[가-힣]{2,3}(?=\s?(?:씨|님|선배|후배|언니|오빠|누나|형|선생님)(?:이랑|에게|한테|[이가은는을를랑과와도의께])?(?![가-힣]))"),
     # Place names by their suffix (강남역, 망원시장, 연남동 카페), also with a particle (강남역에서)
@@ -19,11 +22,16 @@ _PATTERNS = [
 ]
 
 
-def scan(text: str) -> dict:
-    """{"masked": …, "counts": {"names", "contacts", "places"}}"""
-    counts = {}
+def scan(text: str, mode: str = "all") -> dict:
+    """{"masked": …, "counts": {"names", "contacts", "places"}}. mode "all" masks names and places
+    too (a single sentence, a nebula); "contacts" only contacts and identifying numbers (a star's
+    whole writing on the plaza, 20261108: names and places stay as written)."""
+    counts = {"contacts": 0, "names": 0, "places": 0}
     for kind, pattern in _PATTERNS:
-        text, counts[kind] = re.subn(pattern, MASK, text)
+        if mode == "contacts" and kind != "contacts":
+            continue
+        text, n = re.subn(pattern, MASK, text)
+        counts[kind] += n
     return {"masked": text, "counts": counts, "total": sum(counts.values())}
 
 

@@ -89,7 +89,7 @@ def error_test():
 
 
 @router.get("/reports")
-def reported_lines(db: Session = Depends(get_db)):
+def reported_lines(db: Session = Depends(get_db), cipher: Cipher = Depends(get_cipher)):
     """Lines with at least one report, most reported first."""
     counts = (select(LineReport.line_id, LineReport.reason, func.count().label("n"))
               .group_by(LineReport.line_id, LineReport.reason))
@@ -111,7 +111,10 @@ def reported_lines(db: Session = Depends(get_db)):
     for (kind, target_id), reasons in by_share.items():
         row = db.get(StarShare if kind == "star" else NebulaShare, target_id)
         if row:
-            shares.append({"kind": kind, "id": row.id, "name": row.name, "quote": row.quote, "hidden": row.hidden,
+            # A reported full-text star is judged on what the plaza shows: its masked writing too.
+            body = cipher.dec(row.body_masked_enc) if kind == "star" and row.full_text and row.body_masked_enc else None
+            shares.append({"kind": kind, "id": row.id, "name": row.name, "quote": row.quote, "body_masked": body,
+                           "hidden": row.hidden,
                            "created_at": iso(row.created_at), "reasons": reasons, "reports": sum(reasons.values())})
     _log(db, "list_reports")
     return {"items": sorted(items, key=lambda i: -i["reports"]),

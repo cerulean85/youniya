@@ -145,7 +145,7 @@ Run the tests with `.venv/bin/python -m pytest`. They need no API key or network
 | Refunds | `POST /v1/storekit/notifications` (App Store Server Notifications V2 URL) | — |
 | Operator | `GET /v1/admin/status`, `POST /v1/admin/push-test`, `POST /v1/admin/error-test`, `POST /v1/admin/announcements`, `GET /v1/admin/reports`, `POST /v1/admin/lines/{id}/hide·restore`, `GET /v1/admin/inquiries`, `GET /v1/admin/logs` | — |
 | Blocks | `POST·GET /v1/blocks`, `DELETE /v1/blocks/{id}` | 87-3, 100 |
-| Plaza | `POST /v1/plaza/privacy-scan`, `PUT·DELETE /v1/stars/{id}/share`, `GET /v1/plaza/stars[/{id}]`, `GET /v1/plaza/nebulae[/{id}]`, `PUT·DELETE /v1/plaza/{star\|nebula}/{id}/resonance` and `…/beside`, `GET·POST /v1/plaza/nebulae/{id}/lines`, `POST /v1/plaza/lines/{id}/report`, `POST /v1/plaza/{star|nebula}/{id}/report`, `GET /v1/plaza/tonight` | 09, 19–22, 55, 69, 72–75, 79, 99–101, 103, 106, 107 |
+| Plaza | `POST /v1/plaza/privacy-scan`, `PUT·DELETE /v1/stars/{id}/share` (`full_text: true`: the title and writing go out too, only contacts and identifying numbers masked), `GET /v1/plaza/stars[/{id}]`, `GET /v1/plaza/nebulae[/{id}]`, `PUT·DELETE /v1/plaza/{star\|nebula}/{id}/resonance` and `…/beside`, `GET·POST /v1/plaza/nebulae/{id}/lines`, `POST /v1/plaza/lines/{id}/report`, `POST /v1/plaza/{star|nebula}/{id}/report`, `GET /v1/plaza/tonight` | 09, 19–22, 55, 69, 72–75, 79, 99–101, 103, 106, 107 |
 
 ### Behaviour worth knowing
 

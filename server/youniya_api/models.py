@@ -106,7 +106,11 @@ class StarShare(Base):
     star_id: Mapped[str] = mapped_column(ForeignKey("stars.id", ondelete="CASCADE"), unique=True)
     user_id: Mapped[str] = user_fk()
     name: Mapped[str] = mapped_column(String(80))
-    quote: Mapped[str] = mapped_column(Text)
+    # 대표 문장. Null when an edit took it out of the writing, until the owner picks another.
+    quote: Mapped[str | None] = mapped_column(Text)
+    # The whole writing goes out too (20261108), contacts masked; only when the owner agreed to it.
+    full_text: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    body_masked_enc: Mapped[str | None] = mapped_column(Text)
     mood: Mapped[str] = mapped_column(String(16))
     moods: Mapped[list] = mapped_column(JSON, default=list)
     depth_level: Mapped[int] = mapped_column(Integer)

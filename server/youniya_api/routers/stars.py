@@ -10,9 +10,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..deps import ApiError, consented_user, get_cipher, get_db
-from ..models import Draft, Nebula, Star, User, now
+from ..models import Draft, Nebula, Star, StarShare, User, now
 from ..prism.filters import CRISIS_GUIDANCE, has_crisis_signal
-from .. import ai_cost, allowance, coins, membership
+from .. import ai_cost, allowance, coins, membership, privacy
 from ..rules import (DEEP_DEPTH_SCORE, FIRST_STAGE_STARS, STAGE_NAMES, STAR_FLOAT_COST, SUPERNOVA_STARLIGHT,
                      growth_stage)
 from ..security import Cipher
@@ -213,7 +213,10 @@ def edit_star(star_id: str, body: StarEdit, user: User = Depends(consented_user)
               cipher: Cipher = Depends(get_cipher)):
     """글 수정. A kept star: title, body and mood. A floated star: title and body only; its mood, shape,
     starlight, analysis and telescope reports stay as first read (nothing is read again or charged).
-    Plaza shares keep the sentence copied when shared. The crisis check runs again on the new text."""
+    The crisis check runs again: a new signal takes the star off the plaza (`share_removed`).
+    A full-text share follows the new title and writing; if its 대표 문장 is gone from the writing,
+    the sentence is cleared and `quote_missing` asks for another. A sentence-only share keeps the
+    sentence copied when shared."""
     star = owned_star(db, user, star_id)
     if body.mood is not None and body.mood != star.mood and star.state == "floated":
         raise ApiError(409, "mood_fixed", "띄운 별의 기분은 바꿀 수 없어요.")
@@ -228,8 +231,20 @@ def edit_star(star_id: str, body: StarEdit, user: User = Depends(consented_user)
     crisis = has_crisis_signal(f"{cipher.dec(star.title_enc)}\n{cipher.dec(star.body_enc)}")
     star.crisis = crisis
     star.updated_at = datetime.now(timezone.utc)
+    share = db.scalar(select(StarShare).where(StarShare.star_id == star.id))
+    removed = quote_missing = False
+    if share is not None and crisis:
+        db.delete(share)
+        removed = True
+    elif share is not None and share.full_text:
+        body_masked = privacy.scan(cipher.dec(star.body_enc), "contacts")["masked"]
+        share.name = privacy.scan(cipher.dec(star.title_enc), "contacts")["masked"]
+        share.body_masked_enc = cipher.enc(body_masked)
+        if share.quote and share.quote not in body_masked:
+            share.quote = None
+        quote_missing = share.quote is None
     db.commit()
-    return _response(db, star, cipher, crisis)
+    return _response(db, star, cipher, crisis) | {"share_removed": removed, "quote_missing": quote_missing}
 
 
 @router.delete("/stars/{star_id}", status_code=204)

@@ -159,7 +159,9 @@ def my_shares(user: User = Depends(current_user), db: Session = Depends(get_db),
     return {
         "stars": [{"id": sh.id, "star_id": sh.star_id, "name": sh.name, "title": cipher.dec(st.title_enc),
                    "written_at": iso(st.created_at), "starlight": st.starlight, "created_at": iso(sh.created_at),
-                   "resonances": resonances("star", sh.id), "hidden": sh.hidden} for sh, st in stars],
+                   "resonances": resonances("star", sh.id), "hidden": sh.hidden,
+                   # Off the plaza until another 대표 문장 is picked (PUT /v1/stars/{id}/share).
+                   "quote_missing": sh.quote is None} for sh, st in stars],
         "nebulae": [{"id": n.id, "nebula_id": n.nebula_id, "name": n.name, "created_at": iso(n.created_at),
                      "resonances": resonances("nebula", n.id), "hidden": n.hidden,
                      "lines": db.scalar(select(func.count()).select_from(StarlightLine)

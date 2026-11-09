@@ -30,10 +30,14 @@ HIDE_AFTER_REPORTS = 3
 
 class ScanIn(BaseModel):
     text: str = Field(..., max_length=20000)
+    mode: Literal["all", "contacts"] = "all"  # "contacts": how a star's whole writing is masked
 
 
 class StarShareIn(BaseModel):
-    quote: str = Field(..., min_length=1, max_length=300)  # 75 본인이 골라 공개한 한 문장
+    quote: str = Field(..., min_length=1, max_length=300)  # 75 대표 문장, one the owner wrote
+    # The owner agreed that the title and the whole writing go out too (contacts masked).
+    # Without it, as before: the chosen sentence only.
+    full_text: bool = False
 
 
 class LineIn(BaseModel):
@@ -48,13 +52,15 @@ class ReportIn(BaseModel):
 @router.post("/plaza/privacy-scan", dependencies=[per_user("scan", 60, 60)])
 def privacy_scan(body: ScanIn, user: User = Depends(consented_user)):
     """20 공유 전 확인: "가려진 항목 2개 · 이름 1 · 장소 1"."""
-    return privacy.scan(body.text)
+    return privacy.scan(body.text, body.mode)
 
 
 @router.put("/stars/{star_id}/share")
 def share_star(star_id: str, body: StarShareIn, user: User = Depends(consented_user),
                db: Session = Depends(get_db), cipher: Cipher = Depends(get_cipher)):
-    """19 익명으로 나누기. Only the chosen sentence goes out, masked; the rest of the writing stays."""
+    """19 익명으로 나누기. With `full_text`, the title and the whole writing go out with the chosen
+    sentence as its 대표 문장, only contacts and identifying numbers masked (names and places stay).
+    Without it, only the chosen sentence goes out, with names and places masked too."""
     star = owned_star(db, user, star_id)
     if star.state != "floated":
         raise ApiError(422, "not_floated", "떠 있는 별만 나눌 수 있어요.")
@@ -65,13 +71,16 @@ def share_star(star_id: str, body: StarShareIn, user: User = Depends(consented_u
     a = cipher.dec_json(star.analysis_enc)
     row = db.scalar(select(StarShare).where(StarShare.star_id == star.id)) or StarShare(
         star_id=star.id, user_id=user.id)
-    row.name = privacy.scan(cipher.dec(star.title_enc))["masked"]
-    row.quote = privacy.scan(body.quote)["masked"]
+    mode = "contacts" if body.full_text else "all"
+    row.name = privacy.scan(cipher.dec(star.title_enc), mode)["masked"]
+    row.quote = privacy.scan(body.quote, mode)["masked"]
+    row.full_text = body.full_text
+    row.body_masked_enc = cipher.enc(privacy.scan(cipher.dec(star.body_enc), mode)["masked"]) if body.full_text else None
     row.mood, row.moods = star.mood, [m["mood"] for m in a["moods"]]
     row.depth_level, row.shape = a["depth_level"], a["shape"]
     db.add(row)
     db.commit()
-    return {"share_id": row.id, "name": row.name, "quote": row.quote}
+    return {"share_id": row.id, "name": row.name, "quote": row.quote, "full_text": row.full_text}
 
 
 @router.delete("/stars/{star_id}/share", status_code=204)
@@ -105,9 +114,10 @@ def _similar_order(db: Session, user: User, rows: list) -> list:
 
 
 def _star_item(s: StarShare, res: set[str], bes: set[str]) -> dict:
+    """The list item: the 대표 문장, never the writing (75 has it)."""
     return {"id": s.id, "name": s.name, "quote": s.quote, "mood": s.mood, "moods": s.moods,
             "depth_level": s.depth_level, "shape": s.shape, "created_at": iso(s.created_at),
-            "resonated": s.id in res, "beside": s.id in bes}
+            "full_text": s.full_text, "resonated": s.id in res, "beside": s.id in bes}
 
 
 def _nebula_item(n: NebulaShare, res: set[str], bes: set[str]) -> dict:
@@ -123,6 +133,9 @@ def plaza_stars(sort: Literal["new", "similar", "beside"] = "new", limit: int = 
     stmt = (_besides_first(db, user, StarShare, "star") if sort == "beside" else
             select(StarShare).where(StarShare.user_id != user.id, *visible_shares(db, user.id, StarShare))
             .order_by(StarShare.created_at.desc()))
+    # A star whose 대표 문장 an edit took out waits off the plaza until one is picked again:
+    # builds before 20261108 cannot read a share without one.
+    stmt = stmt.where(StarShare.quote.is_not(None))
     rows = db.scalars(stmt.limit(500)).all()
     if sort == "similar":
         rows = _similar_order(db, user, rows)
@@ -131,12 +144,16 @@ def plaza_stars(sort: Literal["new", "similar", "beside"] = "new", limit: int = 
 
 
 @router.get("/plaza/stars/{share_id}")
-def plaza_star(share_id: str, user: User = Depends(consented_user), db: Session = Depends(get_db)):
-    """75 다른 이의 별"""
+def plaza_star(share_id: str, user: User = Depends(consented_user), db: Session = Depends(get_db),
+               cipher: Cipher = Depends(get_cipher)):
+    """75 다른 이의 별. A full-text share adds the title and writing as shared (contacts masked);
+    one shared before 20261108 or without that agreement still shows only its sentence."""
     s = db.get(StarShare, share_id)
-    if s is None or not can_see(db, user.id, s):
+    if s is None or s.quote is None or not can_see(db, user.id, s):
         raise ApiError(404, "not_found", "별을 찾지 못했어요.")
-    return _star_item(s, *_marks(db, user, "star"))
+    full = s.full_text and s.body_masked_enc
+    return _star_item(s, *_marks(db, user, "star")) | {
+        "title_masked": s.name if full else None, "body_masked": cipher.dec(s.body_masked_enc) if full else None}
 
 
 @router.get("/plaza/nebulae")

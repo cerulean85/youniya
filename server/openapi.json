@@ -953,7 +953,7 @@
           "stars"
         ],
         "summary": "Edit Star",
-        "description": "글 수정. A kept star: title, body and mood. A floated star: title and body only; its mood, shape,\nstarlight, analysis and telescope reports stay as first read (nothing is read again or charged).\nPlaza shares keep the sentence copied when shared. The crisis check runs again on the new text.",
+        "description": "글 수정. A kept star: title, body and mood. A floated star: title and body only; its mood, shape,\nstarlight, analysis and telescope reports stay as first read (nothing is read again or charged).\nThe crisis check runs again: a new signal takes the star off the plaza (`share_removed`).\nA full-text share follows the new title and writing; if its 대표 문장 is gone from the writing,\nthe sentence is cleared and `quote_missing` asks for another. A sentence-only share keeps the\nsentence copied when shared.",
         "operationId": "edit_star_v1_stars__star_id__patch",
         "security": [
           {
@@ -1901,7 +1901,7 @@
           "plaza"
         ],
         "summary": "Share Star",
-        "description": "19 익명으로 나누기. Only the chosen sentence goes out, masked; the rest of the writing stays.",
+        "description": "19 익명으로 나누기. With `full_text`, the title and the whole writing go out with the chosen\nsentence as its 대표 문장, only contacts and identifying numbers masked (names and places stay).\nWithout it, only the chosen sentence goes out, with names and places masked too.",
         "operationId": "share_star_v1_stars__star_id__share_put",
         "security": [
           {
@@ -2059,7 +2059,7 @@
           "plaza"
         ],
         "summary": "Plaza Star",
-        "description": "75 다른 이의 별",
+        "description": "75 다른 이의 별. A full-text share adds the title and writing as shared (contacts masked);\none shared before 20261108 or without that agreement still shows only its sentence.",
         "operationId": "plaza_star_v1_plaza_stars__share_id__get",
         "security": [
           {
@@ -4045,6 +4045,15 @@
             "type": "string",
             "maxLength": 20000,
             "title": "Text"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "all",
+              "contacts"
+            ],
+            "title": "Mode",
+            "default": "all"
           }
         },
         "type": "object",
@@ -4280,6 +4289,11 @@
             "maxLength": 300,
             "minLength": 1,
             "title": "Quote"
+          },
+          "full_text": {
+            "type": "boolean",
+            "title": "Full Text",
+            "default": false
           }
         },
         "type": "object",

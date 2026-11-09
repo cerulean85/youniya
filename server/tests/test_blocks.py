@@ -107,7 +107,7 @@ def test_star_and_nebula_reports(make_app):
     assert client.get("/v1/me/shares", headers=owner).json()["stars"][0]["hidden"] is True
 
     reports = client.get("/v1/admin/reports", headers=OP).json()["shares"]
-    assert reports == [{"kind": "star", "id": star, "name": "걔 소식을 들은 날", "quote": reports[0]["quote"],
+    assert reports == [{"kind": "star", "id": star, "name": "걔 소식을 들은 날", "quote": reports[0]["quote"], "body_masked": None,
                         "hidden": True, "created_at": reports[0]["created_at"],
                         "reasons": {"hurtful": 1, "spam": 2}, "reports": 3}]
     done = client.post(f"/v1/admin/shares/star/{star}/restore", headers=OP).json()
