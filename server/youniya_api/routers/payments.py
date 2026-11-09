@@ -18,11 +18,12 @@ import httpx
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .. import coins
 from ..deps import ApiError, consented_user, get_db
-from ..models import CoinEntry, InviteAccount, TossOrder, User
+from ..models import CoinEntry, TossOrder, User
 from ..ratelimit import per_user
 from ..rules import COIN_PACKAGES, REFUND_WINDOW_DAYS
 from ..toss import TossClient, TossError
@@ -47,17 +48,14 @@ def _toss(request: Request) -> TossClient:
 
 def can_pay(request: Request, db: Session, user: User) -> bool:
     """With a test key (test_sk_…) a test card buys real coins for no money, so until the live key only
-    operators (OPERATOR_USER_IDS), invite accounts and TOSS_TEST_USER_IDS may pay. TOSS_TEST_OPEN=1
-    (development) lets everyone."""
+    accounts that existed before TOSS_TEST_ACCOUNTS_BEFORE may pay; any account made after it may not
+    (decided 2026-11-10). Unset: nobody. TOSS_TEST_OPEN=1 (development) lets everyone."""
     s = request.app.state.settings
     if request.app.state.toss is None:
         return False
     if not s.toss_secret_key.startswith("test_") or s.toss_test_open:
         return True
-    if user.id in s.operator_user_ids or user.id in s.toss_test_user_ids:
-        return True
-    return db.scalar(select(InviteAccount.login).where(InviteAccount.user_id == user.id,
-                                                       InviteAccount.disabled.is_(False))) is not None
+    return s.toss_test_accounts_before is not None and aware(user.created_at) < s.toss_test_accounts_before
 
 
 def _entry_id(order: TossOrder) -> str:
@@ -147,9 +145,15 @@ def confirm(body: ConfirmIn, request: Request, user: User = Depends(consented_us
         db.commit()
         raise ApiError(404, "order_expired", "주문 시간이 지났어요. 결제는 되지 않았어요. 다시 시도해 주세요.")
     # Only one request approves an order; a second one racing it waits for the first to finish.
-    claimed = db.execute(update(TossOrder).where(TossOrder.id == order.id, TossOrder.status == "pending")
-                         .values(status="confirming", payment_key=body.payment_key)).rowcount
-    db.commit()
+    if db.scalar(select(TossOrder.id).where(TossOrder.payment_key == body.payment_key, TossOrder.id != order.id)):
+        raise ApiError(409, "payment_key_used", "다른 주문에 쓰인 결제예요.")
+    try:
+        claimed = db.execute(update(TossOrder).where(TossOrder.id == order.id, TossOrder.status == "pending")
+                             .values(status="confirming", payment_key=body.payment_key)).rowcount
+        db.commit()
+    except IntegrityError:  # the same paymentKey racing on another order
+        db.rollback()
+        raise ApiError(409, "payment_key_used", "다른 주문에 쓰인 결제예요.")
     if not claimed:
         db.refresh(order)
         if order.status == "done" and order.payment_key == body.payment_key:
@@ -167,7 +171,8 @@ def confirm(body: ConfirmIn, request: Request, user: User = Depends(consented_us
             except (TossError, httpx.HTTPError):
                 payment = None
         if payment is None or not _paid(payment, order):
-            order.status, order.failure_code = "pending", e.code[:64]
+            # Refused: the order may be paid again with a new payment, so it lets go of this one.
+            order.status, order.failure_code, order.payment_key = "pending", e.code[:64], None
             db.commit()
             raise ApiError(402, "payment_failed", e.message, toss_code=e.code)
     except httpx.HTTPError:
@@ -180,7 +185,7 @@ def confirm(body: ConfirmIn, request: Request, user: User = Depends(consented_us
 
     if not _paid(payment, order):
         logger.error("toss confirm for %s returned %s", order.id, payment.get("status"))
-        order.status, order.failure_code = "pending", f"status_{payment.get('status')}"[:64]
+        order.status, order.failure_code, order.payment_key = "pending", f"status_{payment.get('status')}"[:64], None
         db.commit()
         raise ApiError(402, "payment_failed", "결제가 끝나지 않았어요. 코인은 지급되지 않았어요.",
                        toss_code=payment.get("status"))

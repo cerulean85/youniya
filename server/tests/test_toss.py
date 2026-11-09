@@ -195,21 +195,43 @@ def test_without_key_web_payments_are_off(make_app):
     assert client.post("/v1/payments/toss/webhook", json={"eventType": "PAYMENT_STATUS_CHANGED"}).status_code == 404
 
 
-def test_test_key_is_for_testers_only(make_app):
-    from youniya_api.models import InviteAccount, User
-    app = make_app(toss_secret_key="test_sk_fake", operator_user_ids=())
+def test_test_key_is_for_accounts_made_before_the_cutoff(make_app):
+    from youniya_api.models import User
+    cutoff = datetime.now(timezone.utc)
+    app = make_app(toss_secret_key="test_sk_fake", toss_test_accounts_before=cutoff)
     app.state.toss = FakeToss()
     client = TestClient(app)
-    h = sign_in(client)
-    assert client.get("/v1/payments/toss/packages", headers=h).json()["available"] is False
-    r = client.post("/v1/payments/toss/orders", json={"package_id": "coin_110"}, headers=h)
-    assert r.status_code == 403 and r.json()["error"]["code"] == "payments_not_open"
-    with app.state.sessions() as db:  # an invite account may test
-        db.add(InviteAccount(login="tester", password_hash="x", user_id=db.query(User).first().id))
+    old = sign_in(client, sub="old")
+    with app.state.sessions() as db:  # made before the cutoff
+        db.query(User).update({User.created_at: cutoff - timedelta(days=1)})
         db.commit()
-    assert client.get("/v1/payments/toss/packages", headers=h).json()["available"] is True
-    assert client.post("/v1/payments/toss/orders", json={"package_id": "coin_110"}, headers=h).status_code == 201
+    new = sign_in(client, sub="new")  # made after it
+    assert client.get("/v1/payments/toss/packages", headers=old).json()["available"] is True
+    assert client.post("/v1/payments/toss/orders", json={"package_id": "coin_110"}, headers=old).status_code == 201
+    assert client.get("/v1/payments/toss/packages", headers=new).json()["available"] is False
+    r = client.post("/v1/payments/toss/orders", json={"package_id": "coin_110"}, headers=new)
+    assert r.status_code == 403 and r.json()["error"]["code"] == "payments_not_open"
+    unset = make_app(toss_secret_key="test_sk_fake")
+    unset.state.toss = FakeToss()
+    uc = TestClient(unset)
+    assert uc.get("/v1/payments/toss/packages", headers=sign_in(uc, sub="old")).json()["available"] is False
     live = make_app(toss_secret_key="live_sk_fake")
     live.state.toss = FakeToss()
     lc = TestClient(live)
     assert lc.get("/v1/payments/toss/packages", headers=sign_in(lc, sub="user-9")).json()["available"] is True
+
+
+def test_refused_payment_key_can_be_used_by_no_other_order_but_frees_its_own(make_app):
+    client, h, fake = _setup(make_app)
+    a, b = _order(client, h, "coin_110"), _order(client, h, "coin_110")
+    fake.fail = TossError(400, "NOT_FOUND_PAYMENT_SESSION", "결제 시간이 만료되어 결제 진행 데이터가 존재하지 않습니다.")
+    for o in (a, b):  # a refused key is let go, so a second order with it is refused by Toss, not a 500
+        r = client.post("/v1/payments/toss/confirm", json={"payment_key": "pk_same", "order_id": o["order_id"],
+                                                          "amount": 1100}, headers=h)
+        assert r.status_code == 402
+    fake.fail = None
+    client.post("/v1/payments/toss/confirm", json={"payment_key": "pk_same", "order_id": a["order_id"],
+                                                   "amount": 1100}, headers=h)
+    r = client.post("/v1/payments/toss/confirm", json={"payment_key": "pk_same", "order_id": b["order_id"],
+                                                       "amount": 1100}, headers=h)
+    assert r.status_code == 409 and r.json()["error"]["code"] == "payment_key_used"
