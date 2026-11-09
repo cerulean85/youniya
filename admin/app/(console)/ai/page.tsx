@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notConnected } from "@/components/NotConnected";
 import { Stat } from "@/components/Stat";
 import { getAi } from "@/lib/api";
 import { monthLabel, num, thisMonth, won } from "@/lib/format";
@@ -9,6 +10,8 @@ export const metadata: Metadata = { title: "AI 사용량·원가" };
 // Figma A-09 (owners): what the starlight prism and the telescope cost, and members over the monthly line.
 export default async function AiPage() {
   await requireOperator(["owner"]);
+  const wait = notConnected("owner", "AI 사용량·원가");
+  if (wait) return wait;
   const month = thisMonth();
   const a = await getAi(month);
   const s = a.summary;

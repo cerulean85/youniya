@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notConnected } from "@/components/NotConnected";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ReasonActions, type ReasonButton } from "@/components/ReasonActions";
@@ -15,6 +16,8 @@ const day = (iso: string) => new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/
 // Figma A-06: account facts, consents and sanctions; never what they wrote.
 export default async function KeeperPage({ params }: PageProps<"/keepers/[id]">) {
   const { operator } = await requireOperator();
+  const wait = notConnected("keepers", "별지기 상세");
+  if (wait) return wait;
   const { id } = await params;
   let k: KeeperDetail;
   try {

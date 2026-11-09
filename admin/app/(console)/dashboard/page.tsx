@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notConnected } from "@/components/NotConnected";
 import Link from "next/link";
 import { Stat } from "@/components/Stat";
 import { getDashboard } from "@/lib/api";
@@ -14,6 +15,8 @@ const EVENT: Record<string, [string, string]> = { hidden: ["badge-hidden", "숨�
 // Figma A-02 (owners). Counts only.
 export default async function DashboardPage({ searchParams }: PageProps<"/dashboard">) {
   await requireOperator(["owner"]);
+  const wait = notConnected("owner", "대시보드");
+  if (wait) return wait;
   const sp = await searchParams;
   const range = RANGES.some(([k]) => k === sp.range) ? (sp.range as Range) : "today";
   const d = await getDashboard(range);

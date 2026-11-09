@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notConnected } from "@/components/NotConnected";
 import { audit } from "@/lib/api";
 import { dateTime } from "@/lib/format";
 import { requireOperator } from "@/lib/session";
@@ -9,6 +10,8 @@ export const metadata: Metadata = { title: "운영 기록" };
 // Figma A-13: who did what, to which target, and why. Owners only.
 export default async function AuditPage() {
   await requireOperator(["owner"]);
+  const wait = notConnected("audit", "운영 기록");
+  if (wait) return wait;
   const items = await audit();
   return (
     <>

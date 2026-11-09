@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notConnected } from "@/components/NotConnected";
 import { ReasonActions } from "@/components/ReasonActions";
 import { getPrism } from "@/lib/api";
 import { num } from "@/lib/format";
@@ -14,6 +15,8 @@ const STATUS: Record<PrismStatus, [string, string]> = { draft: ["badge-muted", "
 // the 30-piece test, so 배포 stays off until then.
 export default async function PrismPage() {
   await requireOperator(["owner"]);
+  const wait = notConnected("owner", "별빛 측정 방식");
+  if (wait) return wait;
   const p = await getPrism();
   const next = p.versions.find((v) => v.status === "held" || v.status === "draft");
   const t = p.test && next && p.test.version === next.key ? p.test : null;

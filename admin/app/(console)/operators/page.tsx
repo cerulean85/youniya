@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notConnected } from "@/components/NotConnected";
 import { ReasonActions, type ReasonButton } from "@/components/ReasonActions";
 import { getOperators } from "@/lib/api";
 import { dateTime } from "@/lib/format";
@@ -18,6 +19,8 @@ const ABILITIES: [string, boolean][] = [
 // Figma A-14: operators join by invitation only and need two-step sign-in.
 export default async function OperatorsPage() {
   const { operator: me } = await requireOperator(["owner"]);
+  const wait = notConnected("operators", "운영자·권한");
+  if (wait) return wait;
   const ops = await getOperators();
   return (
     <>

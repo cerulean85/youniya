@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notConnected } from "@/components/NotConnected";
 import Link from "next/link";
 import { Stat } from "@/components/Stat";
 import { getLedger } from "@/lib/api";
@@ -14,6 +15,8 @@ const when = (iso: string) => new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia
 // Figma A-08 (owners): App Store and web (Toss) payments in one ledger.
 export default async function CoinsPage({ searchParams }: PageProps<"/coins">) {
   await requireOperator(["owner"]);
+  const wait = notConnected("owner", "코인·결제");
+  if (wait) return wait;
   const sp = await searchParams;
   const month = typeof sp.month === "string" && /^\d{4}-\d{2}$/.test(sp.month) ? sp.month : thisMonth();
   const l = await getLedger(month);

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notConnected } from "@/components/NotConnected";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ApiError, getReport } from "@/lib/api";
@@ -14,6 +15,8 @@ const KINDS: ReportKind[] = ["star", "nebula", "star_line", "line", "nickname"];
 // Figma A-04 (18.1): only what the plaza shows; never unshared writing, starlight numbers or telescope results.
 export default async function ReportPage({ params }: PageProps<"/reports/[kind]/[id]">) {
   await requireOperator();
+  const wait = notConnected("reports", "신고 상세");
+  if (wait) return wait;
   const { kind, id } = await params;
   if (!KINDS.includes(kind as ReportKind)) notFound();
   let r: ReportDetail;

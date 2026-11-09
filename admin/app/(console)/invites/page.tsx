@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notConnected } from "@/components/NotConnected";
 import { ReasonActions } from "@/components/ReasonActions";
 import { getInvites } from "@/lib/api";
 import { dateTime } from "@/lib/format";
@@ -11,6 +12,8 @@ export const metadata: Metadata = { title: "초대 계정" };
 // Figma A-11: operator-made accounts (App Store review), signed in with an id and password.
 export default async function InvitesPage() {
   await requireOperator(["owner"]);
+  const wait = notConnected("owner", "초대 계정");
+  if (wait) return wait;
   const v = await getInvites();
   const review = v.items.find((i) => i.login_id.startsWith("review"));
   return (

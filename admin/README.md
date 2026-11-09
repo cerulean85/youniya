@@ -65,6 +65,15 @@ the API Dev Session's plan) are in `lib/api.ts`: `/v1/admin/dashboard`, `/coins`
 
 ## Deploy
 
-Not deployed yet. Plan: Vercel project `youniya-admin` (CLI deploys only, no Git connection), domain
-`admin.youniya.dycdyp.com` (Route 53 CNAME), Vercel deployment protection or an IP allowlist on top of the
-sign-in. Ask the user before connecting the domain or deploying.
+```sh
+vercel deploy --prod   # from admin/, linked to youniya-admin (CLI only, no Git connection)
+```
+
+Vercel project `youniya-admin` (framework Next.js), production env `YOUNIYA_API_URL=https://youniya-api.dycdyp.com`
+and `ADMIN_REAL` (the parts the production API has; `auth,operators,audit` on 2026-11-09). With a real API, a part
+that isn't live shows "서버 연결 대기", never mock data. Domain `admin.youniya.dycdyp.com`: Route 53 CNAME to the
+value Vercel recommends. Vercel's standard protection covers the `*.vercel.app` URLs; the custom domain relies on
+the sign-in (password + TOTP, lock after 5 misses).
+
+The first owner comes from the server: `uv run python tools/admin_operator.py invite EMAIL --role owner` on
+home-desktop (with `.env.production` for production) prints a one-time token; open `/setup?token=…`.

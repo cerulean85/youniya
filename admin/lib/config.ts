@@ -11,3 +11,6 @@ export const MOCK = !API_URL || process.env.ADMIN_MOCK === "1";
 const REAL = new Set((process.env.ADMIN_REAL ?? "all").split(",").map((s) => s.trim()).filter(Boolean));
 export type Part = "auth" | "operators" | "audit" | "reports" | "keepers" | "inquiries" | "owner";
 export const live = (part: Part) => !MOCK && (REAL.has("all") || REAL.has(part));
+
+/** Whether a screen may show: with a real API, parts that aren't live yet show "서버 연결 대기", never mock data. */
+export const ready = (part: Part) => MOCK || live(part);

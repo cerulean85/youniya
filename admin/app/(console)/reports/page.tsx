@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notConnected } from "@/components/NotConnected";
 import Link from "next/link";
 import { listReports } from "@/lib/api";
 import { elapsed } from "@/lib/format";
@@ -12,6 +13,8 @@ const TABS: ReportStatus[] = ["pending", "hidden", "done"];
 // Figma A-03 (기획서 18.2 · 18.3): oldest first, so nothing waits past 24 hours.
 export default async function ReportsPage({ searchParams }: PageProps<"/reports">) {
   await requireOperator();
+  const wait = notConnected("reports", "신고 처리");
+  if (wait) return wait;
   const sp = await searchParams;
   const status: ReportStatus = TABS.includes(sp.status as ReportStatus) ? (sp.status as ReportStatus) : "pending";
   const { items, counts } = await listReports(status);

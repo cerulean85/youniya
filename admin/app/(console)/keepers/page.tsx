@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notConnected } from "@/components/NotConnected";
 import Link from "next/link";
 import { listKeepers } from "@/lib/api";
 import { requireOperator } from "@/lib/session";
@@ -11,6 +12,8 @@ const FILTERS = [["all", "전체"], ["restricted", "제한"], ["reported", "신�
 // Figma A-05: find by 별지기 이름 or #번호. Counts only; no writing.
 export default async function KeepersPage({ searchParams }: PageProps<"/keepers">) {
   const { operator } = await requireOperator();
+  const wait = notConnected("keepers", "별지기");
+  if (wait) return wait;
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q.slice(0, 40) : "";
   const filter = FILTERS.some(([k]) => k === sp.filter) ? String(sp.filter) : "all";

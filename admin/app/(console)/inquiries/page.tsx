@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notConnected } from "@/components/NotConnected";
 import Link from "next/link";
 import { getInquiry, listInquiries } from "@/lib/api";
 import { dateTime, elapsed } from "@/lib/format";
@@ -11,6 +12,8 @@ export const metadata: Metadata = { title: "문의" };
 // Figma A-07: the list and the chosen inquiry side by side. Email shows masked.
 export default async function InquiriesPage({ searchParams }: PageProps<"/inquiries">) {
   const { operator } = await requireOperator();
+  const wait = notConnected("inquiries", "문의");
+  if (wait) return wait;
   const sp = await searchParams;
   const status: InquiryStatus = sp.status === "answered" ? "answered" : "new";
   const { items, counts } = await listInquiries(status);

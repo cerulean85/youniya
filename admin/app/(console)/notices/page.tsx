@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notConnected } from "@/components/NotConnected";
 import { ReasonActions } from "@/components/ReasonActions";
 import { getNotices } from "@/lib/api";
 import { requireOperator } from "@/lib/session";
@@ -12,6 +13,8 @@ const AUDIENCE = { all: "전체", ios: "iOS", web: "웹" } as const;
 // Figma A-12: maintenance and the minimum version apply at once (app screens 41 점검, 40 업데이트 필요).
 export default async function NoticesPage() {
   await requireOperator(["owner"]);
+  const wait = notConnected("owner", "공지·점검");
+  if (wait) return wait;
   const n = await getNotices();
   const today = new Date().toISOString().slice(0, 10);
   return (
