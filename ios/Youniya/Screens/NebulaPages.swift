@@ -526,6 +526,17 @@ private struct GalaxyRiver: View {
                         .position(x: p.x + rng.next(in: -14...14), y: p.y + rng.next(in: -14...14))
                 }
 
+                // 81: 별 잇기 across months, as silver dotted arcs over the river.
+                Path { path in
+                    for (a, b) in crossLinks {
+                        let pa = dotPoint(a, t: t, in: size), pb = dotPoint(b, t: t, in: size)
+                        let lift = min(90, abs(pb.x - pa.x) * 0.45 + 30)
+                        path.move(to: pa)
+                        path.addQuadCurve(to: pb, control: CGPoint(x: (pa.x + pb.x) / 2, y: min(pa.y, pb.y) - lift))
+                    }
+                }
+                .stroke(Color.white.opacity(0.55), style: StrokeStyle(lineWidth: 1, dash: [1.5, 3.5]))
+
                 ForEach(months.indices, id: \.self) { i in
                     let m = months[i]
                     let p = point(m.t, in: size)
@@ -554,6 +565,30 @@ private struct GalaxyRiver: View {
         }
         .accessibilityElement()
         .accessibilityLabel("별 \(timeline.count)개가 시간순으로 이어진 은하수")
+    }
+
+    /// A star's dot (the same scatter as drawn).
+    private func dotPoint(_ i: Int, t: (Int) -> Double, in size: CGSize) -> CGPoint {
+        var rng = SeededRandom(seed: timeline[i].star.id.uuidString)
+        let p = point(t(i), in: size)
+        _ = rng.next(in: 2...5)
+        _ = rng.next(in: 0.6...0.95)
+        return CGPoint(x: p.x + rng.next(in: -14...14), y: p.y + rng.next(in: -14...14))
+    }
+
+    /// Pairs of timeline indexes joined by 별 잇기 in different months, once each.
+    private var crossLinks: [(Int, Int)] {
+        let index = Dictionary(timeline.enumerated().map { ($1.star.id, $0) }, uniquingKeysWith: { a, _ in a })
+        let cal = Calendar.current
+        var out: [(Int, Int)] = []
+        for (i, item) in timeline.enumerated() {
+            for other in item.star.linkedIDs ?? [] {
+                guard let j = index[other], j > i,
+                      !cal.isDate(item.date, equalTo: timeline[j].date, toGranularity: .month) else { continue }
+                out.append((i, j))
+            }
+        }
+        return out
     }
 
     /// The first star of each of the last four months.

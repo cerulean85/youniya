@@ -40,7 +40,7 @@ enum DebugScreen {
  1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 23 24 25 26 27 28 28-1 29 31 32 33 34 35 36 37 38
  39 40 41 43 44 45 46 47 48 49 50 56 61 62 67-1 68 69 70 72 73 74 75 76 77 78 81 82 83
  87 89 90 91 92 93 94 95 98 99 100 101 102 104 105 106 107 108 109 111 113 114 115 116 117
- 118 119 120 120-1 121 122 122-1 19-1 87-1 87-2 3-1 2-1 75-1 75-2 87-3 M1 28-2 68-1 87-4 123 5-3 5-4 87-5 12-1 12-2 12-3 12-5 12-10 7-1 5-2 5-5 75-3 77-2
+ 118 119 120 120-1 121 122 122-1 19-1 87-1 87-2 3-1 2-1 75-1 75-2 87-3 M1 28-2 68-1 87-4 123 5-3 5-4 87-5 12-1 12-2 12-3 12-5 12-10 7-1 5-2 5-5 75-3 77-2 12-6 12-7 12-8
  """.split(whereSeparator: \.isWhitespace).map(String.init))
 
     /// App-wide state for the screen, before the first page shows.
@@ -92,6 +92,18 @@ enum DebugScreen {
         case "99", "100", "106":
             model.nebulaLines[GalaxyNebula.samples[0].name] = nil  // not left a line yet
             model.reportedLines.remove("그 문장, 저도 오늘 쓰고 싶던 말이에요.")
+        case "12-2", "12-6", "12-7", "12-8", "77-2":
+            // Mock 이어진 별 for the review: the sample star joined to two others.
+            if let star = floatedStar(model) {
+                model.linkLocally(star.id, model.stars.filter { $0.id != star.id }.prefix(2).map(\.id))
+            }
+        case "81":
+            // A 별 잇기 across months for the review (11월 ↔ 10월).
+            let cal = Calendar.current
+            if let a = model.stars.first(where: { $0.date.map { cal.component(.month, from: $0) } == 11 }),
+               let b = model.stars.first(where: { $0.date.map { cal.component(.month, from: $0) } == 10 }) {
+                model.linkLocally(a.id, [b.id])
+            }
         case "12-3":
             // A shared star whose edited text lost its 대표 문장.
             if let i = model.stars.firstIndex(where: \.isFloated) {

@@ -9,6 +9,8 @@ struct ConstellationFigureView: View {
     var compact = false
     /// 77: the picked place, ringed.
     var selected: UUID? = nil
+    /// 77-2: the picked star's 별 잇기 within this month, as silver dotted lines.
+    var silverLinks: [UUID] = []
     var onTap: ((MonthConstellation.Star) -> Void)? = nil
 
     var body: some View {
@@ -30,6 +32,16 @@ struct ConstellationFigureView: View {
                     }
                 }
                 .stroke(Color.starBright.opacity(0.6), lineWidth: compact ? 0.8 : 1.2)
+
+                // 77-2: silver dotted lines from the picked star to the ones joined to it.
+                if let sel = selected, let from = point(of: sel, pts: pts, rect: rect) {
+                    Path { p in
+                        for id in silverLinks {
+                            if let to = point(of: id, pts: pts, rect: rect) { p.move(to: from); p.addLine(to: to) }
+                        }
+                    }
+                    .stroke(Color.white.opacity(0.75), style: StrokeStyle(lineWidth: 1, dash: [1.5, 3]))
+                }
 
                 ForEach(Array(constellation.extra.enumerated()), id: \.element.id) { i, s in
                     dot(s, k: k * 0.7, faint: true)
@@ -73,6 +85,15 @@ struct ConstellationFigureView: View {
         .accessibilityElement()
         .accessibilityLabel("\(s.title), \(s.hasStarlight ? "별빛 \(s.starlight ?? 0)" : "별빛 없는 별")")
         .accessibilityAddTraits(onTap != nil ? .isButton : [])
+    }
+
+    /// Where a star sits: its place, or its spot among the extra stars.
+    private func point(of id: UUID, pts: [CGPoint], rect: CGRect) -> CGPoint? {
+        if let i = constellation.slots.firstIndex(where: { $0.star?.id == id }), i < pts.count { return pts[i] }
+        if let i = constellation.extra.firstIndex(where: { $0.id == id }) {
+            return Self.extraPoint(i, in: rect, month: constellation.month)
+        }
+        return nil
     }
 
     /// Extra stars sit on a steady ring around the figure, by month.

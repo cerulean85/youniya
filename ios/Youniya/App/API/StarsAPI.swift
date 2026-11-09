@@ -16,6 +16,9 @@ struct ServerStar: Decodable {
     var rewriteOf: String?
     var analysisFailed: Bool
     var shared: Bool
+    /// 별 잇기: the stars joined to this one (detail only).
+    var linkedStars: [LinkedOut]?
+    struct LinkedOut: Decodable { var id: String }
     var body: String?
     var analysis: ServerAnalysis?
     /// 17.6: how the starlight was read.
@@ -59,6 +62,8 @@ private struct StarList: Decodable {
 
 private struct StarIn: Encodable {
     var mood: Mood
+    /// 14 별 잇기 · 새 별 쓰기: the stars the new one is joined to.
+    var linkTo: [String]? = nil
     /// 17.5 (2026-11-09): every mood, the color first. Older servers ignore it.
     var moods: [Mood]
     var title: String
@@ -108,6 +113,7 @@ extension StarItem {
             createdAt: s.createdAt,
             rewriteOf: s.rewriteOf.flatMap(UUID.init(uuidString:)),
             sharedToPlaza: s.shared,
+            linkedIDs: s.linkedStars.map { $0.compactMap { UUID(uuidString: $0.id) } } ?? local?.linkedIDs,
             // Known only from the edit's answer; kept until a new pick.
             shareQuoteMissing: s.shared ? local?.shareQuoteMissing : nil
         )
@@ -170,10 +176,12 @@ extension AppModel {
     /// Live 05/14: saves the star on the server, which analyses it when floated.
     /// Returns the saved star and whether 37 Crisis Care should show.
     /// The server clears the draft; so does this.
-    @MainActor func publishLive(_ d: StarDraft, floated: Bool, rewriteOf: StarItem.ID? = nil) async throws -> (StarItem, crisis: Bool) {
+    @MainActor func publishLive(_ d: StarDraft, floated: Bool, rewriteOf: StarItem.ID? = nil,
+                                linkTo: [StarItem.ID] = []) async throws -> (StarItem, crisis: Bool) {
         // mode stays float/keep until the server ships lit/unlit (same meaning).
-        let body = StarIn(mood: d.mood, moods: d.moods, title: d.title.trimmingCharacters(in: .whitespacesAndNewlines),
+        var body = StarIn(mood: d.mood, moods: d.moods, title: d.title.trimmingCharacters(in: .whitespacesAndNewlines),
                           body: d.body, mode: floated ? "float" : "keep", rewriteOf: rewriteOf?.apiID)
+        body.linkTo = linkTo.isEmpty ? nil : linkTo.map(\.apiID)
         let r: StarCreated = try await APIClient.shared.post("/v1/stars", body: body)
         guard let star = StarItem(r.star) else { throw APIError.badResponse }
         stars.insert(star, at: 0)

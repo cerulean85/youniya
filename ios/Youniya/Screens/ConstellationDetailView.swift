@@ -57,11 +57,16 @@ struct ConstellationDetailView: View {
         .background { StarField() }
         .toastCard($toast)
         .task { await model.loadConstellation(month) }
+        .onAppear {
+            // 77-2 review: the sample star picked, with its links.
+            if DebugScreen.is("77-2"), let s = c.stars.first(where: { !model.linkedStars($0.id).isEmpty }) { selected = s }
+        }
     }
 
     private func figure(_ c: MonthConstellation) -> some View {
         ZStack(alignment: .topTrailing) {
-            ConstellationFigureView(constellation: c, selected: selected?.id) { s in
+            ConstellationFigureView(constellation: c, selected: selected?.id,
+                                    silverLinks: selected.map { model.linkedStars($0.id).map(\.id) } ?? []) { s in
                 withAnimation(.snappy) { selected = selected?.id == s.id ? nil : s }
             }
             .padding(Space.lg)
@@ -113,7 +118,7 @@ struct ConstellationDetailView: View {
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: Space.xs) {
                     Text("내 별 · \(s.title)").textStyle(.labelM).foregroundStyle(Color.textPrimary)
-                    Text(s.hasStarlight ? "별빛 \(s.starlight ?? 0)" : "별빛 없는 별")
+                    Text(linkLine(s))
                         .textStyle(.caption).foregroundStyle(Color.textSecondary)
                 }
                 Spacer()
@@ -125,6 +130,17 @@ struct ConstellationDetailView: View {
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
+    }
+
+    /// 77-2: "이어진 별 3 · 이번 달 2개는 은빛 선으로 보여요" (+ the other months).
+    private func linkLine(_ s: MonthConstellation.Star) -> String {
+        let linked = model.linkedStars(s.id)
+        guard !linked.isEmpty else { return s.hasStarlight ? "별빛 \(s.starlight ?? 0)" : "별빛 없는 별" }
+        let here = linked.filter { $0.date.map(MonthConstellation.monthKey) == month }.count
+        var line = "이어진 별 \(linked.count)"
+        if here > 0 { line += " · 이번 달 \(here)개는 은빛 선으로 보여요" }
+        if linked.count > here { line += " · 다른 달 \(linked.count - here)개" }
+        return line
     }
 
     @MainActor

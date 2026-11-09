@@ -5,7 +5,7 @@ struct StarDetailView: View {
     @Environment(AppModel.self) private var model
     var starID: StarItem.ID
     var onBack: () -> Void
-    /// "이 주제로 다시 쓰기" → 14 Rewrite
+    /// 12-6 「새 글을 써서 잇기」 → 14 별 잇기 · 새 별 쓰기
     var onRewrite: () -> Void
     /// "내용 먼저 확인" on 19 → 20 Privacy Check.
     var onReviewShare: () -> Void
@@ -17,6 +17,10 @@ struct StarDetailView: View {
     var onFloat: () -> Void = {}
     /// 05-2 고쳐 쓰기 (a star with starlight is locked, 2026-11-09).
     var onRevise: () -> Void = {}
+    /// 12-6 「이미 쓴 별과 잇기」 → 12-7
+    var onLinkExisting: () -> Void = {}
+    /// 「이어진 별」 chip → that star
+    var onOpenLinked: (StarItem) -> Void = { _ in }
     /// 12 「마음 망원경 켜기」 (24/25) or 12-2 「망원경 리포트 보기 ›」 (10).
     var onTelescope: () -> Void = {}
 
@@ -27,6 +31,9 @@ struct StarDetailView: View {
     @State private var pickQuote = DebugScreen.is("19-1")
     /// 12-5: 별빛 풀이 folded at first (open for the 12-5 review).
     @State private var showBreakdown = DebugScreen.is("12-5")
+    /// 12-6 이 별과 무엇을 이을까요?
+    @State private var askLink = DebugScreen.is("12-6")
+    @State private var askLinkHeight: CGFloat = 300
     @State private var wantsPick = false
     @State private var pickerHeight: CGFloat = 480
     @State private var screenHeight: CGFloat = 844
@@ -122,8 +129,10 @@ struct StarDetailView: View {
                     .textStyle(.caption).foregroundStyle(Color.textTertiary)
                     .frame(maxWidth: .infinity)
             }
+            linkedGroup(star)
+
             if star.isFloated {
-                Button("이 주제로 다시 쓰기") { onRewrite() }
+                Button("별 잇기") { askLink = true }
                     .buttonStyle(.primary)
             } else {
                 // Figma 12-1: 다시 쓰기 follows a report's question, so a kept star
@@ -198,6 +207,22 @@ struct StarDetailView: View {
             .presentationCornerRadius(Radius.xl)
             .presentationBackground { SheetBackground(seed: "share-sheet") }
         }
+        // 12-6 이 별과 무엇을 이을까요?
+        .sheet(isPresented: $askLink) {
+            ActionSheetContent(
+                title: "이 별과 무엇을 이을까요?",
+                message: "이은 별은 서로의 별 상세에 '이어진 별'로 보여요. 여러 별과 이을 수 있고, 언제든 끊을 수 있어요.",
+                primary: ("새 글을 써서 잇기", { askLink = false; onRewrite() }),
+                secondary: ("이미 쓴 별과 잇기", { askLink = false; onLinkExisting() }),
+                ghost: ("취소", { askLink = false })
+            )
+            .fixedSize(horizontal: false, vertical: true)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { askLinkHeight = $0 }
+            .presentationDetents([.height(askLinkHeight)])
+            .presentationDragIndicator(.hidden)
+            .presentationCornerRadius(Radius.xl)
+            .presentationBackground { SheetBackground(seed: "link-ask") }
+        }
         // 19-1 어떤 문장을 나눌까요?
         .sheet(isPresented: $pickQuote) {
             SentencePickerSheet(
@@ -219,6 +244,40 @@ struct StarDetailView: View {
             .presentationDragIndicator(.hidden)
             .presentationCornerRadius(Radius.xl)
             .presentationBackground { SheetBackground(seed: "quote-sheet") }
+        }
+    }
+
+    /// 12-2 「이어진 별 N」: mood dot · title · date chips; a long press undoes one.
+    @ViewBuilder private func linkedGroup(_ star: StarItem) -> some View {
+        let linked = model.linkedStars(star.id)
+        if !linked.isEmpty {
+            VStack(alignment: .leading, spacing: Space.sm) {
+                Text("이어진 별 \(linked.count)").textStyle(.labelM).foregroundStyle(Color.textPrimary)
+                    .accessibilityAddTraits(.isHeader)
+                FlowRow(spacing: Space.sm) {
+                    ForEach(linked) { other in
+                        Button { onOpenLinked(other) } label: {
+                            HStack(spacing: 6) {
+                                Circle().fill(other.mood.color).frame(width: 7, height: 7)
+                                Text(other.title).textStyle(.labelS).foregroundStyle(Color.textPrimary).lineLimit(1)
+                                Text(other.shortDateText).textStyle(.caption).foregroundStyle(Color.textTertiary)
+                            }
+                            .padding(.horizontal, Space.md)
+                            .padding(.vertical, Space.sm)
+                            .background(Color.bgSurface, in: .capsule)
+                            .overlay(Capsule().strokeBorder(Color.borderDefault, lineWidth: 1))
+                            .contentShape(.capsule)
+                        }
+                        .buttonStyle(.plain)
+                        .contextMenu {
+                            Button("연결 끊기", role: .destructive) {
+                                Task { await model.unlinkStars(star.id, other.id) }
+                            }
+                        }
+                        .accessibilityHint("길게 누르면 연결을 끊을 수 있어요")
+                    }
+                }
+            }
         }
     }
 

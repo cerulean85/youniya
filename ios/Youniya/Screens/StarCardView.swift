@@ -197,8 +197,6 @@ struct ComposeFlowView: View {
                         // 별빛 없이 띄운 별: its page (12-1), where starlight can come later.
                         if !star.isFloated {
                             onOpenStar(star)
-                        } else if let previous = rewriteOf {
-                            step = .compare(previous: previous, current: star)
                         } else {
                             step = .card(star)
                         }
@@ -379,7 +377,9 @@ struct ComposeFlowView: View {
         Task { @MainActor in
             defer { sending = false }
             do {
-                let (star, crisis) = try await model.publishLive(draft, floated: floated, rewriteOf: link ?? rewriteOf?.id)
+                // 05-2 sends rewrite_of; 14 별 잇기 · 새 별 쓰기 sends link_to.
+                let (star, crisis) = try await model.publishLive(draft, floated: floated, rewriteOf: link,
+                                                                 linkTo: rewriteOf.map { [$0.id] } ?? [])
                 onSaved()
                 // The server may have charged 5 coins and used today's free float.
                 if floated { Task { await model.loadCoins() } }

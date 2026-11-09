@@ -28,6 +28,7 @@ struct MainView: View {
         /// 05 flow, or 14 Rewrite when a star ID is given.
         case compose(rewriteOf: StarItem.ID? = nil)
         case revise(StarItem.ID)   // 05-2 고쳐 쓰기
+        case linkStars(StarItem.ID) // 12-7 이을 별 고르기
         case detail(StarItem.ID)
         case report(StarItem.ID)
         case records   // 17
@@ -265,6 +266,8 @@ struct MainView: View {
                 onEdit: { push(.editStar(id)) },
                 onFloat: { push(.floatKept(id)) },
                 onRevise: { push(.revise(id)) },
+                onLinkExisting: { push(.linkStars(id)) },
+                onOpenLinked: { push(.detail($0.id)) },
                 onTelescope: { if let s = model.stars.first(where: { $0.id == id }) { openReport(s) } }
             )
             .edgeSwipeBack(onBack: pop)
@@ -381,6 +384,12 @@ struct MainView: View {
             }
         case .editStar(let id):
             StarEditView(starID: id, onClose: pop)
+        case .linkStars(let id):
+            LinkStarsView(starID: id, onBack: pop) { n in
+                pop()
+                toast = ToastCardMessage(title: "별 \(n)개를 이었어요", detail: "서로의 별 상세에서 볼 수 있어요")
+            }
+            .edgeSwipeBack(onBack: pop)
         case .revise(let id):
             ComposeFlowView(
                 onClose: pop,
@@ -493,6 +502,10 @@ struct MainView: View {
         case "5-3", "5-4": push(.compose())
         case "5-2", "5-5":
             if let s = DebugScreen.floatedStar(model) { push(.revise(s.id)) }
+        case "12-6":
+            if let s = DebugScreen.floatedStar(model) { push(.detail(s.id)) }
+        case "12-7", "12-8", "12-9":
+            if let s = DebugScreen.floatedStar(model) { push(.linkStars(s.id)) }
         case "12-1":
             if let s = DebugScreen.keptStar(model) { push(.detail(s.id)) }
         case "12-10":

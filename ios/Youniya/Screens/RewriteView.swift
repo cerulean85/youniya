@@ -15,12 +15,12 @@ struct RewriteView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            TopAppBar(title: "다시 쓰기", onBack: onBack)
+            TopAppBar(title: "별 잇기 · 새 별 쓰기", onBack: onBack)
 
             VStack(spacing: Space.lg) {
                 // Previous question
                 VStack(alignment: .leading, spacing: Space.sm) {
-                    Text("지난번 기록 · \(previous.title)")
+                    Text("이어 쓰는 글 · \(previous.title)")
                         .textStyle(.caption)
                         .foregroundStyle(Color.textTertiary)
                     Text(question)
@@ -51,26 +51,29 @@ struct RewriteView: View {
                     }
                     .padding(Space.lg)
                     // Figma 14/105: a 260pt editor; the buttons stay at the bottom.
-                    .frame(height: 260, alignment: .top)
+                    // It gives way (down to 120pt) when the keyboard takes room,
+                    // so it doesn't spill over the question above.
+                    .frame(minHeight: 120, maxHeight: 260, alignment: .top)
+                    .layoutPriority(-1)
                     .focusCard(angle: .init(x: 0.25, y: 0), end: .init(x: 0.75, y: 1))
 
                 // Figma 105: "13자 · 37자 더 쓰면 띄울 수 있어요" (05/104 use the same form).
                 Text(text.count >= AppModel.minFloatLength
                      ? "\(text.count.formatted())자"
-                     : "\(text.count.formatted())자 · \((AppModel.minFloatLength - text.count).formatted())자 더 쓰면 띄울 수 있어요")
+                     : "\(text.count.formatted())자 · \((AppModel.minFloatLength - text.count).formatted())자 더 쓰면 별빛을 받을 수 있어요")
                     .textStyle(.caption)
                     .foregroundStyle(Color.textTertiary)
                     .frame(maxWidth: .infinity, alignment: .trailing)
 
                 // 105: floating needs 1,000 characters.
                 if canPublish && text.count < AppModel.minFloatLength {
-                    NoticeBanner(message: "짧은 글은 '조용히 간직하기'로 남겨 둘 수 있어요")
+                    NoticeBanner(message: "짧은 글은 '별빛 없이 띄우기'로 띄울 수 있어요")
                 }
 
                 Spacer(minLength: 0)
 
                 HStack(spacing: Space.md) {
-                    Button("조용히 간직하기") { publish(floated: false) }
+                    Button("별빛 없이 띄우기") { publish(floated: false) }
                         .buttonStyle(.secondary)
                         .disabled(!canPublish)
                     Button(model.floatButtonTitle) { publish(floated: true) }

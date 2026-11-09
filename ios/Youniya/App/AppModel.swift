@@ -204,6 +204,8 @@ struct StarItem: Identifiable, Hashable, Codable {
     var rewriteOf: UUID?
     /// Shared anonymously to the plaza (19). Optional so older saves still load.
     var sharedToPlaza: Bool?
+    /// 별 잇기 (11.5): the stars joined to this one, both ways, no direction.
+    var linkedIDs: [UUID]? = nil
     /// 12-3: the text was edited and the shared 대표 문장 is no longer in it
     /// (the server's `quote_missing`); pick it again on 19-1.
     var shareQuoteMissing: Bool?
@@ -1055,6 +1057,7 @@ final class AppModel {
         star.rewriteOf = original.id
         stars.insert(star, at: 0)
         reviseDrafts[original.id] = nil
+        linkLocally(star.id, [original.id])
         return star
     }
 
@@ -1063,10 +1066,11 @@ final class AppModel {
     @discardableResult
     func publishRewrite(of previous: StarItem, body: String, floated: Bool) -> StarItem {
         let d = StarDraft(mood: previous.mood, title: previous.title, body: body)
-        var star = makeStar(d, floated: floated)
-        star.rewriteOf = previous.id
+        let star = makeStar(d, floated: floated)
         stars.insert(star, at: 0)
-        return star
+        // 14 별 잇기 · 새 별 쓰기: the new star is joined to the one it follows.
+        linkLocally(star.id, [previous.id])
+        return stars[0]
     }
 
     // MARK: Nebula stats (08)
