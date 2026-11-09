@@ -126,6 +126,13 @@ struct TelescopeReport: Hashable, Codable {
     /// A sentence quoted from the user's own text.
     var evidence: String
     var question: String
+    /// 17.3 망원경 (2026-11-08): what clouded the writing, and how the mood
+    /// moved through it. Nil until the server sends them.
+    struct Fog: Hashable, Codable { var kind: String; var sentence: String; var note: String }
+    struct Flow: Hashable, Codable { var part: String; var moods: String; var note: String }
+    var fogItems: [Fog]? = nil
+    var moodFlow: [Flow]? = nil
+    var moodInterpretation: String? = nil
     var isSaved = false
     /// The server's report id (live), for 보관하기.
     var serverID: String? = nil
@@ -162,7 +169,14 @@ struct TelescopeReport: Hashable, Codable {
             ],
             emotions: shares,
             evidence: evidence,
-            question: questions[star.mood] ?? ""
+            question: questions[star.mood] ?? "",
+            fogItems: [Fog(kind: "한 걸음 물러서기", sentence: evidence,
+                           note: "'어쩌면', '~지도'가 붙으면서 내 마음을 확신하기 직전에 한 발 뒤로 물러섰어요.")],
+            moodFlow: [
+                Flow(part: "글의 시작", moods: tones[0].label, note: "처음 마음이 먼저 있었어요."),
+                Flow(part: "글의 끝", moods: tones.map(\.label).joined(separator: " · "), note: "쓰는 동안 마음이 조금씩 옮겨 갔어요."),
+            ],
+            moodInterpretation: "\(tones[0].label)이 가장 크게 남았어요. 글을 쓰는 동안 마음이 천천히 옮겨 갔어요."
         )
     }
 
@@ -176,7 +190,20 @@ struct TelescopeReport: Hashable, Codable {
         ],
         emotions: [Share(mood: .calm, percent: 42), Share(mood: .sorrow, percent: 31), Share(mood: .insight, percent: 27)],
         evidence: "어쩌면 나는 쉬고 싶었는지도 몰라요.",
-        question: "쉬고 싶다는 마음은 어디에서 오고 있을까요?"
+        question: "쉬고 싶다는 마음은 어디에서 오고 있을까요?",
+        // Figma 12-2 (398:16202)
+        fogItems: [
+            Fog(kind: "한 걸음 물러서기", sentence: "어쩌면 나는 쉬고 싶었는지도 몰라요.",
+                note: "'어쩌면', '~지도'가 붙으면서 내 마음을 확신하기 직전에 한 발 뒤로 물러섰어요."),
+            Fog(kind: "이름 없이 지나간 감정", sentence: "친구의 답장은 오지 않았고, 나는 휴대폰을 엎어 두었어요.",
+                note: "행동만 적고 그때의 마음(서운함)은 이름 붙이지 않고 지나갔어요."),
+        ],
+        moodFlow: [
+            Flow(part: "글의 시작", moods: "슬픔", note: "기다림이 길어지며 서운함이 먼저 있었어요."),
+            Flow(part: "글의 중간", moods: "슬픔 → 평온", note: "느림이 싫지만은 않다고 적으며 마음이 풀리기 시작했어요."),
+            Flow(part: "글의 끝", moods: "평온 · 통찰", note: "'쉬고 싶었다'는 마음을 알아차리며 조용히 가라앉았어요."),
+        ],
+        moodInterpretation: "평온(42%)이 가장 크지만 슬픔(31%)도 가까이 있어요. 슬픔이 사라진 게 아니라, 글을 쓰는 동안 평온 쪽으로 천천히 옮겨 갔어요."
     )
 }
 

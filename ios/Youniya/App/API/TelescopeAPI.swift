@@ -10,6 +10,12 @@ private struct ServerReportBody: Decodable {
     var emotions: [Emotion]
     var evidence: String
     var question: String
+    /// Newer servers (17.3); absent before.
+    struct FogOut: Decodable { var kind: String; var sentence: String; var note: String }
+    struct FlowOut: Decodable { var part: String; var moods: String; var note: String }
+    var fogItems: [FogOut]?
+    var moodFlow: [FlowOut]?
+    var moodInterpretation: String?
 }
 
 private struct ServerReport: Decodable {
@@ -38,6 +44,9 @@ private extension TelescopeReport {
             emotions: r.report.emotions.map { Share(mood: $0.mood, percent: $0.percent) },
             evidence: r.report.evidence,
             question: r.report.question,
+            fogItems: r.report.fogItems?.map { Fog(kind: $0.kind, sentence: $0.sentence, note: $0.note) },
+            moodFlow: r.report.moodFlow?.map { Flow(part: $0.part, moods: $0.moods, note: $0.note) },
+            moodInterpretation: r.report.moodInterpretation,
             isSaved: r.saved,
             serverID: r.id
         )

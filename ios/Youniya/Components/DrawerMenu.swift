@@ -19,7 +19,6 @@ struct DrawerMenu: View {
     private let items: [Item] = [
         Item(title: "별빛 기록", subtitle: "지나온 별들", icon: .iconStar),
         Item(title: "별빛 없는 별", subtitle: "별빛 없이 띄운 별", icon: .iconArchive),
-        Item(title: "마음 망원경", subtitle: "리포트 모아보기", icon: .iconNebula),
         Item(title: "코인", subtitle: "충전 · 사용 내역", icon: .iconCoin),
         Item(title: "설정", subtitle: "알림 · 데이터 · 약관", icon: .iconSettings),
         // Not in the 67 drawer; 30 Menu lists it. Reaches 32 Inquiry.

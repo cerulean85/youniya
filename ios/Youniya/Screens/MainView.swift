@@ -30,14 +30,12 @@ struct MainView: View {
         case revise(StarItem.ID)   // 05-2 고쳐 쓰기
         case linkStars(StarItem.ID) // 12-7 이을 별 고르기
         case detail(StarItem.ID)
-        case report(StarItem.ID)
         case records   // 17
         case kept      // 18
         case privacy(StarItem.ID)  // 20
         case starlightLine(String) // 23
         case telescopeConfirm(StarItem.ID) // 24
         case scanning(StarItem.ID)  // 25
-        case reports   // 26
         case coins     // 28
         case coinHistory // 33
         case settings  // 87
@@ -57,7 +55,6 @@ struct MainView: View {
         case blockedKeepers // 87-3 차단한 별지기
         case editStar(StarItem.ID)  // 글 수정
         case floatKept(StarItem.ID) // a kept star's "별 띄우기" → 06/07
-        case monthlyReport(String?)  // 123 (v1.1): a month, or the mock sample
         case page(String)
     }
 
@@ -67,9 +64,7 @@ struct MainView: View {
                 .edgeSwipeDrawer(isOpen: $drawerOpen, enabled: stack.isEmpty) {
                     DrawerMenu(onSelect: { title in
                         drawerOpen = false
-                        if title == "마음 망원경" {
-                            push(.reports)
-                        } else if title == "코인" {
+                        if title == "코인" {
                             push(.coins)
                         } else if title == "설정" {
                             push(.settings)
@@ -112,13 +107,11 @@ struct MainView: View {
             switch UserDefaults.standard.string(forKey: "debugRoute") {
             case "coins": push(.coins)
             case "settings": push(.settings)
-            case "reports": push(.reports)
             case "plaza", "plazaNebula": tab = .plaza     // 09 / 72
             case "compose": push(.compose())              // 05
             case "myNebula": push(.constellation(MonthConstellation.monthKey(.now))) // 70
             case "galaxy": tab = .plaza                  // 69 is now the plaza
             case "story": push(.constellationStory(MonthConstellation.monthKey(.now))) // 83
-            case "missingReport": push(.report(UUID()))   // 122-1
             // Visual review (mock data):
             case "coinsAgreed": push(.coins)              // 28-1
             case "policyPayment": push(.policy(.payment))     // 46
@@ -271,11 +264,6 @@ struct MainView: View {
                 onTelescope: { if let s = model.stars.first(where: { $0.id == id }) { openReport(s) } }
             )
             .edgeSwipeBack(onBack: pop)
-        case .report(let id):
-            TelescopeReportView(starID: id, onClose: pop,
-                                onRewrite: { replace(with: .compose(rewriteOf: id)) },
-                                onReportList: { replace(with: .reports) })
-            .edgeSwipeBack(onBack: pop)
         case .records:
             // Pushed copy (older links); the tab is the main entry now.
             VStack(spacing: 0) {
@@ -303,19 +291,7 @@ struct MainView: View {
             )
             .edgeSwipeBack(onBack: pop)
         case .scanning(let id):
-            TelescopeScanView(starID: id, onDone: { replace(with: .report(id)) }, onBackground: pop)
-        case .reports:
-            ReportListView(onBack: pop, onOpen: { push(.report($0.id)) },
-                           onTurnOn: {
-                               // 98 "최근 별 보러 가기": the telescope is turned on from a star.
-                               if let star = model.stars.filter(\.isFloated).max(by: { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }) {
-                                   replace(with: .detail(star.id))
-                               } else {
-                                   replace(with: .compose())
-                               }
-                           },
-                           onMonthly: { push(.monthlyReport($0)) })
-                .edgeSwipeBack(onBack: pop)
+            TelescopeScanView(starID: id, onDone: { finishTelescope(id) }, onBackground: pop)
         case .coins:
             CoinChargeView(onBack: pop, onPolicy: { push(.policy(.payment)) },
                            onHistory: { push(.coinHistory) })
@@ -414,12 +390,6 @@ struct MainView: View {
         case .blockedKeepers:
             BlockedKeepersView(onBack: pop)
                 .edgeSwipeBack(onBack: pop)
-        case .monthlyReport(let month):
-            MonthlyReportView(month: month, onClose: pop, onStars: {
-                withAnimation(.easeInOut(duration: 0.32)) { stack.removeAll() }
-                tab = .records
-            })
-            .edgeSwipeBack(onBack: pop)
         case .sharedStars:
             SharedStarsView(
                 onBack: pop,
@@ -458,7 +428,7 @@ struct MainView: View {
             model.saveDraft(StarDraft(mood: .calm, title: "", body: "오늘은 조금 느렸다."))
             push(.compose())
         case "14", "16", "105": if let floated { push(.compose(rewriteOf: floated.id)) }
-        case "10": if let floated { push(.report(floated.id)) }
+        case "10": if let floated { push(.detail(floated.id)) }
         case "12":
             // 12: a floated star without a report (「마음 망원경 켜기」); 12-2 has one.
             if let i = model.stars.firstIndex(where: { $0.isFloated && model.report(for: $0.id) == nil }) {
@@ -476,7 +446,6 @@ struct MainView: View {
         case "20": if let floated { push(.privacy(floated.id)) }
         case "24", "29": if let s = fresh ?? floated { push(.telescopeConfirm(s.id)) }
         case "25": if let s = fresh ?? floated { push(.scanning(s.id)) }
-        case "26", "27", "98", "111": push(.reports)
         case "17", "18": push(.sharedStars)
         case "23": push(.starlightLine("그런 마음이 어둠 속에서도 조용히 빛나고 있어요."))
         case "28", "28-1", "38", "102": push(.coins)
@@ -520,10 +489,8 @@ struct MainView: View {
         case "M1", "28-2": push(.coins)
         case "68-1": push(.sky)
         case "87-4": push(.settings)
-        case "123": push(.monthlyReport(nil))
         case "87", "87-1", "87-2", "87-5", "91", "92", "93", "94", "95", "114": push(.settings)
         case "122": push(.detail(UUID()))
-        case "122-1": push(.report(UUID()))
         default: break
         }
     }
@@ -569,7 +536,8 @@ struct MainView: View {
         }
         let route: Route
         if model.report(for: star.id) != nil {
-            route = .report(star.id)
+            // 12-2: the result lives in the star page.
+            route = .detail(star.id)
         } else if model.isTelescopeFree {
             // "처음 한 번은 무료": skip the coin sheet.
             model.useFreeTelescope()
@@ -578,6 +546,12 @@ struct MainView: View {
             route = .telescopeConfirm(star.id)
         }
         if replacing { replace(with: route) } else { push(route) }
+    }
+
+    /// 88 done: back to the star page (12-2), where the result folds open.
+    private func finishTelescope(_ id: StarItem.ID) {
+        let before = stack.dropLast().last?.route
+        if before == .detail(id) { pop() } else { replace(with: .detail(id)) }
     }
 
     /// 12 Star Detail

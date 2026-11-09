@@ -33,6 +33,8 @@ struct StarDetailView: View {
     @State private var showBreakdown = DebugScreen.is("12-5")
     /// 12-6 이 별과 무엇을 이을까요?
     @State private var askLink = DebugScreen.is("12-6")
+    /// 12-2: the telescope's result, open at first.
+    @State private var showTelescope = true
     @State private var askLinkHeight: CGFloat = 300
     @State private var wantsPick = false
     @State private var pickerHeight: CGFloat = 480
@@ -110,10 +112,11 @@ struct StarDetailView: View {
                 BreakdownToggle(isOpen: $showBreakdown)
             }
 
-            // Figma 12 / 12-2: straight to the telescope from a floated star.
-            if star.isFloated {
-                Button(model.report(for: star.id) == nil ? "마음 망원경 켜기" : "망원경 리포트 보기 ›",
-                       action: onTelescope)
+            // 12 / 12-2: the telescope lives here now; its result folds open.
+            if let report = model.report(for: star.id) {
+                TelescopeSection(report: report, isOpen: $showTelescope)
+            } else if star.isFloated {
+                Button("마음 망원경 켜기", action: onTelescope)
                     .buttonStyle(.secondary)
             }
 

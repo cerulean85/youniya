@@ -143,17 +143,6 @@ struct ListSkeleton: View {
     }
 }
 
-/// 111 스켈레톤 · 리포트 목록: three report rows under the real hero.
-struct ReportListSkeleton: View {
-    var body: some View {
-        SkeletonStack(spacing: Space.md) {
-            ForEach(0..<3, id: \.self) { _ in
-                SkeletonBlock(height: 78, radius: Radius.lg)
-            }
-        }
-    }
-}
-
 #Preview("47") {
     HomeSkeleton().frame(maxHeight: .infinity, alignment: .top).background(Color.bgCanvas)
 }

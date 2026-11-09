@@ -1,0 +1,26 @@
+# iOS 4단계: 별 상세 안의 마음 망원경 (기획 11.5·17.3, Figma 12-2 398:16202)
+
+- 요청: 사용자가 "4단계 진행해줘"라고 했다.
+- TelescopeReport에 fogItems(kind, sentence, note), moodFlow(part, moods, note), moodInterpretation을 더했다.
+  - 서버의 fog_items, mood_flow, mood_interpretation을 선택 필드로 읽는다.
+  - 목업과 샘플은 Figma 12-2 문구다.
+- TelescopeSection (Components 새 파일): 「마음 망원경 · {별 이름}」과 「접기 ▴ / 펼치기 ▾」 아래에 카드 세 장을 둔다.
+  - 마음을 가린 안개: 설명과 항목마다 이름, 인용, 풀이
+  - 감정의 결과 흐름: 비율 막대와 범례, 글의 시작·중간·끝, 종합 해석. 해석이 없는 예전 리포트는 근거 문장을 보여 준다.
+  - 스스로 물어볼 질문
+- 12 별 상세
+  - 리포트가 있으면 별빛 풀이 아래에 이 묶음을 펼친 채 보여 준다.
+  - 리포트가 없으면 「마음 망원경 켜기」 버튼을 둔다(24 → 88).
+- 88 관측이 끝나면 별 상세로 돌아간다. 상세에서 켰으면 pop하고, 07-1에서 켰으면 상세로 바꾼다.
+- 리포트가 이미 있는 별에서 망원경을 열면 별 상세로 간다.
+- 지운 것(기획 11.5·13.5 "리포트 아카이브와 월간 리포트를 뺀다")
+  - TelescopeReportView(10), ReportListView(26), MonthlyReportView(123), ReportListSkeleton
+  - 경로: report, reports, monthlyReport
+  - 디버그: 26 / 27 / 98 / 111 / 123 / 122-1 / missingReport
+  - 서랍의 「마음 망원경 · 리포트 모아보기」, 멤버십 혜택의 「월간 마음 리포트」
+  - 디버그 10은 별 상세를 연다.
+- 남겨 둔 것: MonthlyReport 모델과 API 함수(쓰는 곳이 없다). 나중에 정리한다.
+- 확인
+  - Debug 빌드 성공.
+  - 12-2 묶음을 임시로 위로 올려 캡처한 뒤 되돌렸다.
+  - 저장된 샘플 리포트에는 안개와 흐름이 없어서 근거 문장이 보이는 것을 확인했다.
