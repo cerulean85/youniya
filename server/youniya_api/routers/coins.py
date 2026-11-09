@@ -52,9 +52,16 @@ def history(user: User = Depends(consented_user), db: Session = Depends(get_db))
                       .order_by(CoinEntry.created_at.desc())).all()
     # A refund that found no coins left to take stays in the DB (it stops a second take-back)
     # but isn't shown: there is nothing to tell the user.
-    return {"items": [{"id": r.id, "kind": _kind(r), "title": r.title, "delta": r.delta,
+    return {"items": [{"id": r.id, "kind": _kind(r), "title": r.title, "delta": r.delta, "source": source(r),
                        "created_at": iso(r.created_at)} for r in rows
                       if not (_kind(r) == "refund" and r.delta == 0)]}
+
+
+def source(entry: CoinEntry) -> str:
+    """Where a purchase or refund was paid: toss (웹 결제) · app_store. Everything else is the server's."""
+    if not entry.transaction_id:
+        return "server"
+    return "toss" if entry.transaction_id.removeprefix("refund:").startswith("toss:") else "app_store"
 
 
 def _kind(entry: CoinEntry) -> str:

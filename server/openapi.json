@@ -5964,7 +5964,7 @@
           "admin"
         ],
         "summary": "Coins Ledger",
-        "description": "One ledger: App Store purchases and refunds, operator grants, coins spent. (Web payments with Toss come\nwhen they exist.) `krw_estimate` is the package price for a purchase.",
+        "description": "One ledger: App Store and web (toss) purchases and refunds, operator grants, coins spent.\n`krw_estimate` is the package price for a purchase.",
         "operationId": "coins_ledger_v1_admin_coins_get",
         "parameters": [
           {
@@ -7047,6 +7047,214 @@
           }
         }
       }
+    },
+    "/v1/payments/toss/packages": {
+      "get": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Packages",
+        "operationId": "packages_v1_payments_toss_packages_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/payments/toss/orders": {
+      "post": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Create Order",
+        "operationId": "create_order_v1_payments_toss_orders_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/payments/toss/confirm": {
+      "post": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Confirm",
+        "operationId": "confirm_v1_payments_toss_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/payments/toss/{order_id}/cancel": {
+      "post": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Cancel",
+        "description": "46 결제·환불 정책: the whole payment, within 7 days, while all of its coins are still unspent.",
+        "operationId": "cancel_v1_payments_toss__order_id__cancel_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Order Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/payments/toss/webhook": {
+      "post": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Webhook",
+        "description": "토스 웹훅 PAYMENT_STATUS_CHANGED. The body isn't trusted: the payment is read back from Toss with the\nsecret key. DONE adds the coins of an order whose confirm answer was lost; CANCELED (canceled from the\nToss console) takes back what is left of them, the balance stopping at 0.",
+        "operationId": "webhook_v1_payments_toss_webhook_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -7118,6 +7326,46 @@
         },
         "type": "object",
         "title": "BlockIn"
+      },
+      "CancelIn": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Reason",
+            "default": "고객 요청"
+          }
+        },
+        "type": "object",
+        "title": "CancelIn"
+      },
+      "ConfirmIn": {
+        "properties": {
+          "payment_key": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Payment Key"
+          },
+          "order_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Order Id"
+          },
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "payment_key",
+          "order_id",
+          "amount"
+        ],
+        "title": "ConfirmIn"
       },
       "Consent": {
         "properties": {
@@ -7879,6 +8127,20 @@
         ],
         "title": "OperatorPatch"
       },
+      "OrderIn": {
+        "properties": {
+          "package_id": {
+            "type": "string",
+            "maxLength": 32,
+            "title": "Package Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "package_id"
+        ],
+        "title": "OrderIn"
+      },
       "PurchaseIn": {
         "properties": {
           "signed_transaction": {
@@ -8484,6 +8746,26 @@
           "signedTransaction"
         ],
         "title": "VerifyIn"
+      },
+      "WebhookIn": {
+        "properties": {
+          "eventType": {
+            "type": "string",
+            "maxLength": 64,
+            "title": "Eventtype"
+          },
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": [
+          "eventType"
+        ],
+        "title": "WebhookIn"
       },
       "youniya_api__routers__admin_auth__InviteIn": {
         "properties": {

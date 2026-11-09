@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from .. import invites, runtime
 from .. import operators as ops
 from ..deps import ApiError, get_db
+from .coins import source as coin_source
 from ..models import (AdminAudit, AdminLog, AiCost, AiUsage, CoinEntry, DeviceToken, Inquiry, InviteAccount, Notice,
                       Operator, PrismTest, ShareReport, Star, StarLineReport, User)
 from ..push import Message, notify
@@ -103,8 +104,8 @@ def _kind(e: CoinEntry) -> str:
 @router.get("/coins")
 def coins_ledger(month: str | None = Query(None, pattern=r"^\d{4}-\d{2}$"), limit: int = Query(500, ge=1, le=5000),
                  db: Session = Depends(get_db)):
-    """One ledger: App Store purchases and refunds, operator grants, coins spent. (Web payments with Toss come
-    when they exist.) `krw_estimate` is the package price for a purchase."""
+    """One ledger: App Store and web (toss) purchases and refunds, operator grants, coins spent.
+    `krw_estimate` is the package price for a purchase."""
     m, start, end = _month(month)
     rows = db.scalars(select(CoinEntry).where(CoinEntry.created_at >= start, CoinEntry.created_at < end)
                       .order_by(CoinEntry.created_at.desc())).all()
@@ -116,8 +117,7 @@ def coins_ledger(month: str | None = Query(None, pattern=r"^\d{4}-\d{2}$"), limi
         t["coins"] += r.delta
         t["krw_estimate"] += _price(r.delta) if _kind(r) == "purchase" else 0
     return {"month": m, "totals": totals,
-            "items": [{"id": r.id, "at": iso(r.created_at), "kind": _kind(r), "source": "app_store" if r.transaction_id
-                       else "server", "keeper_no": nos.get(r.user_id), "title": r.title, "coins": r.delta,
+            "items": [{"id": r.id, "at": iso(r.created_at), "kind": _kind(r), "source": coin_source(r), "keeper_no": nos.get(r.user_id), "title": r.title, "coins": r.delta,
                        "transaction_id": r.transaction_id,
                        "krw_estimate": _price(r.delta) if _kind(r) == "purchase" else None} for r in rows[:limit]]}
 

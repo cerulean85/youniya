@@ -590,6 +590,31 @@ class UserNotification(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
 
 
+class TossOrder(Base):
+    """28 코인 충전 on the web (토스페이먼츠 결제창). The server sets the amount; the coins are added once, when
+    the payment is confirmed (coin entry `toss:<id>`). Kept 5 years like store purchases (전자상거래법): the
+    account's deletion only cuts the order off from it."""
+
+    __tablename__ = "toss_orders"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)  # Toss orderId
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True,
+                                                nullable=True)
+    package_id: Mapped[str] = mapped_column(String(32))
+    coins: Mapped[int] = mapped_column(Integer)
+    amount: Mapped[int] = mapped_column(Integer)
+    order_name: Mapped[str] = mapped_column(String(40))
+    # pending → confirming → done → canceled; pending → expired
+    status: Mapped[str] = mapped_column(String(16), default="pending")
+    payment_key: Mapped[str | None] = mapped_column(String(200), unique=True)
+    method: Mapped[str | None] = mapped_column(String(32))
+    failure_code: Mapped[str | None] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    canceled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 @event.listens_for(User, "before_insert")
 def _keeper_no(mapper, connection, target: User) -> None:
     """The next #번호. Two sign-ups at once can collide on the unique key; that request fails and is retried."""

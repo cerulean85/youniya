@@ -88,6 +88,10 @@ class Settings:
     cron_secret: str | None = field(default_factory=lambda: os.getenv("CRON_SECRET") or None)
     # Accept purchases without store verification. Development only.
     trust_purchases: bool = field(default_factory=lambda: os.getenv("TRUST_PURCHASES") == "1")
+    # 토스페이먼츠 (web 코인 충전, API 개별 연동). Without the secret key the web can't buy coins.
+    # test_sk_… in development, live_sk_… in production; never in a message or a commit.
+    toss_secret_key: str | None = field(default_factory=lambda: os.getenv("TOSS_SECRET_KEY") or None)
+    toss_client_key: str | None = field(default_factory=lambda: os.getenv("TOSS_CLIENT_KEY") or None)
 
     def appstore_private_key(self) -> str | None:
         """The .p8 PEM: from APPSTORE_PRIVATE_KEY_BASE64 if set, else read from APPSTORE_PRIVATE_KEY_PATH."""

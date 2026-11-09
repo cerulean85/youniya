@@ -14,10 +14,11 @@ from .monitoring import init_sentry
 from .prism import PrismEngine
 from .push import ApnsClient
 from .ratelimit import RateLimiter
-from .routers import (account, admin, admin_auth, admin_ops, admin_owner, auth, blocks, coins, constellations, cron, membership, nebulae, plaza, stars,
+from .routers import (account, admin, admin_auth, admin_ops, admin_owner, auth, blocks, coins, constellations, cron, membership, nebulae, payments, plaza, stars,
                       telescope)
 from .security import Cipher, IdTokenVerifier
 from .storekit import AppStoreClient, StoreKitVerifier
+from .toss import TossClient
 
 
 def _version(v: str) -> tuple[int, ...]:
@@ -57,6 +58,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.push = (ApnsClient(settings.apns_team_id, settings.apns_key_id, apns_key, settings.apple_bundle_id)
                       if settings.apple_bundle_id and settings.apns_team_id and settings.apns_key_id and apns_key
                       else None)
+    app.state.toss = TossClient(settings.toss_secret_key) if settings.toss_secret_key else None
     app.state.prism = PrismEngine(settings.gemini_api_key, settings.prism_model, settings.prism_samples,
                                   thinking=settings.prism_thinking)
     app.state.caches = CacheManager(app.state.sessions, settings.gemini_api_key)
@@ -107,7 +109,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     for router in (auth.router, account.router, stars.router, telescope.router, coins.router, coins.notifications,
                    nebulae.router, plaza.router, blocks.router, membership.router, admin.router, cron.router,
                    constellations.router, admin_auth.auth, admin_auth.router, admin_ops.router,
-                   admin_owner.router):
+                   admin_owner.router, payments.router):
         app.include_router(router)
     return app
 

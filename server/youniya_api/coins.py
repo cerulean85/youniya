@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
-from .models import CoinEntry, User
+from .models import CoinEntry, TossOrder, User
 
 
 def spend(db: Session, user: User, amount: int, title: str) -> bool:
@@ -54,4 +54,5 @@ def purge_detached(db: Session, now: datetime | None = None) -> int:
     """Deletes the purchase records of deleted accounts once they are older than DETACHED_KEEP.
     Records of living accounts are their own history and stay. Returns how many rows went."""
     cutoff = (now or datetime.now(timezone.utc)) - DETACHED_KEEP
+    db.execute(delete(TossOrder).where(TossOrder.user_id.is_(None), TossOrder.created_at < cutoff))
     return db.execute(delete(CoinEntry).where(CoinEntry.user_id.is_(None), CoinEntry.created_at < cutoff)).rowcount
