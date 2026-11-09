@@ -176,6 +176,9 @@ struct StarItem: Identifiable, Hashable, Codable {
     var rewriteOf: UUID?
     /// Shared anonymously to the plaza (19). Optional so older saves still load.
     var sharedToPlaza: Bool?
+    /// 12-3: the text was edited and the shared 대표 문장 is no longer in it
+    /// (the server's `quote_missing`); pick it again on 19-1.
+    var shareQuoteMissing: Bool?
 
     var isShared: Bool { sharedToPlaza == true }
 
@@ -473,6 +476,8 @@ final class AppModel {
     var accountID: String?
     /// Live 85 guests and 69 tonight's count.
     var guestCandidatesLive: [GuestStar] = []
+    /// 75: plaza stars let in as guests from their page (kept as 85 candidates).
+    var adoptedGuests: [GuestStar] = []
     var tonightCount: Int?
     /// Of tonight's stars, how many are mine (`/v1/plaza/tonight` mine).
     var tonightMine: Int?
@@ -727,6 +732,7 @@ final class AppModel {
         }
         guard let i = stars.firstIndex(where: { $0.id == id }) else { return }
         stars[i].sharedToPlaza = shared
+        stars[i].shareQuoteMissing = nil
     }
 
     func deleteStar(_ id: StarItem.ID) {

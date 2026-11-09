@@ -87,10 +87,12 @@ struct PrivacyScan {
         (\.places, #"[가-힣]{2,8}(?:역|구청|공원|학교|대학교|병원|카페|시장|해변|터미널)(?=(?:에서|에|으로|로|은|는|이|가|을|를|과|와|의|도)?(?![가-힣]))"#),
     ]
 
-    init(_ text: String) {
+    /// `contactsOnly`: a star shared with its whole text (19) hides only phone
+    /// numbers and emails; names and places stay as written.
+    init(_ text: String, contactsOnly: Bool = false) {
         var out = text
         var counts: [KeyPath<PrivacyScan, Int>: Int] = [:]
-        for (kind, pattern) in Self.patterns {
+        for (kind, pattern) in Self.patterns where !contactsOnly || kind == \.contacts {
             guard let regex = try? NSRegularExpression(pattern: pattern) else {
                 assertionFailure("Bad privacy pattern: \(pattern)")
                 continue
@@ -218,73 +220,6 @@ struct PlazaHero: View {
     }
 }
 
-// MARK: - 22 Other Nebula
-
-/// 22 Other Nebula (다른 이의 성운): an anonymous nebula opened from the plaza.
-/// Shows only titles and resonance counts, never the other person's text.
-struct OtherNebulaView: View {
-    @Environment(AppModel.self) private var model
-    var nebula: PlazaNebula
-    var onBack: () -> Void
-    /// A star card → 23 Starlight Line with that star's one line.
-    var onOpenLine: (String) -> Void
-
-    var body: some View {
-        let resonated = model.resonated.contains(nebula.id)
-        VStack(spacing: 0) {
-            TopAppBar(title: "이름 없는 성운", onBack: onBack)
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: Space.lg) {
-                    VStack(alignment: .leading, spacing: Space.lg) {
-                        Text(nebula.name)
-                            .textStyle(.h1)
-                            .foregroundStyle(Color.textPrimary)
-                        Text("익명의 별 \(nebula.starCount)개가 모인 성운이에요.")
-                            .textStyle(.bodyM)
-                            .foregroundStyle(Color.textSecondary)
-                    }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityAddTraits(.isHeader)
-
-                    PlazaHero()
-                        .frame(maxWidth: .infinity)
-
-                    ForEach(nebula.entries, id: \.title) { entry in
-                        Button { onOpenLine(entry.line) } label: {
-                            InfoCard(seed: nebula.name + entry.title, title: entry.title, detail: "공명 \(entry.resonance)")
-                                .contentShape(.rect)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal, Space.xl)
-                .padding(.top, Space.sm)
-                .padding(.bottom, Space.xl)
-            }
-            .scrollIndicators(.hidden)
-
-            Button(resonated ? "공명을 남겼어요" : "공명 남기기") {
-                withAnimation(.snappy) { model.toggleResonance(nebula.id) }
-            }
-            .buttonStyle(.secondary)
-            .accessibilityAddTraits(resonated ? .isSelected : [])
-            .padding(.horizontal, Space.xl)
-            .padding(.bottom, Space.xl)
-        }
-        .background { StarField() }
-    }
-}
-
-extension PlazaNebula {
-    /// TODO: From the plaza API. Figma `22 다른 이의 성운` sample data.
-    var starCount: Int { 12 - order * 2 }
-    var entries: [(title: String, resonance: Int, line: String)] {
-        [("저녁이 길게 느껴진 날", 8 - order, "그런 마음이 어둠 속에서도 조용히 빛나고 있어요."),
-         ("놓아주고 싶은 말", 5 + order % 2, line)]
-    }
-}
-
 #Preview("20") {
     let model = AppModel()
     model.fillSampleStars()
@@ -295,6 +230,3 @@ extension PlazaNebula {
     PlazaWelcomeView(onBrowse: {}, onLater: {})
 }
 
-#Preview("22") {
-    OtherNebulaView(nebula: PlazaNebula.samples[0], onBack: {}, onOpenLine: { _ in }).environment(AppModel())
-}

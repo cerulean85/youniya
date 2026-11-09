@@ -30,8 +30,8 @@ struct MaskPreview: Equatable {
     }
 
     /// The on-device pass (same patterns as the server).
-    init(local text: String) {
-        let s = PrivacyScan(text)
+    init(local text: String, contactsOnly: Bool = false) {
+        let s = PrivacyScan(text, contactsOnly: contactsOnly)
         self.init(masked: s.masked, names: s.names, contacts: s.contacts, places: s.places)
     }
 
@@ -91,8 +91,12 @@ struct SentencePickerSheet: View {
     var maxHeight: CGFloat
     var onPick: (String) -> Void
     var onCancel: () -> Void
+    /// 19-1: the whole star goes public with the picked 대표 문장. Only phone
+    /// numbers and emails are hidden, and the masked text can be previewed.
+    var fullText: (title: String, body: String)? = nil
 
     @State private var selected: Int?
+    @State private var showFullText = false
     /// Server previews by option id (live), fetched once per pick.
     @State private var previews: [Int: MaskPreview] = [:]
     @State private var listHeight: CGFloat = 0
@@ -106,6 +110,7 @@ struct SentencePickerSheet: View {
             ScrollView {
                 VStack(spacing: Space.sm) {
                     ForEach(options) { optionCard($0) }
+                    if let fullText { fullTextPreview(fullText) }
                 }
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { listHeight = $0 }
             }
@@ -129,7 +134,7 @@ struct SentencePickerSheet: View {
         .task(id: selected) {
             guard let id = selected, previews[id] == nil,
                   let option = options.first(where: { $0.id == id }) else { return }
-            previews[id] = await model.maskPreview(option.sentence)
+            previews[id] = await model.maskPreview(option.sentence, contactsOnly: fullText != nil)
         }
     }
 
@@ -171,7 +176,8 @@ struct SentencePickerSheet: View {
     private func optionCard(_ option: SentenceOption) -> some View {
         let isOn = option.id == selected
         // The chosen card shows the server's masking; the rest, the on-device pass.
-        let preview = (isOn ? previews[option.id] : nil) ?? MaskPreview(local: option.sentence)
+        let preview = (isOn ? previews[option.id] : nil)
+            ?? MaskPreview(local: option.sentence, contactsOnly: fullText != nil)
         return Button {
             withAnimation(.snappy(duration: 0.2)) { selected = option.id }
         } label: {
@@ -208,9 +214,50 @@ struct SentencePickerSheet: View {
     }
 }
 
+extension SentencePickerSheet {
+    /// 19-1: "글 전체 미리 보기", folded; opens to the title and body as they
+    /// will look on the plaza (phone numbers and emails as ●●●).
+    fileprivate func fullTextPreview(_ text: (title: String, body: String)) -> some View {
+        VStack(alignment: .leading, spacing: Space.sm) {
+            Button {
+                withAnimation(.snappy(duration: 0.2)) { showFullText.toggle() }
+            } label: {
+                HStack {
+                    Text("글 전체 미리 보기").textStyle(.labelM).foregroundStyle(Color.textSecondary)
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Color.textTertiary)
+                        .rotationEffect(.degrees(showFullText ? 180 : 0))
+                }
+                .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityValue(showFullText ? "펼침" : "접힘")
+
+            if showFullText {
+                VStack(alignment: .leading, spacing: Space.xs) {
+                    Text(PrivacyScan(text.title, contactsOnly: true).masked)
+                        .textStyle(.labelM).foregroundStyle(Color.textPrimary)
+                    Text(PrivacyScan(text.body, contactsOnly: true).masked)
+                        .textStyle(.bodyM).foregroundStyle(Color.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(.horizontal, Space.lg)
+        .padding(.vertical, 14)
+        .background(Color.bgSurface.opacity(0.7), in: .rect(cornerRadius: Radius.lg))
+        .overlay(RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(Color.borderDefault, lineWidth: 1))
+        .padding(.top, Space.xs)
+    }
+}
+
 // MARK: - AppModel
 
-private struct ScanIn: Encodable { var text: String }
+/// `mode`: "contacts" for a whole-text share (19-1), "all" otherwise (71-1).
+private struct ScanIn: Encodable { var text: String; var mode = "all" }
 private struct ScanOut: Decodable {
     struct Counts: Decodable { var names: Int; var contacts: Int; var places: Int }
     var masked: String
@@ -221,13 +268,14 @@ extension AppModel {
     /// 19-1 / 71-1 preview: the server's masking of one chosen sentence
     /// (`POST /v1/plaza/privacy-scan`, 60 a minute). Mock, or when the call
     /// fails: the on-device pass with the same patterns.
-    @MainActor func maskPreview(_ sentence: String) async -> MaskPreview {
-        guard useLiveAPI, isSignedIn else { return MaskPreview(local: sentence) }
+    @MainActor func maskPreview(_ sentence: String, contactsOnly: Bool = false) async -> MaskPreview {
+        guard useLiveAPI, isSignedIn else { return MaskPreview(local: sentence, contactsOnly: contactsOnly) }
         do {
-            let r: ScanOut = try await APIClient.shared.post("/v1/plaza/privacy-scan", body: ScanIn(text: sentence))
+            let r: ScanOut = try await APIClient.shared.post("/v1/plaza/privacy-scan",
+                                                             body: ScanIn(text: sentence, mode: contactsOnly ? "contacts" : "all"))
             return MaskPreview(masked: r.masked, names: r.counts.names, contacts: r.counts.contacts, places: r.counts.places)
         } catch {
-            return MaskPreview(local: sentence)
+            return MaskPreview(local: sentence, contactsOnly: contactsOnly)
         }
     }
 

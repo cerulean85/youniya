@@ -38,6 +38,9 @@ struct StarCreated: Decodable {
     var star: ServerStar
     /// 37: set when the writing shows a crisis signal; the star is then kept unscored.
     var crisis: Crisis?
+    /// PATCH only: the shared 대표 문장 is gone from the edited text (12-3);
+    /// the share stays, with no quote until one is picked again.
+    var quoteMissing: Bool?
 }
 
 private struct StarList: Decodable {
@@ -91,7 +94,9 @@ extension StarItem {
             report: local?.report,
             createdAt: s.createdAt,
             rewriteOf: s.rewriteOf.flatMap(UUID.init(uuidString:)),
-            sharedToPlaza: s.shared
+            sharedToPlaza: s.shared,
+            // Known only from the edit's answer; kept until a new pick.
+            shareQuoteMissing: s.shared ? local?.shareQuoteMissing : nil
         )
     }
 
@@ -185,7 +190,8 @@ extension AppModel {
             // 200 {star, crisis, …}: the floated star's light, shape and report stay as they were.
             let r: StarCreated = try await APIClient.shared.send("PATCH", "/v1/stars/\(id.apiID)",
                                                                  body: Patch(title: t, body: body, mood: mood))
-            if let i = stars.firstIndex(where: { $0.id == id }), let s = StarItem(r.star, keeping: stars[i]) {
+            if let i = stars.firstIndex(where: { $0.id == id }), var s = StarItem(r.star, keeping: stars[i]) {
+                if r.quoteMissing == true && s.isShared { s.shareQuoteMissing = true }
                 stars[i] = s
             } else {
                 applyLocally()

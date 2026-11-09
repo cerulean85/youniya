@@ -1,0 +1,43 @@
+# iOS: 별 공유 = 대표 문장 + 글 전체, 75-3, 손님별 바로 들이기, 12-3, 약관
+
+- 요청: FIGMA 세션이 사용자 결정을 전달함 (2026-11-08). 응답 형태는 API 세션 답을 따랐다.
+- 문구
+  - 19 시트, 03-1, 09-3 설명을 바꿨다.
+  - 43 이용약관(제1~11조)과 45 민감정보 동의(1~5)를 Figma 18:841 / 18:903 전문으로 바꿨다.
+- 19-1
+  - 제목 "대표 문장 고르기"와 안내를 바꿨다.
+  - 버튼은 처음 나눌 때 「이 문장으로 나누기」, 다시 고를 때 「이 문장으로 바꾸기」다.
+  - 「글 전체 미리 보기」를 펼칠 수 있다.
+  - 미리 보기와 문장 카드 모두 연락처만 가린다. PrivacyScan contactsOnly를 쓰고, 서버는 privacy-scan mode "contacts"를 쓴다.
+- PUT share: {quote, full_text: true}를 보낸다.
+- 75 GalaxyStarView
+  - 73에서 열 때와 09-3 행에서 열 때(Route.plazaStar)를 함께 처리한다.
+  - full_text면 「대표 문장이에요. 아래에서 글 전체를 읽을 수 있어요.」 아래에 제목(h3)과 본문(Serif 15, 175%)을 둔다. 라이브는 GET /v1/plaza/stars/{id}의 title_masked / body_masked를 쓴다.
+  - 예전 공유는 「본인이 고른 한 문장만 나눈 별이에요」를 보여 준다.
+  - 광장에서 열면 「공명 남기기」(primary)와 「내 성운에 손님별로 들이기」(ghost)를 둔다. 73에서 열면 기존 버튼 그대로다.
+  - quote가 null이면 문장 줄을 숨긴다.
+- 손님별 바로 들이기: AppModel.adoptGuest → latestNebula에 넣고 updateDrawnNebula(PATCH guest_share_ids)
+  - 결과 토스트: 성공 / 성운 없음(→ 51) / 다 참(5개, 빈 자리 없음, 직접 그린 성운) / 이미 들인 별(버튼 비활성)
+  - adoptedGuests는 85 후보에 합쳐 보여 준다.
+- 12-3: PATCH /v1/stars/{id} 응답의 quote_missing이 true면 별 상세에 NoticeBanner와 「대표 문장 고르기」(→ 19-1)를 보여 준다. 다시 나누면 배너가 사라진다.
+- 22 「이름 없는 성운」(OtherNebulaView), Route.otherNebula, debug 22를 지웠다.
+- 새 디버그 화면: 12-3, 75-3
+- 확인
+  - Debug 빌드 성공.
+  - 75-3, 12-3, 19-1, 43을 캡처했다.
+  - 손님별 들이기 버튼은 눌러 보지 못했다(탭 도구 없음).
+- 남은 것
+  - 서버 guest-candidates에는 직접 들인 별이 나오지 않는다. 그래서 앱을 다시 켜면 85 후보에서 빠지고, 모양 바꾸기로 저장하면 그 손님별이 빠질 수 있다. API 세션에 요청했다.
+  - 서버 변경은 아직 운영에 배포되지 않았다. 배포 전 운영은 full_text를 무시한다.
+
+## 후속: guest-candidates
+- API 세션이 guest-candidates를 바꿨다: 공명한 별 다음에, 내 성운에 들어 있는 손님별(공명하지 않은 것)이 이어진다.
+- 앱 반영
+  - resonated_at을 옵셔널로 받는다. 75에서 들인 별은 null이라, 예전 코드였다면 목록 디코딩이 실패했을 것이다.
+  - in_nebula도 읽는다.
+  - 날짜가 없으면 "손님별"로 표시한다.
+- 이제 85 모양 바꾸기에서 직접 들인 손님별이 빠지지 않는다.
+- 서버가 새 후보를 ?include_guests=true일 때만 주도록 바꿨다(예전 빌드 보호). 앱은 이 파라미터를 붙여 부른다.
+- 예전 빌드는 광장 별 quote를 non-optional로 읽는다. quote가 null이면 목록 전체가 실패하므로 API 세션에 알렸다.
+- 서버: 대표 문장이 빈 공유는 광장 목록에서 빠지고 상세는 404를 준다(광장 quote는 항상 문자열). 주인에게는 /v1/me/shares stars[].quote_missing으로 알려 준다.
+- 앱: 나눈 별의 상세를 열면 /v1/me/shares로 quote_missing을 다시 읽는다. 그래서 앱을 다시 켜도 12-3 배너가 유지된다.

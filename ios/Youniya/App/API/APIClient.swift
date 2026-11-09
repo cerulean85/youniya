@@ -3,15 +3,15 @@ import Foundation
 // MARK: - Configuration
 
 enum APIConfig {
-    /// Debug: the MacBook dev server over Tailscale, port 8001 (dev sign-in,
-    /// trusted purchases, minimum version 0.1, membership on); the same address
-    /// works from the simulator on that Mac and from a phone on Tailscale.
-    /// (Until 2026-11-08 it was home-desktop, 100.126.111.107:8000.)
+    /// Debug: the home-desktop dev server over Tailscale, port 8000 (dev sign-in,
+    /// trusted purchases, minimum version 0.1); reachable from the simulator and
+    /// from a phone on Tailscale. (For part of 2026-11-08 it was the MacBook,
+    /// 100.117.103.2:8001; a session saved for another server starts signed out.)
     /// Release/TestFlight: the production API (HTTPS, minimum version 1.0.0, no
     /// dev sign-in, StoreKit-verified purchases).
     /// Override with `-apiBaseURL http://…` (launch argument) or the `apiBaseURL` default.
     #if DEBUG
-    static let defaultBaseURL = "http://100.117.103.2:8001"
+    static let defaultBaseURL = "http://100.126.111.107:8000"
     #else
     static let defaultBaseURL = "https://youniya-api.dycdyp.com"
     #endif

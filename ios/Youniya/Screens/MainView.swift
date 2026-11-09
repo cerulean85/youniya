@@ -32,7 +32,6 @@ struct MainView: View {
         case records   // 17
         case kept      // 18
         case privacy(StarItem.ID)  // 20
-        case otherNebula(String)   // 22, by plaza nebula name
         case starlightLine(String) // 23
         case telescopeConfirm(StarItem.ID) // 24
         case scanning(StarItem.ID)  // 25
@@ -51,7 +50,8 @@ struct MainView: View {
         case drawNebula  // 51–55, 84, 85
         case galaxyNebula(String) // 73/78, by name
         case galaxyLines(String)  // 74
-        case galaxyStar(nebula: String, star: String) // 75
+        case galaxyStar(nebula: String, star: String) // 75, from 73
+        case plazaStar(String)                        // 75, from a 09-3 row (by name)
         case growth     // 65
         case moments    // 66
         case stages     // 86
@@ -193,7 +193,7 @@ struct MainView: View {
                 NebulaView(onOpen: openFromNebula)
             case .plaza:
                 LoadingGate {
-                    PlazaView(onOpen: { push(.otherNebula($0)) },
+                    PlazaView(onOpen: { push(.plazaStar($0)) },
                               onOpenNebula: { push(.galaxyNebula($0.name)) })
                 } placeholder: { ListSkeleton(titleWidth: 160, rowHeight: 100, rows: 3) }
             case .records:
@@ -289,14 +289,6 @@ struct MainView: View {
         case .privacy(let id):
             PrivacyCheckView(starID: id, onBack: pop)
                 .edgeSwipeBack(onBack: pop)
-        case .otherNebula(let name):
-            if let nebula = model.plazaStarItems.first(where: { $0.name == name }) {
-                OtherNebulaView(nebula: nebula, onBack: pop, onOpenLine: { push(.starlightLine($0)) })
-                    .edgeSwipeBack(onBack: pop)
-            } else {
-                PlaceholderPage(title: "이름 없는 성운", onBack: pop)
-                    .edgeSwipeBack(onBack: pop)
-            }
         case .starlightLine(let line):
             StarlightLineView(line: line, onClose: pop)
                 .edgeSwipeBack(onBack: pop)
@@ -400,6 +392,14 @@ struct MainView: View {
                 GalaxyStarView(nebula: n, starTitle: star, onBack: pop, onBlocked: blocked)
                     .edgeSwipeBack(onBack: pop)
             }
+        case .plazaStar(let name):
+            if let p = (model.plazaStarItems + model.plazaStarsBeside).first(where: { $0.name == name }) {
+                GalaxyStarView(plazaStar: p, onBack: pop, onBlocked: blocked, onDraw: { push(.drawNebula) })
+                    .edgeSwipeBack(onBack: pop)
+            } else {
+                NotFoundView(onBack: pop)
+                    .edgeSwipeBack(onBack: pop)
+            }
         case .growth:
             NebulaGrowthView(onBack: pop, onMoments: { push(.moments) }, onDraw: { push(.drawNebula) })
                 .edgeSwipeBack(onBack: pop)
@@ -489,7 +489,6 @@ struct MainView: View {
         case "25": if let s = fresh ?? floated { push(.scanning(s.id)) }
         case "26", "27", "98", "111": push(.reports)
         case "17", "18": push(.sharedStars)
-        case "22": push(.otherNebula(PlazaNebula.samples[0].name))
         case "23": push(.starlightLine("그런 마음이 어둠 속에서도 조용히 빛나고 있어요."))
         case "28", "28-1", "38", "102": push(.coins)
         case "33", "108", "121": push(.coinHistory)
@@ -519,6 +518,9 @@ struct MainView: View {
         case "75", "75-1", "75-2": push(.galaxyStar(nebula: nebula.name, star: nebula.stars[0].title))
         case "87-3": push(.blockedKeepers)
         case "5-3", "5-4": push(.compose())
+        case "12-3":
+            if let s = model.stars.first(where: \.isFloated) { push(.detail(s.id)) }
+        case "75-3": push(.plazaStar(PlazaNebula.samples[0].name))
         case "12-2":
             if let s = model.stars.first(where: { $0.isFloated && model.report(for: $0.id) != nil }) { push(.detail(s.id)) }
         case "M1", "28-2": push(.coins)
@@ -552,7 +554,7 @@ struct MainView: View {
         withAnimation(.easeInOut(duration: 0.32)) {
             stack.removeAll {
                 switch $0.route {
-                case .galaxyStar, .galaxyNebula, .galaxyLines: true
+                case .galaxyStar, .plazaStar, .galaxyNebula, .galaxyLines: true
                 default: false
                 }
             }

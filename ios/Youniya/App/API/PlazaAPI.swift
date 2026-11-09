@@ -15,14 +15,17 @@ private struct ShapeOut: Decodable {
 private struct PlazaStarItem: Decodable {
     var id: String
     var name: String
-    var quote: String
+    /// Null while the owner picks a new 대표 문장 (12-3).
+    var quote: String?
     var mood: Mood
     var depthLevel: Int?
     var shape: ShapeOut?
     var resonated: Bool
     var beside: Bool
-    /// 09-2 row: when it was shared.
+    /// 09-3 row: when it was shared.
     var createdAt: Date?
+    /// 75-3: shared with its whole text (shares from 2026-11-08).
+    var fullText: Bool?
 }
 
 private struct PlazaNebulaItem: Decodable {
@@ -50,7 +53,8 @@ private struct LineList: Decodable {
     var canLeave: Bool
 }
 
-private struct ShareIn: Encodable { var quote: String }
+/// 19: the 대표 문장 and, from 2026-11-08, the whole text (`full_text`).
+private struct ShareIn: Encodable { var quote: String; var fullText = true }
 private struct LineIn: Encodable { var text: String }
 
 // MARK: - Mapping
@@ -58,10 +62,10 @@ private struct LineIn: Encodable { var text: String }
 private extension PlazaNebula {
     init(_ s: PlazaStarItem, order: Int, similarity: Double) {
         var rng = SeededRandom(seed: s.id)
-        self.init(name: s.name, line: s.quote, pattern: rng.next(in: 0...1) < 0.5 ? .a : .b,
+        self.init(name: s.name, line: s.quote ?? "", pattern: rng.next(in: 0...1) < 0.5 ? .a : .b,
                   similarity: similarity, order: order, serverID: s.id,
                   starShape: s.shape?.spec, mood: s.mood, depthLevel: s.depthLevel,
-                  sharedAt: s.createdAt)
+                  sharedAt: s.createdAt, fullText: s.fullText ?? false)
     }
 }
 
@@ -179,20 +183,32 @@ extension AppModel {
         }
     }
 
-    /// Live 19/20: shares a floated star with one sentence of its own text,
-    /// the one picked on 19-1 (sent as written; the server masks names,
-    /// contacts and places before it is public). Without a pick (20): the longest.
+    /// Live 19/20: shares a floated star with its whole text and one sentence
+    /// of it as the 대표 문장, the one picked on 19-1 (sent as written; the
+    /// server hides phone numbers and emails). Without a pick (20): the longest.
     @MainActor func shareStarLive(_ id: StarItem.ID, quote picked: String? = nil) async -> Bool {
         guard let star = stars.first(where: { $0.id == id }) else { return false }
         let quote = picked ?? star.body.shareSentences.max(by: { $0.count < $1.count }) ?? String(star.body.prefix(300))
         do {
             try await APIClient.shared.sendRaw("PUT", "/v1/stars/\(id.apiID)/share", body: ShareIn(quote: quote))
-            if let i = stars.firstIndex(where: { $0.id == id }) { stars[i].sharedToPlaza = true }
+            if let i = stars.firstIndex(where: { $0.id == id }) {
+                stars[i].sharedToPlaza = true
+                stars[i].shareQuoteMissing = nil
+            }
             return true
         } catch {
             handle(error)
             return false
         }
+    }
+
+    /// Live 75-3: the whole star (`GET /v1/plaza/stars/{id}`): title and body,
+    /// contacts masked. Nil for one-sentence shares or when it fails.
+    @MainActor func plazaStarText(_ shareID: String) async -> (title: String, body: String)? {
+        struct Detail: Decodable { var titleMasked: String?; var bodyMasked: String? }
+        guard let d: Detail = try? await APIClient.shared.get("/v1/plaza/stars/\(shareID)"),
+              let body = d.bodyMasked else { return nil }
+        return (d.titleMasked ?? "", body)
     }
 
     /// Live: takes one star back from the plaza.

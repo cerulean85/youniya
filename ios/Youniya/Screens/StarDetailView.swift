@@ -56,6 +56,7 @@ struct StarDetailView: View {
         }
         .background { StarField() }
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { screenHeight = $0 }
+        .task(id: star.isShared) { if star.isShared { await model.refreshQuoteMissing(starID) } }
     }
 
     private func content(_ star: StarItem) -> some View {
@@ -70,6 +71,13 @@ struct StarDetailView: View {
             }
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isHeader)
+
+            // 12-3: the edited text lost the shared 대표 문장.
+            if star.isShared && star.shareQuoteMissing == true {
+                NoticeBanner(message: "광장에 나눈 이 별의 대표 문장이 고친 글에 없어요. 대표 문장을 다시 골라 주세요.")
+                Button("대표 문장 고르기") { pickQuote = true }
+                    .buttonStyle(.secondary)
+            }
 
             if !star.body.isEmpty {
                 Text(star.body)
@@ -185,16 +193,17 @@ struct StarDetailView: View {
         // 19-1 어떤 문장을 나눌까요?
         .sheet(isPresented: $pickQuote) {
             SentencePickerSheet(
-                title: "어떤 문장을 나눌까요?",
-                detail: "고른 한 문장만 익명으로 올라가요. 이름·연락처·장소는 ●●●로 가려져요.",
-                actionTitle: "이 문장 나누기",
+                title: "대표 문장 고르기",
+                detail: "고른 문장은 광장 목록에 대표로 보여요. 글 전체도 함께 공개되고, 전화번호·이메일은 ●●●로 가려져요.",
+                actionTitle: model.stars.first { $0.id == starID }?.isShared == true ? "이 문장으로 바꾸기" : "이 문장으로 나누기",
                 options: model.sentenceOptions(for: starID),
                 maxHeight: screenHeight * 0.85,
                 onPick: { sentence in
                     model.setShared(true, for: starID, quote: sentence)
                     pickQuote = false
                 },
-                onCancel: { pickQuote = false }
+                onCancel: { pickQuote = false },
+                fullText: model.stars.first { $0.id == starID }.map { ($0.title, $0.body) }
             )
             .fixedSize(horizontal: false, vertical: true)
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { pickerHeight = $0 }

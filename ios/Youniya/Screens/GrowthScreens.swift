@@ -139,32 +139,61 @@ struct FloatNebulaSheet: View {
 
 // MARK: - 75 Someone's star
 
-/// 75 다른 이의 별: one anonymous star, its chosen sentence, resonance.
+/// 75 다른 이의 별: one anonymous star, its 대표 문장 and (75-3) its whole text,
+/// resonance. Opened from a star inside a plaza nebula (73), or from a 별 기록
+/// row (09-3); from the plaza there's no owner nebula to open, so 「공명 남기기」
+/// leads and 「내 성운에 손님별로 들이기」 sits under it.
 struct GalaxyStarView: View {
     @Environment(AppModel.self) private var model
-    var nebula: GalaxyNebula
-    var starTitle: String
+    /// From 73: the nebula and the star's title. From 09-3: the plaza star.
+    var nebula: GalaxyNebula? = nil
+    var starTitle: String = ""
+    var plazaStar: PlazaNebula? = nil
     var onBack: () -> Void
     /// 75-2: back to the previous page with the "차단했어요" toast.
     var onBlocked: () -> Void = {}
+    /// 「성운을 먼저 그려 주세요」 → 51.
+    var onDraw: () -> Void = {}
 
     @State private var showMenu = DebugScreen.is("75-1")
-    private var key: String { "star:\(nebula.name):\(starTitle)" }
+    @State private var toast: ToastCardMessage?
+    /// Live 75-3: the whole text, from the plaza star's detail.
+    @State private var liveText: (title: String, body: String)?
+
+    private var title: String { plazaStar?.name ?? starTitle }
+    private var key: String { plazaStar?.id ?? "star:\(nebula?.name ?? ""):\(starTitle)" }
     private var resonated: Bool { model.resonated.contains(key) }
+    private var quote: String { plazaStar?.line ?? nebula?.quote ?? "" }
+    private var depth: Int { plazaStar?.cardDepth ?? max(1, (nebula?.stage ?? 2) - 1) }
+    private var spec: StarShapeSpec {
+        plazaStar?.cardShape ?? nebula?.stars.first { $0.title == starTitle }?.spec ?? .init(points: 5, sharpness: .normal)
+    }
+    /// 75-3: the whole star (title and body, contacts masked by the server).
+    private var fullText: (title: String, body: String)? {
+        guard let p = plazaStar, p.fullText else { return nil }
+        if let liveText { return (liveText.title.isEmpty ? p.name : liveText.title, liveText.body) }
+        return p.fullBody.map { (p.fullTitle ?? p.name, $0) }
+    }
+    private var guest: GuestStar? {
+        guard let p = plazaStar else { return nil }
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "ko_KR")
+        f.dateFormat = "M월 d일"
+        return GuestStar(title: p.name, source: "우주 광장", day: f.string(from: .now), color: p.cardMood.color, shareID: p.serverID)
+    }
 
     var body: some View {
-        let star = nebula.stars.first { $0.title == starTitle }
         VStack(spacing: 0) {
             TopAppBar(title: "다른 이의 별", onBack: onBack, onMore: { showMenu.toggle() })
 
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
-                    Text(starTitle)
+                    Text(title)
                         .textStyle(.h2).foregroundStyle(Color.textPrimary)
                         .accessibilityAddTraits(.isHeader)
                     HStack(spacing: Space.sm) {
                         Tag(text: "익명의 별지기", tone: .neutral)
-                        Tag(text: "깊이 \(max(1, nebula.stage - 1))단계", tone: .gold)
+                        Tag(text: "깊이 \(depth)단계", tone: .gold)
                     }
 
                     // Figma `Hero`: the star in gold, a dotted orbit, four small stars.
@@ -185,33 +214,42 @@ struct GalaxyStarView: View {
                                 .frame(width: i == 3 ? 7 : 10, height: i == 3 ? 7 : 10)
                                 .offset(x: cos(a) * 95, y: sin(a) * 60)
                         }
-                        ShapeStar(spec: star?.spec ?? .init(points: 5, sharpness: .normal),
-                                  color: .starBright, size: 58, rays: true)
+                        ShapeStar(spec: spec, color: .starBright, size: 58, rays: true)
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 220)
                     .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: Space.xs) {
-                        Text("“\(nebula.quote)”")
-                            .textStyle(.observation).foregroundStyle(Color.textPrimary)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Text("본인이 골라 공개한 한 문장이에요. 글 전체는 나가지 않아요.")
+                        // The quote is empty while its owner picks a new one (12-3).
+                        if !quote.isEmpty {
+                            Text("“\(quote)”")
+                                .textStyle(.observation).foregroundStyle(Color.textPrimary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Text(fullText != nil ? "대표 문장이에요. 아래에서 글 전체를 읽을 수 있어요."
+                                             : "본인이 고른 한 문장만 나눈 별이에요")
                             .textStyle(.caption).foregroundStyle(Color.textTertiary)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(Space.lg)
                     .flatCard(seed: "star-quote")
 
-                    HStack(spacing: Space.md) {
-                        Button(resonated ? "공명했어요" : "공명 남기기") {
-                            withAnimation(.snappy) { model.toggleResonance(key) }
+                    if let fullText {
+                        VStack(alignment: .leading, spacing: Space.sm) {
+                            Text(fullText.title)
+                                .textStyle(.h3).foregroundStyle(Color.textPrimary)
+                            // Figma: Serif 15, line height 175%.
+                            Text(fullText.body)
+                                .font(.custom("NotoSerifKR-Regular", size: 15, relativeTo: .callout))
+                                .lineSpacing(15 * 0.75 - 4)
+                                .foregroundStyle(Color.textSecondary)
+                                .textSelection(.enabled)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
-                        .buttonStyle(.secondary)
-                        .frame(width: 140)
-                        Button("이 사람의 성운 보기", action: onBack)
-                            .buttonStyle(.primary)
                     }
+
+                    actions
                 }
                 .padding(.horizontal, Space.xl)
                 .padding(.top, Space.sm)
@@ -220,8 +258,53 @@ struct GalaxyStarView: View {
             .scrollIndicators(.hidden)
         }
         .background { StarField() }
-        .modifier(PlazaSafetyModifier(showMenu: $showMenu, target: .star, nebulaName: nebula.name,
-                                       serverID: nebula.serverID, onBlocked: onBlocked))
+        .toastCard($toast)
+        .task {
+            if model.useLiveAPI, let p = plazaStar, p.fullText, let id = p.serverID {
+                liveText = await model.plazaStarText(id)
+            }
+        }
+        .modifier(PlazaSafetyModifier(showMenu: $showMenu, target: .star, nebulaName: nebula?.name ?? title,
+                                       serverID: plazaStar?.serverID ?? nebula?.serverID, onBlocked: onBlocked))
+    }
+
+    @ViewBuilder private var actions: some View {
+        let resonate = Button(resonated ? "공명했어요" : "공명 남기기") {
+            withAnimation(.snappy) { model.toggleResonance(key) }
+        }
+        if let guest {
+            VStack(spacing: Space.md) {
+                resonate.buttonStyle(.primary)
+                    .accessibilityAddTraits(resonated ? .isSelected : [])
+                let inside = model.isGuestInLatestNebula(guest)
+                Button(inside ? "손님별로 들어와 있어요" : "내 성운에 손님별로 들이기") { adopt(guest) }
+                    .buttonStyle(.ghost)
+                    .disabled(inside)
+            }
+        } else {
+            HStack(spacing: Space.md) {
+                resonate.buttonStyle(.secondary).frame(width: 140)
+                Button("이 사람의 성운 보기", action: onBack)
+                    .buttonStyle(.primary)
+            }
+        }
+    }
+
+    private func adopt(_ g: GuestStar) {
+        switch model.adoptGuest(g) {
+        case .added(let name):
+            toast = ToastCardMessage(title: "「\(name)」에 손님별로 들였어요")
+        case .noNebula:
+            toast = ToastCardMessage(title: "성운을 먼저 그려 주세요", detail: "성운 그리기로 이동해요")
+            Task {
+                try? await Task.sleep(for: .seconds(1.2))
+                onDraw()
+            }
+        case .full:
+            toast = ToastCardMessage(title: "손님별 자리가 다 찼어요", detail: "모양 바꾸기에서 정리할 수 있어요")
+        case .already:
+            break
+        }
     }
 }
 

@@ -19,8 +19,13 @@ struct PlazaNebula: Identifiable, Hashable {
     var starShape: StarShapeSpec? = nil
     var mood: Mood? = nil
     var depthLevel: Int? = nil
-    /// 09-2 row: when it was shared.
+    /// 09-3 row: when it was shared.
     var sharedAt: Date? = nil
+    /// 75-3: shared with its whole text (from 2026-11-08); older shares are one
+    /// sentence only. Title and body come masked (contacts) from the server.
+    var fullText = false
+    var fullTitle: String? = nil
+    var fullBody: String? = nil
 
     /// 09 card: the server's values, or steady samples from the name.
     var cardShape: StarShapeSpec {
@@ -42,10 +47,12 @@ struct PlazaNebula: Identifiable, Hashable {
 
     /// Mock samples from Figma `09-2 우주 광장 · 합친 화면`.
     static let samples: [PlazaNebula] = [
-        PlazaNebula(name: "고요한 새벽의 고래자리", line: "그런 마음, 저도 알아요.", pattern: .a, similarity: 0.62, order: 0,
-                    sharedAt: .now.addingTimeInterval(-20)),
+        PlazaNebula(name: "고요한 새벽의 고래자리", line: "괜찮다는 말 뒤에 숨는 건 이제 그만하고 싶다.", pattern: .a, similarity: 0.62, order: 0,
+                    sharedAt: .now.addingTimeInterval(-20), fullText: true, fullTitle: "새벽에 깬 날",
+                    fullBody: "새벽 네 시에 눈이 떠졌다. 다시 잠들려고 애쓰다가 그냥 창가에 앉았다. 민지가 보낸 메시지를 몇 번이나 다시 읽었다. 괜찮다는 말 뒤에 숨는 건 이제 그만하고 싶다. 내일은 서울숲에 가서 천천히 걸어 볼 생각이다. 연락은 ●●●로 주면 된다고 적어 두었다."),
         PlazaNebula(name: "늦은 밤의 등대자리", line: "오늘도 여기까지 왔어요.", pattern: .b, similarity: 0.91, order: 1,
-                    sharedAt: .now.addingTimeInterval(-12 * 60)),
+                    sharedAt: .now.addingTimeInterval(-12 * 60), fullText: true, fullTitle: "긴 하루의 끝",
+                    fullBody: "아침부터 일이 겹쳐서 점심도 제대로 못 먹었다. 집에 오는 길에 편의점 불빛이 유난히 따뜻해 보였다. 오늘도 여기까지 왔어요. 그걸로 됐다고 말해 주고 싶다."),
         PlazaNebula(name: "비를 기다리는 나무자리", line: "느려도 괜찮은 밤이에요.", pattern: .b, similarity: 0.78, order: 2,
                     sharedAt: .now.addingTimeInterval(-3600)),
         PlazaNebula(name: "천천히 날아오른 새자리", line: "당신의 별빛이 닿았어요.", pattern: .a, similarity: 0.45, order: 3,
@@ -142,7 +149,7 @@ struct PlazaView: View {
                     .textStyle(.h1)
                     .foregroundStyle(Color.textPrimary)
                 Text(segment == .stars
-                     ? "누군가 골라 나눈 한 문장이에요. 눌러서 읽고, 마음이 닿으면 공명을 남겨 보세요. 순위나 인기는 없어요."
+                     ? "누군가 나눈 별이에요. 눌러서 글을 읽고, 마음이 닿으면 공명을 남겨 보세요. 순위나 인기는 없어요."
                      : "모인 성운의 모양을 둘러보세요. 순위나 인기는 없어요.")
                     .textStyle(.bodyS)
                     .foregroundStyle(Color.textSecondary)

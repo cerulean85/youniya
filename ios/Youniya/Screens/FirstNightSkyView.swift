@@ -76,7 +76,7 @@ struct WelcomeSheet: View {
 
             VStack(alignment: .leading, spacing: Space.lg) {
                 point(.iconStar, "쓴 마음은 단 하나뿐인 별이 돼요", "같은 모양의 별은 하나도 없어요.")
-                point(.iconLock, "나누는 건 고른 한 문장뿐이에요", "우주 광장에는 익명으로, 내가 고른 한 줄만 올라가요.")
+                point(.iconLock, "나누는 건 내가 고른 별뿐이에요", "우주 광장에는 내가 나누기로 고른 별만 익명으로 올라가요.")
                 point(.iconShield, "쓴 글은 AI 학습에 쓰이지 않아요", "언제든 모두 지울 수 있어요. 상담이나 진단을 대신하지는 않아요.")
             }
 

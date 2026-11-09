@@ -45,6 +45,8 @@ struct SharedStar: Decodable, Identifiable {
     var title: String
     var writtenAt: Date
     var starlight: Int?
+    /// 12-3: off the plaza until a new 대표 문장 is picked.
+    var quoteMissing: Bool?
 }
 
 private struct MyShares: Decodable {
@@ -116,6 +118,15 @@ extension AppModel {
     @MainActor func loadSharedStars() async throws -> [SharedStar] {
         let r: MyShares = try await APIClient.shared.get("/v1/me/shares")
         return r.stars
+    }
+
+    /// Live 12-3: whether this shared star still waits for a new 대표 문장
+    /// (the edit's answer said so; this keeps it after a relaunch).
+    @MainActor func refreshQuoteMissing(_ id: StarItem.ID) async {
+        guard useLiveAPI, let r: MyShares = try? await APIClient.shared.get("/v1/me/shares"),
+              let i = stars.firstIndex(where: { $0.id == id }) else { return }
+        let share = r.stars.first { UUID(uuidString: $0.starId) == id }
+        stars[i].shareQuoteMissing = share?.quoteMissing == true ? true : nil
     }
 
     /// Live 92: how many stars and nebulae are shared now.
