@@ -81,6 +81,8 @@ def main() -> int:
     ap.add_argument("--out", default=None)
     # The old prompt against itself: how often the score order flips with no change at all.
     ap.add_argument("--baseline", action="store_true")
+    # Keep the result for the admin console (A-10) in the database of DATABASE_URL.
+    ap.add_argument("--record", action="store_true")
     a = ap.parse_args()
     settings = Settings()
     if not settings.gemini_api_key:
@@ -118,6 +120,17 @@ def main() -> int:
         Path(a.out).write_text(json.dumps({"version": PRISM_VERSION, "repeat": a.repeat, "shift": shift, "flips": flips,
                                            "correlation": corr, "passed": passed, "cost_krw": cost,
                                            "results": results}, ensure_ascii=False, indent=1))
+    if a.record:
+        from sqlalchemy.orm import sessionmaker
+
+        from youniya_api.db import make_engine
+        from youniya_api.models import PrismTest
+        with sessionmaker(make_engine(settings.database_url))() as db:
+            db.add(PrismTest(version=PRISM_VERSION, baseline=a.baseline, passed=passed, writings=len(both),
+                             mean_shift=round(shift, 1), flips=len(flips), correlation=corr,
+                             cost_krw=round(cost["old"] + cost["new"], 1)))
+            db.commit()
+        print("recorded for the admin console")
     return 0 if passed else 1
 
 

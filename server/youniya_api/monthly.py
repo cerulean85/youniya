@@ -51,7 +51,7 @@ def make(db: Session, user: User, month: str, cipher: Cipher, settings, cache: s
         raise NotEnoughStars(len(stars))
     texts = [StarText(id=s.id, title=cipher.dec(s.title_enc), body=cipher.dec(s.body_enc),
                       created_at=iso(s.created_at), analysis=cipher.dec_json(s.analysis_enc)) for s in stars]
-    with ai_cost.metered(db, user):
+    with ai_cost.metered(db, user, "monthly_report"):
         report = build_monthly(month, texts, settings.gemini_api_key, settings.telescope_model,
                                settings.telescope_thinking, cache)
     row = MonthlyReport(user_id=user.id, month=month, report_enc=cipher.enc_json(report))

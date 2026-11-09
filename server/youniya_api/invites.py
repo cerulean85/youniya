@@ -30,7 +30,7 @@ def check(db: Session, login: str, password: str) -> User | None:
         _hasher.verify(row.password_hash if row else _DUMMY, password)
     except (VerificationError, InvalidHashError):
         return None
-    if row is None:
+    if row is None or row.disabled:  # A-11 꺼 둔 계정
         return None
     if _hasher.check_needs_rehash(row.password_hash):
         row.password_hash = _hasher.hash(password)

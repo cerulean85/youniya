@@ -77,4 +77,25 @@ is built against these shapes with mock data. Agreed with the Web Dev Session, 2
 - GET /v1/admin/notices · PUT /v1/admin/maintenance {on} · PUT /v1/admin/min-version {ios} · POST /v1/admin/notices
 - GET /v1/admin/operators · POST /v1/admin/operators/invite {email, role} · PATCH /v1/admin/operators/{id} {role|status}
   (409 for the last owner)
+- Built (step 7-3, routers/admin_owner.py):
+  - dashboard → {range, since, stars:{lit, unlit, total}, new_keepers, reports_pending, inquiries_new,
+    ai_cost_month_krw, crisis_stars (a count only), alerts:[{kind, target_id, at}], payments:{count, coins, krw_estimate}}
+  - coins?month= → {month, totals:{purchase|refund|grant|spend: {count, coins, krw_estimate}}, items:[{id, at, kind,
+    source: app_store|server, keeper_no, title, coins, transaction_id, krw_estimate}]}. krw_estimate is the package
+    price; Toss comes with web payments.
+  - ai?month= → {month, total_krw, features:[{feature: prism|prism_reading|telescope|monthly_report, requests, calls,
+    krw, krw_per_request, avg_input_tokens, avg_output_tokens, cache_hit_rate, attempts, failures, failure_rate}],
+    alert_krw, over_alert:[{user_id, keeper_no, nickname, krw, calls}]}. Counted from 20261109.
+  - prism → {current, versions:[{key, stars, first_at, last_at, status}], tests:[…], limits}. POST …/test and …/deploy
+    are 409 manual_only: a test calls the model ~120 times (tools/compare_prism.py --record) and a version ships
+    with the code.
+  - invites → {enabled, items:[{id, login_id, memo, enabled, created_at, last_seen_at, keeper_no, stars}]};
+    PUT invites/settings {enabled, reason}; POST invites {login_id, memo, reason} → … + password (once);
+    PATCH invites/{login_id} {enabled?, reset_password?, reason} (→ password when reset); POST …/reseed is
+    409 manual_only (tools/seed_review.py --reset).
+  - notices → {maintenance:{on, start, end}, min_version:{ios}, items:[{id, title, body, publish_at, push, pushed_at,
+    created_by, created_at, published}]}; PUT maintenance {on, until?, reason} (default two hours; operators and
+    cron pass); PUT min-version {ios, reason}; POST notices {title, body, publish_at?, push?, reason} (push only when
+    it is published now). The app reads GET /v1/notices. These live in the database (runtime_settings) over the
+    environment, read through a 20-second cache.
 - Audit: GET /v1/admin/audit?from=&to=&operator=&format=json|csv → {items:[{at, operator, action, target, reason}]}

@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import sessionmaker
 
 from .ai_cache import CacheManager
+from . import runtime
 from .config import Settings
 from .db import make_engine
 from .deps import ApiError
@@ -13,7 +14,7 @@ from .monitoring import init_sentry
 from .prism import PrismEngine
 from .push import ApnsClient
 from .ratelimit import RateLimiter
-from .routers import (account, admin, admin_auth, admin_ops, auth, blocks, coins, constellations, cron, membership, nebulae, plaza, stars,
+from .routers import (account, admin, admin_auth, admin_ops, admin_owner, auth, blocks, coins, constellations, cron, membership, nebulae, plaza, stars,
                       telescope)
 from .security import Cipher, IdTokenVerifier
 from .storekit import AppStoreClient, StoreKitVerifier
@@ -77,31 +78,35 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.middleware("http")
     async def app_gate(request: Request, call_next):
-        if request.url.path != "/v1/app/status":
+        path = request.url.path
+        # Operators and cron jobs pass, so maintenance can be switched off from the console.
+        if path != "/v1/app/status" and not path.startswith(("/v1/admin", "/v1/cron")):
             # 41 잠시 점검 중이에요
-            if in_maintenance(settings):
+            if runtime.in_maintenance(app):
+                end = runtime.maintenance(app)[1]
                 return JSONResponse({"error": {"code": "maintenance", "message": "잠시 점검 중이에요.",
-                                               "until": settings.maintenance_end.isoformat()}}, status_code=503)
+                                               "until": end.isoformat() if end else None}}, status_code=503)
             # 40 새 버전이 필요해요
             version = request.headers.get("x-app-version")
-            if version and _version(version) < _version(settings.min_app_version):
+            if version and _version(version) < _version(runtime.min_app_version(app)):
                 return JSONResponse({"error": {"code": "update_required", "message": "새 버전이 필요해요."}},
                                     status_code=426)
         return await call_next(request)
 
     @app.get("/v1/app/status", tags=["app"])
     def status(version: str | None = None):
+        minimum, (start, end) = runtime.min_app_version(app), runtime.maintenance(app)
         return {
-            "min_version": settings.min_app_version,
-            "update_required": bool(version and _version(version) < _version(settings.min_app_version)),
-            "maintenance": {"start": settings.maintenance_start.isoformat(), "end": settings.maintenance_end.isoformat()}
-            if settings.maintenance_start and settings.maintenance_end else None,
-            "in_maintenance": in_maintenance(settings),
+            "min_version": minimum,
+            "update_required": bool(version and _version(version) < _version(minimum)),
+            "maintenance": {"start": start.isoformat(), "end": end.isoformat()} if start and end else None,
+            "in_maintenance": runtime.in_maintenance(app),
         }
 
     for router in (auth.router, account.router, stars.router, telescope.router, coins.router, coins.notifications,
                    nebulae.router, plaza.router, blocks.router, membership.router, admin.router, cron.router,
-                   constellations.router, admin_auth.auth, admin_auth.router, admin_ops.router):
+                   constellations.router, admin_auth.auth, admin_auth.router, admin_ops.router,
+                   admin_owner.router):
         app.include_router(router)
     return app
 

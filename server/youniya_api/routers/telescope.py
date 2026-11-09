@@ -73,7 +73,7 @@ def create_report(body: ReportIn, request: Request, user: User = Depends(consent
     texts = [StarText(id=s.id, title=cipher.dec(s.title_enc), body=cipher.dec(s.body_enc),
                       created_at=iso(s.created_at), analysis=cipher.dec_json(s.analysis_enc)) for s in stars]
     try:
-        with ai_cost.metered(db, user):
+        with ai_cost.metered(db, user, "telescope"):
             report = build_report(texts, settings.gemini_api_key, settings.telescope_model,
                                   settings.telescope_thinking, request.app.state.caches)
     except Exception:

@@ -15,7 +15,7 @@ from ..deps import ApiError, current_user, get_cipher, get_db
 from ..export import StarEntry, as_pdf, as_text
 from ..prism.engine import split_sentences
 from .constellations import TEMPLATES
-from ..models import StarLine, StarLink, TelescopeReport, CoinEntry, DeviceToken, Inquiry, Nebula, NebulaShare, Resonance, Star, StarlightLine, StarShare, User
+from ..models import Notice, StarLine, StarLink, TelescopeReport, CoinEntry, DeviceToken, Inquiry, Nebula, NebulaShare, Resonance, Star, StarlightLine, StarShare, User
 from ..rules import INQUIRY_KINDS, MOOD_LABELS, SKY_THEMES, SOUNDS
 from ..security import Cipher
 from ..views import iso, local
@@ -297,3 +297,11 @@ def inquire(body: InquiryIn, request: Request, user: User = Depends(current_user
     db.add(row)
     db.commit()
     return {"id": row.id}
+
+
+@router.get("/notices")
+def app_notices(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """관리자 A-12 공지, newest first, once their time has come."""
+    now = datetime.now(timezone.utc)
+    rows = db.scalars(select(Notice).where(Notice.publish_at <= now).order_by(Notice.publish_at.desc()).limit(30))
+    return {"items": [{"id": n.id, "title": n.title, "body": n.body, "published_at": iso(n.publish_at)} for n in rows]}

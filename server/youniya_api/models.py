@@ -396,6 +396,8 @@ class InviteAccount(Base):
     password_hash: Mapped[str] = mapped_column(String(200))  # argon2id
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), unique=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    disabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())  # A-11
+    memo: Mapped[str | None] = mapped_column(String(200))
 
 
 class Subscription(Base):
@@ -450,6 +452,13 @@ class AiUsage(Base):
     feature: Mapped[str] = mapped_column(String(32), primary_key=True)
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     failures: Mapped[int] = mapped_column(Integer, default=0)
+    # Every metered request of the feature (A-09): model calls, tokens and cost.
+    calls: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    input_tokens: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    cached_tokens: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    output_tokens: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    krw: Mapped[float] = mapped_column(Float, default=0.0, server_default="0")
+    requests: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
 
 class AiCache(Base):
@@ -518,6 +527,51 @@ class AdminAudit(Base):
     target: Mapped[str | None] = mapped_column(String(80))
     reason: Mapped[str | None] = mapped_column(Text)
     detail: Mapped[dict | None] = mapped_column(JSON)
+
+
+
+class RuntimeSetting(Base):
+    """관리자 콘솔 A-11·A-12: settings an owner changes without a deploy. A key that is absent falls back to
+    the environment (config.Settings)."""
+
+    __tablename__ = "runtime_settings"
+
+    key: Mapped[str] = mapped_column(String(40), primary_key=True)  # maintenance | min_app_version | invite_login
+    value: Mapped[dict] = mapped_column(JSON)  # {"v": …}
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+    updated_by: Mapped[str | None] = mapped_column(String(254))
+
+
+class Notice(Base):
+    """A-12 공지: shown in the app from `publish_at`. Service notices, not advertising."""
+
+    __tablename__ = "notices"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    title: Mapped[str] = mapped_column(String(60))
+    body: Mapped[str] = mapped_column(Text)
+    publish_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+    push: Mapped[bool] = mapped_column(Boolean, default=False)
+    pushed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_by: Mapped[str | None] = mapped_column(String(254))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class PrismTest(Base):
+    """A-10: a run of tools/compare_prism.py, recorded with --record."""
+
+    __tablename__ = "prism_tests"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    version: Mapped[str] = mapped_column(String(32), index=True)
+    baseline: Mapped[bool] = mapped_column(Boolean, default=False)
+    passed: Mapped[bool] = mapped_column(Boolean)
+    writings: Mapped[int] = mapped_column(Integer)
+    mean_shift: Mapped[float] = mapped_column(Float)
+    flips: Mapped[int] = mapped_column(Integer)
+    correlation: Mapped[dict] = mapped_column(JSON)
+    cost_krw: Mapped[float] = mapped_column(Float)
+    run_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
 @event.listens_for(User, "before_insert")

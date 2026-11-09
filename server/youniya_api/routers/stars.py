@@ -97,7 +97,7 @@ def _float(db: Session, user: User, star: Star, request: Request, cipher: Cipher
     free = member or allowance.stars_left(user, per_day) > 0
     if not free and user.coins < STAR_FLOAT_COST:
         raise _insufficient(user, STAR_FLOAT_COST)  # 29, before anything is stored
-    with ai_cost.metered(db, user):
+    with ai_cost.metered(db, user, "prism"):
         result = request.app.state.prism.evaluate(cipher.dec(star.title_enc), cipher.dec(star.body_enc))
     if result.status in ("too_short", "foul"):
         raise ApiError(422, result.status, result.message)

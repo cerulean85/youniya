@@ -16,6 +16,7 @@ from ..deps import ApiError, get_db
 from ..models import RefreshToken, User
 from ..security import REFRESH_TTL, hash_token, issue_access_token, new_refresh_token
 from ..views import aware
+from .. import runtime
 from ..ratelimit import per_ip
 
 log = logging.getLogger(__name__)
@@ -82,7 +83,7 @@ def dev_sign_in(body: DevSignIn, request: Request, db: Session = Depends(get_db)
 def invite_sign_in(body: InviteSignIn, request: Request, db: Session = Depends(get_db)):
     """초대 계정 (INVITE_LOGIN=1): accounts an operator made with tools/invite.py. No sign-up.
     A wrong login and a wrong password get the same answer."""
-    if not request.app.state.settings.invite_login:
+    if not runtime.invite_login(request.app):
         raise ApiError(404, "not_found", "찾지 못했어요.")
     user = invites.check(db, body.login, body.password)
     if user is None:

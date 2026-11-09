@@ -38,7 +38,7 @@ def krw(model: str, usage: dict, on: date | None = None) -> float:
 
 
 @contextmanager
-def metered(db: Session, user: User):
+def metered(db: Session, user: User, feature: str = "other"):
     """Every model call inside is added to the account's month, even when the feature then fails
     (the model was paid for). Over AI_COST_ALERT_KRW the operator hears of it once a month."""
     entries: list = []
@@ -49,16 +49,35 @@ def metered(db: Session, user: User):
     finally:
         llm.meter.reset(token)
         llm.outcomes.reset(seen_token)
-        for feature, ok in seen:
-            usage = db.get(AiUsage, (this_month(), feature)) or AiUsage(month=this_month(), feature=feature,
-                                                                        attempts=0, failures=0)
+        for step, ok in seen:
+            usage = _usage(db, step)
             usage.attempts += 1
             usage.failures += 0 if ok else 1
+            db.add(usage)
+        if entries:  # 관리자 A-09: per feature, every model call of the request
+            usage = _usage(db, feature)
+            usage.requests += 1
+            usage.calls += len(entries)
+            usage.krw += sum(krw(m, u) for m, u in entries)
+            usage.input_tokens += sum(u.get("promptTokenCount", 0) for _, u in entries)
+            usage.cached_tokens += sum(u.get("cachedContentTokenCount", 0) for _, u in entries)
+            usage.output_tokens += sum(u.get("candidatesTokenCount", 0) + u.get("thoughtsTokenCount", 0)
+                                       for _, u in entries)
             db.add(usage)
         if entries:
             record(db, user.id, entries)
         elif seen:
             db.commit()
+
+
+def _usage(db: Session, feature: str) -> AiUsage:
+    row = db.get(AiUsage, (this_month(), feature))
+    if row is None:
+        row = AiUsage(month=this_month(), feature=feature, attempts=0, failures=0, calls=0, input_tokens=0,
+                      cached_tokens=0, output_tokens=0, krw=0.0, requests=0)
+        db.add(row)
+        db.flush()
+    return row
 
 
 def record(db: Session, user_id: str, entries: list) -> None:
