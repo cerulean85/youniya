@@ -88,3 +88,12 @@ def test_maintenance_min_version_and_notices(make_app):
     assert [i["title"] for i in items] == ["점검 안내"] and later["published"] is False
     actions = [a["action"] for a in client.get("/v1/admin/audit", headers=oh).json()["items"]]
     assert {"maintenance_on", "maintenance_off", "min_version", "notice_post"} <= set(actions)
+
+
+def test_min_version_is_for_ios_only(make_app):
+    client, oh, _ = _setup(make_app)
+    h = sign_in(client)
+    client.put("/v1/admin/min-version", json={"ios": "9.0.0", "reason": "필수 업데이트"}, headers=oh)
+    assert client.get("/v1/me", headers=h | {"X-App-Version": "0.3.0"}).status_code == 426
+    assert client.get("/v1/me", headers=h | {"X-App-Version": "0.3.0", "X-App-Platform": "ios"}).status_code == 426
+    assert client.get("/v1/me", headers=h | {"X-App-Version": "0.3.0", "X-App-Platform": "web"}).status_code == 200

@@ -86,9 +86,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 end = runtime.maintenance(app)[1]
                 return JSONResponse({"error": {"code": "maintenance", "message": "잠시 점검 중이에요.",
                                                "until": end.isoformat() if end else None}}, status_code=503)
-            # 40 새 버전이 필요해요
+            # 40 새 버전이 필요해요: the minimum is the iOS app's; the web is always current.
             version = request.headers.get("x-app-version")
-            if version and _version(version) < _version(runtime.min_app_version(app)):
+            platform = (request.headers.get("x-app-platform") or "ios").lower()
+            if version and platform == "ios" and _version(version) < _version(runtime.min_app_version(app)):
                 return JSONResponse({"error": {"code": "update_required", "message": "새 버전이 필요해요."}},
                                     status_code=426)
         return await call_next(request)
