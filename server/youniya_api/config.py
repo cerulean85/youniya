@@ -92,6 +92,10 @@ class Settings:
     # test_sk_… in development, live_sk_… in production; never in a message or a commit.
     toss_secret_key: str | None = field(default_factory=lambda: os.getenv("TOSS_SECRET_KEY") or None)
     toss_client_key: str | None = field(default_factory=lambda: os.getenv("TOSS_CLIENT_KEY") or None)
+    # With a test key only operators, invite accounts and these user ids may pay (routers/payments.can_pay);
+    # TOSS_TEST_OPEN=1 lets everyone (development).
+    toss_test_user_ids: tuple[str, ...] = field(default_factory=lambda: _list("TOSS_TEST_USER_IDS"))
+    toss_test_open: bool = field(default_factory=lambda: os.getenv("TOSS_TEST_OPEN") == "1")
 
     def appstore_private_key(self) -> str | None:
         """The .p8 PEM: from APPSTORE_PRIVATE_KEY_BASE64 if set, else read from APPSTORE_PRIVATE_KEY_PATH."""

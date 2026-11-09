@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 
 from .. import coins
 from ..deps import ApiError, consented_user, get_db
-from ..models import CoinEntry, TossOrder, User
+from ..models import CoinEntry, InviteAccount, TossOrder, User
 from ..ratelimit import per_user
 from ..rules import COIN_PACKAGES, REFUND_WINDOW_DAYS
 from ..toss import TossClient, TossError
@@ -45,6 +45,21 @@ def _toss(request: Request) -> TossClient:
     return client
 
 
+def can_pay(request: Request, db: Session, user: User) -> bool:
+    """With a test key (test_sk_…) a test card buys real coins for no money, so until the live key only
+    operators (OPERATOR_USER_IDS), invite accounts and TOSS_TEST_USER_IDS may pay. TOSS_TEST_OPEN=1
+    (development) lets everyone."""
+    s = request.app.state.settings
+    if request.app.state.toss is None:
+        return False
+    if not s.toss_secret_key.startswith("test_") or s.toss_test_open:
+        return True
+    if user.id in s.operator_user_ids or user.id in s.toss_test_user_ids:
+        return True
+    return db.scalar(select(InviteAccount.login).where(InviteAccount.user_id == user.id,
+                                                       InviteAccount.disabled.is_(False))) is not None
+
+
 def _entry_id(order: TossOrder) -> str:
     return f"toss:{order.id}"
 
@@ -56,12 +71,13 @@ def customer_key(request: Request, user: User) -> str:
 
 
 @router.get("/packages")
-def packages(request: Request, _: User = Depends(consented_user)):
+def packages(request: Request, user: User = Depends(consented_user), db: Session = Depends(get_db)):
+    """`available` false: no web payments for this keeper now (no key, or a test key and not a tester)."""
     s = request.app.state.settings
     return {"items": [{"id": k, "coins": v["coins"], "bonus": v.get("bonus", 0), "price": v["price"]}
                       for k, v in COIN_PACKAGES.items() if v["sold"]],
             "client_key": s.toss_client_key,
-            "available": request.app.state.toss is not None}
+            "available": can_pay(request, db, user)}
 
 
 class OrderIn(BaseModel):
@@ -72,6 +88,8 @@ class OrderIn(BaseModel):
 def create_order(body: OrderIn, request: Request, user: User = Depends(consented_user),
                  db: Session = Depends(get_db)):
     _toss(request)
+    if not can_pay(request, db, user):
+        raise ApiError(403, "payments_not_open", "지금은 웹 충전을 준비 중이에요. 앱에서 충전해 주세요.")
     package = COIN_PACKAGES.get(body.package_id)
     if package is None or not package["sold"]:
         raise ApiError(422, "unknown_product", "알 수 없는 상품이에요.")

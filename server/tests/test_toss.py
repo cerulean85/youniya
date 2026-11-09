@@ -44,7 +44,7 @@ class FakeToss:
 
 
 def _setup(make_app):
-    app = make_app(toss_secret_key="test_sk_fake", toss_client_key="test_ck_fake")
+    app = make_app(toss_secret_key="test_sk_fake", toss_client_key="test_ck_fake", toss_test_open=True)
     app.state.toss = fake = FakeToss()
     client = TestClient(app)
     return client, sign_in(client), fake
@@ -193,3 +193,23 @@ def test_without_key_web_payments_are_off(make_app):
     r = client.post("/v1/payments/toss/orders", json={"package_id": "coin_110"}, headers=h)
     assert r.status_code == 503 and r.json()["error"]["code"] == "payments_unavailable"
     assert client.post("/v1/payments/toss/webhook", json={"eventType": "PAYMENT_STATUS_CHANGED"}).status_code == 404
+
+
+def test_test_key_is_for_testers_only(make_app):
+    from youniya_api.models import InviteAccount, User
+    app = make_app(toss_secret_key="test_sk_fake", operator_user_ids=())
+    app.state.toss = FakeToss()
+    client = TestClient(app)
+    h = sign_in(client)
+    assert client.get("/v1/payments/toss/packages", headers=h).json()["available"] is False
+    r = client.post("/v1/payments/toss/orders", json={"package_id": "coin_110"}, headers=h)
+    assert r.status_code == 403 and r.json()["error"]["code"] == "payments_not_open"
+    with app.state.sessions() as db:  # an invite account may test
+        db.add(InviteAccount(login="tester", password_hash="x", user_id=db.query(User).first().id))
+        db.commit()
+    assert client.get("/v1/payments/toss/packages", headers=h).json()["available"] is True
+    assert client.post("/v1/payments/toss/orders", json={"package_id": "coin_110"}, headers=h).status_code == 201
+    live = make_app(toss_secret_key="live_sk_fake")
+    live.state.toss = FakeToss()
+    lc = TestClient(live)
+    assert lc.get("/v1/payments/toss/packages", headers=sign_in(lc, sub="user-9")).json()["available"] is True
