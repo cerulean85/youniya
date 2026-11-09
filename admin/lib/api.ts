@@ -153,12 +153,14 @@ export const getInvites = () => owned<Invites>((t) => own.invites(t), "/v1/admin
 export const setInvitesEnabled = (on: boolean, reason: string) => owned((t) => own.invitesEnabled(t, on, reason), "/v1/admin/invites/settings", put({ enabled: on, reason }));
 export const createInvite = (loginId: string, memo: string, reason: string) =>
   owned<{ password: string }>((t) => own.createInvite(t, loginId, memo, reason), "/v1/admin/invites", post({ login_id: loginId, memo, reason }));
-export const setInvite = (id: string, on: boolean, reason: string) => owned((t) => own.setInvite(t, id, on, reason), `/v1/admin/invites/${id}`, patch({ enabled: on, reason }));
+export const resetInvitePassword = (id: string, reason: string) =>
+  owned<{ password: string }>((t) => own.resetInvite(t, id, reason), `/v1/admin/invites/${encodeURIComponent(id)}`, patch({ reset_password: true, reason }));
+export const setInvite = (id: string, on: boolean, reason: string) => owned((t) => own.setInvite(t, id, on, reason), `/v1/admin/invites/${encodeURIComponent(id)}`, patch({ enabled: on, reason }));
 export const reseedInvite = (id: string, reason: string) => owned((t) => own.reseed(t, id, reason), `/v1/admin/invites/${id}/reseed`, post({ reason }));
 export const getNotices = () => owned<Notices>((t) => own.notices(t), "/v1/admin/notices");
-export const setMaintenance = (on: boolean, reason: string) => owned((t) => own.setMaintenance(t, on, reason), "/v1/admin/maintenance", put({ on, reason }));
+export const setMaintenance = (on: boolean, reason: string, until?: string) => owned((t) => own.setMaintenance(t, on, reason, until), "/v1/admin/maintenance", put({ on, until, reason }));
 export const setMinVersion = (ios: string, reason: string) => owned((t) => own.setMinVersion(t, ios, reason), "/v1/admin/min-version", put({ ios, reason }));
-export const createNotice = (n: { title: string; body: string; audience: "all" | "ios" | "web"; starts_at: string; ends_at: string }, reason: string) =>
+export const createNotice = (n: { title: string; body: string; publish_at?: string; push?: boolean }, reason: string) =>
   owned((t) => own.createNotice(t, n, reason), "/v1/admin/notices", post({ ...n, reason }));
 type RealOperator = { id: string; email: string; role: "owner" | "moderator"; status: string; totp: boolean; last_seen_at: string | null; created_at: string };
 const mask = (email: string) => { const [u, d] = email.split("@"); return `${u.slice(0, 1)}●●●@${d ?? ""}`; };

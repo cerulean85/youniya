@@ -5,6 +5,8 @@ import { getAi } from "@/lib/api";
 import { monthLabel, num, thisMonth, won } from "@/lib/format";
 import { requireOperator } from "@/lib/session";
 
+const FEATURE: Record<string, string> = { prism: "별빛 받기 · 점수", prism_score: "별빛 받기 · 점수", prism_reading: "별빛 받기 · 풀이 (별도 호출)", telescope: "마음 망원경", monthly_report: "월간 리포트", crisis: "위기 신호 감지" };
+
 export const metadata: Metadata = { title: "AI 사용량·원가" };
 
 // Figma A-09 (owners): what the starlight prism and the telescope cost, and members over the monthly line.
@@ -35,8 +37,8 @@ export default async function AiPage() {
             <tbody>{a.features.map((f) => {
               const rate = f.attempts ? ((f.failures ?? 0) / f.attempts) * 100 : null;
               return (
-                <tr key={f.key}>
-                  <td>{f.label}{f.note ? <span className="faint"> ({f.note})</span> : null}</td>
+                <tr key={f.feature ?? f.key}>
+                  <td>{f.label ?? FEATURE[f.feature ?? f.key ?? ""] ?? f.feature}{f.note ? <span className="faint"> ({f.note})</span> : null}</td>
                   <td>{f.calls != null ? num(f.calls) : "—"}</td>
                   <td>{rate != null ? <span className={`badge ${rate >= 1 ? "badge-hidden" : rate >= 0.5 ? "badge-pending" : "badge-done"}`}>{rate.toFixed(1)}%</span> : "—"}</td>
                   <td>{f.avg_in != null ? num(f.avg_in) : "—"}</td><td>{f.avg_out != null ? num(f.avg_out) : "—"}</td><td>{won(f.cost_krw)}</td>

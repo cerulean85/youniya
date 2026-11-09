@@ -32,9 +32,13 @@ export async function invitesSetting(on: boolean, _p: ReasonState, form: FormDat
   return run(form, (r) => api.setInvitesEnabled(on, r), on ? "초대 계정 로그인을 켰어요." : "초대 계정 로그인을 껐어요.");
 }
 
-export async function inviteAction(id: string, _p: ReasonState, form: FormData) {
+export async function inviteAction(id: string, _p: ReasonState, form: FormData): Promise<ReasonState> {
   const a = str(form, "action");
-  if (a === "reseed") return run(form, (r) => api.reseedInvite(id, r), "심사용 데이터를 다시 채웠어요.");
+  if (a === "reset_password") {
+    let password: string | undefined;
+    const r = await run(form, async (reason) => { password = (await api.resetInvitePassword(id, reason)).password; }, "새 비밀번호예요. 지금 한 번만 보여요.");
+    return r?.error || !password ? r : { ...r, secret: password };
+  }
   return run(form, (r) => api.setInvite(id, a === "enable", r), a === "enable" ? "켰어요." : "껐어요.");
 }
 
@@ -49,10 +53,15 @@ export async function newInvite(_p: CreatedInvite, form: FormData): Promise<Crea
 
 export async function noticesAction(_p: ReasonState, form: FormData) {
   const a = str(form, "action");
-  if (a === "maintenance_on" || a === "maintenance_off") return run(form, (r) => api.setMaintenance(a === "maintenance_on", r), a === "maintenance_on" ? "점검 모드를 켰어요." : "점검 모드를 껐어요.");
+  if (a === "maintenance_on" || a === "maintenance_off") {
+    const hours = Number(str(form, "hours") || 2);
+    const until = a === "maintenance_on" ? new Date(Date.now() + hours * 3600000).toISOString() : undefined;
+    return run(form, (r) => api.setMaintenance(a === "maintenance_on", r, until), a === "maintenance_on" ? `점검 모드를 켰어요. ${hours}시간 뒤 저절로 꺼져요.` : "점검 모드를 껐어요.");
+  }
   if (a === "min_version") return run(form, (r) => api.setMinVersion(str(form, "ios"), r), "최소 앱 버전을 바꿨어요.");
-  const audience = (["all", "ios", "web"] as const).find((x) => x === str(form, "audience")) ?? "all";
-  return run(form, (r) => api.createNotice({ title: str(form, "title"), body: str(form, "body"), audience, starts_at: str(form, "starts_at"), ends_at: str(form, "ends_at") }, r), "공지를 올렸어요.");
+  const publish = str(form, "publish_at");
+  return run(form, (r) => api.createNotice({ title: str(form, "title"), body: str(form, "body"), publish_at: publish ? new Date(publish).toISOString() : undefined, push: str(form, "push") === "yes" }, r),
+    publish ? "공지를 예약했어요." : "공지를 올렸어요.");
 }
 
 export async function operatorsAction(id: string | null, _p: ReasonState, form: FormData) {

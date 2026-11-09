@@ -36,7 +36,10 @@ export default async function InvitesPage() {
             <tr key={i.id}>
               <td>{i.login_id}</td><td>{i.memo}</td><td>{i.created_at}</td><td>{i.last_login_at ? dateTime(i.last_login_at) : "—"}</td>
               <td><span className={`badge ${i.enabled ? "badge-done" : "badge-muted"}`}>{i.enabled ? "켜짐" : "꺼짐"}</span></td>
-              <td><ReasonActions action={inviteAction.bind(null, i.id)} buttons={[{ key: i.enabled ? "disable" : "enable", label: i.enabled ? "끄기" : "켜기" }]} /></td>
+              <td><ReasonActions action={inviteAction.bind(null, i.id)} buttons={[
+                { key: i.enabled ? "disable" : "enable", label: i.enabled ? "끄기" : "켜기" },
+                { key: "reset_password", label: "비밀번호 새로", confirm: "지금 비밀번호는 바로 못 쓰게 돼요. 새 비밀번호는 한 번만 보여요." },
+              ]} /></td>
             </tr>
           ))}</tbody>
         </table>
@@ -44,8 +47,8 @@ export default async function InvitesPage() {
       {review && (
         <section className="card panel">
           <h2>심사용 데이터 다시 채우기</h2>
-          <p className="muted">별 15개(별빛 받은 별·없는 별), 이번 달과 지난달 별자리, 별 잇기, 광장의 나눈 별과 별빛 한 줄을 다시 채워요. 제출 직전에 한 번 눌러 주세요.</p>
-          <ReasonActions action={inviteAction.bind(null, review.id)} buttons={[{ key: "reseed", label: `${review.login_id}에 다시 채우기`, confirm: "지금 이 계정에 있는 별과 나눈 별은 지우고 새로 채워요." }]} />
+          <p className="muted">별 15개(별빛 받은 별·없는 별), 이번 달과 지난달 별자리, 별 잇기, 광장의 나눈 별과 별빛 한 줄을 다시 채워요.</p>
+          <p className="faint">콘솔에서는 채우지 않아요. 제출 직전에 home-desktop에서 서버 도구 tools/seed_review.py로 {review.login_id} 계정을 다시 채워 주세요.</p>
         </section>
       )}
     </>

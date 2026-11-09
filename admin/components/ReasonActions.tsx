@@ -3,7 +3,7 @@
 import { useActionState, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 
-export type ExtraField = { name: string; label: string; type?: "text" | "number" | "date" | "textarea" | "select"; options?: [string, string][]; required?: boolean; defaultValue?: string };
+export type ExtraField = { name: string; label: string; type?: "text" | "number" | "date" | "datetime-local" | "textarea" | "select"; options?: [string, string][]; required?: boolean; defaultValue?: string };
 export type ReasonButton = { key: string; label: string; danger?: boolean; primary?: boolean; disabled?: boolean; field?: "amount" | "days"; fields?: ExtraField[]; confirm?: string };
 export type ReasonState = { error?: string; ok?: string; secret?: string } | null;
 

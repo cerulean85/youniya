@@ -24,7 +24,7 @@ export default async function CoinsPage({ searchParams }: PageProps<"/coins">) {
   return (
     <>
       <div className="head">
-        <div><h1>코인·결제</h1><p className="muted">App Store 결제와 웹 결제(Toss)를 함께 보여 줘요.</p></div>
+        <div><h1>코인·결제</h1><p className="muted">App Store 결제와 웹 결제(Toss)를 함께 보여 줘요. 금액은 상품 가격으로 추정한 값이에요.</p></div>
         <span className="btn" aria-label="기간">기간: {monthLabel(month)}</span>
       </div>
       <div className="stats">
@@ -44,7 +44,7 @@ export default async function CoinsPage({ searchParams }: PageProps<"/coins">) {
                 <td><span className={`badge ${KIND[x.kind][0]}`}>{KIND[x.kind][1]}</span></td>
                 <td>{x.detail}</td>
                 <td>{x.coins > 0 ? `+${num(x.coins)}` : `−${num(-x.coins)}`}</td>
-                <td>{x.amount_krw != null ? won(x.amount_krw) : "—"}</td>
+                <td>{(x.amount_krw ?? x.krw_estimate) != null ? won((x.amount_krw ?? x.krw_estimate)!) : "—"}</td>
                 <td>{x.reference ?? "—"}</td>
               </tr>
             ))}

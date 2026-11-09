@@ -86,13 +86,14 @@ export type LedgerKind = "charge" | "use" | "refund" | "grant";
 export type Ledger = {
   month: string;
   summary: { charge_krw: number; charge_count: number; refund_krw: number; refund_count: number; usage_share: { starlight: number; telescope: number }; free_used: { starlight: number; telescope: number } };
-  items: { at: string; keeper: { id: string; no: string; nickname: string | null }; kind: LedgerKind; detail: string; coins: number; amount_krw: number | null; reference: string | null; channel: "app_store" | "toss" | "admin" | null }[];
+  /** `krw_estimate`: from the product price (the API's); `source`: app_store | server (toss once the web pays). */
+  items: { at: string; keeper: { id: string; no: string; nickname: string | null }; kind: LedgerKind; detail: string; coins: number; amount_krw?: number | null; krw_estimate?: number | null; reference: string | null; channel?: "app_store" | "toss" | "admin" | null; source?: string | null }[];
 };
 export type AiUsage = {
   month: string; model: string; thinking: string; krw_per_usd: number;
   summary: { cost_krw: number; change_pct: number; calls: number; failure_rate: number; per_starlight_krw: number; cache_hit: number; per_telescope_krw: number; member_alerts: number; member_limit_krw: number };
   /** Per feature this month; the failure rate is failures / attempts (ai_usage; the reading call is prism_reading). */
-  features: { key: string; label: string; calls: number | null; attempts?: number; failures?: number; avg_in: number | null; avg_out: number | null; cost_krw: number; note?: string }[];
+  features: { key?: string; feature?: "prism" | "prism_reading" | "telescope" | "monthly_report" | string; label?: string; calls: number | null; attempts?: number; failures?: number; avg_in: number | null; avg_out: number | null; cost_krw: number; note?: string }[];
   members: { keeper_no: string; cost_krw: number; alert: boolean }[];
 };
 export type PrismStatus = "draft" | "held" | "active" | "retired";
@@ -102,8 +103,9 @@ export type Prism = {
 };
 export type Invites = { enabled: boolean; items: { id: string; login_id: string; memo: string; created_at: string; last_login_at: string | null; enabled: boolean }[] };
 export type Notices = {
-  maintenance: { on: boolean };
+  /** `until`: when maintenance ends on its own (2 hours by default). */
+  maintenance: { on: boolean; until?: string | null };
   min_version: { ios: string };
-  items: { id: string; title: string; body: string; audience: "all" | "ios" | "web"; starts_at: string; ends_at: string; status: "scheduled" | "live" | "ended" }[];
+  items: { id: string; title: string; body: string; publish_at?: string | null; push?: boolean; audience?: "all" | "ios" | "web"; starts_at?: string; ends_at?: string; status: "scheduled" | "live" | "ended" | string }[];
 };
 export type OperatorRow = { id: string; name: string; email_masked: string; role: Role; totp: boolean; last_seen_at: string | null; status: "active" | "invited" | "disabled" };

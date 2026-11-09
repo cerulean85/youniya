@@ -133,20 +133,25 @@ export function setInvite(token: string, id: string, on: boolean, reason: string
   if (!i) throw new MockError(404, "not_found", "찾지 못했어요.");
   i.enabled = on; return { ok: true };
 }
+export function resetInvite(token: string, id: string, reason: string) {
+  owner(token); need(reason);
+  if (!st().invites.items.some((x) => x.id === id)) throw new MockError(404, "not_found", "찾지 못했어요.");
+  return { password: Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => "abcdefghjkmnpqrstuvwxyz23456789"[b % 31]).join("") };
+}
 export function reseed(token: string, id: string, reason: string) { owner(token); need(reason); if (!st().invites.items.some((x) => x.id === id)) throw new MockError(404, "not_found", "찾지 못했어요."); return { ok: true }; }
 
 export const notices = (token: string): Notices => { owner(token); return st().notices; };
-export function setMaintenance(token: string, on: boolean, reason: string) { owner(token); need(reason); st().notices.maintenance.on = on; return { ok: true }; }
+export function setMaintenance(token: string, on: boolean, reason: string, until?: string) { owner(token); need(reason); st().notices.maintenance = { on, until: on ? until ?? null : null }; return { ok: true }; }
 export function setMinVersion(token: string, ios: string, reason: string) {
   owner(token); need(reason);
   if (!/^\d+\.\d+\.\d+$/.test(ios)) throw new MockError(422, "invalid", "1.0.3 같은 모양으로 적어 주세요.");
   st().notices.min_version.ios = ios; return { ok: true };
 }
-export function createNotice(token: string, n: { title: string; body: string; audience: "all" | "ios" | "web"; starts_at: string; ends_at: string }, reason: string) {
+export function createNotice(token: string, n: { title: string; body: string; publish_at?: string; push?: boolean }, reason: string) {
   owner(token); need(reason);
-  if (!n.title.trim() || !n.starts_at || !n.ends_at || n.ends_at < n.starts_at) throw new MockError(422, "invalid", "제목과 기간을 확인해 주세요.");
-  const today = new Date().toISOString().slice(0, 10);
-  st().notices.items.unshift({ id: crypto.randomUUID(), ...n, status: n.starts_at > today ? "scheduled" : n.ends_at < today ? "ended" : "live" });
+  if (!n.title.trim() || !n.body.trim()) throw new MockError(422, "invalid", "제목과 내용을 적어 주세요.");
+  const later = n.publish_at && n.publish_at > new Date().toISOString();
+  st().notices.items.unshift({ id: crypto.randomUUID(), title: n.title, body: n.body, publish_at: n.publish_at ?? new Date().toISOString(), push: n.push, status: later ? "scheduled" : "live" });
   return { ok: true };
 }
 

@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import { notConnected } from "@/components/NotConnected";
-import { ReasonActions } from "@/components/ReasonActions";
 import { getPrism } from "@/lib/api";
 import { num } from "@/lib/format";
 import { requireOperator } from "@/lib/session";
 import type { PrismStatus } from "@/lib/types";
-import { prismAction } from "../owner-actions";
 
 export const metadata: Metadata = { title: "별빛 측정 방식" };
 
@@ -25,10 +23,9 @@ export default async function PrismPage() {
       <div className="head">
         <div><h1>별빛 측정 방식</h1><p className="muted">이미 받은 별빛은 다시 계산하지 않아요. 새 방식은 시험을 통과해야 배포할 수 있어요.</p></div>
         {next && (
-          <ReasonActions action={prismAction.bind(null, next.key)} buttons={[
-            { key: "test", label: "시험 실행 · AI 비용 승인 필요", confirm: `${next.label}로 시험용 글 30편을 다시 읽어요. AI 비용이 들어요.` },
-            { key: "deploy", label: t?.passed ? "배포" : "배포 · 시험 통과 후", primary: true, disabled: !t?.passed, confirm: "배포하면 이제부터 새로 별빛을 받는 별은 이 방식으로 읽어요. 별마다 버전이 저장돼요." },
-          ]} />
+          <p className="faint" style={{ maxWidth: 360, textAlign: "right" }}>
+            시험과 배포는 콘솔에서 하지 않아요. 시험은 서버의 tools/compare_prism.py(AI 약 120회)로, 배포는 코드로 해요. 결과는 여기에 남아요.
+          </p>
         )}
       </div>
       <div className="card table-card">
