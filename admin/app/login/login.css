@@ -1,0 +1,4 @@
+.login { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+.login-card { width: 400px; padding: 32px; display: flex; flex-direction: column; gap: 20px; }
+.login-card h1 { font-size: 20px; }
+.login-form { display: flex; flex-direction: column; gap: 14px; }

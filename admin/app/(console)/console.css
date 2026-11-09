@@ -1,0 +1,33 @@
+.shell { display: flex; min-height: 100vh; }
+.sidebar { width: 240px; flex: none; display: flex; flex-direction: column; gap: 24px; padding: 28px 16px 20px; background: #0d1220; border-right: 1px solid var(--line); position: sticky; top: 0; height: 100vh; }
+.brand { display: flex; flex-direction: column; padding: 0 8px; }
+.brand b { font-size: 18px; letter-spacing: 0.02em; }
+.nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.nav a { padding: 9px 12px; border-radius: 10px; color: var(--text-2); }
+.nav a:hover { background: var(--row); }
+.nav a[aria-current="page"] { background: var(--accent-tint); color: var(--text); font-weight: 600; }
+.me { padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+.me b { font-size: 13px; }
+.link { background: none; border: 0; padding: 4px 0 0; color: var(--text-3); font: inherit; font-size: 12px; cursor: pointer; text-align: left; }
+.link:hover { color: var(--text); }
+.main { flex: 1; min-width: 0; padding: 36px 40px 48px; display: flex; flex-direction: column; gap: 24px; }
+.head { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.head > div { display: flex; flex-direction: column; gap: 6px; }
+.tabs { display: flex; gap: 8px; flex: none; }
+.tabs a { padding: 8px 14px; border-radius: 10px; border: 1px solid var(--border); font-weight: 500; }
+.tabs a[aria-current="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.table-card { overflow: hidden; }
+.row-link { display: block; }
+.cols { display: grid; grid-template-columns: 1fr 360px; gap: 16px; align-items: start; }
+.panel { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.kv { display: grid; grid-template-columns: 100px 1fr; gap: 8px 16px; }
+.kv dt { color: var(--text-3); font-size: 13px; }
+.kv dd { margin: 0; white-space: pre-wrap; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.rule { color: var(--amber); font-size: 12px; }
+.placeholder { padding: 32px; display: flex; flex-direction: column; gap: 8px; }
+dialog.card { color: var(--text); padding: 24px; width: 440px; }
+dialog.card[open] { display: flex; flex-direction: column; gap: 14px; }
+dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
+dialog form { display: flex; flex-direction: column; gap: 14px; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
