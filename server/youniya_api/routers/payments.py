@@ -48,12 +48,15 @@ def _toss(request: Request) -> TossClient:
 
 def can_pay(request: Request, db: Session, user: User) -> bool:
     """With a test key (test_sk_…) a test card buys real coins for no money, so until the live key only
-    accounts that existed before TOSS_TEST_ACCOUNTS_BEFORE may pay; any account made after it may not
-    (decided 2026-11-10). Unset: nobody. TOSS_TEST_OPEN=1 (development) lets everyone."""
+    accounts that existed before TOSS_TEST_ACCOUNTS_BEFORE may pay, and those named in TOSS_TEST_USER_IDS;
+    any other account made after it may not (decided 2026-11-10). Unset: nobody. TOSS_TEST_OPEN=1
+    (development) lets everyone."""
     s = request.app.state.settings
     if request.app.state.toss is None:
         return False
     if not s.toss_secret_key.startswith("test_") or s.toss_test_open:
+        return True
+    if user.id in s.toss_test_user_ids:
         return True
     return s.toss_test_accounts_before is not None and aware(user.created_at) < s.toss_test_accounts_before
 

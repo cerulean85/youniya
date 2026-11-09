@@ -95,6 +95,8 @@ class Settings:
     # With a test key only accounts made before this time may pay (routers/payments.can_pay); unset: nobody.
     # TOSS_TEST_OPEN=1 lets everyone (development).
     toss_test_accounts_before: datetime | None = field(default_factory=lambda: _time("TOSS_TEST_ACCOUNTS_BEFORE"))
+    # And these user ids, added one by one (comma separated).
+    toss_test_user_ids: tuple[str, ...] = field(default_factory=lambda: _list("TOSS_TEST_USER_IDS"))
     toss_test_open: bool = field(default_factory=lambda: os.getenv("TOSS_TEST_OPEN") == "1")
 
     def appstore_private_key(self) -> str | None:

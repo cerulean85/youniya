@@ -173,7 +173,8 @@ function toLedger(d: any, month: string): Ledger {
     month: d.month ?? month,
     summary: { charge_krw: t.purchase?.krw_estimate ?? 0, charge_count: t.purchase?.count ?? 0, refund_krw: t.refund?.krw_estimate ?? 0, refund_count: t.refund?.count ?? 0, spend_coins: t.spend?.coins, grant_coins: t.grant?.coins },
     items: (d.items ?? []).map((x: any) => ({
-      at: x.at, keeper: { id: null, no: x.keeper_no, nickname: null }, kind: LEDGER_KIND[x.kind] ?? "use", detail: x.title ?? x.detail ?? "",
+      // keeper_no is a number from the API (null once the account is deleted); the page expects "#4".
+      at: x.at, keeper: { id: null, no: x.keeper_no == null ? "탈퇴" : `#${x.keeper_no}`, nickname: null }, kind: LEDGER_KIND[x.kind] ?? "use", detail: x.title ?? x.detail ?? "",
       coins: x.coins, krw_estimate: x.krw_estimate ?? null, reference: x.transaction_id ?? null, source: x.source ?? null,
     })),
   };

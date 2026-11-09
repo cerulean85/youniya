@@ -211,6 +211,12 @@ def test_test_key_is_for_accounts_made_before_the_cutoff(make_app):
     assert client.get("/v1/payments/toss/packages", headers=new).json()["available"] is False
     r = client.post("/v1/payments/toss/orders", json={"package_id": "coin_110"}, headers=new)
     assert r.status_code == 403 and r.json()["error"]["code"] == "payments_not_open"
+    with app.state.sessions() as db:  # named one by one
+        new_id = db.query(User).filter(User.provider_sub == "new").one().id
+    named = make_app(toss_secret_key="test_sk_fake", toss_test_accounts_before=cutoff, toss_test_user_ids=(new_id,))
+    named.state.toss = FakeToss()
+    nc = TestClient(named)
+    assert nc.get("/v1/payments/toss/packages", headers=new).json()["available"] is True
     unset = make_app(toss_secret_key="test_sk_fake")
     unset.state.toss = FakeToss()
     uc = TestClient(unset)
