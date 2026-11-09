@@ -53,7 +53,7 @@ async function Detail({ params }: Pick<PageProps<"/plaza/stars/[id]">, "params">
       </div>
       <blockquote className={styles.quote}>
         <p className="observation">“{star.quote}”</p>
-        <p className="caption faint">{star.full_text ? "별지기가 고른 대표 문장이에요." : "별지기가 골라 나눈 한 문장이에요."}</p>
+        <p className="caption faint">{star.full_text ? "대표 문장과 글 전체가 별지기 이름과 함께 공개된 별이에요." : "별지기가 골라 나눈 한 문장이에요."}</p>
       </blockquote>
       {star.full_text && star.body_masked && <div className={`journal ${styles.full}`}>{star.body_masked}</div>}
       <PlazaActions id={star.id} resonated={star.resonated} beside={star.beside} keeper={keeper}

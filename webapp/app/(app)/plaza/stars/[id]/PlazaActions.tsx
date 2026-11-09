@@ -38,10 +38,11 @@ export function PlazaActions({ id, resonated, keeper, lines }: { id: string; res
         </button>
         {keeper ? <Link href={keeper} className="btn btn-primary">이 별지기의 밤하늘 보기</Link> : <span />}
       </div>
-      {lines !== "closed" && (
-        <button type="button" className={styles.lineButton} disabled={lines === "left"} onClick={() => line.current?.showModal()}>
-          {lines === "left" ? "별빛 한 줄을 건넸어요" : "✦ 별빛 한 줄 건네기"}
-        </button>
+      {/* 107: once left, or when the owner doesn't take lines, a dim note instead of the button. */}
+      {lines === "open" ? (
+        <button type="button" className={styles.lineButton} onClick={() => line.current?.showModal()}>✦ 별빛 한 줄 건네기</button>
+      ) : (
+        <p className={`caption faint ${styles.lineNote}`}>{lines === "left" ? "이미 별빛 한 줄을 건넸어요" : "이 별은 별빛 한 줄을 받지 않아요"}</p>
       )}
       <div className={styles.more}>
         <button type="button" onClick={() => report.current?.showModal()}>신고하기</button>

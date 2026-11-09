@@ -37,3 +37,4 @@ a.tag:hover { color: var(--text); background: var(--tint); }
 .lineForm > * { order: 2; }
 .lineForm > h2, .lineForm > p:first-of-type { order: 0; }
 .lineForm > .chips { order: 1; }
+.lineNote { align-self: center; margin: 0; }
