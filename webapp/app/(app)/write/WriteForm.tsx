@@ -12,7 +12,10 @@ import styles from "./write.module.css";
 const STAR_COST = 5;
 
 export function WriteForm({ draft, freeStarToday, coins }: { draft: Draft; freeStarToday: number; coins: number }) {
-  const [mood, setMood] = useState<Mood>(draft?.mood ?? "calm");
+  // Several moods in the order picked; the first is the star's colour (기획서 17.1).
+  const [moods, setMoods] = useState<Mood[]>(draft?.moods?.length ? draft.moods : [draft?.mood ?? "calm"]);
+  const toggleMood = (m: Mood) => setMoods((list) => (list.includes(m) ? (list.length > 1 ? list.filter((x) => x !== m) : list) : [...list, m]));
+  const confirm = useRef<HTMLDialogElement>(null);
   const [title, setTitle] = useState(draft?.title ?? "");
   const [body, setBody] = useState(draft?.body ?? "");
   const [saved, setSaved] = useState<string | null>(draft ? "이전에 쓰던 글을 불러왔어요" : null);
@@ -24,12 +27,12 @@ export function WriteForm({ draft, freeStarToday, coins }: { draft: Draft; freeS
     if (first.current) { first.current = false; return; }
     const t = setTimeout(async () => {
       try {
-        await saveDraft({ mood, title, body });
+        await saveDraft({ mood: moods[0], moods, title, body });
         setSaved(`임시 저장됨 · ${new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date())}`);
       } catch { setSaved("임시 저장하지 못했어요"); }
     }, 1200);
     return () => clearTimeout(t);
-  }, [mood, title, body]);
+  }, [moods, title, body]);
 
   const length = body.trim().length;
   const canFloat = length >= MIN_FLOAT_LENGTH;
@@ -37,14 +40,15 @@ export function WriteForm({ draft, freeStarToday, coins }: { draft: Draft; freeS
 
   return (
     <form action={action} className={styles.body}>
-      <input type="hidden" name="mood" value={mood} />
+      <input type="hidden" name="moods" value={moods.join(",")} />
       <div className={`card ${styles.editor}`}>
-        <div className={styles.moods} role="radiogroup" aria-label="오늘의 기분">
+        <div className={styles.moods} role="group" aria-label="오늘의 기분">
           {MOODS.map((m) => (
-            <button key={m.key} type="button" role="radio" aria-checked={mood === m.key} className={styles.mood}
-              style={{ ["--c" as string]: m.color }} onClick={() => setMood(m.key)}>{m.label}</button>
+            <button key={m.key} type="button" aria-pressed={moods.includes(m.key)} className={styles.mood}
+              style={{ ["--c" as string]: m.color }} onClick={() => toggleMood(m.key)}>{m.label}</button>
           ))}
         </div>
+        <p className="caption faint" style={{ marginTop: -12 }}>오늘의 마음을 여러 개 고를 수 있어요 · 처음 고른 마음이 별의 색이 돼요</p>
         <input name="title" className={`h1 ${styles.title}`} placeholder="제목 없는 별" value={title} maxLength={60}
           onChange={(e) => setTitle(e.target.value)} aria-label="제목" />
         <textarea name="body" className={`journal ${styles.text}`} placeholder="오늘은 어떤 마음이 머물렀나요? 떠오르는 대로 적어 주세요."
@@ -54,7 +58,7 @@ export function WriteForm({ draft, freeStarToday, coins }: { draft: Draft; freeS
           <span className={styles.spacer} />
           {saved && <span className="caption faint">{saved}</span>}
           <Submit mode="keep" label="별빛 없이 띄우기" style="btn-secondary" disabled={length === 0} />
-          <Submit mode="float" label="별빛 받고 띄우기" style="btn-primary" disabled={!canFloat} />
+          <button type="button" className="btn btn-primary" disabled={!canFloat} onClick={() => confirm.current?.showModal()}>별빛 받고 띄우기</button>
         </div>
       </div>
       <aside className={styles.side}>
@@ -72,15 +76,29 @@ export function WriteForm({ draft, freeStarToday, coins }: { draft: Draft; freeS
           <span className="label-m">쓰는 동안</span>
           <ul>
             <li>떠오르는 대로 적어도 괜찮아요. 맞춤법은 신경 쓰지 않아도 돼요.</li>
-            <li>{MIN_FLOAT_LENGTH}자를 넘으면 별빛을 받을 수 있어요. 짧은 날은 별빛 없이 띄워도 괜찮아요.</li>
-            <li>별빛을 받으면 별빛 프리즘이 마음의 결을 읽어 별빛을 매겨요. 별빛 없이 띄우면 글만 별이 돼요.</li>
+            <li>별빛은 {MIN_FLOAT_LENGTH}자부터 받을 수 있어요. 짧은 날은 별빛 없이 띄워도 괜찮아요.</li>
+            <li>별빛 받고 띄우면 별빛과 별빛 풀이를 받아요. 별빛을 받은 글은 고칠 수 없어요.</li>
           </ul>
         </div>
         <p className={`caption faint ${styles.privacy}`}><Lock size={16} />글은 나에게만 보여요. 우주 광장에는 내가 고른 한 줄만 나가요.</p>
       </aside>
       <Analyzing />
+      {/* Figma W-45 (기획서 17.5): floating with starlight locks the writing, so it asks first. */}
+      <dialog ref={confirm} className={`card ${styles.dialog}`} aria-labelledby="float-title">
+        <h2 id="float-title" className="h2">별빛을 받아 띄울까요?</h2>
+        <p className="body-s muted">별빛 프리즘이 글을 읽고 별빛·깊이·고유한 별 모양을 줘요. {freeLeft ? "오늘 무료 1번 남았어요." : `${STAR_COST}코인이 들어요 (보유 ${coins}).`}</p>
+        <p className="body-s muted">별빛을 받으면 이 글은 잠겨서 고칠 수 없어요. 고치고 싶으면 &lsquo;고쳐 쓰기&rsquo;로 새 별을 만들 수 있어요.</p>
+        <ConfirmFloat label={freeLeft ? "별빛 받고 띄우기 · 오늘 무료 1번" : `별빛 받고 띄우기 · ${STAR_COST}코인`} onDone={() => confirm.current?.close()} />
+        <button type="button" className="btn btn-ghost" onClick={() => confirm.current?.close()}>조금 더 쓸게요</button>
+      </dialog>
     </form>
   );
+}
+
+// Submits the surrounding form with mode=float (the dialog sits inside the form).
+function ConfirmFloat({ label, onDone }: { label: string; onDone: () => void }) {
+  const { pending } = useFormStatus();
+  return <button name="mode" value="float" className="btn btn-primary btn-block" disabled={pending} onClick={() => setTimeout(onDone, 0)}>{label}</button>;
 }
 
 function Submit({ mode, label, style, disabled }: { mode: "keep" | "float"; label: string; style: string; disabled: boolean }) {

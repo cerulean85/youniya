@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
 import type { CreateResult, Mood } from "@/lib/types";
 
-export type DraftInput = { mood: Mood; title: string; body: string };
+export type DraftInput = { mood: Mood; moods: Mood[]; title: string; body: string };
 export type CreateState = { error?: string; code?: string; cost?: number; coins?: number } | null;
 
 /** 34 임시 저장: the draft lives in the database, one per person. */
@@ -19,7 +19,10 @@ export async function saveDraft(d: DraftInput) {
 
 export async function createStar(_: CreateState, form: FormData): Promise<CreateState> {
   const mode = form.get("mode") === "float" ? "float" : "keep";
-  const input = { mood: String(form.get("mood")) as Mood, title: String(form.get("title") ?? ""), body: String(form.get("body") ?? ""), mode };
+  // Several moods, the first being the colour (기획서 17.1). Until the API takes `moods`, `mood` carries the first.
+  const moods = String(form.get("moods") ?? "").split(",").filter(Boolean) as Mood[];
+  const mood = moods[0] ?? "calm";
+  const input = { mood, moods, title: String(form.get("title") ?? ""), body: String(form.get("body") ?? ""), mode };
   let result: CreateResult;
   try {
     result = await api<CreateResult>("/v1/stars", { method: "POST", body: JSON.stringify(input) });

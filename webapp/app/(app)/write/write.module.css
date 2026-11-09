@@ -7,7 +7,7 @@
 .moods { display: flex; gap: 8px; }
 .mood { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; cursor: pointer; font: 500 12px/18px var(--sans); background: var(--raised); border: 1px solid var(--border); color: var(--text-2); }
 .mood::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--c); }
-.mood[aria-checked="true"] { border-color: var(--c); color: var(--text); background: color-mix(in srgb, var(--c) 16%, transparent); }
+.mood[aria-pressed="true"] { border-color: var(--c); color: var(--text); background: color-mix(in srgb, var(--c) 16%, transparent); }
 .title { background: none; border: 0; outline: none; color: var(--text); padding: 0; width: 100%; }
 .title::placeholder { color: var(--text-3); }
 .text { flex: 1; min-height: 360px; resize: none; background: none; border: 0; outline: none; color: var(--text-2); padding: 0; }
@@ -40,3 +40,6 @@
   .side { width: auto; order: -1; }
   .editor { padding: 28px 24px 20px; }
 }
+.dialog { max-width: 460px; padding: 28px; color: var(--text); }
+.dialog[open] { display: flex; flex-direction: column; gap: 12px; }
+.dialog::backdrop { background: rgba(11, 15, 25, 0.7); }

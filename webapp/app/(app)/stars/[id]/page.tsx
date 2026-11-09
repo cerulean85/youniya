@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ChevronLeft, Heart, StarFilled } from "@/components/icons";
+import { ChevronLeft, Heart, StarFilled, Telescope } from "@/components/icons";
 import { StarCard } from "@/components/StarCard";
+import { StarlightReading } from "@/components/StarlightReading";
 import { api, ApiError } from "@/lib/api";
 import { longDate, moodOf, dateTime } from "@/lib/format";
 import type { Star } from "@/lib/types";
@@ -38,6 +39,7 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
   const justFloated = sp.new === "1" && floated;
   const care = sp.care === "1";
   const mood = moodOf(star.mood);
+  if (justFloated) return <Result star={star} />;
   return (
     <div className={styles.body}>
       <article className={styles.article}>
@@ -63,7 +65,7 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
         {floated ? (
           <>
             <StarCard analysis={star.analysis!} />
-            {star.analysis!.rewrite_question && <p className={`observation ${styles.question}`}>“{star.analysis!.rewrite_question}”</p>}
+            <StarlightReading analysis={star.analysis!} readAt={star.created_at} version={star.prism_version} />
             <Link href="/write" className="btn btn-primary btn-block">별 잇기</Link>
             <ShareStar id={star.id} title={star.title || "제목 없는 별"} body={star.body} shared={star.shared} />
           </>
@@ -80,6 +82,38 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
           <DeleteButton id={star.id} title={star.title || "제목 없는 별"} />
         </div>
       </aside>
+    </div>
+  );
+}
+
+// Figma W-24 (별이 떠올랐어요) with the 별빛 풀이 open. Sections come in 0.2 s apart, rising over 0.5 s, then
+// the reading's lines 0.18 s apart: about 3.5 s in all, or all at once with reduced motion (기획서 17.4).
+function Result({ star }: { star: Star }) {
+  const a = star.analysis!;
+  const at = (i: number) => ({ ["--i" as string]: i });
+  return (
+    <div className={styles.result}>
+      <div className={styles.resultCard} style={at(0)} data-rise>
+        <StarCard analysis={a} />
+      </div>
+      <div className={styles.resultSide}>
+        <p className={styles.born} style={at(1)} data-rise><StarFilled size={16} />{longDate(star.created_at).replace(/ [^ ]+요일$/, "")} · {star.title || "제목 없는 별"}</p>
+        <h1 className="display" style={at(2)} data-rise>별이 떠올랐어요</h1>
+        <p className="body-l muted" style={at(3)} data-rise>오늘의 별이 이번 달 별자리의 빈 자리를 채웠어요.</p>
+        {a.telescope_teaser && (
+          <div className={`card ${styles.offer}`} style={at(4)} data-rise>
+            <span className={styles.offerHead}><Telescope size={16} />마음 망원경</span>
+            <p className="observation">{a.telescope_teaser}</p>
+            <p className="caption faint">숨은 마음의 결을 더 들여다볼 수 있어요.</p>
+          </div>
+        )}
+        <div className={styles.resultActions} style={at(5)} data-rise>
+          <Link href={`/stars/${star.id}`} className="btn btn-secondary">마음 망원경 켜기</Link>
+          <Link href="/constellation" className="btn btn-primary">나의 별자리 보기</Link>
+        </div>
+        <Link href={`/stars/${star.id}`} className={styles.shareLink} style={at(6)} data-rise>우주 광장에 나누기</Link>
+        <StarlightReading analysis={a} readAt={star.created_at} version={star.prism_version} open animate />
+      </div>
     </div>
   );
 }

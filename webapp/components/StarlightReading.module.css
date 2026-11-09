@@ -1,0 +1,12 @@
+.wrap { display: flex; flex-direction: column; gap: 10px; }
+.card { padding: 22px 24px; border-radius: 20px; display: flex; flex-direction: column; gap: 16px; }
+.measure { display: flex; flex-direction: column; gap: 6px; }
+.head { display: flex; justify-content: space-between; }
+.measure i { display: block; height: 5px; border-radius: 3px; background: var(--border); position: relative; overflow: hidden; }
+.measure i::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--v); background: var(--c); border-radius: 3px; }
+.overall { display: flex; flex-direction: column; gap: 8px; padding-top: 14px; border-top: 1px solid var(--border); }
+.toggle { align-self: flex-start; background: none; border: 0; padding: 0; cursor: pointer; font: 500 12px/18px var(--sans); color: var(--primary-text); }
+/* 기획서 17.4: lines 0.18 s apart, each rising slightly over 0.5 s, after the result's own sections. */
+.wrap[data-animate="true"] [data-line] { opacity: 0; animation: rise 0.5s ease-out forwards; animation-delay: calc(1.4s + var(--i, 0) * 0.18s); }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .wrap[data-animate="true"] [data-line] { opacity: 1; animation: none; } }

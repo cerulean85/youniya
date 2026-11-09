@@ -5,6 +5,13 @@ export type StarSummary = {
   id: string;
   title: string;
   mood: Mood;
+  /** Several moods, the first being the star's colour (기획서 17.1). `mood` stays as moods[0]. */
+  moods?: Mood[];
+  /** New screens decide by these, not `state` (kept for older iOS builds). A lit star is locked. */
+  has_starlight?: boolean;
+  locked?: boolean;
+  /** The prism that read it, e.g. "prism-v1-2026-11"; null for a star without starlight. */
+  prism_version?: string | null;
   state: StarState;
   created_at: string;
   updated_at: string | null;
@@ -16,6 +23,13 @@ export type StarSummary = {
 
 export type Analysis = {
   starlight: number;
+  /** Raw measures: depth out of 400, clarity and weight out of 300 (they add up to the starlight). */
+  scores?: { depth: number; clarity: number; weight: number };
+  /** 별빛 풀이 (기획서 17.3): why each measure came out as it did, and an overall reading (API Dev Session, step 5). */
+  depth_reason?: string | null;
+  clarity_reason?: string | null;
+  weight_reason?: string | null;
+  interpretation?: string | null;
   tier: string;
   depth: number;
   clarity: number;
@@ -51,7 +65,7 @@ export type Summary = {
   by_month: { month: string; count: number }[];
 };
 
-export type Draft = { mood: Mood; title: string; body: string } | null;
+export type Draft = { mood: Mood; moods?: Mood[]; title: string; body: string } | null;
 
 export type CreateResult = { star: Star; crisis: unknown; charged: number; coins: number };
 
