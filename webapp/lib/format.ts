@@ -21,6 +21,8 @@ export function dateTime(iso: string) {
   const t = parts(iso, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
   return `${d} · ${t}`;
 }
+/** "11월 3일" */
+export const monthDay = (iso: string) => parts(iso, { month: "long", day: "numeric" });
 /** "11월 3일 화요일" */
 export const longDate = (iso: string) => parts(iso, { month: "long", day: "numeric", weekday: "long" });
 /** Year, month and day of a moment, in Korean time. */

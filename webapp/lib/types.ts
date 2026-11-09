@@ -43,7 +43,27 @@ export type Analysis = {
   shape: { points: number; sharpness: string } | null;
 };
 
-export type Star = StarSummary & { body: string; analysis: Analysis | null };
+/** A star joined by 별 잇기 (기획서 16장): shown as 이어진 별 chips, both ways. */
+export type LinkedStar = { id: string; title: string; mood: Mood; moods?: Mood[]; created_at: string; has_starlight: boolean };
+
+/** `linked_stars` comes with the 별 잇기 API (dev server 2026-11-09); absent on older servers. */
+export type Star = StarSummary & { body: string; analysis: Analysis | null; linked_stars?: LinkedStar[] };
+
+/** 마음 망원경 report for one star (or the last seven days). `fog` and `flow` are the W-54 sections, when the API has them. */
+export type TelescopeReport = {
+  id: string; title: string; created_at: string; saved: boolean; star_ids: string[];
+  report: {
+    star_name: string;
+    lenses: { key: string; label: string; value: number; note: string }[];
+    emotions: { mood: Mood; label: string; percent: number }[];
+    evidence: string | null;
+    question: string | null;
+    signals: { star_id: string; sentence: string }[];
+    fog?: { title: string; note: string; items: { label: string; quote: string; note: string }[] } | null;
+    flow?: { part: string; moods: string; note: string }[] | null;
+  };
+};
+export type TelescopeOffer = { free: boolean; free_left: number; cost: number; coins: number; enough: boolean };
 
 export type Me = {
   id: string;
@@ -65,7 +85,8 @@ export type Summary = {
   by_month: { month: string; count: number }[];
 };
 
-export type Draft = { mood: Mood; moods?: Mood[]; title: string; body: string } | null;
+/** `source_star_id`: the star a 고쳐 쓰기 draft rewrites (one draft per person). */
+export type Draft = { mood: Mood; moods?: Mood[]; title: string; body: string; source_star_id?: string | null } | null;
 
 export type CreateResult = { star: Star; crisis: unknown; charged: number; coins: number };
 

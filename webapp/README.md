@@ -63,3 +63,18 @@ vercel deploy --prod   # from this folder, linked to youniya-app
    (a floated star's mood is fixed: 409 `mood_fixed`); `POST /v1/stars/{id}/float` floats a kept star.
 5. Coins through Toss Payments: new server endpoints (order, confirm, webhook, refund) and the policy
    updates that come with a PG.
+
+## 2026-11-09 plan (기획서 16–17장)
+
+1. Terms, sidebar, removed screens. **Done.**
+2. Writing (several moods), 별빛 받기 / 별빛 없이 띄우기, result (W-24), 별빛 풀이. **Done.**
+3. Monthly constellations (`lib/constellation.ts`, 12 shapes from Figma), 별자리 이야기, home preview. Stars fill
+   slots in date order on the web until `GET /v1/constellations` ships. **Done.**
+4. Star detail: 마음 망원경 inside it (W-54, one-star report), 이어진 별 chips (`linked_stars`, cut with ×),
+   별 잇기 (W-47; new writing with `link_to`, or pick written stars: W-51 list, W-52 calendar, W-53 preview,
+   `POST /v1/stars/{id}/links`), 고쳐 쓰기 (`/write?rewrite=`, W-46, `rewrite_of`; its draft carries
+   `source_star_id`), stars without starlight (W-32, W-56 confirm, `POST /v1/stars/{id}/starlight`, 글 수정 W-33
+   with PATCH), 내보내기 as a text file. A lit star's writing and moods are locked; its title isn't. **Done.**
+5. Plaza, nickname, 별빛 한 줄.
+6. Settings and intro-site wording.
+

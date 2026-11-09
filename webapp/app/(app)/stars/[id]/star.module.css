@@ -42,3 +42,17 @@
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .result [data-rise] { opacity: 1; animation: none; } }
 @media (max-width: 1100px) { .result { flex-direction: column; align-items: center; } .resultCard { position: static; } }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 8px 8px 8px 12px; border-radius: 12px; background: var(--raised); border: 1px solid var(--border); }
+.chip a { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: center; }
+.chip a::before { content: ""; grid-row: span 2; width: 6px; height: 6px; border-radius: 50%; background: var(--c); }
+.unlink { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; border: 0; background: none; color: var(--text-3); cursor: pointer; }
+.unlink:hover { color: var(--text); background: var(--tint); }
+.footerLinks { display: flex; justify-content: space-around; }
+.sectionHead { display: flex; align-items: baseline; justify-content: space-between; }
+.keptNote { text-align: center; }
+.loadingSmall { min-height: 120px; opacity: 0.5; }
+.kept { display: flex; flex-direction: column; gap: 12px; }
+.linked { display: flex; flex-direction: column; gap: 10px; }
+.toast { position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%); z-index: 30; padding: 12px 20px; border-radius: 999px; background: var(--raised); border: 1px solid var(--border); font: 500 14px/20px var(--sans); box-shadow: 0 12px 40px rgba(0,0,0,0.4); animation: toast 3s ease forwards; }
+@keyframes toast { 0% { opacity: 0; transform: translate(-50%, 8px); } 10%, 85% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; visibility: hidden; } }

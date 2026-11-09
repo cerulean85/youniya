@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { Info, Lock, StarFilled } from "@/components/icons";
+import { Info, Lock } from "@/components/icons";
+import { PrismOverlay } from "@/components/PrismOverlay";
 import { MIN_FLOAT_LENGTH, MOODS } from "@/lib/format";
 import type { Draft, Mood } from "@/lib/types";
 import { createStar, saveDraft } from "./actions";
@@ -11,28 +12,37 @@ import styles from "./write.module.css";
 
 const STAR_COST = 5;
 
-export function WriteForm({ draft, freeStarToday, coins }: { draft: Draft; freeStarToday: number; coins: number }) {
+/** The star a 고쳐 쓰기 starts from, or the one a 별 잇기 joins the new star to. */
+export type Source = { kind: "rewrite" | "link"; id: string; title: string; question: string | null; moods: Mood[]; body: string };
+
+export function WriteForm({ draft, source, freeStarToday, coins }: { draft: Draft; source: Source | null; freeStarToday: number; coins: number }) {
+  const rewrite = source?.kind === "rewrite" ? source : null;
+  // 고쳐 쓰기 starts from the old writing unless a draft of it is waiting.
+  const start = draft ?? (rewrite && { mood: rewrite.moods[0], moods: rewrite.moods, title: rewrite.title, body: rewrite.body });
   // Several moods in the order picked; the first is the star's colour (기획서 17.1).
-  const [moods, setMoods] = useState<Mood[]>(draft?.moods?.length ? draft.moods : [draft?.mood ?? "calm"]);
+  const [moods, setMoods] = useState<Mood[]>(start?.moods?.length ? start.moods : [start?.mood ?? "calm"]);
   const toggleMood = (m: Mood) => setMoods((list) => (list.includes(m) ? (list.length > 1 ? list.filter((x) => x !== m) : list) : [...list, m]));
   const confirm = useRef<HTMLDialogElement>(null);
-  const [title, setTitle] = useState(draft?.title ?? "");
-  const [body, setBody] = useState(draft?.body ?? "");
+  const [title, setTitle] = useState(start?.title ?? "");
+  const [body, setBody] = useState(start?.body ?? "");
   const [saved, setSaved] = useState<string | null>(draft ? "이전에 쓰던 글을 불러왔어요" : null);
   const [state, action] = useActionState(createStar, null);
-  const first = useRef(true);
+  // Only save once something changes (a first-render save would also wipe a draft when opening an empty page).
+  const last = useRef(JSON.stringify([moods, title, body]));
 
   // Autosave a moment after typing stops.
   useEffect(() => {
-    if (first.current) { first.current = false; return; }
+    const now = JSON.stringify([moods, title, body]);
+    if (now === last.current) return;
     const t = setTimeout(async () => {
       try {
-        await saveDraft({ mood: moods[0], moods, title, body });
+        await saveDraft({ mood: moods[0], moods, title, body, source_star_id: rewrite?.id ?? null });
+        last.current = now;
         setSaved(`임시 저장됨 · ${new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date())}`);
       } catch { setSaved("임시 저장하지 못했어요"); }
     }, 1200);
     return () => clearTimeout(t);
-  }, [moods, title, body]);
+  }, [moods, title, body, rewrite?.id]);
 
   const length = body.trim().length;
   const canFloat = length >= MIN_FLOAT_LENGTH;
@@ -41,6 +51,7 @@ export function WriteForm({ draft, freeStarToday, coins }: { draft: Draft; freeS
   return (
     <form action={action} className={styles.body}>
       <input type="hidden" name="moods" value={moods.join(",")} />
+      {source && <input type="hidden" name={rewrite ? "rewrite_of" : "link_to"} value={source.id} />}
       <div className={`card ${styles.editor}`}>
         <div className={styles.moods} role="group" aria-label="오늘의 기분">
           {MOODS.map((m) => (
@@ -57,15 +68,24 @@ export function WriteForm({ draft, freeStarToday, coins }: { draft: Draft; freeS
           <span className="caption faint">{length.toLocaleString("ko-KR")}자{!canFloat && length > 0 ? ` · ${MIN_FLOAT_LENGTH - length}자 더 쓰면 별빛을 받을 수 있어요` : ""}</span>
           <span className={styles.spacer} />
           {saved && <span className="caption faint">{saved}</span>}
-          <Submit mode="keep" label="별빛 없이 띄우기" style="btn-secondary" disabled={length === 0} />
+          {rewrite ? (
+            <button type="button" className="btn btn-secondary" disabled={length === 0} onClick={() => confirm.current?.showModal()}>별빛 없이 띄우기</button>
+          ) : <Submit mode="keep" label="별빛 없이 띄우기" style="btn-secondary" disabled={length === 0} />}
           <button type="button" className="btn btn-primary" disabled={!canFloat} onClick={() => confirm.current?.showModal()}>별빛 받고 띄우기</button>
         </div>
       </div>
       <aside className={styles.side}>
-        <div className={styles.banner}>
-          <Info size={18} />
-          {freeLeft ? "오늘 무료 별빛 받기가 1번 남았어요." : `오늘 무료 별빛 받기를 썼어요. 별빛을 받으면 ${STAR_COST}코인이 들어요 (보유 ${coins}).`}
-        </div>
+        {source?.kind === "link" ? (
+          <div className={styles.banner}>
+            <Info size={18} />
+            <span>지난번 기록 · {source.title}{source.question && <><br />{source.question}</>}</span>
+          </div>
+        ) : (
+          <div className={styles.banner}>
+            <Info size={18} />
+            {freeLeft ? "오늘 무료 별빛 받기가 1번 남았어요." : `오늘 무료 별빛 받기를 썼어요. 별빛을 받으면 ${STAR_COST}코인이 들어요 (보유 ${coins}).`}
+          </div>
+        )}
         {state?.error && (
           <div className={styles.error} role="alert">
             {state.error}
@@ -82,14 +102,29 @@ export function WriteForm({ draft, freeStarToday, coins }: { draft: Draft; freeS
         </div>
         <p className={`caption faint ${styles.privacy}`}><Lock size={16} />글은 나에게만 보여요. 우주 광장에는 내가 고른 한 줄만 나가요.</p>
       </aside>
-      <Analyzing />
+      <PrismOverlay mode="float" />
       {/* Figma W-45 (기획서 17.5): floating with starlight locks the writing, so it asks first. */}
       <dialog ref={confirm} className={`card ${styles.dialog}`} aria-labelledby="float-title">
+        {rewrite ? (
+          <>
+            {/* Figma W-46: a rewrite becomes a new star; the old one and its starlight stay. */}
+            <h2 id="float-title" className="h2">고쳐 쓴 글을 새 별로 띄울까요?</h2>
+            <p className="body-s muted">「{rewrite.title}」를 고쳐 쓴 글이에요. 원래 별과 별빛은 그대로 남고, 새 별이 하나 더 생겨 원래 별과 이어져요.</p>
+            <p className="body-s muted">별빛을 받으면 {freeLeft ? "오늘 무료 1번을 써요" : `${STAR_COST}코인이 들어요 (보유 ${coins})`}. 별빛 없이 띄우면 무료예요.</p>
+            {canFloat ? <ConfirmFloat label="별빛 받고 새 별로 띄우기" onDone={() => confirm.current?.close()} />
+              : <p className="caption faint">별빛은 {MIN_FLOAT_LENGTH}자부터 받을 수 있어요.</p>}
+            <ConfirmKeep label="별빛 없이 새 별로 띄우기" onDone={() => confirm.current?.close()} />
+            <button type="button" className="btn btn-ghost" onClick={() => confirm.current?.close()}>조금 더 고칠게요</button>
+          </>
+        ) : (
+        <>
         <h2 id="float-title" className="h2">별빛을 받아 띄울까요?</h2>
         <p className="body-s muted">별빛 프리즘이 글을 읽고 별빛·깊이·고유한 별 모양을 줘요. {freeLeft ? "오늘 무료 1번 남았어요." : `${STAR_COST}코인이 들어요 (보유 ${coins}).`}</p>
         <p className="body-s muted">별빛을 받으면 이 글은 잠겨서 고칠 수 없어요. 고치고 싶으면 &lsquo;고쳐 쓰기&rsquo;로 새 별을 만들 수 있어요.</p>
         <ConfirmFloat label={freeLeft ? "별빛 받고 띄우기 · 오늘 무료 1번" : `별빛 받고 띄우기 · ${STAR_COST}코인`} onDone={() => confirm.current?.close()} />
         <button type="button" className="btn btn-ghost" onClick={() => confirm.current?.close()}>조금 더 쓸게요</button>
+        </>
+        )}
       </dialog>
     </form>
   );
@@ -101,24 +136,12 @@ function ConfirmFloat({ label, onDone }: { label: string; onDone: () => void }) 
   return <button name="mode" value="float" className="btn btn-primary btn-block" disabled={pending} onClick={() => setTimeout(onDone, 0)}>{label}</button>;
 }
 
+function ConfirmKeep({ label, onDone }: { label: string; onDone: () => void }) {
+  const { pending } = useFormStatus();
+  return <button name="mode" value="keep" className="btn btn-secondary btn-block" disabled={pending} onClick={() => setTimeout(onDone, 0)}>{label}</button>;
+}
+
 function Submit({ mode, label, style, disabled }: { mode: "keep" | "float"; label: string; style: string; disabled: boolean }) {
   const { pending } = useFormStatus();
   return <button name="mode" value={mode} className={`btn ${style}`} disabled={disabled || pending}>{label}</button>;
-}
-
-// Figma W-23: shown over the editor while the starlight prism reads the writing.
-function Analyzing() {
-  const { pending, data } = useFormStatus();
-  if (!pending || data?.get("mode") !== "float") return null;
-  return (
-    <div className={styles.overlay} role="status" aria-live="polite">
-      <div className={styles.prism} aria-hidden="true">
-        <span /><span /><span />
-        <StarFilled size={48} />
-      </div>
-      <p className="h2">별빛 프리즘이 마음의 결을 비추고 있어요</p>
-      <p className="body-l muted">별의 깊이 · 빛의 선명함 · 마음의 무게를<br />부드럽게 살펴보는 중이에요.</p>
-      <p className="caption faint"><Lock size={14} /> 쓴 글은 암호화되어 안전하게 보관돼요</p>
-    </div>
-  );
 }

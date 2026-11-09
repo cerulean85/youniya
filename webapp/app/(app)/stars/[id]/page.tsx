@@ -2,19 +2,22 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ChevronLeft, Heart, StarFilled, Telescope } from "@/components/icons";
+import { ChevronLeft, Heart, StarFilled, Telescope as TelescopeIcon } from "@/components/icons";
 import { StarCard } from "@/components/StarCard";
 import { StarlightReading } from "@/components/StarlightReading";
 import { api, ApiError } from "@/lib/api";
-import { longDate, moodOf, dateTime } from "@/lib/format";
-import type { Star } from "@/lib/types";
+import { longDate, moodOf, dateTime, MIN_FLOAT_LENGTH } from "@/lib/format";
+import type { Me, Star } from "@/lib/types";
+import { LinkStar } from "./LinkStar";
 import { ShareStar } from "./ShareStar";
-import { DeleteButton, FloatButton } from "./StarActions";
+import { DeleteButton, ExportButton, FloatButton, LinkedChip, Toast } from "./StarActions";
+import { Telescope } from "./Telescope";
 import styles from "./star.module.css";
 
 export const metadata: Metadata = { title: "별 상세" };
 
-// Figma W-12 (별빛 받은 별), W-32 (별빛 없는 별), W-24 (별이 떠올랐어요, ?new=1), W-36 (마음 돌봄, ?care=1).
+// Figma W-54 (별빛 받은 별: 별빛 풀이, 마음 망원경, 이어진 별), W-32 (별빛 없는 별) with W-56 (별빛 받기 확인),
+// W-24 (별이 떠올랐어요, ?new=1), W-36 (마음 돌봄, ?care=1); ?kept=1 says 별빛 없이 띄웠어요.
 export default function StarPage({ params, searchParams }: PageProps<"/stars/[id]">) {
   return (
     <>
@@ -35,7 +38,10 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
     if (e instanceof ApiError && e.status === 404) notFound();
     throw e;
   }
-  const floated = star.state === "floated" && star.analysis;
+  const me = await api<Me>("/v1/me");
+  const floated = (star.has_starlight ?? star.state === "floated") && star.analysis;
+  const linked = star.linked_stars ?? [];
+  const title = star.title || "제목 없는 별";
   const justFloated = sp.new === "1" && floated;
   const care = sp.care === "1";
   const mood = moodOf(star.mood);
@@ -45,7 +51,7 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
       <article className={styles.article}>
         {justFloated && <p className={styles.born}><StarFilled size={16} />별이 떠올랐어요</p>}
         <p className="caption faint">{longDate(star.created_at)} · {dateTime(star.created_at).split(" · ")[1]}</p>
-        <h1 className="display">{star.title || "제목 없는 별"}</h1>
+        <h1 className="display">{title}</h1>
         <div className={styles.meta}>
           <span className={styles.mood} style={{ ["--c" as string]: mood.color }}>{mood.label}</span>
           {!floated && <span className="label-s muted">{star.analysis_failed ? "별빛을 읽지 못한 별 · 다시 받을 수 있어요" : "별빛 없는 별"}</span>}
@@ -66,22 +72,44 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
           <>
             <StarCard analysis={star.analysis!} />
             <StarlightReading analysis={star.analysis!} readAt={star.created_at} version={star.prism_version} />
-            <Link href="/write" className="btn btn-primary btn-block">별 잇기</Link>
-            <ShareStar id={star.id} title={star.title || "제목 없는 별"} body={star.body} shared={star.shared} />
+            <Suspense fallback={<div className={`card ${styles.loadingSmall}`} aria-busy="true" />}>
+              <Telescope id={star.id} analysis={star.analysis!} />
+            </Suspense>
           </>
         ) : (
-          <div className={`card ${styles.keptCard}`}>
-            <span className="label-m">{star.analysis_failed ? "별빛을 읽지 못했어요" : "별빛을 받아 볼까요?"}</span>
+          <div className={styles.kept}>
             <p className="body-s muted">
-              {star.analysis_failed ? "코인은 차감되지 않았어요. 다시 받으면 별빛 프리즘이 한 번 더 읽어요." : "별빛 없이 띄운 별이에요. 별빛을 받으면 별빛 프리즘이 마음의 결을 읽어요. 받은 뒤에는 글이 잠겨요."}
+              {star.analysis_failed ? "별빛을 읽지 못했어요. 코인은 차감되지 않았어요. 다시 받으면 별빛 프리즘이 한 번 더 읽어요."
+                : "별빛 없이 띄운 별이에요. 별빛을 받으면 별빛 풀이와 마음 망원경을 쓸 수 있어요."}
             </p>
-            {!care && <FloatButton id={star.id} />}
+            {!care && (star.body.trim().length >= MIN_FLOAT_LENGTH
+              ? <FloatButton id={star.id} free={me.free_star_today > 0} coins={me.coins} />
+              : <p className="caption faint">별빛은 {MIN_FLOAT_LENGTH}자부터 받을 수 있어요. 글을 조금 더 써 보세요.</p>)}
+            <p className={`caption faint ${styles.keptNote}`}>
+              {me.free_star_today > 0 ? "오늘 무료 별빛 받기가 1번 남았어요. 이후 한 번에 5코인이에요." : "오늘 무료 별빛 받기를 썼어요. 한 번에 5코인이에요."}
+            </p>
+            <Link href={`/stars/${star.id}/edit`} className="btn btn-secondary btn-block">글 수정</Link>
           </div>
         )}
-        <div className={styles.more}>
-          <DeleteButton id={star.id} title={star.title || "제목 없는 별"} />
+        {linked.length > 0 && (
+          <section className={styles.linked} aria-label="이어진 별">
+            <span className="label-m">이어진 별 {linked.length}</span>
+            <div className={styles.chips}>{linked.map((l) => <LinkedChip key={l.id} id={star.id} star={l} />)}</div>
+          </section>
+        )}
+        {floated && (
+          <>
+            <LinkStar id={star.id} title={title} linkedIds={linked.map((l) => l.id)} />
+            <ShareStar id={star.id} title={title} body={star.body} shared={star.shared} />
+          </>
+        )}
+        <div className={styles.footerLinks}>
+          <ExportButton title={title} date={dateTime(star.created_at)} body={star.body} />
+          {floated && <Link href={`/write?rewrite=${star.id}`} className="btn btn-ghost">고쳐 쓰기</Link>}
+          <DeleteButton id={star.id} title={title} />
         </div>
       </aside>
+      {sp.kept === "1" && <Toast message="별빛 없이 띄웠어요" />}
     </div>
   );
 }
@@ -102,13 +130,13 @@ function Result({ star }: { star: Star }) {
         <p className="body-l muted" style={at(3)} data-rise>오늘의 별이 이번 달 별자리의 빈 자리를 채웠어요.</p>
         {a.telescope_teaser && (
           <div className={`card ${styles.offer}`} style={at(4)} data-rise>
-            <span className={styles.offerHead}><Telescope size={16} />마음 망원경</span>
+            <span className={styles.offerHead}><TelescopeIcon size={16} />마음 망원경</span>
             <p className="observation">{a.telescope_teaser}</p>
             <p className="caption faint">숨은 마음의 결을 더 들여다볼 수 있어요.</p>
           </div>
         )}
         <div className={styles.resultActions} style={at(5)} data-rise>
-          <Link href={`/stars/${star.id}`} className="btn btn-secondary">마음 망원경 켜기</Link>
+          <Link href={`/stars/${star.id}#telescope`} className="btn btn-secondary">마음 망원경 켜기</Link>
           <Link href="/constellation" className="btn btn-primary">나의 별자리 보기</Link>
         </div>
         <Link href={`/stars/${star.id}`} className={styles.shareLink} style={at(6)} data-rise>우주 광장에 나누기</Link>
