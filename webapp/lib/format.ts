@@ -39,3 +39,5 @@ export function shiftMonth(month: string, n: number) {
   const d = new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5)) - 1 + n, 1));
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
+/** "2026-11" → "11월" */
+export const monthOnly = (month: string) => `${Number(month.slice(5))}월`;

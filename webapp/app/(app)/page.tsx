@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { Constellation } from "@/components/Constellation";
+import { ConstellationFigure } from "@/components/ConstellationFigure";
 import { Archive, ChevronRight, Nebula, Pen, Star } from "@/components/icons";
 import { StarRow } from "@/components/StarRow";
 import { api } from "@/lib/api";
-import { longDate } from "@/lib/format";
+import { getConstellation } from "@/lib/constellation-data";
+import { kst, longDate, monthOnly } from "@/lib/format";
 import type { StarSummary, Summary } from "@/lib/types";
 import styles from "./home.module.css";
 
@@ -30,28 +31,31 @@ async function Today() {
 }
 
 async function Sky() {
-  const [list, summary] = await Promise.all([
+  await connection();
+  const month = kst(new Date()).month;
+  const [list, summary, { c, stars }] = await Promise.all([
     api<{ items: StarSummary[] }>("/v1/stars?limit=6"),
     api<Summary>("/v1/stars/summary"),
+    getConstellation(month),
   ]);
   if (summary.total === 0) return <EmptySky />;
-  const floated = list.items.filter((s) => s.state === "floated");
+  const unlit = stars.filter((s) => !(s.has_starlight ?? s.state === "floated")).length;
   return (
     <div className={styles.body}>
       <div className={styles.left}>
-        <section className={`card ${styles.sky}`}>
+        <Link href="/constellation" className={`card ${styles.sky}`} aria-label="나의 별자리 보기">
           <div className={styles.skyHead}>
-            <h2 className="h3">최근 별자리</h2>
-            <span className="caption faint">띄운 별 {floated.length}개</span>
+            <h2 className="h3">이번 달 별자리{c ? ` · ${monthOnly(month)} ${c.name}자리` : ""}</h2>
+            {c && <span className="caption faint">{c.filled} / {c.total} 자리 채움</span>}
           </div>
           <div className={styles.canvas}>
-            {floated.length ? <Constellation stars={floated} /> : <p className="body-m muted">별을 띄우면 이곳에 별자리가 그려져요.</p>}
+            {c ? <ConstellationFigure c={c} links={false} /> : <p className="body-m muted">이번 달 별자리의 모양을 준비하고 있어요.</p>}
           </div>
-        </section>
+        </Link>
         <div className={styles.stats}>
-          <Stat label="띄운 별" value={summary.floated} color="var(--gold)" />
-          <Stat label="별빛 없는 별" value={summary.kept} color="var(--text)" />
-          <Stat label="깊은 별" value={summary.deep} color="var(--primary-text)" />
+          <Stat label="이번 달 띄운 별" value={String(stars.length)} color="var(--gold)" />
+          <Stat label="별빛 없는 별" value={String(unlit)} color="var(--text)" />
+          <Stat label="채운 자리" value={c ? `${c.filled}/${c.total}` : "–"} color="var(--primary-text)" />
         </div>
       </div>
       <section className={styles.recent} aria-labelledby="recent">
@@ -65,7 +69,7 @@ async function Sky() {
   );
 }
 
-function Stat({ label, value, color }: { label: string; value: number; color: string }) {
+function Stat({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <div className={`card ${styles.stat}`}>
       <span className="caption muted">{label}</span>
