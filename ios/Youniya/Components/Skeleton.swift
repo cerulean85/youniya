@@ -154,19 +154,6 @@ struct ReportListSkeleton: View {
     }
 }
 
-/// 112 스켈레톤 · 성운 상세: name chip, title, canvas, info table and links.
-struct NebulaDetailSkeleton: View {
-    var body: some View {
-        SkeletonStack {
-            SkeletonBlock(width: 107, height: 24, radius: Radius.lg)
-            SkeletonBlock(width: 240, height: 38, radius: Radius.lg)
-            SkeletonBlock(height: 280, radius: Radius.lg)
-            SkeletonBlock(height: 138, radius: Radius.lg)
-            SkeletonBlock(width: 260, height: 32, radius: Radius.lg)
-        }
-    }
-}
-
 #Preview("47") {
     HomeSkeleton().frame(maxHeight: .infinity, alignment: .top).background(Color.bgCanvas)
 }

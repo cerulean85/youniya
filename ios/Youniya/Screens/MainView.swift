@@ -46,20 +46,15 @@ struct MainView: View {
         case nebulaStars(NebulaStarsView.Kind) // 89/90
         case brightness // 82
         case milkyWay   // 81
-        case myNebulaZoom // 77
-        case nebulaStory // 83
-        case drawNebula  // 51–55, 84, 85
+        case constellation(String) // 70 / 77 / 77-2, "YYYY-MM"
+        case constellationStory(String) // 83, "YYYY-MM"
         case galaxyNebula(String) // 73/78, by name
         case galaxyLines(String)  // 74
         case galaxyStar(nebula: String, star: String) // 75, from 73
         case plazaStar(String)                        // 75, from a 09-3 row (by name)
-        case growth     // 65
-        case moments    // 66
-        case stages     // 86
         case sharedStars // 87 › 나눈 별
         case blockedKeepers // 87-3 차단한 별지기
         case editStar(StarItem.ID)  // 글 수정
-        case reshapeNebula          // 08 「모양 바꾸기」 → 84 … 54
         case floatKept(StarItem.ID) // a kept star's "별 띄우기" → 06/07
         case monthlyReport(String?)  // 123 (v1.1): a month, or the mock sample
         case page(String)
@@ -119,9 +114,9 @@ struct MainView: View {
             case "reports": push(.reports)
             case "plaza", "plazaNebula": tab = .plaza     // 09 / 72
             case "compose": push(.compose())              // 05
-            case "myNebula": push(.myNebulaZoom)          // 77
+            case "myNebula": push(.constellation(MonthConstellation.monthKey(.now))) // 70
             case "galaxy": tab = .plaza                  // 69 is now the plaza
-            case "story": push(.nebulaStory)              // 83
+            case "story": push(.constellationStory(MonthConstellation.monthKey(.now))) // 83
             case "missingReport": push(.report(UUID()))   // 122-1
             // Visual review (mock data):
             case "coinsAgreed": push(.coins)              // 28-1
@@ -142,10 +137,6 @@ struct MainView: View {
                 }
                 push(.coinHistory)
             case "missingStar": push(.detail(UUID()))     // 122
-            // 08-1 / 08-2 / 84 reshape (2026-11-08)
-            case "nebulaDrawn", "reshapeNebula":
-                ensureMockNebula()
-                if UserDefaults.standard.string(forKey: "debugRoute") == "reshapeNebula" { push(.reshapeNebula) } else { tab = .nebula }
             case "nebulaEmpty":
                 model.drawnNebulae = []
                 tab = .nebula
@@ -187,11 +178,13 @@ struct MainView: View {
                 } else {
                     LoadingGate {
                         HomeView(onCompose: { push(.compose()) }, onOpenStar: openStar,
-                                 onSeeAll: { recordsFilter = .all; tab = .records })
+                                 onSeeAll: { recordsFilter = .all; tab = .records },
+                                 onConstellation: { tab = .nebula })
                     } placeholder: { HomeSkeleton() }
                 }
             case .nebula:
-                NebulaView(onOpen: openFromNebula)
+                ConstellationView(onOpen: openFromNebula, onDetail: { push(.constellation($0)) },
+                                  onStory: { push(.constellationStory($0)) })
             case .plaza:
                 LoadingGate {
                     PlazaView(onOpen: { push(.plazaStar($0)) },
@@ -349,37 +342,17 @@ struct MainView: View {
         case .milkyWay:
             MilkyWayView(onBack: pop, onOpenStar: openStar)
                 .edgeSwipeBack(onBack: pop)
-        case .myNebulaZoom:
-            MyNebulaZoomView(onBack: pop, onOpenStar: openStar, onOpen: { title in
-                switch title {
-                case "성운 이야기": push(.nebulaStory)
-                case "성운 그리기": push(.drawNebula)
-                case "모양 바꾸기": push(.reshapeNebula)
-                case "자라는 모습": push(.growth)
-                default: push(.page(title))
-                }
-            })
-            .edgeSwipeBack(onBack: pop)
-        case .nebulaStory:
+        case .constellation(let month):
+            ConstellationDetailView(month: month, onBack: pop, onOpenStar: openStar, onStory: { push(.constellationStory(month)) })
+                .edgeSwipeBack(onBack: pop)
+        case .constellationStory(let month):
             NebulaStoryView(onBack: pop,
                             onSaved: {
                                 pop()
-                                toast = ToastCardMessage(title: "성운 이야기를 엮어 두었어요")
-                            })
+                                toast = ToastCardMessage(title: "별자리 이야기를 엮어 두었어요")
+                            },
+                            month: month)
                 .edgeSwipeBack(onBack: pop)
-        case .drawNebula:
-            NebulaDrawingFlow(
-                onClose: pop,
-                onHome: {
-                    withAnimation(.easeInOut(duration: 0.32)) { stack.removeAll() }
-                    tab = .sky
-                },
-                onShare: {
-                    withAnimation(.easeInOut(duration: 0.32)) { stack.removeAll() }
-                    tab = .plaza
-                    toast = ToastCardMessage(title: "우주 광장에 나눴어요")
-                }
-            )
         case .galaxyNebula(let name):
             if let n = model.galaxyNebulae.first(where: { $0.name == name }) {
                 GalaxyNebulaView(nebula: n, onBack: pop,
@@ -406,17 +379,6 @@ struct MainView: View {
                 NotFoundView(onBack: pop)
                     .edgeSwipeBack(onBack: pop)
             }
-        case .growth:
-            NebulaGrowthView(onBack: pop, onMoments: { push(.moments) }, onDraw: { push(.drawNebula) })
-                .edgeSwipeBack(onBack: pop)
-        case .moments:
-            GrowthMomentsView(onBack: pop)
-                .edgeSwipeBack(onBack: pop)
-        case .stages:
-            GrowthStagesView(onBack: pop)
-                .edgeSwipeBack(onBack: pop)
-        case .reshapeNebula:
-            NebulaDrawingFlow(onClose: pop, onHome: pop, onShare: pop, editing: model.latestNebula)
         case .editStar(let id):
             StarEditView(starID: id, onClose: pop)
         case .revise(let id):
@@ -516,19 +478,12 @@ struct MainView: View {
         case "45": push(.policy(.sensitive))
         case "46": push(.policy(.payment))
         case "32": push(.inquiry)
-        case "51": push(.drawNebula)
-        case "86-1": push(.stages)
-        case "65": push(.growth)
-        case "66": push(.moments)
-        case "86": push(.stages)
         case "68": push(.sky)
         case "69", "76": tab = .plaza
-        case "70", "71", "71-1", "77", "112":
-            ensureMockNebula()
-            push(.myNebulaZoom)
+        case "70", "77", "77-2": push(.constellation(MonthConstellation.monthKey(.now)))
         case "81": push(.milkyWay)
         case "82", "109": push(.brightness)
-        case "83": push(.nebulaStory)
+        case "83": push(.constellationStory(MonthConstellation.monthKey(.now)))
         case "89": push(.nebulaStars(.floated))
         case "90": push(.nebulaStars(.supernova))
         case "73", "78": push(.galaxyNebula(nebula.name))
@@ -551,7 +506,6 @@ struct MainView: View {
             if let s = model.stars.first(where: { $0.isFloated && model.report(for: $0.id) != nil }) { push(.detail(s.id)) }
         case "M1", "28-2": push(.coins)
         case "68-1": push(.sky)
-        case "84-1": push(.drawNebula)
         case "87-4": push(.settings)
         case "123": push(.monthlyReport(nil))
         case "87", "87-1", "87-2", "87-5", "91", "92", "93", "94", "95", "114": push(.settings)
@@ -561,18 +515,6 @@ struct MainView: View {
         }
     }
     #endif
-
-    /// Debug: a fresh mock nebula (등대, every mood, two guests) for 08 / 70 / 77.
-    private func ensureMockNebula() {
-        if model.stars.filter(\.isFloated).count < 3 { model.fillSampleStars() }
-        let moods: [Mood] = [.calm, .sorrow, .anger, .insight]
-        for (k, i) in model.stars.indices.filter({ model.stars[$0].isFloated }).enumerated() {
-            model.stars[i].mood = moods[k % moods.count]
-        }
-        let ids = model.stars.filter(\.isFloated).map(\.id)
-        model.drawnNebulae = [DrawnNebula(name: "느린 저녁의 성운", silhouette: NebulaSilhouette.lighthouse.rawValue,
-                                          starIDs: ids, guests: GuestStar.candidates.prefix(2).map(\.title))]
-    }
 
     /// 75-2 차단하기: leave the blocked keeper's page (and the nebula it came
     /// from, which is now hidden), then "차단했어요".
@@ -642,11 +584,6 @@ struct MainView: View {
             // 모두의 은하 (69) is merged into the plaza: switch tabs.
             withAnimation(.easeInOut(duration: 0.32)) { stack.removeAll() }
             tab = .plaza
-        case "나의 성운 확대": push(.myNebulaZoom)
-        case "성운 이야기": push(.nebulaStory)
-        case "성운 그리기": push(.drawNebula)
-        case "모양 바꾸기": push(.reshapeNebula)
-        case "성장 단계": push(.stages)
         default: push(.page(title))
         }
     }

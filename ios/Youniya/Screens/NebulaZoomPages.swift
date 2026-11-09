@@ -43,300 +43,7 @@ struct ZoomControls: View {
     }
 }
 
-/// Figma `Star Tooltip`: the selected star, its shape, and a link to it.
-private struct StarTooltip: View {
-    @Environment(\.skyTheme) private var theme
-    var star: StarItem
-    var onOpen: () -> Void
-
-    var body: some View {
-        Button(action: onOpen) {
-            HStack(spacing: Space.md) {
-                VStack(alignment: .leading, spacing: Space.xs) {
-                    Text("내 별 · \(star.title)")
-                        .textStyle(.labelM)
-                        .foregroundStyle(Color.textPrimary)
-                        .lineLimit(1)
-                    Text("모양: \(StarShapeSpec(star: star).label) · 별빛 \(star.starlightValue ?? 0)")
-                        .textStyle(.caption)
-                        .foregroundStyle(Color.textTertiary)
-                        .lineLimit(1)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                Text("별 보기 ›")
-                    .textStyle(.labelM)
-                    .foregroundStyle(theme.accent.strong)
-            }
-            .padding(Space.lg)
-            .cosmos("tooltip", in: RoundedRectangle(cornerRadius: Radius.lg))
-            .background(Color.bgSurface, in: .rect(cornerRadius: Radius.lg))
-            .overlay(RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(Color.starBright, lineWidth: 1))
-            .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-/// Pinch, drag and the +/− buttons over a fixed-size drawing.
-private struct ZoomPanCanvas<Content: View>: View {
-    @Binding var level: CGFloat
-    var range: ClosedRange<CGFloat>
-    @ViewBuilder var content: (_ level: CGFloat) -> Content
-
-    @State private var pan: CGSize = .zero
-    @State private var dragStart: CGSize?
-    @State private var pinchStart: CGFloat?
-
-    var body: some View {
-        content(level)
-            .offset(pan)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .contentShape(.rect)
-            .gesture(
-                DragGesture(minimumDistance: 4)
-                    .onChanged { v in
-                        let start = dragStart ?? pan
-                        dragStart = start
-                        pan = CGSize(width: start.width + v.translation.width, height: start.height + v.translation.height)
-                    }
-                    .onEnded { _ in dragStart = nil }
-                    .simultaneously(with: MagnifyGesture()
-                        .onChanged { v in
-                            let start = pinchStart ?? level
-                            pinchStart = start
-                            level = min(range.upperBound, max(range.lowerBound, start * v.magnification))
-                        }
-                        .onEnded { _ in pinchStart = nil })
-            )
-            .clipped()
-    }
-}
-
-/// Figma 69 `Stat`: a gold number over a small label.
-private struct NebulaInfoTable: View {
-    var rows: [(String, String)]
-
-    var body: some View {
-        VStack(spacing: Space.sm) {
-            ForEach(rows, id: \.0) { k, v in
-                HStack {
-                    Text(k).textStyle(.bodyS).foregroundStyle(Color.textTertiary)
-                    Spacer()
-                    Text(v).textStyle(.labelS).foregroundStyle(Color.textPrimary)
-                }
-                .accessibilityElement(children: .combine)
-            }
-        }
-        .padding(Space.lg)
-        .itemCard(seed: "nebula-info", minHeight: 0, flatBorder: true)
-    }
-}
-
 // MARK: - 70 / 77 My nebula, zoomed
-
-/// 70 / 77 나의 성운 (자세히 보기): the nebula from 08, larger. Zoom (1–3.2×),
-/// pan and tap a star for its card (77); a guest shows only where it came from.
-struct MyNebulaZoomView: View {
-    @Environment(AppModel.self) private var model
-    var onBack: () -> Void
-    var onOpenStar: (StarItem) -> Void
-    /// 모양 바꾸기 · 성운 이야기 · 자라는 모습
-    var onOpen: (String) -> Void
-
-    /// Figma 70 opens at 1× on the whole nebula; 77 is the zoomed-in, picked state.
-    @State private var level: CGFloat = DebugScreen.is("77") ? 2.4 : 1
-    @State private var selectedID: StarItem.ID?
-    @State private var selectedGuest: GuestStar?
-    @State private var toast: String?
-    /// 71 하늘에 띄우기
-    @State private var askFloat = DebugScreen.is("71") || DebugScreen.is("71-1")
-    @State private var screenHeight: CGFloat = 844
-    @State private var floatSheetHeight: CGFloat = 640
-    @State private var isShortScreen = false
-    /// 112 skeleton while the nebula loads.
-    @State private var loaded = false
-    private var isLoading: Bool { model.simulateLoading && !loaded }
-
-    private var nebula: DrawnNebula? { model.latestNebula }
-    private var stars: [StarItem] {
-        guard let nebula else { return [] }
-        let floated = model.stars.filter(\.isFloated)
-        return nebula.starIDs.compactMap { id in floated.first { $0.id == id } }
-    }
-    private var guests: [GuestStar] {
-        guard let nebula else { return [] }
-        return model.guestCandidates.filter { nebula.guests.contains($0.title) }
-    }
-    private var selected: StarItem? { stars.first { $0.id == selectedID } }
-
-    /// "등대 · 두 번째 걸음" (직접 그리기: the stage only).
-    private var tagText: String {
-        let stage = model.stageName ?? model.stageLabel
-        return [nebula?.template?.name, stage].compactMap { $0 }.joined(separator: " · ")
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            TopAppBar(title: "나의 성운", onBack: onBack)
-
-            ScrollView {
-                if isLoading {
-                    NebulaDetailSkeleton()
-                        .padding(.horizontal, Space.xl)
-                        .padding(.top, Space.sm)
-                } else if let nebula {
-                VStack(alignment: .leading, spacing: Space.lg) {
-                    Text(tagText)
-                        .textStyle(.labelS)
-                        .foregroundStyle(Color.starBright)
-                        .padding(.horizontal, Space.md)
-                        .padding(.vertical, Space.xs)
-                        .background(Color.tintGold, in: .capsule)
-                    Text(nebula.name)
-                        .textStyle(.h1)
-                        .foregroundStyle(Color.textPrimary)
-                        .accessibilityAddTraits(.isHeader)
-
-                    ZStack(alignment: .topTrailing) {
-                        ZoomPanCanvas(level: $level, range: 1...3.2) { level in
-                            NebulaArt(nebula: nebula, selectedStar: selectedID, selectedGuest: selectedGuest?.title,
-                                      onTapStar: { star in
-                                          withAnimation(.snappy) { selectedID = star.id; selectedGuest = nil }
-                                      },
-                                      onTapGuest: { guest in
-                                          withAnimation(.snappy) { selectedGuest = guest; selectedID = nil }
-                                      })
-                                .frame(width: 342, height: isShortScreen ? 200 : 280)
-                                // 77: zoom in around the picked star or guest.
-                                .scaleEffect(level, anchor: zoomAnchor(nebula))
-                        }
-                        ZoomControls(level: $level, range: 1...3.2)
-                            .padding(.top, 4)
-                        Text(selectedID == nil && selectedGuest == nil ? "두 손가락으로 확대 · 별을 눌러 보기" : "별의 모양은 쓴 글의 결로 정해져요")
-                            .textStyle(.caption)
-                            .foregroundStyle(Color.textTertiary)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-                            .padding(.leading, 4)
-                            .allowsHitTesting(false)
-                    }
-                    // iPhone SE: a shorter canvas so the 70 info table shows above the buttons.
-                    .frame(height: isShortScreen ? 200 : 280)
-                    .background { NebulaGlowBackground().clipShape(.rect(cornerRadius: Radius.lg)) }
-
-                    // 70 Info by default; a star shows its card (77); a guest, only its source.
-                    if let selected {
-                        StarTooltip(star: selected) { onOpenStar(selected) }
-                    } else if let guest = selectedGuest {
-                        Text("손님별 · \(guest.source)")
-                            .textStyle(.labelM)
-                            .foregroundStyle(Color.textPrimary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(Space.lg)
-                            .itemCard(seed: "guest-tooltip", minHeight: 0, flatBorder: true)
-                    } else {
-                        NebulaInfoTable(rows: infoRows(nebula))
-                    }
-
-                    HStack(spacing: Space.sm) {
-                        LinkChip(title: "모양 바꾸기") { onOpen("모양 바꾸기") }
-                        LinkChip(title: "성운 이야기") { onOpen("성운 이야기") }
-                        LinkChip(title: "자라는 모습") { onOpen("자라는 모습") }
-                    }
-                }
-                .padding(.horizontal, Space.xl)
-                .padding(.top, Space.sm)
-                .padding(.bottom, Space.lg)
-                .transition(.opacity)
-                }
-            }
-            .scrollIndicators(.hidden)
-            // Anything left below the fold fades out above the buttons (iPhone SE).
-            .mask {
-                VStack(spacing: 0) {
-                    Color.black
-                    LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom).frame(height: Space.lg)
-                }
-            }
-
-            VStack(spacing: Space.md) {
-                Button(model.skyShare == nil ? "하늘에 띄우기" : "하늘에 떠 있어요") { askFloat = true }
-                    .buttonStyle(.primary)
-                Button("이미지로 저장") { saveImage() }
-                    .buttonStyle(.ghost)
-            }
-            // Figma 112: both disabled until the nebula arrives.
-            .disabled(isLoading || nebula == nil)
-            .padding(.horizontal, Space.xl)
-            .padding(.bottom, Space.xl)
-        }
-        .onGeometryChange(for: Bool.self) { $0.size.height < 700 } action: { isShortScreen = $0 }
-        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { screenHeight = $0 }
-        .onAppear {
-            if DebugScreen.is("77") { selectedID = stars.first?.id }
-        }
-        .background { StarField() }
-        .simulatedLoad($loaded)
-        .toast($toast)
-        .sheet(isPresented: $askFloat) {
-            FloatNebulaSheet(
-                maxPickerHeight: screenHeight * 0.85,
-                onFloat: {
-                    askFloat = false
-                    toast = "성운을 하늘에 띄웠어요"
-                },
-                onLater: { askFloat = false }
-            )
-            .fixedSize(horizontal: false, vertical: true)
-            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { floatSheetHeight = $0 }
-            .presentationDetents([.height(floatSheetHeight)])
-            .presentationDragIndicator(.hidden)
-            .presentationCornerRadius(Radius.xl)
-            .presentationBackground { SheetBackground(seed: "float-sheet") }
-        }
-    }
-
-    private func zoomAnchor(_ nebula: DrawnNebula) -> UnitPoint {
-        let index: Int?
-        if let selectedID { index = stars.firstIndex { $0.id == selectedID } }
-        else if let g = selectedGuest, nebula.template != nil { index = guests.firstIndex(of: g).map { stars.count + $0 } }
-        else { index = nil }
-        guard let index else { return .center }
-        let figure = NebulaFigure(nebula: nebula, stars: stars, guests: nebula.template == nil ? [] : guests)
-        return NebulaArt.anchor(dot: index, of: figure, in: CGSize(width: 342, height: isShortScreen ? 200 : 280))
-    }
-
-    /// Figma 70 `Info`: 내 별 · 빈 자리 (실루엣만) · 평균 깊이 · 빛깔, for this nebula.
-    private func infoRows(_ nebula: DrawnNebula) -> [(String, String)] {
-        let deep = stars.compactMap { $0.analysis?.depth }
-        // Depth 0…1 shown on the 1–5 stage scale.
-        let avg = deep.isEmpty ? 0 : 1 + deep.reduce(0, +) / Double(deep.count) * 4
-        let moods = Mood.allCases.filter { m in stars.contains { $0.mood == m } }.map(\.label)
-        var rows = [("내 별", "\(stars.count)개 · 손님별 \(guests.count)개")]
-        if nebula.template != nil {
-            let empty = max(0, NebulaSilhouette.slotCount - stars.count - guests.count)
-            rows.append(("빈 자리", "\(empty) · 다음 별을 기다려요"))
-        }
-        rows.append(("평균 깊이", String(format: "%.1f단계", avg)))
-        rows.append(("빛깔", moods.isEmpty ? "-" : moods.joined(separator: " · ")))
-        return rows
-    }
-
-    /// Saves this nebula (as drawn on 08) to Photos, then T2.
-    @MainActor
-    private func saveImage() {
-        guard let nebula else { return }
-        let renderer = ImageRenderer(content:
-            NebulaArt(nebula: nebula)
-                .environment(model)
-                .frame(width: 360, height: 360)
-                .background { NebulaGlowBackground() }
-        )
-        renderer.scale = 3
-        guard let image = renderer.uiImage else { return }
-        UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
-        toast = "이미지로 저장했어요"
-    }
-}
 
 // MARK: - 83 Nebula story
 
@@ -345,6 +52,8 @@ struct NebulaStoryView: View {
     @Environment(AppModel.self) private var model
     var onBack: () -> Void
     var onSaved: () -> Void
+    /// 83 별자리 이야기 (16장): the month whose stars it weaves.
+    var month: String = MonthConstellation.monthKey(.now)
 
     struct Line: Identifiable {
         var star: StarItem
@@ -352,7 +61,7 @@ struct NebulaStoryView: View {
         var id: StarItem.ID { star.id }
     }
 
-    /// Live: the server's story for my newest nebula (its stars' key sentences).
+    /// Live: GET /v1/constellations/{month}/story (each star's key sentence).
     @State private var serverStory: ServerStory?
 
     /// Live: the server's entries; mock: each floated star's last sentence.
@@ -363,8 +72,7 @@ struct NebulaStoryView: View {
                 return Line(star: star, sentence: e.sentence)
             }
         }
-        return model.stars
-            .filter(\.isFloated)
+        return monthStars
             .sorted { ($0.date ?? .now) < ($1.date ?? .now) }
             .compactMap { star in
                 let parts = star.body
@@ -377,17 +85,22 @@ struct NebulaStoryView: View {
             }
     }
 
+    /// The month's stars, with or without starlight.
+    private var monthStars: [StarItem] {
+        model.stars.filter { $0.date.map(MonthConstellation.monthKey) == month }
+    }
+
     var body: some View {
         let lines = self.lines
-        let floated = model.stars.filter(\.isFloated)
+        let floated = monthStars
         let since = floated.compactMap(\.date).min()
         VStack(spacing: 0) {
-            TopAppBar(title: "성운 이야기", onBack: onBack)
+            TopAppBar(title: "별자리 이야기", onBack: onBack)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     VStack(alignment: .leading, spacing: Space.lg) {
-                        Text("\(model.nebulaName) 이야기")
+                        Text("\(model.constellation(month).title) 이야기")
                             .textStyle(.h2)
                             .foregroundStyle(Color.textPrimary)
                         Text("별마다 고른 핵심 문장을 시간순으로 엮었어요. 원문 문장은 한 글자도 바꾸지 않아요.")
@@ -409,6 +122,9 @@ struct NebulaStoryView: View {
                             .foregroundStyle(Color.textSecondary)
                     } else {
                         storyCard(lines)
+                        Text("✦ 표시는 문장 사이를 잇는 자리예요.")
+                            .textStyle(.caption)
+                            .foregroundStyle(Color.textTertiary)
                     }
                 }
                 .padding(Space.xl)
@@ -422,7 +138,7 @@ struct NebulaStoryView: View {
         }
         .background { StarField() }
         .task {
-            if let story = await model.loadStory() { serverStory = story }
+            if let story = await model.loadConstellationStory(month) { serverStory = story }
         }
     }
 
@@ -471,11 +187,6 @@ struct NebulaStoryView: View {
     }
 }
 
-#Preview("77") {
-    let model = AppModel()
-    model.fillSampleStars()
-    return MyNebulaZoomView(onBack: {}, onOpenStar: { _ in }, onOpen: { _ in }).environment(model)
-}
 
 #Preview("83") {
     let model = AppModel()

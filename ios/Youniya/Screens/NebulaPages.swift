@@ -387,7 +387,7 @@ struct MilkyWayView: View {
                         Text("시간의 길을 따라 흐르는 은하수")
                             .textStyle(.h2)
                             .foregroundStyle(Color.textPrimary)
-                        Text("내가 빚은 별 카드들이 시간순으로 이어져, 나만의 밤하늘 길이 돼요.")
+                        Text("달마다 채운 별자리가 시간순으로 이어져요. 은빛 점선은 서로 다른 달의 별을 이은 별 잇기예요.")
                             .textStyle(.bodyM)
                             .foregroundStyle(Color.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)

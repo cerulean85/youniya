@@ -520,6 +520,8 @@ final class AppModel {
     var retryAvailableAt: Date?
     /// Live plaza (09, 72, 74), loaded by `loadPlaza()` / `loadLines(for:)`.
     var plazaStarsLive: [PlazaNebula] = []
+    /// Live 08-3: month constellations by "YYYY-MM".
+    var liveConstellations: [String: MonthConstellation] = [:]
     var plazaNebulaeLive: [GalaxyNebula] = []
     /// Live 09-2 「곁에 둔 것」: the server's beside lists, most recently kept first.
     var plazaStarsBeside: [PlazaNebula] = []
