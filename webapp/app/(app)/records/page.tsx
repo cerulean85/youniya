@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { RecordsSkeleton } from "@/components/Skeleton";
 import Link from "next/link";
 import { Suspense } from "react";
 import { ChevronLeft, ChevronRight } from "@/components/icons";
@@ -23,7 +24,7 @@ const href = (p: Params) => {
 // Figma W-14 (기록 · 목록) and W-28 (기록 · 달력).
 export default function RecordsPage({ searchParams }: PageProps<"/records">) {
   return (
-    <Suspense fallback={<><Header total={null} /><div className={`card ${styles.loading}`} aria-busy="true" /></>}>
+    <Suspense fallback={<><Header total={null} /><RecordsSkeleton /></>}>
       <Records searchParams={searchParams} />
     </Suspense>
   );

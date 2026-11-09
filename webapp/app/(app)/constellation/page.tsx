@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ConstellationSkeleton } from "@/components/Skeleton";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
@@ -14,7 +15,7 @@ export const metadata: Metadata = { title: "나의 별자리" };
 // Figma W-16 (484:13329, 기획서 16장): the month's constellation, filled with that month's stars.
 export default function ConstellationPage({ searchParams }: PageProps<"/constellation">) {
   return (
-    <Suspense fallback={<><h1 className="h1">나의 별자리</h1><div className={`card ${styles.loading}`} aria-busy="true" /></>}>
+    <Suspense fallback={<><h1 className="h1">나의 별자리</h1><ConstellationSkeleton /></>}>
       <Month searchParams={searchParams} />
     </Suspense>
   );

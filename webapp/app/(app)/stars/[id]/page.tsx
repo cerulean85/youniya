@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { StarSkeleton } from "@/components/Skeleton";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -23,7 +24,7 @@ export default function StarPage({ params, searchParams }: PageProps<"/stars/[id
   return (
     <>
       <Link href="/" className={styles.back}><ChevronLeft size={18} />나의 밤하늘</Link>
-      <Suspense fallback={<div className={`card ${styles.loading}`} aria-busy="true" />}>
+      <Suspense fallback={<StarSkeleton />}>
         <StarView params={params} searchParams={searchParams} />
       </Suspense>
     </>

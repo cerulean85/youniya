@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HomeSkeleton } from "@/components/Skeleton";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { ConstellationFigure } from "@/components/ConstellationFigure";
@@ -20,7 +21,7 @@ export default function HomePage() {
         <Suspense fallback={<p className="body-m muted">&nbsp;</p>}><Today /></Suspense>
       </header>
       <Suspense fallback={null}><OperatorBanners /></Suspense>
-      <Suspense fallback={<div className={`card ${styles.loading}`} aria-busy="true" />}>
+      <Suspense fallback={<HomeSkeleton />}>
         <Sky />
       </Suspense>
     </>

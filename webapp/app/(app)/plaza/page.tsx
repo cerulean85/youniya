@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PlazaSkeleton } from "@/components/Skeleton";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
@@ -28,7 +29,7 @@ export default function PlazaPage({ searchParams }: PageProps<"/plaza">) {
         <h1 className="h1">우주 광장</h1>
         <p className="body-m muted">별지기들이 나눈 별이에요. 눌러서 글을 읽고, 마음이 닿으면 공명을 남겨 보세요.</p>
       </header>
-      <Suspense fallback={<div className={`card ${styles.loading}`} aria-busy="true" />}>
+      <Suspense fallback={<PlazaSkeleton />}>
         <Plaza searchParams={searchParams} />
       </Suspense>
     </>
