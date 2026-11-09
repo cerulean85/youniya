@@ -42,7 +42,9 @@ export default async function CoinsPage({ searchParams }: PageProps<"/coins">) {
             {l.items.map((x, i) => (
               <tr key={i}>
                 <td>{when(x.at)}</td>
-                <td><Link href={x.keeper.id ? `/keepers/${encodeURIComponent(x.keeper.id)}` : `/keepers?q=${encodeURIComponent(x.keeper.no.startsWith("#") ? x.keeper.no : `#${x.keeper.no}`)}`}>{x.keeper.nickname ?? x.keeper.no}</Link></td>
+                <td>{x.keeper.id ? <Link href={`/keepers/${encodeURIComponent(x.keeper.id)}`}>{x.keeper.nickname ?? x.keeper.no}</Link>
+                  : x.keeper.no.startsWith("#") ? <Link href={`/keepers?q=${encodeURIComponent(x.keeper.no)}`}>{x.keeper.no}</Link>
+                  : <span className="faint">{x.keeper.no}</span>}</td>
                 <td><span className={`badge ${KIND[x.kind][0]}`}>{KIND[x.kind][1]}</span></td>
                 <td>{x.detail}</td>
                 <td>{x.coins > 0 ? `+${num(x.coins)}` : `−${num(-x.coins)}`}</td>
