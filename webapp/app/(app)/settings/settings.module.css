@@ -1,0 +1,28 @@
+.loading { min-height: 480px; }
+.columns { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; }
+.column { display: flex; flex-direction: column; gap: 28px; }
+.group { display: flex; flex-direction: column; gap: 10px; }
+.card { padding: 4px 0; border-radius: 18px; display: flex; flex-direction: column; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 14px 20px; background: none; border: 0; color: var(--text); font: 400 14px/22px var(--sans); text-align: left; cursor: pointer; }
+.card form { display: block; }
+.card > :not(:first-child):not(dialog) { border-top: 1px solid var(--border); }
+.row:disabled { cursor: default; }
+.row:not(:disabled):hover { background: rgba(255, 255, 255, 0.02); }
+.value { display: inline-flex; align-items: center; gap: 4px; color: var(--text-2); font-size: 13px; }
+.danger { color: var(--anger); }
+.appOnly { padding: 0 4px; }
+.switch { appearance: none; width: 44px; height: 26px; border-radius: 999px; background: var(--raised); border: 1px solid var(--border); position: relative; cursor: pointer; transition: background 0.2s; flex: none; }
+.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform 0.2s; }
+.switch:checked { background: var(--primary); border-color: var(--primary); }
+.switch:checked::after { transform: translateX(18px); }
+.dialog { max-width: 460px; width: 100%; padding: 28px; color: var(--text); }
+.dialog[open] { display: flex; flex-direction: column; gap: 14px; }
+.dialog::backdrop { background: rgba(11, 15, 25, 0.7); }
+.dialog form { display: flex; flex-direction: column; gap: 14px; }
+.dialogActions { display: flex; justify-content: flex-end; gap: 8px; }
+.blocks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.blocks li { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-radius: 12px; background: var(--raised); }
+.confirm { display: flex; flex-direction: column; gap: 6px; }
+.confirm input { padding: 10px 12px; border-radius: 10px; background: var(--raised); border: 1px solid var(--border); color: var(--text); font: 400 14px/20px var(--sans); outline: none; }
+.dangerButton { color: #fff; background: linear-gradient(180deg, #bc5457, #a5202a); }
+@media (max-width: 1100px) { .columns { grid-template-columns: 1fr; } }

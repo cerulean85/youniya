@@ -25,6 +25,7 @@ export function NicknameForm({ initial = "", next = "/", submit = "이 이름으
   const current = check && formOk;
   const status = !trimmed ? null
     : !formOk ? { ok: false, text: "2~12자, 한글·영문·숫자로 정해 주세요." }
+    : initial && trimmed === initial ? { ok: null, text: "지금 쓰고 있는 이름이에요." }
     : checking || !current ? { ok: null, text: "확인하는 중…" }
     : check.available ? { ok: true, text: `쓸 수 있는 이름이에요 · ${trimmed.length}/12` }
     : { ok: false, text: check.message ?? "쓸 수 없는 이름이에요." };

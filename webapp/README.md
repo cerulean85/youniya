@@ -85,5 +85,9 @@ vercel deploy --prod   # from this folder, linked to youniya-app
    받은 별빛 한 줄 on star detail, 별지기 페이지 (W-50, `/plaza/keepers/[name]`), sharing the 대표 문장 with the
    whole writing (W-26, `full_text`, `receive_lines`; stars without starlight too). The nebula plaza is gone.
    **Done.**
-6. Settings and intro-site wording.
+6. Settings (W-15, web part): 별지기 이름 (30 days), sign-in, 새 기능·혜택 알림 (`PUT /v1/me/marketing`), 나눈 별,
+   차단한 별지기 (when and where), 데이터 내보내기 (`/settings/export` passes the API's text file through), 모든
+   공유 거두기, 계정 영구 삭제 (type 삭제), 109, policies, 로그아웃. 우주의 색, 진동, 소리, 별 만들기 알림 stay in the
+   app. Intro-site wording (`web/`: 별자리, 별지기 이름, 별빛) is edited but not deployed: it goes out with the
+   policy update. **Done.**
 
