@@ -42,8 +42,14 @@ class PrismSample(BaseModel):
     telescope_teaser: str = "망원경으로 보면 이 별의 결이 조금 더 또렷해져요."  # 07 마음 망원경 카드의 한 줄
     rewrite_question: str  # 14 다시 쓰기 질문
     signal_sentences: list[str] = Field(default_factory=list, max_length=5)  # 88 불이 켜진 문장
+    # 17.3 별빛 풀이 (prism-v1-2026-11). Empty when the model leaves one out: the app hides that line.
+    depth_reason: str = ""
+    clarity_reason: str = ""
+    weight_reason: str = ""
+    interpretation: str = ""
 
-    @field_validator("latent_hypothesis", "telescope_teaser", mode="before")
+    @field_validator("latent_hypothesis", "telescope_teaser", "depth_reason", "clarity_reason", "weight_reason",
+                     "interpretation", mode="before")
     @classmethod
     def _null_is_unset(cls, v, info):
         """The model sometimes sends null when it has nothing to say: use the default line."""

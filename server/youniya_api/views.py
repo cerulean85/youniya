@@ -42,6 +42,7 @@ def star_view(star: Star, cipher: Cipher, shared: bool = False, body: bool = Tru
         "created_at": iso(star.created_at),
         "updated_at": iso(star.updated_at),
         "starlight": star.starlight,
+        "prism_version": star.prism_version,  # 17.6 "2026년 11월 방식으로 읽었어요"; null before it
         "rewrite_of": star.rewrite_of,
         "analysis_failed": star.analysis_failed,
         "shared": shared,

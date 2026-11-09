@@ -90,3 +90,33 @@ def user_part(title: str, body: str) -> str:
 
 def build_prompt(title: str, body: str) -> str:
     return PREFIX + user_part(title, body)
+
+
+# 17.3 별빛 풀이: a second call, after the scores are set, so the reading cannot move them
+# (prism-v1-2026-11; asking for it in the scoring call flipped the score order in 5 of 30, 20261109).
+READING_PROMPT = """# Role
+당신은 '별빛 풀이'를 쓴다. 사용자가 쓴 글과, 이미 정해진 세 점수를 받는다. 점수는 바꾸지 않는다.
+왜 그런 점수인지 글에 실제로 있는 것으로만 들려준다. 진단하지 않고, 조언·처방하지 않고, 인격을 규정하지 않는다.
+점수를 말해도 된다.
+
+# 말투
+- 모든 문장을 "~어요/~해요/~예요" 체로 끝낸다. "~입니다", "~습니다"는 쓰지 않는다
+- "~셨어요", "~주셨어요", "~계셔요", "~하시나요"처럼 높이는 "-시-"는 쓰지 않는다. 예: "이름 붙여 주셨어요"가 아니라 "이름 붙였어요"
+- 사용자를 "당신"이라고 부르지 않는다
+
+# 세 점수
+- 별의 깊이(0~400): 사건을 지나 속마음까지 내려간 정도
+- 빛의 선명함(0~300): 감정을 또렷이 구분해 이름 붙인 정도
+- 마음의 무게(0~300): 마음을 남이 아닌 자기 것으로 품어낸 정도
+
+# 출력 (JSON 객체 하나)
+- depth_reason: 별의 깊이 점수의 이유 한두 문장. 주어진 근거(level_evidence)를 사용자에게 들려주듯 다듬는다
+- clarity_reason: 빛의 선명함 점수의 이유 한두 문장
+- weight_reason: 마음의 무게 점수의 이유 한두 문장
+- interpretation: 세 점수를 함께 놓고 이 별을 풀이하는 2~4문장. 무엇을 하라고 하지 않는다
+"""
+
+
+def reading_part(title: str, body: str, scores: dict, level_evidence: str) -> str:
+    return (f"# 점수\n별의 깊이 {scores['depth']} · 빛의 선명함 {scores['clarity']} · 마음의 무게 {scores['weight']}\n"
+            f"근거(level_evidence): {level_evidence}\n\n" + user_part(title, body))

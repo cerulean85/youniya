@@ -9,6 +9,16 @@ from .llm import generate_json
 from .rules import MOOD_LABELS
 
 LENSES = (("depth", "별의 깊이"), ("clarity", "빛의 선명함"), ("weight", "마음의 무게"))
+# 17.3 마음을 흐리게 하는 것들
+FOG_KINDS = {"step_back": "한 걸음 물러서기", "unnamed": "이름 없이 지나간 감정", "blaming": "남 탓",
+             "self_blame": "자신 몰아세우기", "overgeneral": "지나친 일반화"}
+
+
+def _flow(flow, emotions: list[dict]) -> dict:
+    """{start, middle, end}: a mood each; the strongest mood where the model gave none."""
+    top = emotions[0]["mood"] if emotions else "calm"
+    flow = flow if isinstance(flow, dict) else {}
+    return {k: flow.get(k) if flow.get(k) in MOOD_LABELS else top for k in ("start", "middle", "end")}
 
 _STAR_NAMES = {
     "calm": "기다림이 머문 별",
@@ -29,6 +39,12 @@ TELESCOPE_PROMPT = """# Role
   weight=마음의 무게(남이 아니라 내 마음으로 품어낸 정도)
 - evidence: 위 관찰의 근거가 된 원문 문장 하나. 원문을 한 글자도 바꾸지 않는다
 - question: 스스로에게 물어볼 질문 한 문장. 답을 유도하지 않는다
+- fog_items: 마음을 흐리게 하는 생각의 습관이 보이는 곳 0~5개. [{"kind": …, "sentence": …, "note": …}]
+  kind는 다음 중 하나: step_back(한 걸음 물러서기: 느낌 대신 상황 설명으로 비켜 감), unnamed(이름 없이 지나간 감정),
+  blaming(남 탓), self_blame(자신 몰아세우기), overgeneral(지나친 일반화: "늘", "항상", "다들" 같은 말로 넓힘).
+  sentence는 원문 문장 그대로, note는 그 문장에서 본 것을 가능성으로 말하는 한 문장(~일지도 몰라요). 없으면 빈 배열
+- mood_flow: {"start": …, "middle": …, "end": …} 글의 처음·가운데·끝에 머문 감정. 각각 calm, sorrow, anger, insight 중 하나
+- mood_interpretation: 감정이 그렇게 흘러간 모습을 비추는 1~2문장. 조언하지 않는다
 
 # 말투
 - notes와 question은 "~어요/~해요/~나요" 체로 통일한다. "~셨어요", "~계셔요", "~하시나요"처럼 높이는 "-시-"는 쓰지 않는다
@@ -80,8 +96,18 @@ def build_report(stars: list[StarText], api_key: str | None, model: str, thinkin
 
     return {
         "star_name": text["star_name"],
-        "lenses": [{"key": k, "label": label, "value": lens_values[k], "note": text["notes"].get(k, "")}
+        # 17.3: the score and its reason are the prism's, copied, never read again.
+        "lenses": [{"key": k, "label": label, "value": lens_values[k], "note": text["notes"].get(k, ""),
+                    "score": stars[-1].analysis["scores"][k] if n == 1 else None,
+                    "reason": stars[-1].analysis.get(f"{k}_reason") if n == 1 else None}
                    for k, label in LENSES],
+        "fog_items": [{"kind": f["kind"], "label": FOG_KINDS[f["kind"]], "sentence": f["sentence"],
+                       "note": f.get("note", "")}
+                      for f in text.get("fog_items") or []
+                      if isinstance(f, dict) and f.get("kind") in FOG_KINDS
+                      and f.get("sentence") and any(f["sentence"] in b for b in bodies.values())][:5],
+        "mood_flow": _flow(text.get("mood_flow"), emotions),
+        "mood_interpretation": text.get("mood_interpretation") or "",
         "emotions": emotions,
         "evidence": evidence,
         "question": text["question"],
@@ -118,6 +144,8 @@ def _mock_text(star: StarText, top_mood: str) -> dict:
         "evidence": a["impact_quote"],
         "question": a["rewrite_question"],
         "signals": [],
+        "fog_items": [],
+        "mood_interpretation": "마음이 한 결로 머물렀다가 천천히 가라앉았어요.",
     }
 
 

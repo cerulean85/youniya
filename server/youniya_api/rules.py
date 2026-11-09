@@ -6,6 +6,9 @@ MOOD_LABELS = {"calm": "평온", "sorrow": "슬픔", "anger": "분노", "insight
 # 104/105: floating (analysis) needs 50 characters (1,000 until 20261108); keeping has no minimum.
 MIN_FLOAT_LENGTH = 50
 
+# 17.6 측정 방식: stored on every star read from now on; earlier stars (null) are never read again.
+PRISM_VERSION = "prism-v1-2026-11"
+
 # 17.1 별빛 없이 띄우기: no model, free, this many a Korean day.
 UNLIT_PER_DAY = 10
 

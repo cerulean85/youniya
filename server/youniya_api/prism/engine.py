@@ -13,7 +13,7 @@ from .calculator import final_scores
 from .filters import foul_reason, has_crisis_signal
 import contextvars
 
-from .prompt import PREFIX, user_part
+from .prompt import PREFIX, READING_PROMPT, reading_part, user_part
 from .schemas import MoodShare, PrismSample
 
 log = logging.getLogger(__name__)
@@ -48,7 +48,25 @@ class PrismEngine:
         except Exception:
             # 36 별을 읽지 못했어요: the writing is kept and nothing is charged.
             return PrismResult(status="failed", message="별을 읽지 못했어요.")
-        return PrismResult(status="ok", analysis=to_analysis(samples, body))
+        analysis = to_analysis(samples, body)
+        if self.api_key:
+            analysis |= self._reading(title, body, analysis)
+        return PrismResult(status="ok", analysis=analysis)
+
+    def _reading(self, title: str, body: str, analysis: dict) -> dict:
+        """17.3 별빛 풀이 from the settled scores. A lost call leaves the reasons out (the app hides them),
+        never the star: the depth reason falls back to the level evidence."""
+        try:
+            out = generate_json(self.api_key, self.model, reading_part(title, body, analysis["scores"],
+                                                                        analysis["level_evidence"]),
+                                prefix=READING_PROMPT + "\n\n", temperature=0.3, thinking=self.thinking,
+                                timeout=25.0, retries=1)
+        except Exception as e:  # noqa: BLE001
+            log.warning("prism reading failed: %s", type(e).__name__)
+            return {}
+        keys = ("depth_reason", "clarity_reason", "weight_reason", "interpretation")
+        got = {k: out[k].strip() for k in keys if isinstance(out.get(k), str) and out[k].strip()}
+        return got | ({} if got.get("depth_reason") else {"depth_reason": analysis["level_evidence"]})
 
     def _samples(self, title: str, body: str) -> list[PrismSample]:
         if not self.api_key:
@@ -120,6 +138,11 @@ def to_analysis(samples: list[PrismSample], body: str) -> dict:
         "tags": best.psych_tags,
         "signal_sentences": signals,
         "latent_hypothesis": best.latent_hypothesis,
+        # 17.3 별빛 풀이: why each score, and the three read together.
+        "depth_reason": best.depth_reason or best.level_evidence,
+        "clarity_reason": best.clarity_reason,
+        "weight_reason": best.weight_reason,
+        "interpretation": best.interpretation,
         "self_attack": best.self_attack,
         # 76 "모양: 꼭짓점 5개 · 보통 뾰족함": deeper stars have more tips, clearer ones sharper.
         "shape": {
@@ -186,4 +209,8 @@ def mock_sample(title: str, body: str) -> PrismSample:
         telescope_teaser="말하지 않은 마음이 한 겹 더 있을지도 몰라요.",
         rewrite_question="그 마음은 어디에서 오고 있었을까요?",
         signal_sentences=signals,
+        depth_reason=f"{'속마음까지 내려가' if level >= 5 else '일어난 일을 따라가며'} 마주한 깊이가 {depth}점이에요.",
+        clarity_reason=f"마음에 이름을 붙인 선명함이 {naming}점이에요.",
+        weight_reason=f"마음을 내 것으로 품어낸 무게가 {ownership}점이에요.",
+        interpretation=_OBSERVATIONS[ranked[0]].split("\n")[0] + " 세 빛이 함께 이 별의 모양을 이뤄요.",
     )

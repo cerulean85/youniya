@@ -109,6 +109,8 @@ class Star(Base):
     floated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     # Set when the owner edits the writing; null for one never edited.
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # 17.6 the prism version that read this star; null for those read before prism-v1-2026-11.
+    prism_version: Mapped[str | None] = mapped_column(String(32))
     # 17.5 감정 여러 개, the first is `mood` (the star's colour). Null for stars before 20261109: [mood].
     moods: Mapped[list | None] = mapped_column(JSON)
 
