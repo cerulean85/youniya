@@ -171,8 +171,8 @@ KEEPER_TOLD = {
 }
 
 
-def _tell(db: Session, request: Request, user_ids: list[str], title: str, body: str) -> None:
-    notify(db, request.app.state.push, [u for u in user_ids if u], Message(title, body, "report_result"))
+def _tell(db: Session, request: Request, user_ids: list[str], title: str, body: str, target: dict | None = None) -> None:
+    notify(db, request.app.state.push, [u for u in user_ids if u], Message(title, body, "report_result", target))
 
 
 def _restrict(user: User, days: int) -> None:
@@ -221,12 +221,16 @@ def report_action(kind: Kind, target_id: str, body: ReportAction, request: Reque
                       note=body.note, keeper=keeper.id if keeper else None)
     db.commit()
     if a in REPORTER_TOLD and kind != "star_line":  # a star line's reporter is its star's owner
-        _tell(db, request, reporters, "신고하신 내용을 살펴봤어요", REPORTER_TOLD[a])
-    if keeper and a in ("take_down", "request_rename"):
-        _tell(db, request, [keeper.id], *KEEPER_TOLD[a])
+        _tell(db, request, reporters, "신고하신 내용을 살펴봤어요", REPORTER_TOLD[a], {"screen": "notifications"})
+    if keeper and a == "take_down":
+        star = {"screen": "star", "star_id": row.star_id} if kind == "star" else {"screen": "notifications"}
+        _tell(db, request, [keeper.id], *KEEPER_TOLD[a], star)
+    if keeper and a == "request_rename":
+        _tell(db, request, [keeper.id], *KEEPER_TOLD[a], {"screen": "nickname"})
     if keeper and a.startswith("restrict"):
         title, text = KEEPER_TOLD["restrict"]
-        _tell(db, request, [keeper.id], title, text.format(days=7 if a == "restrict_7d" else 30))
+        _tell(db, request, [keeper.id], title, text.format(days=7 if a == "restrict_7d" else 30),
+              {"screen": "plaza_restricted", "until": iso(keeper.plaza_restricted_until)})
     st, _ = _status(kind, row, _report_rows(db, kind, target_id))
     return {"status": st, "action_id": entry.id}
 
@@ -323,23 +327,24 @@ def keeper_action(user_id: str, body: KeeperAction, request: Request, op: Operat
     if a in OWNER_ONLY and op.role != "owner":
         raise ApiError(403, "forbidden_role", "이 작업을 할 권한이 없어요.", role=op.role)
     actor = op if op.id else None
-    tell: tuple[str, str] | None = None
+    tell: tuple | None = None
     if a == "lift_restriction":
         u.plaza_restricted_until = None
-        tell = ("우주 광장 이용 제한이 풀렸어요", "다시 광장에 나누고 한 줄을 남길 수 있어요.")
+        tell = ("우주 광장 이용 제한이 풀렸어요", "다시 광장에 나누고 한 줄을 남길 수 있어요.", {"screen": "plaza"})
     elif a == "extend_restriction":
         if body.days is None:
             raise ApiError(422, "days_required", "며칠 동안 제한할지 골라 주세요.")
         _restrict(u, body.days)
-        tell = (KEEPER_TOLD["restrict"][0], KEEPER_TOLD["restrict"][1].format(days=body.days))
+        tell = (KEEPER_TOLD["restrict"][0], KEEPER_TOLD["restrict"][1].format(days=body.days),
+                {"screen": "plaza_restricted", "until": iso(u.plaza_restricted_until)})
     elif a == "request_rename":
         u.nickname_rename_requested_at = _now()
-        tell = KEEPER_TOLD["request_rename"]
+        tell = (*KEEPER_TOLD["request_rename"], {"screen": "nickname"})
     elif a == "grant_coins":
         if body.amount is None:
             raise ApiError(422, "amount_required", "지급할 코인 수를 적어 주세요.")
         coins.add(db, u, body.amount, "운영자 지급")
-        tell = ("코인이 지급됐어요", f"{body.amount}코인을 받았어요.")
+        tell = ("코인이 지급됐어요", f"{body.amount}코인을 받았어요.", {"screen": "coin_history"})
     elif a == "process_deletion":
         ops.audit(db, actor, "keeper_process_deletion", target=f"keeper:{u.id}", reason=body.reason, no=u.keeper_no)
         db.execute(update(CoinEntry).where(CoinEntry.user_id == u.id, CoinEntry.transaction_id.is_not(None))
@@ -351,7 +356,7 @@ def keeper_action(user_id: str, body: KeeperAction, request: Request, op: Operat
               amount=body.amount, days=body.days)
     db.commit()
     if tell:
-        notify(db, request.app.state.push, [u.id], Message(*tell, "report_result"))
+        notify(db, request.app.state.push, [u.id], Message(tell[0], tell[1], "report_result", tell[2] if len(tell) > 2 else None))
     return _keeper_row(db, u)
 
 
