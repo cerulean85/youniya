@@ -89,7 +89,8 @@ export type Ledger = {
 export type AiUsage = {
   month: string; model: string; thinking: string; krw_per_usd: number;
   summary: { cost_krw: number; change_pct: number; calls: number; failure_rate: number; per_starlight_krw: number; cache_hit: number; per_telescope_krw: number; member_alerts: number; member_limit_krw: number };
-  features: { key: string; label: string; calls: number | null; avg_in: number | null; avg_out: number | null; cost_krw: number; note?: string }[];
+  /** Per feature this month; the failure rate is failures / attempts (ai_usage; the reading call is prism_reading). */
+  features: { key: string; label: string; calls: number | null; attempts?: number; failures?: number; avg_in: number | null; avg_out: number | null; cost_krw: number; note?: string }[];
   members: { keeper_no: string; cost_krw: number; alert: boolean }[];
 };
 export type PrismStatus = "draft" | "held" | "active" | "retired";

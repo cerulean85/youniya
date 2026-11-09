@@ -86,10 +86,11 @@ export function ai(token: string, month: string): AiUsage {
   owner(token);
   return {
     month, model: "gemini-3.8-flash", thinking: "low", krw_per_usd: 1500,
-    summary: { cost_krw: 182400, change_pct: 8, calls: 24310, failure_rate: 0.4, per_starlight_krw: 7.6, cache_hit: 62, per_telescope_krw: 3.9, member_alerts: 1, member_limit_krw: 2000 },
+    summary: { cost_krw: 182400, change_pct: 8, calls: 42550, failure_rate: 0.4, per_starlight_krw: 8.4, cache_hit: 62, per_telescope_krw: 3.8, member_alerts: 1, member_limit_krw: 2000 },
     features: [
-      { key: "starlight", label: "별빛 받기 (별빛 풀이 포함)", calls: 18240, avg_in: 1420, avg_out: 610, cost_krw: 138600 },
-      { key: "telescope", label: "마음 망원경", calls: 6070, avg_in: 1980, avg_out: 540, cost_krw: 23700 },
+      { key: "prism_score", label: "별빛 받기 · 점수", calls: 18240, attempts: 18290, failures: 50, avg_in: 1420, avg_out: 180, cost_krw: 92300 },
+      { key: "prism_reading", label: "별빛 받기 · 풀이 (별도 호출)", calls: 18240, attempts: 18370, failures: 130, avg_in: 1650, avg_out: 430, cost_krw: 66400 },
+      { key: "telescope", label: "마음 망원경", calls: 6070, attempts: 6080, failures: 10, avg_in: 1980, avg_out: 540, cost_krw: 23700 },
       { key: "crisis", label: "위기 신호 감지", calls: null, avg_in: null, avg_out: null, cost_krw: 0, note: "AI 안 씀" },
     ],
     members: [{ keeper_no: "#48213", cost_krw: 2140, alert: true }, { keeper_no: "#47002", cost_krw: 1320, alert: false }, { keeper_no: "#46551", cost_krw: 980, alert: false }],
