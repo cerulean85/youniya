@@ -40,6 +40,26 @@ _HURTFUL = ("죽어", "꺼져", "병신", "멍청", "한심", "쓰레기", "닥�
             "stupid", "idiot", "loser")
 
 
+# 10.1 별빛 한 줄 is warmth, not a verdict or a prescription.
+_JUDGING = ("네 잘못", "니 잘못", "당신 잘못", "이상해", "이상하다", "별로", "유난", "예민", "오버", "그럴 만해")
+_ADVICE = ("해야 해", "해야해", "해야 돼", "해야돼", "하세요", "해 봐", "해봐", "하지 마", "하지마", "는 게 좋아",
+           "는게 좋아", "는 게 나아", "병원 가", "상담 받아", "상담받아", "잊어버려", "잊어", "털어버려")
+
+
+def line_problem(text: str) -> str | None:
+    """None, or why a line cannot go: hurtful | contact | judging | advice."""
+    low = text.lower()
+    if is_hurtful(low):
+        return "hurtful"
+    if scan(text, "contacts")["total"]:
+        return "contact"
+    if any(w in low for w in _JUDGING):
+        return "judging"
+    if any(w in low for w in _ADVICE):
+        return "advice"
+    return None
+
+
 def is_hurtful(text: str) -> bool:
     lowered = text.lower()
     return any(w in lowered for w in _HURTFUL)

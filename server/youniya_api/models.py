@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import (JSON, Boolean, CheckConstraint, DateTime, Float, ForeignKey, Index, Integer, String, Text,
-                        UniqueConstraint, false)
+                        UniqueConstraint, false, true as sa_true)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -136,6 +136,7 @@ class StarShare(Base):
     # The whole writing goes out too (20261108), contacts masked; only when the owner agreed to it.
     full_text: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     body_masked_enc: Mapped[str | None] = mapped_column(Text)
+    receive_lines: Mapped[bool] = mapped_column(Boolean, default=True, server_default=sa_true())  # 10.1
     mood: Mapped[str] = mapped_column(String(16))
     moods: Mapped[list] = mapped_column(JSON, default=list)
     depth_level: Mapped[int] = mapped_column(Integer)
@@ -215,6 +216,31 @@ class StarlightLine(Base):
     text: Mapped[str] = mapped_column(String(60))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     hidden: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class StarLine(Base):
+    """10.1 별빛 한 줄 on a star shared to the plaza. Only the star's owner reads it; it stays (no
+    fading) and outlives the share. One per person per star."""
+
+    __tablename__ = "star_lines"
+    __table_args__ = (UniqueConstraint("star_id", "user_id"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    star_id: Mapped[str] = mapped_column(ForeignKey("stars.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[str] = user_fk()  # who left it
+    chip: Mapped[str | None] = mapped_column(String(16))  # LINE_CHIPS key, or null for written words
+    text: Mapped[str] = mapped_column(String(60))
+    hidden: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class StarLineReport(Base):
+    __tablename__ = "star_line_reports"
+
+    line_id: Mapped[str] = mapped_column(ForeignKey("star_lines.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    reason: Mapped[str] = mapped_column(String(20))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
 class LineReport(Base):
@@ -329,7 +355,7 @@ class Block(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     blocker_id: Mapped[str] = user_fk()
     blocked_id: Mapped[str] = user_fk()
-    source: Mapped[str] = mapped_column(String(8))  # line | star | nebula: where it was blocked from
+    source: Mapped[str] = mapped_column(String(16))  # line | star | nebula | star_line: where it was blocked from
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 

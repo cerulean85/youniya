@@ -44,6 +44,8 @@ MEMBER_SILHOUETTES = ("cherry_blossom", "wave", "maple", "snowflake")
 
 # 74 별빛 한 줄: one line per nebula per person, 60 characters, fades after a day.
 LINE_MAX_LENGTH = 60
+# 10.1 빠른 공감: a line can be one of these instead of written words.
+LINE_CHIPS = {"empathize": "공감해요", "me_too": "저도 그랬어요", "thanks": "고마워요"}  # 기획서 10.1, Figma 74
 LINE_LIFETIME_HOURS = 24
 # 18.3: personal_info (연락처·주소) and self_harm (자해·위기) hide at once; the rest at three reports.
 LINE_REPORT_REASONS = ("hurtful", "personal_info", "spam", "other",

@@ -1206,6 +1206,166 @@
         }
       }
     },
+    "/v1/stars/{star_id}/lines": {
+      "get": {
+        "tags": [
+          "stars"
+        ],
+        "summary": "Star Lines",
+        "description": "10.1 the 별빛 한 줄 left on my star, newest first: only I read them, and only I know how many.",
+        "operationId": "star_lines_v1_stars__star_id__lines_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "star_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Star Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/stars/{star_id}/lines/{line_id}": {
+      "delete": {
+        "tags": [
+          "stars"
+        ],
+        "summary": "Delete Star Line",
+        "operationId": "delete_star_line_v1_stars__star_id__lines__line_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "star_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Star Id"
+            }
+          },
+          {
+            "name": "line_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Line Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/stars/{star_id}/lines/{line_id}/report": {
+      "post": {
+        "tags": [
+          "stars"
+        ],
+        "summary": "Report Star Line",
+        "description": "The owner reports a line left on their star: it is hidden at once (only the owner ever saw it).",
+        "operationId": "report_star_line_v1_stars__star_id__lines__line_id__report_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "star_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Star Id"
+            }
+          },
+          {
+            "name": "line_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Line Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LineReportIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/stars/{star_id}/links": {
       "post": {
         "tags": [
@@ -2932,6 +3092,62 @@
         }
       }
     },
+    "/v1/plaza/stars/{share_id}/lines": {
+      "post": {
+        "tags": [
+          "plaza"
+        ],
+        "summary": "Leave Star Line",
+        "description": "10.1 별빛 한 줄 on someone's shared star: words (60 characters) or a 빠른 공감 chip. One per person\nper star. Only the owner reads it; it stays, even after the star leaves the plaza.",
+        "operationId": "leave_star_line_v1_plaza_stars__share_id__lines_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "share_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Share Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StarLineIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/keepers/{name}": {
       "get": {
         "tags": [
@@ -4253,6 +4469,36 @@
         ],
         "title": "LineIn"
       },
+      "LineReportIn": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "hurtful",
+              "personal_info",
+              "spam",
+              "other",
+              "self_harm",
+              "harassment",
+              "hate",
+              "impersonation",
+              "advertising",
+              "nickname"
+            ],
+            "title": "Reason"
+          },
+          "block": {
+            "type": "boolean",
+            "title": "Block",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "LineReportIn"
+      },
       "LinksIn": {
         "properties": {
           "star_ids": {
@@ -4842,6 +5088,40 @@
         ],
         "title": "StarIn"
       },
+      "StarLineIn": {
+        "properties": {
+          "text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "chip": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "empathize",
+                  "me_too",
+                  "thanks"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chip"
+          }
+        },
+        "type": "object",
+        "title": "StarLineIn"
+      },
       "StarShareIn": {
         "properties": {
           "quote": {
@@ -4854,6 +5134,11 @@
             "type": "boolean",
             "title": "Full Text",
             "default": false
+          },
+          "receive_lines": {
+            "type": "boolean",
+            "title": "Receive Lines",
+            "default": true
           }
         },
         "type": "object",

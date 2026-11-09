@@ -15,8 +15,8 @@ from .. import nickname, privacy
 from ..push import Message, notify
 from ..blocks import can_see, hidden_users, visible_shares
 from ..deps import ApiError, consented_user, get_cipher, get_db
-from ..models import AdminLog, Beside, LineReport, NebulaShare, Resonance, ShareReport, Star, StarlightLine, StarShare, User
-from ..rules import LINE_LIFETIME_HOURS, LINE_MAX_LENGTH, LINE_REPORT_REASONS
+from ..models import AdminLog, Beside, StarLine, LineReport, NebulaShare, Resonance, ShareReport, Star, StarlightLine, StarShare, User
+from ..rules import LINE_CHIPS, LINE_LIFETIME_HOURS, LINE_MAX_LENGTH, LINE_REPORT_REASONS
 from ..security import Cipher
 from ..views import KST, iso
 from ..ratelimit import per_user
@@ -54,6 +54,7 @@ class StarShareIn(BaseModel):
     # The owner agreed that the title and the whole writing go out too (contacts masked).
     # Without it, as before: the chosen sentence only.
     full_text: bool = False
+    receive_lines: bool = True  # 10.1 별빛 한 줄 받기
 
 
 class LineIn(BaseModel):
@@ -92,12 +93,14 @@ def share_star(star_id: str, body: StarShareIn, user: User = Depends(consented_u
     row.name = privacy.scan(cipher.dec(star.title_enc), mode)["masked"]
     row.quote = privacy.scan(body.quote, mode)["masked"]
     row.full_text = body.full_text
+    row.receive_lines = body.receive_lines
     row.body_masked_enc = cipher.enc(privacy.scan(cipher.dec(star.body_enc), mode)["masked"]) if body.full_text else None
     row.mood, row.moods = star.mood, [m["mood"] for m in a["moods"]]
     row.depth_level, row.shape = a["depth_level"], a["shape"]
     db.add(row)
     db.commit()
-    return {"share_id": row.id, "name": row.name, "quote": row.quote, "full_text": row.full_text}
+    return {"share_id": row.id, "name": row.name, "quote": row.quote, "full_text": row.full_text,
+            "receive_lines": row.receive_lines}
 
 
 @router.delete("/stars/{star_id}/share", status_code=204)
@@ -130,16 +133,24 @@ def _similar_order(db: Session, user: User, rows: list) -> list:
     return sorted(rows, key=lambda r: (-sum(profile.get(m, 0) for m in r.moods), -r.created_at.timestamp()))
 
 
+def _left(db: Session, user: User, rows) -> set[str]:
+    ids = [r.star_id for r in rows]
+    return set(db.scalars(select(StarLine.star_id).where(StarLine.user_id == user.id, StarLine.star_id.in_(ids))))
+
+
 def _nicks(db: Session, rows) -> dict[str, str | None]:
     ids = {r.user_id for r in rows}
     return {i: n for i, n in db.execute(select(User.id, User.nickname).where(User.id.in_(ids)))} if ids else {}
 
 
-def _star_item(s: StarShare, res: set[str], bes: set[str], nicks: dict | None = None) -> dict:
-    """The list item: the 대표 문장, never the writing (75 has it). `nickname`: the 별지기 이름 (15장)."""
+def _star_item(s: StarShare, res: set[str], bes: set[str], nicks: dict | None = None,
+               left: set[str] | None = None) -> dict:
+    """The list item: the 대표 문장, never the writing (75 has it). `nickname`: the 별지기 이름 (15장).
+    `receive_lines` and `line_left` (I already left my 별빛 한 줄 on this star): 10.1."""
     return {"id": s.id, "name": s.name, "nickname": (nicks or {}).get(s.user_id), "quote": s.quote, "mood": s.mood, "moods": s.moods,
             "depth_level": s.depth_level, "shape": s.shape, "created_at": iso(s.created_at),
             "full_text": s.full_text, "has_starlight": s.depth_level > 0,
+            "receive_lines": s.receive_lines, "line_left": s.star_id in (left or set()),
             "resonated": s.id in res, "beside": s.id in bes}
 
 
@@ -167,8 +178,8 @@ def plaza_stars(sort: Literal["new", "similar", "beside"] = "new", limit: int = 
         rows = sorted(rows, key=lambda r: r.depth_level == 0)
     res, bes = _marks(db, user, "star")
     rows = rows[:limit]
-    nicks = _nicks(db, rows)
-    return {"items": [_star_item(s, res, bes, nicks) for s in rows]}
+    nicks, left = _nicks(db, rows), _left(db, user, rows)
+    return {"items": [_star_item(s, res, bes, nicks, left) for s in rows]}
 
 
 @router.get("/plaza/stars/{share_id}")
@@ -180,7 +191,7 @@ def plaza_star(share_id: str, user: User = Depends(consented_user), db: Session 
     if s is None or s.quote is None or not can_see(db, user.id, s):
         raise ApiError(404, "not_found", "별을 찾지 못했어요.")
     full = s.full_text and s.body_masked_enc
-    return _star_item(s, *_marks(db, user, "star"), _nicks(db, [s])) | {
+    return _star_item(s, *_marks(db, user, "star"), _nicks(db, [s]), _left(db, user, [s])) | {
         "title_masked": s.name if full else None, "body_masked": cipher.dec(s.body_masked_enc) if full else None}
 
 
@@ -340,6 +351,47 @@ def report_share(kind: Kind, target_id: str, body: ReportIn, request: Request, u
                 _alert_operators(db, request, kind, target_id, body.reason)
     db.commit()
     return {"reported": True, "blocked": blocked}
+
+
+class StarLineIn(BaseModel):
+    text: str | None = Field(None, max_length=500)
+    chip: Literal[tuple(LINE_CHIPS)] | None = None  # type: ignore[valid-type]  # 빠른 공감 instead of words
+
+
+@router.post("/plaza/stars/{share_id}/lines", status_code=201, dependencies=[per_user("lines", 30, 3600)])
+def leave_star_line(share_id: str, body: StarLineIn, user: User = Depends(consented_user),
+                    db: Session = Depends(get_db)):
+    """10.1 별빛 한 줄 on someone's shared star: words (60 characters) or a 빠른 공감 chip. One per person
+    per star. Only the owner reads it; it stays, even after the star leaves the plaza."""
+    s = db.get(StarShare, share_id)
+    if s is None or s.quote is None or not can_see(db, user.id, s):
+        raise ApiError(404, "not_found", "별을 찾지 못했어요.")
+    if s.user_id == user.id:
+        raise ApiError(422, "own_share", "내가 나눈 별이에요.")
+    if not s.receive_lines:
+        raise ApiError(403, "lines_closed", "별빛 한 줄을 받지 않는 별이에요.")
+    text = LINE_CHIPS[body.chip] if body.chip else (body.text or "").strip()
+    if not text:
+        raise ApiError(422, "empty_line", "한 줄을 적어 주세요.")
+    if len(text) > LINE_MAX_LENGTH:  # 106
+        raise ApiError(422, "too_long", f"{LINE_MAX_LENGTH}자 안으로 줄여 주세요.", length=len(text),
+                       max_length=LINE_MAX_LENGTH)
+    if not body.chip and (why := privacy.line_problem(text)):
+        raise ApiError(422, why, LINE_REFUSALS[why])
+    if db.scalar(select(StarLine.id).where(StarLine.star_id == s.star_id, StarLine.user_id == user.id)):
+        raise ApiError(409, "already_left", "이 별에는 이미 한 줄을 남겼어요.")
+    row = StarLine(star_id=s.star_id, user_id=user.id, chip=body.chip, text=text)
+    db.add(row)
+    db.commit()
+    return {"id": row.id, "text": row.text, "chip": row.chip, "created_at": iso(row.created_at)}
+
+
+LINE_REFUSALS = {
+    "hurtful": "상처가 될 수 있는 말이 있어 남기지 못했어요.",
+    "contact": "연락처는 남길 수 없어요.",
+    "judging": "판단하는 말 대신 마음을 남겨 주세요.",
+    "advice": "조언 대신 마음을 남겨 주세요.",
+}
 
 
 @router.get("/keepers/{name}")

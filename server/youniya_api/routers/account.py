@@ -13,7 +13,7 @@ from .. import allowance, membership, nickname
 from ..blocks import hidden_users
 from ..deps import ApiError, current_user, get_cipher, get_db
 from ..export import StarEntry, as_pdf, as_text
-from ..models import CoinEntry, DeviceToken, Inquiry, Nebula, NebulaShare, Resonance, Star, StarlightLine, StarShare, User
+from ..models import StarLine, CoinEntry, DeviceToken, Inquiry, Nebula, NebulaShare, Resonance, Star, StarlightLine, StarShare, User
 from ..rules import INQUIRY_KINDS, MOOD_LABELS, SKY_THEMES, SOUNDS
 from ..security import Cipher
 from ..views import iso, local
@@ -196,7 +196,10 @@ def my_shares(user: User = Depends(current_user), db: Session = Depends(get_db),
                    "written_at": iso(st.created_at), "starlight": st.starlight, "created_at": iso(sh.created_at),
                    "resonances": resonances("star", sh.id), "hidden": sh.hidden,
                    # Off the plaza until another 대표 문장 is picked (PUT /v1/stars/{id}/share).
-                   "quote_missing": sh.quote is None} for sh, st in stars],
+                   "quote_missing": sh.quote is None, "receive_lines": sh.receive_lines,
+                   "lines": db.scalar(select(func.count()).select_from(StarLine).where(
+                       StarLine.star_id == sh.star_id, StarLine.hidden.is_(False),
+                       StarLine.user_id.not_in(hidden)))} for sh, st in stars],
         "nebulae": [{"id": n.id, "nebula_id": n.nebula_id, "name": n.name, "created_at": iso(n.created_at),
                      "resonances": resonances("nebula", n.id), "hidden": n.hidden,
                      "lines": db.scalar(select(func.count()).select_from(StarlightLine)

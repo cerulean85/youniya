@@ -6,14 +6,16 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import delete, or_, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.orm import Session
 
 from ..deps import ApiError, consented_user, get_cipher, get_db
-from ..models import Draft, Nebula, Star, StarLink, StarShare, User, now
+from ..blocks import hidden_users
+from ..models import Draft, Nebula, Star, StarLine, StarLineReport, StarLink, StarShare, User, now
 from ..prism.filters import CRISIS_GUIDANCE, has_crisis_signal
 from .. import ai_cost, allowance, coins, membership, privacy
-from ..rules import (DEEP_DEPTH_SCORE, FIRST_STAGE_STARS, STAGE_NAMES, STAR_FLOAT_COST, SUPERNOVA_STARLIGHT,
+from .blocks import block
+from ..rules import (LINE_REPORT_REASONS, DEEP_DEPTH_SCORE, FIRST_STAGE_STARS, STAGE_NAMES, STAR_FLOAT_COST, SUPERNOVA_STARLIGHT,
                      UNLIT_PER_DAY, growth_stage)
 from ..security import Cipher
 from ..views import aware, iso, local, shared_star_ids, star_view
@@ -270,7 +272,8 @@ def get_star(star_id: str, user: User = Depends(consented_user), db: Session = D
     """12 별 상세, with `linked_stars` (11.5 별 잇기)."""
     star = owned_star(db, user, star_id)
     return star_view(star, cipher, shared=star.id in shared_star_ids(db, user.id)) | {
-        "linked_stars": _linked(db, star, cipher)}
+        "linked_stars": _linked(db, star, cipher),
+        "line_count": db.scalar(select(func.count()).select_from(_lines_query(db, user, star).subquery()))}
 
 
 def _link(db: Session, user: User, a: str, b: str) -> bool:
@@ -288,6 +291,52 @@ def _linked(db: Session, star: Star, cipher: Cipher) -> list[dict]:
     stars = db.scalars(select(Star).where(Star.id.in_(ids)).order_by(Star.created_at)).all()
     return [{"id": s.id, "title": cipher.dec(s.title_enc), "created_at": iso(s.created_at), "mood": s.mood,
              "moods": s.moods or [s.mood], "has_starlight": s.state == "floated"} for s in stars]
+
+
+class LineReportIn(BaseModel):
+    reason: Literal[LINE_REPORT_REASONS]  # type: ignore[valid-type]
+    block: bool = False
+
+
+def _lines_query(db: Session, user: User, star: Star):
+    return select(StarLine).where(StarLine.star_id == star.id, StarLine.hidden.is_(False),
+                                  StarLine.user_id.not_in(hidden_users(db, user.id)))
+
+
+@router.get("/stars/{star_id}/lines")
+def star_lines(star_id: str, user: User = Depends(consented_user), db: Session = Depends(get_db)):
+    """10.1 the 별빛 한 줄 left on my star, newest first: only I read them, and only I know how many."""
+    star = owned_star(db, user, star_id)
+    rows = db.scalars(_lines_query(db, user, star).order_by(StarLine.created_at.desc())).all()
+    nicks = {i: n for i, n in db.execute(select(User.id, User.nickname).where(User.id.in_({r.user_id for r in rows})))}
+    return {"items": [{"id": r.id, "text": r.text, "chip": r.chip, "nickname": nicks.get(r.user_id),
+                       "created_at": iso(r.created_at)} for r in rows], "count": len(rows)}
+
+
+@router.delete("/stars/{star_id}/lines/{line_id}", status_code=204)
+def delete_star_line(star_id: str, line_id: str, user: User = Depends(consented_user), db: Session = Depends(get_db)):
+    star = owned_star(db, user, star_id)
+    db.execute(delete(StarLine).where(StarLine.id == line_id, StarLine.star_id == star.id))
+    db.commit()
+
+
+@router.post("/stars/{star_id}/lines/{line_id}/report", dependencies=[per_user("report", 30, 3600)])
+def report_star_line(star_id: str, line_id: str, body: LineReportIn, user: User = Depends(consented_user),
+                     db: Session = Depends(get_db)):
+    """The owner reports a line left on their star: it is hidden at once (only the owner ever saw it)."""
+    star = owned_star(db, user, star_id)
+    line = db.get(StarLine, line_id)
+    if line is None or line.star_id != star.id:
+        raise ApiError(404, "not_found", "별빛을 찾지 못했어요.")
+    if db.get(StarLineReport, (line.id, user.id)) is None:
+        db.add(StarLineReport(line_id=line.id, user_id=user.id, reason=body.reason))
+    line.hidden = True
+    blocked = False
+    if body.block:
+        block(db, user, "star_line", line.id)
+        blocked = True
+    db.commit()
+    return {"reported": True, "blocked": blocked}
 
 
 @router.post("/stars/{star_id}/links", dependencies=[per_user("links", 120, 3600)])

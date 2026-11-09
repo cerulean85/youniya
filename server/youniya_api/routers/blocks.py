@@ -10,13 +10,13 @@ from sqlalchemy.orm import Session
 
 from ..blocks import hidden_users
 from ..deps import ApiError, consented_user, get_db
-from ..models import Block, NebulaShare, StarlightLine, StarShare, User
+from ..models import Block, NebulaShare, StarLine, StarlightLine, StarShare, User
 from ..ratelimit import per_user
 from ..views import iso
 
 router = APIRouter(prefix="/v1/blocks", tags=["blocks"])
 
-Source = Literal["line", "star", "nebula"]
+Source = Literal["line", "star", "nebula", "star_line"]
 
 
 class BlockIn(BaseModel):
@@ -31,7 +31,7 @@ class BlockIn(BaseModel):
         return self
 
 
-_FROM = {"line": StarlightLine, "star": StarShare, "nebula": NebulaShare}
+_FROM = {"line": StarlightLine, "star": StarShare, "nebula": NebulaShare, "star_line": StarLine}
 
 
 def writer_of(db: Session, user: User, source: Source, target_id: str) -> str:
