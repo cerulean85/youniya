@@ -1,0 +1,8 @@
+.banner { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 14px 18px; border-radius: 16px; background: var(--tint-gold); border: 1px solid rgba(251, 191, 36, 0.45); }
+.banner b { display: block; font: 600 14px/20px var(--sans); color: var(--gold); }
+.banner p { margin: 4px 0 0; font: 400 13px/20px var(--sans); color: var(--text-2); }
+.banner button, .banner > span { flex: none; background: none; border: 0; cursor: pointer; font: 500 13px/20px var(--sans); color: var(--gold); }
+.dialog { max-width: 460px; padding: 28px; color: var(--text); }
+.dialog[open] { display: flex; flex-direction: column; gap: 12px; }
+.dialog::backdrop { background: rgba(11, 15, 25, 0.7); }
+.actions { display: flex; justify-content: flex-end; gap: 8px; padding-top: 4px; }

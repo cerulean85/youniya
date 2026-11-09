@@ -7,7 +7,8 @@ import { StarRow } from "@/components/StarRow";
 import { api } from "@/lib/api";
 import { getConstellation } from "@/lib/constellation-data";
 import { kst, longDate, monthOnly } from "@/lib/format";
-import type { StarSummary, Summary } from "@/lib/types";
+import type { Me, StarSummary, Summary } from "@/lib/types";
+import { RenameBanner } from "@/components/Restricted";
 import styles from "./home.module.css";
 
 // Figma W-10 (나의 밤하늘) and W-22 (첫 밤하늘 · 비어 있음).
@@ -18,6 +19,7 @@ export default function HomePage() {
         <h1 className="h1">나의 밤하늘</h1>
         <Suspense fallback={<p className="body-m muted">&nbsp;</p>}><Today /></Suspense>
       </header>
+      <Suspense fallback={null}><OperatorBanners /></Suspense>
       <Suspense fallback={<div className={`card ${styles.loading}`} aria-busy="true" />}>
         <Sky />
       </Suspense>
@@ -28,6 +30,12 @@ export default function HomePage() {
 async function Today() {
   await connection(); // "today" is the request's date, not the build's
   return <p className="body-m muted">{longDate(new Date().toISOString())} · 오늘은 어떤 마음이 머물렀나요?</p>;
+}
+
+/** Mobile 04-1: an operator asked for a new 별지기 이름. */
+async function OperatorBanners() {
+  const me = await api<Me>("/v1/me");
+  return me.nickname_rename_required ? <RenameBanner /> : null;
 }
 
 async function Sky() {

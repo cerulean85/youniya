@@ -26,3 +26,4 @@
 .confirm input { padding: 10px 12px; border-radius: 10px; background: var(--raised); border: 1px solid var(--border); color: var(--text); font: 400 14px/20px var(--sans); outline: none; }
 .dangerButton { color: #fff; background: linear-gradient(180deg, #bc5457, #a5202a); }
 @media (max-width: 1100px) { .columns { grid-template-columns: 1fr; } }
+.rename { color: var(--gold); font-weight: 500; }

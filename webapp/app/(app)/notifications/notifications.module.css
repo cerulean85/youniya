@@ -1,0 +1,15 @@
+.loading { min-height: 360px; }
+.empty { padding: 48px 4px; }
+.wrap { display: flex; flex-direction: column; gap: 12px; max-width: 760px; }
+.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.item { border-radius: 16px; }
+.item > a, .item > div { display: flex; align-items: center; gap: 16px; padding: 16px 20px; border-radius: 16px; }
+.item > a:hover { background: rgba(255, 255, 255, 0.03); }
+.dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--c); opacity: 0.35; }
+.item[data-unread] .dot { opacity: 1; }
+.text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.meta { display: flex; gap: 8px; font: 500 12px/16px var(--sans); }
+.title { font: 400 15px/22px var(--sans); color: var(--text); }
+.item[data-unread] .title { font-weight: 600; }
+.action { flex: none; font: 500 13px/20px var(--sans); color: var(--primary-text); }
+.more { align-self: center; }

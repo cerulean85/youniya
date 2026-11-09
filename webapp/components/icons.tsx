@@ -28,4 +28,5 @@ export const Close = (p: IconProps) => <svg {...base(p)}><path d="M6 6l12 12M18 
 export const Lock = (p: IconProps) => <svg {...base(p)}><rect x="5" y="10.5" width="14" height="9.5" rx="2.5" /><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" /></svg>;
 export const Check = (p: IconProps) => <svg {...base(p)} strokeWidth={2}><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>;
 export const Info = (p: IconProps) => <svg {...base(p)}><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg>;
+export const Bell = (p: IconProps) => <svg {...base(p)}><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15L6 16Z" /><path d="M10 20a2 2 0 0 0 4 0" /></svg>;
 export const Heart = (p: IconProps) => <svg {...base(p)}><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z" /></svg>;

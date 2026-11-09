@@ -19,30 +19,33 @@ type MeFull = Me & { marketing?: { opt_in: boolean; consented_at: string | null;
 
 // Figma W-15 (기획서 설정 · 15.1 · 14.3): the web keeps what the web uses. 우주의 색, 진동, 소리와 별 만들기
 // 알림 live in the app.
-export default function SettingsPage() {
+export default function SettingsPage({ searchParams }: PageProps<"/settings">) {
   return (
     <>
       <PageHeader title="설정" sub="나에게 맞는 밤하늘 · 필요한 것만 켜 두세요. 언제든 바꿀 수 있어요." />
       <Suspense fallback={<div className={styles.loading} aria-busy="true" />}>
-        <Settings />
+        <Settings searchParams={searchParams} />
       </Suspense>
     </>
   );
 }
 
-async function Settings() {
+async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchParams">) {
+  const sp = await searchParams;
   const [me, shares, blocks] = await Promise.all([
     api<MeFull>("/v1/me"),
     api<{ stars: MyShare[] }>("/v1/me/shares"),
     api<{ items: Block[] }>("/v1/blocks"),
   ]);
-  const nextChange = me.nickname_next_change && new Date(me.nickname_next_change) > new Date() ? me.nickname_next_change : null;
+  // An operator's rename request lifts the 30-day wait.
+  const rename = Boolean(me.nickname_rename_required);
+  const nextChange = !rename && me.nickname_next_change && new Date(me.nickname_next_change) > new Date() ? me.nickname_next_change : null;
   const marketing = me.marketing ?? { opt_in: Boolean((me as { marketing_opt_in?: boolean }).marketing_opt_in), consented_at: null, revoked_at: null };
   return (
     <div className={styles.columns}>
       <div className={styles.column}>
         <Group title="계정">
-          <NicknameRow nickname={me.nickname ?? null} nextChange={nextChange ? longDate(nextChange) : null} />
+          <NicknameRow nickname={me.nickname ?? null} nextChange={nextChange ? longDate(nextChange) : null} rename={rename} open={rename && sp.rename === "1"} />
           <div className={styles.row}><span>로그인</span><span className={styles.value}>{PROVIDERS[me.provider] ?? me.provider}로 로그인</span></div>
         </Group>
         <Group title="알림" note={marketing.opt_in && marketing.consented_at ? `${dateTime(marketing.consented_at)}에 동의했어요. 연속 기록이나 재촉하는 알림은 보내지 않아요.` : "연속 기록이나 재촉하는 알림은 보내지 않아요."}>

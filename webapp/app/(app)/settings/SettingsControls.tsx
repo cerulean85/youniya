@@ -1,6 +1,6 @@
 "use client";
 
-import { useOptimistic, useRef, useTransition } from "react";
+import { useEffect, useOptimistic, useRef, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { ChevronRight } from "@/components/icons";
 import { NicknameForm } from "@/components/NicknameForm";
@@ -8,16 +8,18 @@ import { deleteAccount, setMarketing, unblock, unshareAll } from "./actions";
 import styles from "./settings.module.css";
 
 // 15.1: once every 30 days; the change follows every star and line already shared.
-export function NicknameRow({ nickname, nextChange }: { nickname: string | null; nextChange: string | null }) {
+export function NicknameRow({ nickname, nextChange, rename = false, open = false }: { nickname: string | null; nextChange: string | null; rename?: boolean; open?: boolean }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => { if (open) dialog.current?.showModal(); }, [open]);
   return (
     <>
       <button type="button" className={styles.row} onClick={() => dialog.current?.showModal()} disabled={Boolean(nextChange)}>
         <span>별지기 이름</span>
-        <span className={styles.value}>{nickname ?? "정하지 않았어요"}{nextChange ? ` · ${nextChange}부터 바꿀 수 있어요` : <ChevronRight size={16} />}</span>
+        <span className={styles.value}>{nickname ?? "정하지 않았어요"}{rename ? <b className={styles.rename}> · 바꿔 주세요</b> : null}{nextChange ? ` · ${nextChange}부터 바꿀 수 있어요` : <ChevronRight size={16} />}</span>
       </button>
       <dialog ref={dialog} className={`card ${styles.dialog}`} aria-labelledby="nick-title">
         <h2 id="nick-title" className="h2">{nickname ? "별지기 이름 바꾸기" : "별지기 이름 정하기"}</h2>
+        {rename && <p className="body-s" style={{ color: "var(--gold)" }}>운영자 요청이 있어요. 새 이름으로 바꾸면 바로 다시 나눌 수 있어요(30일 제한 없이).</p>}
         <p className="body-s muted">바꾸면 지금까지 나눈 별과 건넨 별빛 한 줄이 모두 새 이름으로 보여요. 30일에 한 번 바꿀 수 있어요.</p>
         <NicknameForm initial={nickname ?? ""} next="/settings" submit={nickname ? "이 이름으로 바꾸기" : "이 이름으로 정하기"} />
         <button type="button" className="btn btn-ghost" onClick={() => dialog.current?.close()}>취소</button>

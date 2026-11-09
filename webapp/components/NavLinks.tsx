@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import styles from "./Sidebar.module.css";
 
-type Item = { href: string; label: string; icon: ReactNode };
+type Item = { href: string; label: string; icon: ReactNode; badge?: ReactNode };
 
 function isActive(href: string, path: string | null) {
   if (path === null) return false;
@@ -22,7 +22,7 @@ function Group({ items, path }: { items: Item[]; path: string | null }) {
           <Link key={it.href} href={it.href} className={styles.item} aria-current={on ? "page" : undefined}>
             <span className={styles.icon}>{it.icon}</span>
             {it.label}
-            {on && <span className={styles.dot} aria-hidden="true" />}
+            {on ? <span className={styles.dot} aria-hidden="true" /> : it.badge}
           </Link>
         );
       })}

@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { ChevronRight } from "@/components/icons";
 import { PlazaRow } from "@/components/PlazaRow";
+import { RestrictedBanner } from "@/components/Restricted";
 import { api } from "@/lib/api";
 import { requireNickname, withAgo } from "@/lib/plaza";
 import type { MyShare, PlazaStar } from "@/lib/types";
@@ -58,6 +59,7 @@ async function Plaza({ searchParams }: Pick<PageProps<"/plaza">, "searchParams">
           오늘 밤, <b>{tonight.count.toLocaleString("ko-KR")}개</b>의 마음이 모였어요{tonight.mine > 0 && <> · 내 별 <b>{tonight.mine}개</b>도 함께 빛나요</>}
         </p>
       )}
+      {me.plaza_restricted_until && new Date(me.plaza_restricted_until) > new Date() && <RestrictedBanner until={me.plaza_restricted_until} open={sp.restricted === "1"} />}
       <nav className={styles.sorts} aria-label="거르기">
         {FILTERS.map((f) => (
           <Link key={f.key} href={f.key === "new" ? "/plaza" : `/plaza?filter=${f.key}`} aria-current={filter === f.key ? "true" : undefined}>{f.label}</Link>

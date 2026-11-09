@@ -42,7 +42,14 @@ export async function scanSentences(sentences: string[]) {
 export async function shareStar(id: string, form: FormData) {
   const quote = String(form.get("quote") ?? "").trim();
   if (!quote) return;
-  await api(`/v1/stars/${id}/share`, { method: "PUT", body: JSON.stringify({ quote, full_text: true, receive_lines: form.get("receive_lines") === "on" }) });
+  try {
+    await api(`/v1/stars/${id}/share`, { method: "PUT", body: JSON.stringify({ quote, full_text: true, receive_lines: form.get("receive_lines") === "on" }) });
+  } catch (e) {
+    // Operator actions: a paused plaza, or a name that has to change before sharing again.
+    if (e instanceof ApiError && e.code === "plaza_restricted") redirect("/plaza?restricted=1");
+    if (e instanceof ApiError && e.code === "nickname_rename_required") redirect("/settings?rename=1");
+    throw e;
+  }
   refresh();
 }
 

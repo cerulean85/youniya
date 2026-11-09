@@ -77,6 +77,9 @@ export type Me = {
   nickname?: string | null;
   /** When the nickname can change again (30 days after the last change). */
   nickname_next_change?: string | null;
+  /** Operator actions (기획서 18장): plaza use paused until then, or a new name asked for (no 30-day wait). */
+  plaza_restricted_until?: string | null;
+  nickname_rename_required?: boolean;
   coins: number;
   free_star_today: number;
   free_telescope: number;
@@ -138,3 +141,8 @@ export type Story = {
   name: string; since: string; star_count: number;
   entries: { star_id: string; date: string; title: string; sentence: string }[];
 };
+
+/** 알림함 (Mobile 130): operator actions, notices and results, kept 90 days. */
+export type NotificationTarget = { screen: string; star_id?: string; notice_id?: string; until?: string };
+export type AppNotification = { id: string; kind: string; title: string; body: string; target: NotificationTarget | null; created_at: string; read: boolean };
+export type Notice = { id: string; title: string; body: string; published_at: string };

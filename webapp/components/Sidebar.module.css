@@ -23,3 +23,4 @@
 .icon { display: inline-flex; }
 .dot { margin-left: auto; width: 5px; height: 5px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 8px var(--gold); }
 .spacer { flex: 1; }
+.unread { margin-left: auto; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); }

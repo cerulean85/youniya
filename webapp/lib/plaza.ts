@@ -23,3 +23,9 @@ function ago(iso: string, now: number) {
   if (m < 60 * 24) return `${Math.floor(m / 60)}시간 전`;
   return `${Math.floor(m / 60 / 24)}일 전`;
 }
+
+/** The same "12분 전" for anything with a created_at. */
+export function withAgoAt<T extends { created_at: string }>(items: T[]) {
+  const now = Date.now();
+  return items.map((item) => ({ item, ago: ago(item.created_at, now) }));
+}

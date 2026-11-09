@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
-import { Archive, Coin, Mail, Moon, Nebula, Settings, Star } from "./icons";
+import { Archive, Bell, Coin, Mail, Moon, Nebula, Settings, Star } from "./icons";
+import { UnreadDot } from "./UnreadDot";
 import { NavLinks } from "./NavLinks";
 import styles from "./Sidebar.module.css";
 
@@ -12,6 +13,8 @@ export const MAIN_NAV = [
   { href: "/records", label: "기록", icon: <Archive /> },
 ];
 export const MORE_NAV = [
+  // The unread dot reads the session, so it streams in on its own.
+  { href: "/notifications", label: "알림", icon: <Bell />, badge: <Suspense fallback={null}><UnreadDot /></Suspense> },
   { href: "/coins", label: "코인", icon: <Coin /> },
   { href: "/settings", label: "설정", icon: <Settings /> },
   { href: "/contact", label: "문의하기", icon: <Mail /> },

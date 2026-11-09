@@ -12,15 +12,25 @@ const reasonOf = (form: FormData) => {
   return (REASON_KEYS as readonly string[]).includes(picked) ? picked : "other";
 };
 
+/** A paused plaza (403 plaza_restricted) sends people to the explanation on the plaza. */
+async function plaza(call: () => Promise<unknown>) {
+  try {
+    await call();
+  } catch (e) {
+    if (e instanceof ApiError && e.code === "plaza_restricted") redirect("/plaza?restricted=1");
+    throw e;
+  }
+}
+
 /** 공명 남기기 / 거두기 (a resonated star also goes beside, 2026-11-08). */
 export async function toggleResonance(shareId: string, on: boolean) {
-  await api(`/v1/plaza/star/${shareId}/resonance`, { method: on ? "PUT" : "DELETE" });
+  await plaza(() => api(`/v1/plaza/star/${shareId}/resonance`, { method: on ? "PUT" : "DELETE" }));
   refresh();
 }
 
 /** 곁에 두기 / 거두기 */
 export async function toggleBeside(shareId: string, on: boolean) {
-  await api(`/v1/plaza/star/${shareId}/beside`, { method: on ? "PUT" : "DELETE" });
+  await plaza(() => api(`/v1/plaza/star/${shareId}/beside`, { method: on ? "PUT" : "DELETE" }));
   refresh();
 }
 
@@ -52,6 +62,7 @@ const LINE_ERRORS: Record<string, string> = {
   advice: "조언보다는 곁에 있다는 마음을 전해 주세요.",
   already_left: "이 별에는 이미 별빛 한 줄을 건넸어요.",
   lines_closed: "이 별은 지금 별빛 한 줄을 받지 않아요.",
+  plaza_restricted: "광장 이용이 잠시 멈춰 있어 별빛 한 줄을 건넬 수 없어요.",
 };
 
 /** W-55 별빛 한 줄: one per star per person, 60 characters or a quick chip; only the owner reads it. */
