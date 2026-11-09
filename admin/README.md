@@ -18,7 +18,17 @@ operator sign-in with email, password and a TOTP code (`/v1/admin/auth/login`, `
 reason) and the audit log (`/v1/admin/audit`). `lib/api.ts` is the only place that calls it.
 
 Until the API exists the console runs on mock data (`lib/mock.ts`, in memory). It does so whenever
-`YOUNIYA_API_URL` is unset, or with `ADMIN_MOCK=1`. Mock sign-in:
+`YOUNIYA_API_URL` is unset, or with `ADMIN_MOCK=1`. With an API, `ADMIN_REAL` lists the parts that are live
+(`auth,operators,audit` since the API Dev Session's first step 7 batch; `all` by default) and the rest stays on
+mock data under the real session. For the home-desktop dev API, in `admin/.env.development.local` (gitignored):
+
+```
+YOUNIYA_API_URL=http://100.126.111.107:8000
+ADMIN_REAL=auth,operators,audit
+```
+
+Operators join by invitation: A-14 shows a one-time setup link (`/setup?token=…`, 3 days) where the new
+operator sets a password of 12 or more and scans the authenticator QR. Mock sign-in:
 
 | Role | Email | Password | Code |
 | --- | --- | --- | --- |

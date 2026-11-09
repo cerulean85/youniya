@@ -6,4 +6,4 @@ export function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 
-export const config = { matcher: ["/((?!login|_next/|favicon).*)"] };
+export const config = { matcher: ["/((?!login|setup|_next/|favicon).*)"] };

@@ -155,7 +155,7 @@ export function inviteOperator(token: string, email: string, role: "owner" | "mo
   owner(token); need(reason);
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new MockError(422, "invalid", "이메일을 확인해 주세요.");
   st().operators.push({ id: crypto.randomUUID(), name: email.split("@")[0], email_masked: `${email[0]}●●●@${email.split("@")[1]}`, role, totp: false, last_seen_at: null, status: "invited" });
-  return { ok: true };
+  return { setup_token: crypto.randomUUID().replaceAll("-", ""), expires_at: new Date(Date.now() + 3 * 86400000).toISOString() };
 }
 export function updateOperator(token: string, id: string, patch: { role?: "owner" | "moderator"; status?: "active" | "disabled" }, reason: string) {
   const me = owner(token); need(reason);

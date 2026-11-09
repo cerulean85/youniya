@@ -1,6 +1,7 @@
 "use server";
 
 import { refresh } from "next/cache";
+import { headers } from "next/headers";
 import type { ReasonState } from "@/components/ReasonActions";
 import * as api from "@/lib/api";
 import { requireOperator } from "@/lib/session";
@@ -58,7 +59,12 @@ export async function operatorsAction(id: string | null, _p: ReasonState, form: 
   const a = str(form, "action");
   if (a === "invite") {
     const role = str(form, "role") === "owner" ? "owner" : "moderator";
-    return run(form, (r) => api.inviteOperator(str(form, "email"), role, r), "초대를 보냈어요. 2단계 인증을 켜야 들어올 수 있어요.");
+    let setup: string | undefined;
+    const r = await run(form, async (reason) => { setup = (await api.inviteOperator(str(form, "email"), role, reason)).setup_token; },
+      "초대했어요. 아래 설정 링크를 초대한 분께 전해 주세요. 3일 동안 한 번만 쓸 수 있고, 지금만 보여요.");
+    if (!setup || r?.error) return r;
+    const h = await headers();
+    return { ...r, secret: `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}/setup?token=${setup}` };
   }
   if (!id) return { error: "운영자를 골라 주세요." };
   if (a === "disable") return run(form, (r) => api.updateOperator(id, { status: "disabled" }, r), "사용을 멈췄어요.");

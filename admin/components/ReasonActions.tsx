@@ -5,7 +5,7 @@ import { useFormStatus } from "react-dom";
 
 export type ExtraField = { name: string; label: string; type?: "text" | "number" | "date" | "textarea" | "select"; options?: [string, string][]; required?: boolean; defaultValue?: string };
 export type ReasonButton = { key: string; label: string; danger?: boolean; primary?: boolean; disabled?: boolean; field?: "amount" | "days"; fields?: ExtraField[]; confirm?: string };
-export type ReasonState = { error?: string; ok?: string } | null;
+export type ReasonState = { error?: string; ok?: string; secret?: string } | null;
 
 // A button per action; each opens a box that needs a reason (18.1) before anything happens.
 export function ReasonActions({ buttons, action }: { buttons: ReasonButton[]; action: (prev: ReasonState, form: FormData) => Promise<ReasonState> }) {
@@ -20,6 +20,7 @@ export function ReasonActions({ buttons, action }: { buttons: ReasonButton[]; ac
         ))}
       </div>
       {state?.ok && <p className="faint" role="status">{state.ok}</p>}
+      {state?.secret && <p className="secret">{state.secret}</p>}
       {state?.error && <p className="error" role="alert">{state.error}</p>}
       <dialog ref={dialog} className="card" aria-labelledby="reason-title">
         <form key={picked?.key} action={async (f) => { await run(f); dialog.current?.close(); }}>

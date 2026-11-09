@@ -74,6 +74,9 @@ export function totp(challenge: string, code: string) {
 
 export function logout(token: string) { state().tokens.delete(token); }
 
+/** With real sign-in, mock-backed screens accept the real session as it is. */
+export function adopt(token: string, operator: Operator) { state().tokens.set(token, operator); }
+
 export function operatorOf(token: string) {
   const op = state().tokens.get(token);
   if (!op) throw new MockError(401, "unauthorized", "다시 로그인해 주세요.");

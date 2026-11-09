@@ -1,6 +1,6 @@
 import "server-only";
 import { redirect } from "next/navigation";
-import { API_URL, MOCK } from "./config";
+import { API_URL, live, MOCK, type Part } from "./config";
 import * as mock from "./mock";
 import * as more from "./mock-more";
 import * as own from "./mock-owner";
@@ -44,6 +44,7 @@ async function authed<T>(path: string, init: RequestInit = {}): Promise<T> {
 async function token() {
   const s = await session();
   if (!s) redirect("/login");
+  if (live("auth")) mock.adopt(s.token, s.operator); // mock-backed screens under a real session
   return s.token;
 }
 async function guard<T>(f: () => T): Promise<T> {
@@ -54,38 +55,39 @@ async function guard<T>(f: () => T): Promise<T> {
 }
 
 export const isMock = MOCK;
+export const authIsLive = live("auth");
 
 export async function login(email: string, password: string): Promise<{ challenge: string }> {
-  return MOCK ? m(() => mock.login(email, password)) : call("/v1/admin/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
+  return !live("auth") ? m(() => mock.login(email, password)) : call("/v1/admin/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
 }
 
 export async function totp(challenge: string, code: string): Promise<{ token: string; expires_at: string; operator: Operator }> {
-  return MOCK ? m(() => mock.totp(challenge, code)) : call("/v1/admin/auth/totp", { method: "POST", body: JSON.stringify({ challenge, code }) });
+  return !live("auth") ? m(() => mock.totp(challenge, code)) : call("/v1/admin/auth/totp", { method: "POST", body: JSON.stringify({ challenge, code }) });
 }
 
 export async function logout(t: string) {
-  if (MOCK) return mock.logout(t);
+  if (!live("auth")) return mock.logout(t);
   await call("/v1/admin/auth/logout", { method: "POST" }, t).catch(() => null);
 }
 
 export async function listReports(status?: ReportStatus): Promise<{ items: ReportItem[]; counts?: Record<ReportStatus, number> }> {
-  if (MOCK) { const t = await token(); return guard(() => mock.listReports(t, status)); }
+  if (!live("reports")) { const t = await token(); return guard(() => mock.listReports(t, status)); }
   return authed(`/v1/admin/reports${status ? `?status=${status}` : ""}`);
 }
 
 export async function getReport(kind: ReportKind, id: string): Promise<ReportDetail> {
-  if (MOCK) { const t = await token(); return guard(() => mock.getReport(t, kind, id)); }
+  if (!live("reports")) { const t = await token(); return guard(() => mock.getReport(t, kind, id)); }
   return authed(`/v1/admin/reports/${kind}/${encodeURIComponent(id)}`);
 }
 
 export async function act(kind: ReportKind, id: string, action: ActionKind, reason: string, note?: string) {
-  if (MOCK) { const t = await token(); return guard(() => mock.act(t, kind, id, action, reason, note)); }
+  if (!live("reports")) { const t = await token(); return guard(() => mock.act(t, kind, id, action, reason, note)); }
   return authed<{ status: ReportStatus; action_id: string }>(`/v1/admin/reports/${kind}/${encodeURIComponent(id)}/actions`,
     { method: "POST", body: JSON.stringify({ action, reason, note }) });
 }
 
 export async function audit(): Promise<AuditEntry[]> {
-  if (MOCK) { const t = await token(); return guard(() => mock.audit(t)); }
+  if (!live("audit")) { const t = await token(); return guard(() => mock.audit(t)); }
   return (await authed<{ items: AuditEntry[] }>("/v1/admin/audit?format=json")).items;
 }
 
@@ -93,12 +95,12 @@ export async function audit(): Promise<AuditEntry[]> {
 
 
 export async function listKeepers(q = "", filter = "all"): Promise<KeeperRow[]> {
-  if (MOCK) { const t = await token(); return guard(() => more.listKeepers(t, q, filter)); }
+  if (!live("keepers")) { const t = await token(); return guard(() => more.listKeepers(t, q, filter)); }
   return (await authed<{ items: KeeperRow[] }>(`/v1/admin/keepers?${new URLSearchParams({ q, filter })}`)).items;
 }
 
 export async function keepersCsv(): Promise<string> {
-  if (MOCK) { const t = await token(); return guard(() => more.keepersCsv(t)); }
+  if (!live("keepers")) { const t = await token(); return guard(() => more.keepersCsv(t)); }
   const s = await session();
   if (!s) redirect("/login");
   const res = await fetch(`${API_URL}/v1/admin/keepers?format=csv`, { headers: { Authorization: `Bearer ${s.token}` }, cache: "no-store" });
@@ -107,27 +109,27 @@ export async function keepersCsv(): Promise<string> {
 }
 
 export async function getKeeper(id: string): Promise<KeeperDetail> {
-  if (MOCK) { const t = await token(); return guard(() => more.getKeeper(t, id)); }
+  if (!live("keepers")) { const t = await token(); return guard(() => more.getKeeper(t, id)); }
   return authed(`/v1/admin/keepers/${encodeURIComponent(id)}`);
 }
 
 export async function keeperAction(id: string, action: KeeperAction, reason: string, amount?: number, days?: number) {
-  if (MOCK) { const t = await token(); return guard(() => more.keeperAction(t, id, action, reason, amount, days)); }
+  if (!live("keepers")) { const t = await token(); return guard(() => more.keeperAction(t, id, action, reason, amount, days)); }
   return authed(`/v1/admin/keepers/${encodeURIComponent(id)}/actions`, { method: "POST", body: JSON.stringify({ action, reason, amount, days }) });
 }
 
 export async function listInquiries(status: InquiryStatus): Promise<{ items: InquiryRow[]; counts?: Record<InquiryStatus, number> }> {
-  if (MOCK) { const t = await token(); return guard(() => more.listInquiries(t, status)); }
+  if (!live("inquiries")) { const t = await token(); return guard(() => more.listInquiries(t, status)); }
   return authed(`/v1/admin/inquiries?status=${status}`);
 }
 
 export async function getInquiry(id: string): Promise<InquiryDetail> {
-  if (MOCK) { const t = await token(); return guard(() => more.getInquiry(t, id)); }
+  if (!live("inquiries")) { const t = await token(); return guard(() => more.getInquiry(t, id)); }
   return authed(`/v1/admin/inquiries/${encodeURIComponent(id)}`);
 }
 
 export async function replyInquiry(id: string, body: string) {
-  if (MOCK) { const t = await token(); return guard(() => more.reply(t, id, body)); }
+  if (!live("inquiries")) { const t = await token(); return guard(() => more.reply(t, id, body)); }
   return authed(`/v1/admin/inquiries/${encodeURIComponent(id)}/reply`, { method: "POST", body: JSON.stringify({ body }) });
 }
 
@@ -136,8 +138,8 @@ export async function replyInquiry(id: string, body: string) {
 const post = (body: unknown) => ({ method: "POST", body: JSON.stringify(body) });
 const put = (body: unknown) => ({ method: "PUT", body: JSON.stringify(body) });
 const patch = (body: unknown) => ({ method: "PATCH", body: JSON.stringify(body) });
-async function owned<T>(f: (t: string) => T, path: string, init?: RequestInit): Promise<T> {
-  if (MOCK) { const t = await token(); return guard(() => f(t)); }
+async function owned<T>(f: (t: string) => T, path: string, init?: RequestInit, part: Part = "owner"): Promise<T> {
+  if (!live(part)) { const t = await token(); return guard(() => f(t)); }
   return authed<T>(path, init);
 }
 
@@ -158,9 +160,22 @@ export const setMaintenance = (on: boolean, reason: string) => owned((t) => own.
 export const setMinVersion = (ios: string, reason: string) => owned((t) => own.setMinVersion(t, ios, reason), "/v1/admin/min-version", put({ ios, reason }));
 export const createNotice = (n: { title: string; body: string; audience: "all" | "ios" | "web"; starts_at: string; ends_at: string }, reason: string) =>
   owned((t) => own.createNotice(t, n, reason), "/v1/admin/notices", post({ ...n, reason }));
+type RealOperator = { id: string; email: string; role: "owner" | "moderator"; status: string; totp: boolean; last_seen_at: string | null; created_at: string };
+const mask = (email: string) => { const [u, d] = email.split("@"); return `${u.slice(0, 1)}●●●@${d ?? ""}`; };
+const toRow = (o: RealOperator): OperatorRow => ({
+  id: o.id, name: o.email.split("@")[0], email_masked: mask(o.email), role: o.role, totp: o.totp, last_seen_at: o.last_seen_at,
+  status: o.status === "disabled" ? "disabled" : o.totp ? "active" : "invited",
+});
 export const getOperators = async (): Promise<OperatorRow[]> =>
-  MOCK ? owned((t) => own.operators(t), "") : (await authed<{ items: OperatorRow[] }>("/v1/admin/operators")).items;
-export const inviteOperator = (email: string, role: "owner" | "moderator", reason: string) =>
-  owned((t) => own.inviteOperator(t, email, role, reason), "/v1/admin/operators/invite", post({ email, role, reason }));
+  !live("operators") ? owned((t) => own.operators(t), "") : (await authed<{ items: RealOperator[] }>("/v1/admin/operators")).items.map(toRow);
+/** An invitation gives a one-time setup token (3 days); the console shows the setup link once. */
+export const inviteOperator = async (email: string, role: "owner" | "moderator", reason: string): Promise<{ setup_token?: string; expires_at?: string }> =>
+  !live("operators") ? owned((t) => own.inviteOperator(t, email, role, reason), "") : authed("/v1/admin/operators/invite", post({ email, role, reason }));
 export const updateOperator = (id: string, p: { role?: "owner" | "moderator"; status?: "active" | "disabled" }, reason: string) =>
-  owned((t) => own.updateOperator(t, id, p, reason), `/v1/admin/operators/${id}`, patch({ ...p, reason }));
+  owned((t) => own.updateOperator(t, id, p, reason), `/v1/admin/operators/${id}`, patch({ ...p, reason }), "operators");
+
+/** /setup: an invited operator sets a password, then the authenticator app. */
+export const setupPassword = (inviteToken: string, password: string) =>
+  call<{ totp_secret: string; otpauth_uri: string }>("/v1/admin/auth/setup", post({ invite_token: inviteToken, password }));
+export const setupConfirm = (inviteToken: string, code: string) =>
+  call<{ operator: RealOperator } | RealOperator>("/v1/admin/auth/setup/confirm", post({ invite_token: inviteToken, code }));

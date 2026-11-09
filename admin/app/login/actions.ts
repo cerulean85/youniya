@@ -25,7 +25,13 @@ export async function signIn(prev: LoginState, form: FormData): Promise<LoginSta
       jar.set(OPERATOR, JSON.stringify(r.operator), cookieOptions(maxAge));
       jar.set(CHALLENGE, "", cookieOptions(0));
     } catch (e) {
-      if (e instanceof ApiError) return e.code === "expired" ? { step: "password", error: e.message } : { step: "code", error: e.message };
+      if (e instanceof ApiError) {
+        // invalid_code comes with a fresh challenge; an expired one starts over.
+        if (typeof e.data.challenge === "string") jar.set(CHALLENGE, e.data.challenge, cookieOptions(300));
+        if (e.code === "expired" || e.code === "challenge_expired") return { step: "password", error: "처음부터 다시 로그인해 주세요." };
+        if (e.status === 423) return { step: "password", error: "로그인 시도가 많아 잠겼어요. 15분 뒤에 다시 해 주세요." };
+        return { step: "code", error: "인증 코드가 맞지 않아요." };
+      }
       throw e;
     }
     redirect("/reports");
