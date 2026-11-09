@@ -11,6 +11,7 @@ import type { Me, Star } from "@/lib/types";
 import { LinkStar } from "./LinkStar";
 import { ShareStar } from "./ShareStar";
 import { DeleteButton, ExportButton, FloatButton, LinkedChip, Toast } from "./StarActions";
+import { ReceivedLines } from "./ReceivedLines";
 import { Telescope } from "./Telescope";
 import styles from "./star.module.css";
 
@@ -89,7 +90,11 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
               {me.free_star_today > 0 ? "오늘 무료 별빛 받기가 1번 남았어요. 이후 한 번에 5코인이에요." : "오늘 무료 별빛 받기를 썼어요. 한 번에 5코인이에요."}
             </p>
             <Link href={`/stars/${star.id}/edit`} className="btn btn-secondary btn-block">글 수정</Link>
+            <ShareStar id={star.id} title={title} body={star.body} shared={star.shared} lit={false} nickname={me.nickname ?? null} />
           </div>
+        )}
+        {(star.shared || (star.line_count ?? 0) > 0) && (
+          <Suspense fallback={null}><ReceivedLines id={star.id} /></Suspense>
         )}
         {linked.length > 0 && (
           <section className={styles.linked} aria-label="이어진 별">
@@ -100,7 +105,7 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
         {floated && (
           <>
             <LinkStar id={star.id} title={title} linkedIds={linked.map((l) => l.id)} />
-            <ShareStar id={star.id} title={title} body={star.body} shared={star.shared} />
+            <ShareStar id={star.id} title={title} body={star.body} shared={star.shared} lit nickname={me.nickname ?? null} />
           </>
         )}
         <div className={styles.footerLinks}>

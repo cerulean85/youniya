@@ -38,11 +38,22 @@ export async function scanSentences(sentences: string[]) {
   return Promise.all(sentences.map((text) => api<Scan>("/v1/plaza/privacy-scan", { method: "POST", body: JSON.stringify({ text }) })));
 }
 
-/** 19 익명으로 나누기: only the chosen sentence goes out, masked by the server. */
+/** W-26: the 대표 문장 and the whole writing go out with the 별지기 이름, masked by the server. */
 export async function shareStar(id: string, form: FormData) {
   const quote = String(form.get("quote") ?? "").trim();
   if (!quote) return;
-  await api(`/v1/stars/${id}/share`, { method: "PUT", body: JSON.stringify({ quote }) });
+  await api(`/v1/stars/${id}/share`, { method: "PUT", body: JSON.stringify({ quote, full_text: true, receive_lines: form.get("receive_lines") === "on" }) });
+  refresh();
+}
+
+/** 받은 별빛 한 줄 (owner only): delete one, or report it, which hides it and can block its writer. */
+export async function deleteLine(id: string, lineId: string) {
+  await api(`/v1/stars/${id}/lines/${lineId}`, { method: "DELETE" });
+  refresh();
+}
+
+export async function reportLine(id: string, lineId: string, form: FormData) {
+  await api(`/v1/stars/${id}/lines/${lineId}/report`, { method: "POST", body: JSON.stringify({ reason: String(form.get("reason") ?? "hurtful"), block: form.get("block") === "on" }) });
   refresh();
 }
 

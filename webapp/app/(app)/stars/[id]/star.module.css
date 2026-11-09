@@ -56,3 +56,11 @@
 .linked { display: flex; flex-direction: column; gap: 10px; }
 .toast { position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%); z-index: 30; padding: 12px 20px; border-radius: 999px; background: var(--raised); border: 1px solid var(--border); font: 500 14px/20px var(--sans); box-shadow: 0 12px 40px rgba(0,0,0,0.4); animation: toast 3s ease forwards; }
 @keyframes toast { 0% { opacity: 0; transform: translate(-50%, 8px); } 10%, 85% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; visibility: hidden; } }
+.receive { display: flex; gap: 10px; align-items: center; font: 400 13px/20px var(--sans); color: var(--text-2); cursor: pointer; }
+.receive input { accent-color: var(--primary); width: 18px; height: 18px; }
+.lines { display: flex; flex-direction: column; gap: 8px; }
+.line { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 12px; background: var(--raised); border: 1px solid var(--border); }
+.lineMeta { display: flex; align-items: center; gap: 8px; }
+.lineMeta form { margin-left: auto; }
+.lineMeta button { background: none; border: 0; cursor: pointer; font: 500 11px/16px var(--sans); color: var(--text-3); }
+.lineMeta button:hover { color: var(--text); }

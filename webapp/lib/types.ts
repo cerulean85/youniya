@@ -47,7 +47,7 @@ export type Analysis = {
 export type LinkedStar = { id: string; title: string; mood: Mood; moods?: Mood[]; created_at: string; has_starlight: boolean };
 
 /** `linked_stars` comes with the 별 잇기 API (dev server 2026-11-09); absent on older servers. */
-export type Star = StarSummary & { body: string; analysis: Analysis | null; linked_stars?: LinkedStar[] };
+export type Star = StarSummary & { body: string; analysis: Analysis | null; linked_stars?: LinkedStar[]; line_count?: number };
 
 /** 마음 망원경 report for one star (or the last seven days). `fog` and `flow` are the W-54 sections, when the API has them. */
 export type TelescopeReport = {
@@ -71,6 +71,8 @@ export type Me = {
   needs_consent: boolean;
   /** 별지기 이름 (기획서 15장); absent until the API ships it. */
   nickname?: string | null;
+  /** When the nickname can change again (30 days after the last change). */
+  nickname_next_change?: string | null;
   coins: number;
   free_star_today: number;
   free_telescope: number;
@@ -92,27 +94,37 @@ export type CreateResult = { star: Star; crisis: unknown; charged: number; coins
 
 export type PlazaStar = {
   id: string; // the share id
+  /** The writer's own title (기획서 15.2); AI names ending in 별 show only in the telescope. */
   name: string;
+  /** 별지기 이름 (기획서 15장). */
+  nickname: string | null;
+  /** 대표 문장, masked. */
   quote: string;
   mood: Mood;
   moods: Mood[];
   depth_level: number;
   shape: { points: number; sharpness: "soft" | "normal" | "sharp" | string } | null;
   created_at: string;
+  full_text: boolean;
+  has_starlight: boolean;
+  /** 별빛 한 줄: whether the owner takes them, and whether I already left mine. */
+  receive_lines: boolean;
+  line_left: boolean;
   resonated: boolean;
   beside: boolean;
+  /** Detail only, when the whole writing is shared (contacts masked). */
+  title_masked?: string;
+  body_masked?: string;
 };
 
-export type NebulaSummary = {
-  id: string; name: string; silhouette: string | null; star_count: number; depth_level: number;
-  shared: boolean; created_at: string; updated_at: string | null;
-};
-export type NebulaStar = { id: string; index: number; title: string; mood: Mood; starlight: number; shape: PlazaStar["shape"]; depth_level: number; created_at: string };
-export type Nebula = {
-  id: string; name: string; silhouette: string | null; edges: number[][]; stars: NebulaStar[];
-  star_count: number; depth_level: number; moods: Mood[]; guests: { share_id?: string; mood?: Mood; name?: string }[];
-  shared: boolean; created_at: string; updated_at: string | null;
-};
+export type Keeper = { nickname: string; mine: boolean; items: PlazaStar[] };
+export type MyShare = { id: string; star_id: string; name: string; title: string; starlight: number | null; created_at: string; receive_lines?: boolean; lines?: number };
+export type ReceivedLine = { id: string; text: string | null; chip: LineChip | null; nickname: string | null; created_at: string };
+export type LineChip = "empathize" | "me_too" | "thanks";
+export const LINE_CHIPS: { key: LineChip; label: string }[] = [
+  { key: "empathize", label: "공감해요" }, { key: "me_too", label: "저도 그랬어요" }, { key: "thanks", label: "고마워요" },
+];
+
 export type Growth = {
   stage: number; stage_name: string | null; floated: number; deep: number; supernova: number;
   next: { stage: number; stage_name: string; needs: Record<string, [number, number]> } | null;
@@ -121,9 +133,4 @@ export type Growth = {
 export type Story = {
   name: string; since: string; star_count: number;
   entries: { star_id: string; date: string; title: string; sentence: string }[];
-};
-export type PlazaNebula = {
-  id: string; name: string; quote: string | null; moods: Mood[]; depth_level: number;
-  shape: { silhouette: string | null; edges: number[][]; stars: { mood: Mood; depth_level?: number }[] };
-  receive_lines: boolean; created_at: string; resonated: boolean; beside: boolean;
 };

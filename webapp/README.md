@@ -77,6 +77,12 @@ vercel deploy --prod   # from this folder, linked to youniya-app
    `POST /v1/stars/{id}/links`), 고쳐 쓰기 (`/write?rewrite=`, W-46, `rewrite_of`; its draft carries
    `source_star_id`), stars without starlight (W-32, W-56 confirm, `POST /v1/stars/{id}/starlight`, 글 수정 W-33
    with PATCH), 내보내기 as a text file. A lit star's writing and moods are locked; its title isn't. **Done.**
-5. Plaza, nickname, 별빛 한 줄.
+5. 별지기 이름 (W-49, `/nickname`: after consent, and before the plaza for people without one; checked with
+   `GET /v1/me/nickname/check`), the plaza as one list (W-44: 대표 문장 · 이름 · 「title」, stars without starlight
+   below, 내 별 card), another's star (W-25: whole writing when shared, 공명, their page, report, block),
+   별빛 한 줄 (W-55: a chip or 60 characters, owner-only; `POST /v1/plaza/stars/{id}/lines`), the owner's
+   받은 별빛 한 줄 on star detail, 별지기 페이지 (W-50, `/plaza/keepers/[name]`), sharing the 대표 문장 with the
+   whole writing (W-26, `full_text`, `receive_lines`; stars without starlight too). The nebula plaza is gone.
+   **Done.**
 6. Settings and intro-site wording.
 

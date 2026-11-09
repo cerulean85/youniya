@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { StarGlyph } from "@/components/StarGlyph";
+import { ChevronRight } from "@/components/icons";
+import { PlazaRow } from "@/components/PlazaRow";
 import { api } from "@/lib/api";
-import type { PlazaNebula, PlazaStar } from "@/lib/types";
-import { NebulaField } from "./NebulaField";
+import { requireNickname, withAgo } from "@/lib/plaza";
+import type { MyShare, PlazaStar } from "@/lib/types";
 import styles from "./plaza.module.css";
 
 export const metadata: Metadata = { title: "우주 광장" };
@@ -17,14 +18,14 @@ const FILTERS = [
 ] as const;
 type Filter = (typeof FILTERS)[number]["key"];
 
-// Figma W-44 (09-2 우주 광장 · 합친 화면): one filter for both the nebula field and the star list.
-// Only the sentence each person chose is shown; no names, accounts, ranks or counts.
+// Figma W-44 (기획서 15.2 · 17.2): one list of shared stars with their 별지기 이름; stars without starlight
+// sit below. No resonance counts for anyone else's star.
 export default function PlazaPage({ searchParams }: PageProps<"/plaza">) {
   return (
     <>
       <header className={styles.header}>
         <h1 className="h1">우주 광장</h1>
-        <p className="body-m muted">모인 성운의 모양을 둘러보고, 별이 남긴 한 문장을 읽어 보세요. 순위나 인기는 없어요.</p>
+        <p className="body-m muted">별지기들이 나눈 별이에요. 눌러서 글을 읽고, 마음이 닿으면 공명을 남겨 보세요.</p>
       </header>
       <Suspense fallback={<div className={`card ${styles.loading}`} aria-busy="true" />}>
         <Plaza searchParams={searchParams} />
@@ -36,12 +37,19 @@ export default function PlazaPage({ searchParams }: PageProps<"/plaza">) {
 async function Plaza({ searchParams }: Pick<PageProps<"/plaza">, "searchParams">) {
   const sp = await searchParams;
   const filter: Filter = FILTERS.some((f) => f.key === sp.filter) ? (sp.filter as Filter) : "new";
-  const [tonight, nebulae, stars] = await Promise.all([
+  const me = await requireNickname(filter === "new" ? "/plaza" : `/plaza?filter=${filter}`);
+  const [tonight, stars, mine, beside] = await Promise.all([
     api<{ count: number; mine: number }>("/v1/plaza/tonight"),
-    api<{ items: PlazaNebula[] }>(`/v1/plaza/nebulae?filter=${filter}&limit=24`),
-    api<{ items: PlazaStar[] }>(`/v1/plaza/stars?sort=${filter}&limit=40`),
+    api<{ items: PlazaStar[] }>(`/v1/plaza/stars?sort=${filter}&limit=60`),
+    api<{ stars: MyShare[] }>("/v1/me/shares"),
+    filter === "beside" ? null : api<{ items: PlazaStar[] }>("/v1/plaza/stars?sort=beside&limit=100"),
   ]);
-  const notice = sp.reported ? "신고를 받았어요. 이제 보이지 않아요." : sp.blocked ? "차단했어요. 서로의 별과 성운이 더 이상 보이지 않아요." : null;
+  await connection(); // "12분 전" is relative to the request
+  // Lit stars first, then the ones without starlight (17.2), each in the server's order.
+  const rows = withAgo([...stars.items.filter((s) => s.has_starlight), ...stars.items.filter((s) => !s.has_starlight)]);
+  const besideCount = (beside ?? stars).items.length;
+  const lines = mine.stars.reduce((n, s) => n + (s.lines ?? 0), 0);
+  const notice = sp.reported ? "신고를 받았어요. 이제 보이지 않아요." : sp.blocked ? "차단했어요. 서로의 별과 별빛 한 줄이 더 이상 보이지 않아요." : null;
   return (
     <>
       {notice && <p className={styles.notice} role="status">{notice}</p>}
@@ -56,56 +64,36 @@ async function Plaza({ searchParams }: Pick<PageProps<"/plaza">, "searchParams">
         ))}
       </nav>
       <div className={styles.body}>
-        <section className={styles.field} aria-label="성운 들판">
-          {nebulae.items.length ? <NebulaField nebulae={nebulae.items} /> : (
-            <div className={styles.fieldEmpty}>
-              <p className="h3">{filter === "beside" ? "아직 곁에 둔 성운이 없어요" : "아직 하늘에 뜬 성운이 없어요"}</p>
-              <p className="body-m muted">{filter === "beside" ? "마음이 닿은 성운을 곁에 두면 이곳에 모여요." : "나의 성운에서 하늘에 띄우면 이곳에 떠올라요."}</p>
-            </div>
+        <section className={styles.records} aria-label="나눈 별">
+          {rows.length === 0 ? (
+            <p className={`body-m faint ${styles.listEmpty}`}>
+              {filter === "beside" ? "아직 곁에 둔 별이 없어요. 공명하거나 곁에 두면 이곳에 모여요." : filter === "similar" ? "나와 결이 비슷한 별이 아직 없어요." : "아직 광장에 뜬 별이 없어요."}
+            </p>
+          ) : (
+            <ul className={styles.list}>
+              {rows.map(({ star, ago }) => <li key={star.id}><PlazaRow star={star} ago={ago} /></li>)}
+            </ul>
           )}
         </section>
-        <section className={styles.records} aria-labelledby="records-title">
-          <h2 id="records-title" className="h2">별 기록</h2>
-          <p className="body-s muted">누군가 골라 나눈 한 문장이에요. 눌러서 읽고, 마음이 닿으면 공명을 남겨 보세요.</p>
-          <StarList stars={stars.items} filter={filter} />
-        </section>
+        <aside className={styles.side}>
+          <div className={`card ${styles.mine}`}>
+            <span className="label-m">내 별</span>
+            <Link href={`/plaza/keepers/${encodeURIComponent(me.nickname!)}`}><span>내가 나눈 별</span><span>{mine.stars.length}개<ChevronRight size={14} /></span></Link>
+            <Link href="/plaza?filter=beside"><span>곁에 둔 별</span><span>{besideCount}개<ChevronRight size={14} /></span></Link>
+            <span className={styles.mineRow}><span>받은 별빛 한 줄</span><span>{lines}개</span></span>
+          </div>
+          <div className={`card ${styles.rules}`}>
+            <span className="label-m">광장에서 지켜 주세요</span>
+            <ul>
+              <li>별을 누르면 글 전체를 읽을 수 있어요.</li>
+              <li>마음이 닿으면 공명이나 별빛 한 줄을 남겨요. 별빛 한 줄은 별 주인만 읽어요.</li>
+              <li>별빛 없이 띄운 별은 목록 아래쪽에 놓여요.</li>
+              <li>불편한 별은 신고하거나 그 별지기를 차단할 수 있어요.</li>
+            </ul>
+          </div>
+          <Link href="/records" className="btn btn-primary btn-block">내 별 나누기</Link>
+        </aside>
       </div>
     </>
   );
-}
-
-async function StarList({ stars, filter }: { stars: PlazaStar[]; filter: Filter }) {
-  if (stars.length === 0) return <p className={`body-s faint ${styles.listEmpty}`}>{filter === "beside" ? "아직 곁에 둔 별이 없어요." : "아직 광장에 뜬 별이 없어요."}</p>;
-  await connection(); // "12분 전" is relative to the request
-  const rows = withAgo(stars);
-  return (
-    <ul className={styles.list}>
-      {rows.map(({ star: s, ago }) => (
-        <li key={s.id}>
-          <Link href={`/plaza/stars/${s.id}`} className={styles.row} prefetch={false}>
-            <span className={styles.thumb}><StarGlyph points={s.shape?.points} sharpness={s.shape?.sharpness} mood={s.mood} size={24} /></span>
-            <span className={styles.rowText}>
-              <span className="observation">“{s.quote}”</span>
-              <span className="caption faint">{s.name} · {ago}</span>
-            </span>
-            <span className={styles.res} data-on={s.resonated} aria-label={s.resonated ? "공명했어요" : "공명 전"}>✦</span>
-          </Link>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-/** Each star with "방금" / "12분 전" / "1시간 전" / "2일 전", from one reading of the clock. */
-function withAgo(stars: PlazaStar[]) {
-  const now = Date.now();
-  return stars.map((star) => ({ star, ago: ago(star.created_at, now) }));
-}
-
-function ago(iso: string, now: number) {
-  const m = Math.max(0, Math.round((now - new Date(iso).getTime()) / 60000));
-  if (m < 1) return "방금";
-  if (m < 60) return `${m}분 전`;
-  if (m < 60 * 24) return `${Math.floor(m / 60)}시간 전`;
-  return `${Math.floor(m / 60 / 24)}일 전`;
 }

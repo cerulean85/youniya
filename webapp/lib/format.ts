@@ -43,3 +43,10 @@ export function shiftMonth(month: string, n: number) {
 }
 /** "2026-11" → "11월" */
 export const monthOnly = (month: string) => `${Number(month.slice(5))}월`;
+
+/** A name with 이/가: "고요한새벽이", "느린고래가". Names ending in Latin letters get 가, in digits 이 (a guess). */
+export function subject(name: string) {
+  const c = name.charCodeAt(name.length - 1);
+  if (c >= 0xac00 && c <= 0xd7a3) return name + ((c - 0xac00) % 28 ? "이" : "가");
+  return `${name}${/[0-9]$/.test(name) ? "이" : "가"}`;
+}

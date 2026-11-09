@@ -1,0 +1,6 @@
+.back { display: inline-flex; align-items: center; gap: 6px; font: 500 14px/20px var(--sans); color: var(--text-2); margin-bottom: -8px; }
+.loading { min-height: 480px; }
+.page { align-self: center; width: 100%; max-width: 640px; display: flex; flex-direction: column; gap: 20px; }
+.header { display: flex; flex-direction: column; gap: 12px; }
+.list { list-style: none; margin: 0; padding: 0; }
+.list li + li { border-top: 1px solid var(--border); }

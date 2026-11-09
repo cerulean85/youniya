@@ -21,3 +21,19 @@
 .check { font: 400 14px/22px var(--sans); padding-top: 4px; border-top: 1px solid var(--border); padding-top: 14px; }
 .dialogActions { display: flex; justify-content: flex-end; gap: 8px; padding-top: 8px; }
 .danger { color: #fff; background: linear-gradient(180deg, #bc5457, #a5202a); }
+a.tag:hover { color: var(--text); background: var(--tint); }
+.full { white-space: pre-wrap; color: var(--text-2); padding: 0 4px; }
+.lineButton { align-self: center; background: none; border: 0; cursor: pointer; font: 500 13px/20px var(--sans); color: var(--primary-text); }
+.lineButton:disabled { color: var(--text-3); cursor: default; }
+.lineForm, .lineDone { display: flex; flex-direction: column; gap: 14px; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: var(--raised); border: 1px solid var(--border); color: var(--text); font: 500 12px/18px var(--sans); cursor: pointer; }
+.chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--primary); }
+.chip:hover { border-color: var(--primary); }
+.lineInput { display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 16px; border-radius: 16px; background: var(--raised); border: 1px solid rgba(133, 85, 239, 0.6); }
+.lineInput input { flex: 1; min-width: 0; background: none; border: 0; outline: none; color: var(--text); font: 400 14px/22px var(--sans); }
+.send { width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--primary); color: #fff; font-size: 16px; cursor: pointer; }
+.send:disabled { opacity: 0.4; cursor: default; }
+.lineForm > * { order: 2; }
+.lineForm > h2, .lineForm > p:first-of-type { order: 0; }
+.lineForm > .chips { order: 1; }
