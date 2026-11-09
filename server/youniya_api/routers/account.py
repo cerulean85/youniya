@@ -15,7 +15,7 @@ from ..deps import ApiError, current_user, get_cipher, get_db
 from ..export import StarEntry, as_pdf, as_text
 from ..prism.engine import split_sentences
 from .constellations import TEMPLATES
-from ..models import Notice, StarLine, StarLink, TelescopeReport, CoinEntry, DeviceToken, Inquiry, Nebula, NebulaShare, Resonance, Star, StarlightLine, StarShare, User
+from ..models import Notice, StarLine, UserNotification, StarLink, TelescopeReport, CoinEntry, DeviceToken, Inquiry, Nebula, NebulaShare, Resonance, Star, StarlightLine, StarShare, User
 from ..rules import INQUIRY_KINDS, MOOD_LABELS, SKY_THEMES, SOUNDS
 from ..security import Cipher
 from ..views import iso, local
@@ -305,3 +305,36 @@ def app_notices(user: User = Depends(current_user), db: Session = Depends(get_db
     now = datetime.now(timezone.utc)
     rows = db.scalars(select(Notice).where(Notice.publish_at <= now).order_by(Notice.publish_at.desc()).limit(30))
     return {"items": [{"id": n.id, "title": n.title, "body": n.body, "published_at": iso(n.publish_at)} for n in rows]}
+
+
+class NotificationsRead(BaseModel):
+    ids: list[str] = Field(default_factory=list, max_length=500)
+    all: bool = False
+
+
+@router.get("/me/notifications")
+def notifications(before: datetime | None = None, limit: int = Query(50, ge=1, le=200),
+                  user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """알림함 (Mobile 130, web): what the server sent this keeper, newest first, kept 90 days.
+    `target` says what a tap opens ({"screen": "star" | "nickname" | "plaza_restricted" | "plaza" |
+    "coin_history" | "notice" | "notification_settings" | "notifications", …})."""
+    stmt = select(UserNotification).where(UserNotification.user_id == user.id)
+    if before:
+        stmt = stmt.where(UserNotification.created_at < before)
+    rows = db.scalars(stmt.order_by(UserNotification.created_at.desc()).limit(limit)).all()
+    unread = db.scalar(select(func.count()).select_from(UserNotification)
+                       .where(UserNotification.user_id == user.id, UserNotification.read_at.is_(None)))
+    return {"items": [{"id": n.id, "kind": n.kind, "title": n.title, "body": n.body, "target": n.target,
+                       "created_at": iso(n.created_at), "read": n.read_at is not None} for n in rows],
+            "unread": unread, "next_before": iso(rows[-1].created_at) if len(rows) == limit else None}
+
+
+@router.post("/me/notifications/read")
+def read_notifications(body: NotificationsRead, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    stmt = update(UserNotification).where(UserNotification.user_id == user.id, UserNotification.read_at.is_(None))
+    if not body.all:
+        stmt = stmt.where(UserNotification.id.in_(body.ids))
+    db.execute(stmt.values(read_at=datetime.now(timezone.utc)))
+    db.commit()
+    return {"unread": db.scalar(select(func.count()).select_from(UserNotification)
+                                .where(UserNotification.user_id == user.id, UserNotification.read_at.is_(None)))}

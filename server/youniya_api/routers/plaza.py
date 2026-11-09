@@ -41,7 +41,8 @@ def _alert_operators(db: Session, request: Request, kind: str, target_id: str, r
     settings = request.app.state.settings
     if settings.operator_user_ids:
         notify(db, request.app.state.push, list(settings.operator_user_ids),
-               Message(title="바로 숨긴 신고가 있어요", body="개인정보 또는 위기 관련 신고예요. 관리 화면에서 살펴봐 주세요."))
+               Message(title="바로 숨긴 신고가 있어요", body="개인정보 또는 위기 관련 신고예요. 관리 화면에서 살펴봐 주세요.",
+                       kind="operator_alert"))
 
 
 class ScanIn(BaseModel):
@@ -79,6 +80,8 @@ def share_star(star_id: str, body: StarShareIn, user: User = Depends(plaza_user)
     sentence as its 대표 문장, only contacts and identifying numbers masked (names and places stay).
     Without it, only the chosen sentence goes out, with names and places masked too."""
     star = owned_star(db, user, star_id)
+    if user.nickname_rename_requested_at is not None:  # 18.3: the name an operator asked to change stays off the plaza
+        raise ApiError(403, "nickname_rename_required", "지금 이름으로는 우주 광장에 별을 나눌 수 없어요. 별지기 이름을 바꿔 주세요.")
     if star.crisis:
         raise ApiError(422, "crisis", "지금은 나누지 않아도 괜찮아요.")
     if body.quote not in cipher.dec(star.body_enc):

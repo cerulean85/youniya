@@ -574,6 +574,22 @@ class PrismTest(Base):
     run_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
+
+class UserNotification(Base):
+    """알림함 (Mobile 130): every app notice the server sent a keeper, kept 90 days."""
+
+    __tablename__ = "user_notifications"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    user_id: Mapped[str] = user_fk()
+    kind: Mapped[str] = mapped_column(String(24))
+    title: Mapped[str] = mapped_column(String(120))
+    body: Mapped[str] = mapped_column(Text)
+    target: Mapped[dict | None] = mapped_column(JSON)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+
+
 @event.listens_for(User, "before_insert")
 def _keeper_no(mapper, connection, target: User) -> None:
     """The next #번호. Two sign-ups at once can collide on the unique key; that request fails and is retried."""

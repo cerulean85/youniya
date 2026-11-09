@@ -2,13 +2,15 @@
 "Authorization: Bearer <CRON_SECRET>"; anything else gets the same 404 as an unknown path."""
 
 import hmac
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Header, Request
+from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from .. import coins, marketing
 from ..deps import ApiError, get_db
-from ..models import AdminLog
+from ..models import AdminLog, UserNotification
 
 
 def vercel_cron(request: Request, authorization: str | None = Header(None)) -> None:
@@ -34,5 +36,9 @@ def purge_purchase_records(db: Session = Depends(get_db)):
     """Daily: deleted accounts' purchase records go once they are 5 years old (개인정보 처리방침 3)."""
     deleted = coins.purge_detached(db)
     db.add(AdminLog(action="cron_purge_purchase_records", target_id=str(deleted)))
+    # 알림함 keeps 90 days.
+    gone = db.execute(delete(UserNotification).where(
+        UserNotification.created_at < datetime.now(timezone.utc) - timedelta(days=90))).rowcount
+    db.add(AdminLog(action="cron_purge_notifications", target_id=str(gone)))
     db.commit()
     return {"deleted": deleted}

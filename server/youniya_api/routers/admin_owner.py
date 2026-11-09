@@ -324,7 +324,8 @@ def post_notice(body: NoticeIn, request: Request, op: Operator = Depends(owner),
     db.commit()
     if body.push and at <= _now() + timedelta(minutes=1):
         users = list({d.user_id for d in db.scalars(select(DeviceToken))})
-        notify(db, request.app.state.push, users, Message(body.title, body.body[:150], "notice"))
+        notify(db, request.app.state.push, users, Message(body.title, body.body[:150], "notice",
+                                                          {"screen": "notice", "notice_id": n.id}))
         n.pushed_at = _now()
         db.commit()
     return _notice_view(n)

@@ -42,7 +42,8 @@ def set_consent(db: Session, push, user: User, opt_in: bool) -> bool:
         user.marketing_revoked_at = now
     day = _day(now)
     message = Message("새 기능·혜택 알림 " + ("수신에 동의하셨어요" if opt_in else "수신을 거부하셨어요"),
-                      f"{day}에 처리됐어요. 설정 › 알림에서 언제든 바꿀 수 있어요.", "consent_result")
+                      f"{day}에 처리됐어요. 설정 › 알림에서 언제든 바꿀 수 있어요.", "consent_result",
+                      {"screen": "notification_settings"})
     db.flush()
     notify(db, push, [user.id], message)
     return True
@@ -65,7 +66,7 @@ def remind_due(db: Session, push, now: datetime | None = None) -> int:
         notify(db, push, [u.id], Message(
             "새 기능·혜택 알림 수신 동의 안내",
             f"{since}에 동의하신 수신 동의가 유지되고 있어요. 원치 않으면 설정 › 알림에서 끌 수 있어요.",
-            "consent_result"))
+            "consent_result", {"screen": "notification_settings"}))
         u.marketing_reminded_at = now
     db.commit()
     return len(due)

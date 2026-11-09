@@ -17,7 +17,7 @@ import jwt
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from .models import DeviceToken
+from .models import DeviceToken, UserNotification
 from .views import local
 
 log = logging.getLogger(__name__)
@@ -31,7 +31,9 @@ TOKEN_LIFETIME = 40 * 60
 class Message:
     title: str
     body: str
-    kind: str  # "report_result" | "announcement": the app routes on it
+    kind: str  # "report_result" | "announcement" | "notice" | "consent_result": the app routes on it
+    # What a tap opens, e.g. {"screen": "star", "star_id": …}; also in the stored notification.
+    target: dict | None = None
 
 
 class ApnsClient:
@@ -55,7 +57,7 @@ class ApnsClient:
     def send_detail(self, device_token: str, environment: str, message: Message) -> tuple[str, int | None, str]:
         """(result, APNs status, APNs reason), for the operator's test push."""
         payload = {"aps": {"alert": {"title": message.title, "body": message.body}, "sound": "default"},
-                   "kind": message.kind}
+                   "kind": message.kind, **({"target": message.target} if message.target else {})}
         try:
             r = self._http.post(f"{HOSTS[environment]}/3/device/{device_token}", json=payload, headers={
                 "authorization": f"bearer {self._provider_token()}",
@@ -81,8 +83,15 @@ def _reason(r: httpx.Response) -> str:
 
 
 def notify(db: Session, client: ApnsClient | None, user_ids: list[str], message: Message) -> dict:
-    """Sends to every device of these users and forgets dead tokens. Without a client nothing is sent."""
+    """Keeps it in each user's 알림함 (GET /v1/me/notifications), then sends to every device of these users
+    and forgets dead tokens. Without a client nothing is sent, but it is still kept."""
     counts = {"sent": 0, "gone": 0, "failed": 0, "devices": 0}
+    user_ids = list(dict.fromkeys(u for u in user_ids if u))
+    if user_ids:
+        for u in user_ids:
+            db.add(UserNotification(user_id=u, kind=message.kind, title=message.title, body=message.body,
+                                    target=message.target))
+        db.commit()
     if client is None or not user_ids:
         return counts
     devices = db.scalars(select(DeviceToken).where(DeviceToken.user_id.in_(user_ids))).all()
