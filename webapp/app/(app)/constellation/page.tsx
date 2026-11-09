@@ -72,9 +72,15 @@ async function Month({ searchParams }: Pick<PageProps<"/constellation">, "search
             <Link href={`/constellation/story?month=${month}`} className={styles.link}>
               <Nebula size={18} /><span><span className="label-m">별자리 이야기</span><span className="caption faint">그달 별들의 핵심 문장을 시간순으로 엮어요</span></span><ChevronRight size={16} />
             </Link>
-            <span className={`${styles.link} ${styles.soon}`} aria-disabled="true">
-              <Nebula size={18} /><span><span className="label-m">나의 은하수</span><span className="caption faint">달마다 채운 별자리를 한눈에 봐요 · 곧 열려요</span></span>
-            </span>
+            {months ? (
+              <Link href="/constellation/galaxy" className={styles.link}>
+                <Nebula size={18} /><span><span className="label-m">나의 은하수</span><span className="caption faint">달마다 채운 별자리를 한눈에 봐요</span></span><ChevronRight size={16} />
+              </Link>
+            ) : (
+              <span className={`${styles.link} ${styles.soon}`} aria-disabled="true">
+                <Nebula size={18} /><span><span className="label-m">나의 은하수</span><span className="caption faint">달마다 채운 별자리를 한눈에 봐요 · 곧 열려요</span></span>
+              </span>
+            )}
           </div>
         </aside>
       </div>
