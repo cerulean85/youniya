@@ -1,22 +1,15 @@
 import { Telescope as TelescopeIcon } from "@/components/icons";
 import { api } from "@/lib/api";
 import { moodOf } from "@/lib/format";
-import type { Analysis, TelescopeOffer, TelescopeReport } from "@/lib/types";
+import type { Analysis, Star, TelescopeOffer } from "@/lib/types";
 import { OpenTelescope } from "./StarActions";
 import styles from "./telescope.module.css";
 
-/** This star's own report: the newest one-star report that names it. */
-async function findReport(id: string): Promise<TelescopeReport | null> {
-  const { items } = await api<{ items: { id: string; star_count: number }[] }>("/v1/telescope/reports");
-  const single = items.filter((r) => r.star_count === 1).slice(0, 30);
-  const reports = await Promise.all(single.map((r) => api<TelescopeReport>(`/v1/telescope/reports/${r.id}`)));
-  return reports.find((r) => r.star_ids[0] === id) ?? null;
-}
+const PARTS = [["start", "글의 시작"], ["middle", "글의 중간"], ["end", "글의 끝"]] as const;
 
 // Figma W-54: the mind telescope inside star detail, folded with 접기. The name ending in 별 shows only here.
-export async function Telescope({ id, analysis }: { id: string; analysis: Analysis }) {
-  const report = await findReport(id);
-  if (!report) {
+export async function Telescope({ id, analysis, telescope }: { id: string; analysis: Analysis; telescope: Star["telescope"] }) {
+  if (!telescope) {
     const offer = await api<TelescopeOffer>("/v1/telescope/offer");
     return (
       <div id="telescope" className={`card ${styles.offer}`}>
@@ -26,22 +19,23 @@ export async function Telescope({ id, analysis }: { id: string; analysis: Analys
       </div>
     );
   }
-  const r = report.report;
+  const r = telescope.report;
+  const fog = r.fog_items ?? [];
   return (
     <details id="telescope" className={styles.telescope} open>
       <summary>
         <span className="label-l">마음 망원경 · {r.star_name}</span>
         <span className={styles.toggle} aria-hidden="true" />
       </summary>
-      {r.fog ? (
+      {fog.length > 0 ? (
         <section className={`card ${styles.card}`}>
-          <h3 className="label-m">{r.fog.title}</h3>
-          <p className="caption muted">{r.fog.note}</p>
-          {r.fog.items.map((it) => (
-            <div key={it.label} className={styles.item}>
-              <span className={styles.itemLabel}>{it.label}</span>
-              <blockquote className={styles.quote}>“{it.quote}”</blockquote>
-              <p className="caption muted">{it.note}</p>
+          <h3 className="label-m">마음을 가린 안개</h3>
+          <p className="caption muted">글 속에서 마음을 조금 흐리게 만든 말버릇이에요. 고칠 점이 아니라, 알아차릴 자리예요.</p>
+          {fog.map((f) => (
+            <div key={`${f.kind}-${f.sentence}`} className={styles.item}>
+              <span className={styles.itemLabel}>{f.label}</span>
+              <blockquote className={styles.quote}>“{f.sentence}”</blockquote>
+              {f.note && <p className="caption muted">{f.note}</p>}
             </div>
           ))}
         </section>
@@ -60,13 +54,13 @@ export async function Telescope({ id, analysis }: { id: string; analysis: Analys
           <p className={styles.legend}>
             {r.emotions.map((e) => <span key={e.mood} style={{ ["--c" as string]: moodOf(e.mood).color }}>{e.label} {e.percent}%</span>)}
           </p>
-          {r.flow?.map((f) => (
-            <div key={f.part} className={styles.flow}>
-              <span className="caption faint">{f.part}</span>
-              <span><span className={styles.flowMoods}>{f.moods}</span><span className="caption muted">{f.note}</span></span>
+          {r.mood_flow && PARTS.map(([k, label]) => (
+            <div key={k} className={styles.flow}>
+              <span className="caption faint">{label}</span>
+              <span className={styles.flowMoods} style={{ color: moodOf(r.mood_flow![k]).color }}>{moodOf(r.mood_flow![k]).label}</span>
             </div>
           ))}
-          {r.evidence && <p className="body-s muted">{r.evidence}</p>}
+          {(r.mood_interpretation || r.evidence) && <p className="body-s muted">{r.mood_interpretation || r.evidence}</p>}
         </section>
       )}
       {r.question && (

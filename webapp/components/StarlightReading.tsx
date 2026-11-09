@@ -41,11 +41,14 @@ export function StarlightReading({ analysis, readAt, version, open: startOpen = 
               </div>
             );
           })}
-          {analysis.interpretation && (
+          {analysis.interpretation ? (
             <div className={styles.overall} style={step()} data-line>
               <span className="label-m">종합 해석</span>
               <p className="journal">{analysis.interpretation}</p>
             </div>
+          ) : version && (
+            // Mobile 12-11: the reading call alone failed; the starlight and the three scores stand.
+            <p className="caption muted" style={step()} data-line>이번에는 별빛 풀이를 다 쓰지 못했어요. 별빛과 세 점수는 그대로예요.</p>
           )}
           <p className="caption faint" style={step()} data-line>점수는 글을 평가한 것이 아니라, 이 글에서 마음이 어디까지 닿았는지를 별빛으로 옮긴 거예요.</p>
           <p className="caption faint" style={step()} data-line>별빛 프리즘 {how.name} · {how.month} 방식으로 읽었어요</p>

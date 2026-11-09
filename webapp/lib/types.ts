@@ -47,22 +47,26 @@ export type Analysis = {
 export type LinkedStar = { id: string; title: string; mood: Mood; moods?: Mood[]; created_at: string; has_starlight: boolean };
 
 /** `linked_stars` comes with the 별 잇기 API (dev server 2026-11-09); absent on older servers. */
-export type Star = StarSummary & { body: string; analysis: Analysis | null; linked_stars?: LinkedStar[]; line_count?: number };
-
-/** 마음 망원경 report for one star (or the last seven days). `fog` and `flow` are the W-54 sections, when the API has them. */
-export type TelescopeReport = {
-  id: string; title: string; created_at: string; saved: boolean; star_ids: string[];
-  report: {
-    star_name: string;
-    lenses: { key: string; label: string; value: number; note: string }[];
-    emotions: { mood: Mood; label: string; percent: number }[];
-    evidence: string | null;
-    question: string | null;
-    signals: { star_id: string; sentence: string }[];
-    fog?: { title: string; note: string; items: { label: string; quote: string; note: string }[] } | null;
-    flow?: { part: string; moods: string; note: string }[] | null;
-  };
+export type Star = StarSummary & {
+  body: string; analysis: Analysis | null; linked_stars?: LinkedStar[]; line_count?: number;
+  /** The latest 마음 망원경 result of this star alone (API 5단계); null if none. */
+  telescope?: { id: string; created_at: string; report: TelescopeResult } | null;
 };
+
+/** 마음 망원경 result. For one star (`Star.telescope`) each lens carries the prism's score and reason. */
+export type FogKind = "step_back" | "unnamed" | "blaming" | "self_blame" | "overgeneral";
+export type TelescopeResult = {
+  star_name: string;
+  lenses: { key: string; label: string; value: number; note: string; score?: number | null; reason?: string | null }[];
+  emotions: { mood: Mood; label: string; percent: number }[];
+  evidence: string | null;
+  question: string | null;
+  signals: { star_id: string; sentence: string }[];
+  fog_items?: { kind: FogKind; label: string; sentence: string; note: string }[];
+  mood_flow?: { start: Mood; middle: Mood; end: Mood } | null;
+  mood_interpretation?: string;
+};
+export type TelescopeReport = { id: string; title: string; created_at: string; saved: boolean; star_ids: string[]; report: TelescopeResult };
 export type TelescopeOffer = { free: boolean; free_left: number; cost: number; coins: number; enough: boolean };
 
 export type Me = {

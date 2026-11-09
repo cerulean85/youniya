@@ -74,7 +74,7 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
             <StarCard analysis={star.analysis!} />
             <StarlightReading analysis={star.analysis!} readAt={star.created_at} version={star.prism_version} />
             <Suspense fallback={<div className={`card ${styles.loadingSmall}`} aria-busy="true" />}>
-              <Telescope id={star.id} analysis={star.analysis!} />
+              <Telescope id={star.id} analysis={star.analysis!} telescope={star.telescope ?? null} />
             </Suspense>
           </>
         ) : (
