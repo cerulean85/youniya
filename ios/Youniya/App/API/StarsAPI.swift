@@ -101,7 +101,11 @@ extension StarItem {
     init?(_ s: ServerStar, keeping local: StarItem? = nil) {
         guard let id = UUID(uuidString: s.id) else { return nil }
         var analysis = s.analysis.map(StarAnalysis.init)
-        analysis?.prismVersion = s.prismVersion.map { "별빛 프리즘 \($0)" }
+        // "prism-v1-2026-11" → "별빛 프리즘 v1" (older stars: none, and no 풀이).
+        analysis?.prismVersion = s.prismVersion.map { v in
+            let parts = v.split(separator: "-")
+            return parts.count > 1 ? "별빛 프리즘 \(parts[1])" : "별빛 프리즘"
+        }
         self.init(
             id: id,
             title: s.title,

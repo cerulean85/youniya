@@ -83,8 +83,10 @@ struct TelescopeSection: View {
                             .frame(width: 52, alignment: .leading)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(f.moods).textStyle(.labelS).foregroundStyle(Color.textPrimary)
-                            Text(f.note).textStyle(.bodyS).foregroundStyle(Color.textSecondary)
-                                .fixedSize(horizontal: false, vertical: true)
+                            if !f.note.isEmpty {
+                                Text(f.note).textStyle(.bodyS).foregroundStyle(Color.textSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                         }
                     }
                     .accessibilityElement(children: .combine)

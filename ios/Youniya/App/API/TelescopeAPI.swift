@@ -11,10 +11,12 @@ private struct ServerReportBody: Decodable {
     var evidence: String
     var question: String
     /// Newer servers (17.3); absent before.
-    struct FogOut: Decodable { var kind: String; var sentence: String; var note: String }
-    struct FlowOut: Decodable { var part: String; var moods: String; var note: String }
+    /// `kind` is a key; `label` is what to show.
+    struct FogOut: Decodable { var kind: String; var label: String?; var sentence: String; var note: String }
+    /// One mood each for the start, middle and end of the writing.
+    struct FlowOut: Decodable { var start: Mood?; var middle: Mood?; var end: Mood? }
     var fogItems: [FogOut]?
-    var moodFlow: [FlowOut]?
+    var moodFlow: FlowOut?
     var moodInterpretation: String?
 }
 
@@ -44,8 +46,12 @@ private extension TelescopeReport {
             emotions: r.report.emotions.map { Share(mood: $0.mood, percent: $0.percent) },
             evidence: r.report.evidence,
             question: r.report.question,
-            fogItems: r.report.fogItems?.map { Fog(kind: $0.kind, sentence: $0.sentence, note: $0.note) },
-            moodFlow: r.report.moodFlow?.map { Flow(part: $0.part, moods: $0.moods, note: $0.note) },
+            fogItems: r.report.fogItems?.map { Fog(kind: $0.label ?? $0.kind, sentence: $0.sentence, note: $0.note) },
+            moodFlow: r.report.moodFlow.map { f in
+                [("글의 시작", f.start), ("글의 중간", f.middle), ("글의 끝", f.end)].compactMap { part, mood in
+                    mood.map { Flow(part: part, moods: $0.label, note: "") }
+                }
+            },
             moodInterpretation: r.report.moodInterpretation,
             isSaved: r.saved,
             serverID: r.id

@@ -83,3 +83,25 @@ extension AppModel {
         return f.string(from: d)
     }
 }
+
+// MARK: - 31 새 기능·혜택 알림 (14.3)
+
+private struct MarketingIn: Encodable { var optIn: Bool }
+private struct MarketingOut: Decodable { var optIn: Bool }
+
+extension AppModel {
+    /// PUT /v1/me/marketing; the server sends the result as a push
+    /// ("consent_result"). Mock: on device.
+    @MainActor func setMarketing(_ on: Bool) async {
+        let before = marketingOptIn
+        marketingOptIn = on
+        guard useLiveAPI else { return }
+        do {
+            let r: MarketingOut = try await APIClient.shared.send("PUT", "/v1/me/marketing", body: MarketingIn(optIn: on))
+            marketingOptIn = r.optIn
+        } catch {
+            marketingOptIn = before
+            handle(error)
+        }
+    }
+}

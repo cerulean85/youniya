@@ -64,7 +64,7 @@ struct SettingsView: View {
 
     /// 91–94 bottom sheets over Settings.
     private enum Sheet: Identifiable {
-        case deleteAccount, withdrawShares, export, sound
+        case deleteAccount, withdrawShares, export
         case reminderTime // 87-2
         case signOut // 87-5
         case notificationsOff // iOS notifications are turned off for the app
@@ -82,16 +82,6 @@ struct SettingsView: View {
     @State private var toast: String?
     /// Live 92: GET /v1/me/shares counts.
     @State private var liveShareCounts: (stars: Int, nebulae: Int)?
-
-    /// Figma note under 소리 고르기 (written for 밤바람).
-    private var soundNote: String {
-        model.settings.sound == Self.sounds[0]
-            ? "밤바람, 미세한 성간 주파수처럼 마음을 가라앉히는 소리예요."
-            : "\(model.settings.sound)처럼 마음을 가라앉히는 소리예요."
-    }
-
-    /// The sound choices in 94. TODO: Play them once ambient audio exists.
-    static let sounds = ["밤바람", "미세한 성간 주파수"]
 
     var body: some View {
         @Bindable var model = model
@@ -131,12 +121,6 @@ struct SettingsView: View {
                         SettingsToggleRow(icon: .iconVibrate, title: "진동", isOn: $model.settings.haptics)
                     }
 
-                    SettingsSection("소리", note: soundNote) {
-                        // TODO: Ambient audio playback.
-                        SettingsToggleRow(icon: .iconSound, title: "앰비언스 사운드", isOn: $model.settings.ambience)
-                        SettingsRow(icon: .iconHeart, title: "소리 고르기", value: model.settings.sound) { sheet = .sound }
-                    }
-
                     SettingsSection("알림", note: model.settings.starReminder
                                     ? "별을 띄우지 않은 날에만 고른 시각에 한 번 알려 드려요. 연속 기록이나 재촉하는 알림은 보내지 않아요."
                                     : "연속 기록이나 재촉하는 알림은 보내지 않아요.") {
@@ -148,8 +132,10 @@ struct SettingsView: View {
                                         value: StarReminder.timeText(model.settings.reminderMinutes)) { sheet = .reminderTime }
                         }
                         // 11 (선택) 새 기능·혜택 알림: the same consent, changeable here.
+                        // 31 / 14.3: the server keeps the consent (PUT /v1/me/marketing).
                         SettingsToggleRow(icon: .iconInfo, title: "새 기능·혜택 알림",
-                                          isOn: notificationToggle($model.marketingOptIn))
+                                          isOn: notificationToggle(Binding(get: { model.marketingOptIn },
+                                                                           set: { on in Task { await model.setMarketing(on) } })))
                     }
 
                     SettingsSection("우주 광장") {
@@ -192,7 +178,6 @@ struct SettingsView: View {
             if DebugScreen.is("91") { sheet = .deleteAccount }
             if DebugScreen.is("92") { sheet = .withdrawShares }
             if DebugScreen.is("93") { sheet = .export }
-            if DebugScreen.is("94") { sheet = .sound }
             if DebugScreen.is("87-5") { sheet = .signOut }
             if DebugScreen.is("87-1") || DebugScreen.is("87-2") {
                 // As in Figma: the reminder on, 새 기능·혜택 알림 off.
@@ -289,14 +274,6 @@ struct SettingsView: View {
                 onSave: { m in close { model.settings.reminderMinutes = m } },
                 onCancel: { close() }
             )
-        case .sound: // 94
-            ActionSheetContent(
-                title: "어떤 소리와 함께할까요?",
-                message: "마음을 가라앉히는 앰비언스예요. 설정에서 언제든 끌 수 있어요.",
-                primary: (Self.sounds[0], { close { model.settings.sound = Self.sounds[0] } }),
-                secondary: (Self.sounds[1], { close { model.settings.sound = Self.sounds[1] } }),
-                ghost: ("닫기", { close() })
-            )
         }
     }
 
@@ -320,16 +297,9 @@ struct SettingsView: View {
 
     /// 92 body (Figma 154:336): "나눈 별 2개와 성운 1개", leaving out a kind with none.
     private var withdrawMessage: String {
-        let (stars, nebulae) = model.useLiveAPI
-            ? (liveShareCounts?.stars ?? 0, liveShareCounts?.nebulae ?? 0)
-            : (model.stars.filter(\.isShared).count, model.drawnNebulae.filter(\.shared).count)
-        let what: String
-        switch (stars, nebulae) {
-        case (0, 0): what = "나눈 별과 성운을"
-        case (_, 0): what = "나눈 별 \(stars)개를"
-        case (0, _): what = "성운 \(nebulae)개를"
-        default: what = "나눈 별 \(stars)개와 성운 \(nebulae)개를"
-        }
+        // 16.3: only stars are shared now.
+        let stars = model.useLiveAPI ? (liveShareCounts?.stars ?? 0) : model.stars.filter(\.isShared).count
+        let what = stars == 0 ? "나눈 별을" : "나눈 별 \(stars)개를"
         return "우주 광장에서 \(what) 거둬요. 그동안 받은 공명과 별빛 한 줄은 그대로 간직돼요. 언제든 다시 나눌 수 있어요."
     }
 

@@ -97,9 +97,9 @@ struct MembershipSheet: View {
     @State private var working = false
 
     private static let benefits: [(ImageResource, String)] = [
-        (.iconStar, "별 띄우기 하루 10개"),
+        (.iconStar, "별빛 받기 하루 10번"),
         (.iconTelescope, "마음 망원경 하루 10번 · 띄운 별마다"),
-        (.iconSun, "우주의 색 장면 3가지 · 아이콘 · 성운 실루엣 계절 팩"),
+        (.iconSun, "우주의 색 장면 3가지 · 앱 아이콘"),
     ]
 
     var body: some View {
@@ -277,31 +277,5 @@ struct MembershipSettingsSection: View {
         }
         .padding(.top, Space.md)
     }
-}
-
-// MARK: - 123 Monthly report
-
-/// 123 월간 마음 리포트: the month's flow, like 10 for one star.
-/// TODO: From the server once the API session sends the format; Figma sample for now.
-struct MonthlyReport: Identifiable, Equatable {
-    var id: String { month }
-    var month: String
-    var floatedCount: Int
-    var name: String
-    var lenses: [(label: String, value: Double, note: String)]
-    var emotions: [(mood: Mood, percent: Int)]
-    var brightest: String
-    var question: String
-
-    static func == (a: MonthlyReport, b: MonthlyReport) -> Bool { a.month == b.month }
-
-    static let sample = MonthlyReport(
-        month: "10월", floatedCount: 18, name: "천천히 숨을 고른 달",
-        lenses: [("별의 깊이", 0.82, "달의 후반으로 갈수록 속마음 가까이 내려갔어요."),
-                 ("빛의 선명함", 0.55, "평온한 날이 조금씩 늘었어요."),
-                 ("마음의 무게", 0.55, "마음의 무게는 셋째 주에 가장 컸고, 그 뒤로 가벼워졌어요.")],
-        emotions: [(.calm, 42), (.sorrow, 31), (.insight, 27)],
-        brightest: "잠깐 멈춰도 괜찮다는 말을 나에게 해 주고 싶었어요.",
-        question: "이번 달 나를 쉬게 해 준 건 무엇이었나요?")
 }
 

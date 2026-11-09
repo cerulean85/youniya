@@ -458,8 +458,6 @@ final class AppModel {
     /// Mock: stars floated today; telescopes are counted by the server only.
     var memberHasStar: Bool { isMember && (memberLeftToday.stars ?? (Self.memberDailyLimit - floatedToday)) > 0 }
     var memberHasTelescope: Bool { isMember && (memberLeftToday.telescope ?? Self.memberDailyLimit) > 0 }
-    /// Live 26: a member's monthly reports (123).
-    var monthlyReports: [MonthlyReportItem] = []
     /// 68-1: a locked sky shown for 3 seconds before M1.
     var previewSky: SkyTheme?
     /// Debug: `-debugTheme aurora+ / ember+ / rose+` shows the member scene.
