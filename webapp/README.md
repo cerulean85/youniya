@@ -19,13 +19,15 @@ Next.js 16 with Cache Components (`next.config.ts`): anything that reads cookies
 
 ## Local development
 
-Run the API from `server/` with `DEV_LOGIN=1` on port 8077 (8000 is often taken), and put this in
-`webapp/.env.development.local` (gitignored):
+Point the app at the dev API on home-desktop (over Tailscale; it has `DEV_LOGIN=1` and gets new endpoints
+first) in `webapp/.env.development.local` (gitignored):
 
 ```
-YOUNIYA_API_URL=http://localhost:8077
+YOUNIYA_API_URL=http://100.126.111.107:8000
 DEV_LOGIN=1
 ```
+
+Or run `server/` yourself with `DEV_LOGIN=1` and use its address.
 
 The login page then shows a 테스트 로그인 form (`/auth/dev`). Production never sets `DEV_LOGIN`, so the
 route is 404 there. Apple sign-in only works on app.youniya.dycdyp.com (Apple needs the HTTPS return URL).
