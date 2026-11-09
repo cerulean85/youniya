@@ -92,7 +92,7 @@ def test_crisis_star_keeps_the_plaza_as_it_was(client):
     ids = [float_star(client, h)["id"] for _ in range(4)]
     nid = _nebula(client, h, ids[:3], silhouette="whale")
     sid = client.put(f"/v1/nebulae/{nid}/share", json={}, headers=h).json()["share_id"]
-    client.patch(f"/v1/stars/{ids[3]}", json={"body": DEEP_BODY + " 그냥 사라지고 싶다."}, headers=h)
+    client.patch(f"/v1/stars/{ids[3]}", json={"title": "그냥 사라지고 싶다"}, headers=h)
     r = client.patch(f"/v1/nebulae/{nid}", json={"silhouette": "flower", "star_ids": ids, "edges": []},
                      headers=h).json()
     assert r["silhouette"] == "flower" and r["plaza_updated"] is False

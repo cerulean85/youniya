@@ -66,6 +66,9 @@ class Settings:
     allow_sandbox_purchases: bool = field(default_factory=lambda: os.getenv("ALLOW_SANDBOX_PURCHASES", "1") == "1")
     # X-Admin-Token for /v1/admin. Without it the operator API does not exist.
     admin_token: str | None = field(default_factory=lambda: os.getenv("ADMIN_TOKEN") or None)
+    # Accounts whose devices hear of urgent reports (18.3), comma separated user ids.
+    operator_user_ids: tuple[str, ...] = field(default_factory=lambda: tuple(
+        i.strip() for i in os.getenv("OPERATOR_USER_IDS", "").split(",") if i.strip()))
     # POST /v1/auth/dev signs in by name, without Apple or Google. Development only.
     dev_login: bool = field(default_factory=lambda: os.getenv("DEV_LOGIN") == "1")
     # Behind a proxy that sets X-Forwarded-For (Vercel sets VERCEL=1 itself). Per-IP limits use that address.

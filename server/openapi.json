@@ -303,6 +303,98 @@
         ]
       }
     },
+    "/v1/me/nickname/check": {
+      "get": {
+        "tags": [
+          "account"
+        ],
+        "summary": "Check Nickname",
+        "description": "15장 별지기 이름: {available, reason (form | hurtful | reserved | taken), message}.",
+        "operationId": "check_nickname_v1_me_nickname_check_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 40,
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/nickname": {
+      "put": {
+        "tags": [
+          "account"
+        ],
+        "summary": "Set Nickname",
+        "description": "The first name any time; after that once in 30 days (429 nickname_too_soon, with `next_change`).",
+        "operationId": "set_nickname_v1_me_nickname_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NicknameIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/v1/me/consent": {
       "post": {
         "tags": [
@@ -622,6 +714,7 @@
           "stars"
         ],
         "summary": "Create Star",
+        "description": "05 별 만들기. lit: read by the prism and priced as before. unlit: no model, free,\nUNLIT_PER_DAY a Korean day (429 unlit_daily_limit). A crisis signal: saved unlit, never read\nor charged (37). With `rewrite_of`, the new star is linked to the one it rewrites.",
         "operationId": "create_star_v1_stars_post",
         "security": [
           {
@@ -692,6 +785,28 @@
             }
           },
           {
+            "name": "starlight",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "lit",
+                    "unlit"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "17.1 별빛 받은 별 | 별빛 없는 별",
+              "title": "Starlight"
+            },
+            "description": "17.1 별빛 받은 별 | 별빛 없는 별"
+          },
+          {
             "name": "mood",
             "in": "query",
             "required": false,
@@ -710,8 +825,10 @@
                   "type": "null"
                 }
               ],
+              "description": "any of the star's moods",
               "title": "Mood"
-            }
+            },
+            "description": "any of the star's moods"
           },
           {
             "name": "q",
@@ -803,13 +920,59 @@
         }
       }
     },
+    "/v1/stars/{star_id}/starlight": {
+      "post": {
+        "tags": [
+          "stars"
+        ],
+        "summary": "Light Star",
+        "description": "17.1 나중에 별빛 받기, priced like a new lit star; 36 다시 시도 too. The writing is locked after.",
+        "operationId": "light_star_v1_stars__star_id__starlight_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "star_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Star Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/stars/{star_id}/float": {
       "post": {
         "tags": [
           "stars"
         ],
         "summary": "Float Star",
-        "description": "36 다시 시도, or floating a kept star later.",
+        "description": "Before 20261109: POST /v1/stars/{id}/starlight, with its old 409 code.",
         "operationId": "float_star_v1_stars__star_id__float_post",
         "security": [
           {
@@ -910,6 +1073,7 @@
           "stars"
         ],
         "summary": "Get Star",
+        "description": "12 별 상세, with `linked_stars` (11.5 별 잇기).",
         "operationId": "get_star_v1_stars__star_id__get",
         "security": [
           {
@@ -953,7 +1117,7 @@
           "stars"
         ],
         "summary": "Edit Star",
-        "description": "글 수정. A kept star: title, body and mood. A floated star: title and body only; its mood, shape,\nstarlight, analysis and telescope reports stay as first read (nothing is read again or charged).\nThe crisis check runs again: a new signal takes the star off the plaza (`share_removed`).\nA full-text share follows the new title and writing; if its 대표 문장 is gone from the writing,\nthe sentence is cleared and `quote_missing` asks for another. A sentence-only share keeps the\nsentence copied when shared.",
+        "description": "글 수정 (11.2). A star without starlight: title, body and moods. A lit star is locked: title only;\na different body or moods is 409 star_locked (고쳐 쓰기 makes a new star instead).\nThe crisis check runs again: a new signal takes the star off the plaza (`share_removed`).\nA full-text share follows the new title and writing; if its 대표 문장 is gone from the writing,\nthe sentence is cleared and `quote_missing` asks for another. A sentence-only share keeps the\nsentence copied when shared.",
         "operationId": "edit_star_v1_stars__star_id__patch",
         "security": [
           {
@@ -1022,6 +1186,111 @@
             "schema": {
               "type": "string",
               "title": "Star Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/stars/{star_id}/links": {
+      "post": {
+        "tags": [
+          "stars"
+        ],
+        "summary": "Add Links",
+        "description": "11.5 별 잇기: several of my stars at once. Already linked ones are left as they are.",
+        "operationId": "add_links_v1_stars__star_id__links_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "star_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Star Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinksIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/stars/{star_id}/links/{other_id}": {
+      "delete": {
+        "tags": [
+          "stars"
+        ],
+        "summary": "Remove Link",
+        "operationId": "remove_link_v1_stars__star_id__links__other_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "star_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Star Id"
+            }
+          },
+          {
+            "name": "other_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Other Id"
             }
           }
         ],
@@ -2600,7 +2869,7 @@
           "plaza"
         ],
         "summary": "Report Share",
-        "description": "100 신고하기 for a plaza star or nebula. It leaves the reporter's plaza at once;\nthree reports take it down for everyone until an operator looks.",
+        "description": "100 신고하기 for a plaza star or nebula. It leaves the reporter's plaza at once; three reports\ntake it down for everyone until an operator looks. 18.3: personal_info or self_harm takes it down\nat the first report, and the operators hear of it at once.",
         "operationId": "report_share_v1_plaza__kind___target_id__report_post",
         "security": [
           {
@@ -2641,6 +2910,52 @@
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/keepers/{name}": {
+      "get": {
+        "tags": [
+          "plaza"
+        ],
+        "summary": "Keeper",
+        "description": "15장 별지기 페이지: only the stars this keeper shared, newest first. No counts, no starlight\nnumbers, nothing unshared. A keeper blocked either way is not found.",
+        "operationId": "keeper_v1_keepers__name__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -3688,6 +4003,28 @@
             "title": "Mood",
             "default": "calm"
           },
+          "moods": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "calm",
+                    "sorrow",
+                    "anger",
+                    "insight"
+                  ]
+                },
+                "type": "array",
+                "maxItems": 4,
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moods"
+          },
           "title": {
             "type": "string",
             "maxLength": 60,
@@ -3699,6 +4036,17 @@
             "maxLength": 20000,
             "title": "Body",
             "default": ""
+          },
+          "source_star_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Star Id"
           }
         },
         "type": "object",
@@ -3785,6 +4133,24 @@
           "text"
         ],
         "title": "LineIn"
+      },
+      "LinksIn": {
+        "properties": {
+          "star_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Star Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "star_ids"
+        ],
+        "title": "LinksIn"
       },
       "MonthlyIn": {
         "properties": {
@@ -3951,6 +4317,21 @@
           "star_ids"
         ],
         "title": "NebulaIn"
+      },
+      "NicknameIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "NicknameIn"
       },
       "NotificationIn": {
         "properties": {
@@ -4200,6 +4581,28 @@
             ],
             "title": "Mood"
           },
+          "moods": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "calm",
+                    "sorrow",
+                    "anger",
+                    "insight"
+                  ]
+                },
+                "type": "array",
+                "maxItems": 4,
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moods"
+          },
           "title": {
             "anyOf": [
               {
@@ -4228,19 +4631,48 @@
         },
         "type": "object",
         "title": "StarEdit",
-        "description": "Only what is given changes. `mood` only while the star is kept."
+        "description": "Only what is given changes. Body and moods only while the star has no starlight (11.2)."
       },
       "StarIn": {
         "properties": {
           "mood": {
-            "type": "string",
-            "enum": [
-              "calm",
-              "sorrow",
-              "anger",
-              "insight"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "calm",
+                  "sorrow",
+                  "anger",
+                  "insight"
+                ]
+              },
+              {
+                "type": "null"
+              }
             ],
             "title": "Mood"
+          },
+          "moods": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "calm",
+                    "sorrow",
+                    "anger",
+                    "insight"
+                  ]
+                },
+                "type": "array",
+                "maxItems": 4,
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moods"
           },
           "title": {
             "type": "string",
@@ -4257,6 +4689,8 @@
           "mode": {
             "type": "string",
             "enum": [
+              "lit",
+              "unlit",
               "float",
               "keep"
             ],
@@ -4272,11 +4706,18 @@
               }
             ],
             "title": "Rewrite Of"
+          },
+          "link_to": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Link To"
           }
         },
         "type": "object",
         "required": [
-          "mood",
           "body",
           "mode"
         ],
@@ -4365,7 +4806,13 @@
               "hurtful",
               "personal_info",
               "spam",
-              "other"
+              "other",
+              "self_harm",
+              "harassment",
+              "hate",
+              "impersonation",
+              "advertising",
+              "nickname"
             ],
             "title": "Reason"
           },

@@ -31,27 +31,27 @@ def test_edit_kept_star_everything(client):
     assert client.patch(f"/v1/stars/{star['id']}", json={"body": "   "}, headers=h).status_code == 422
 
 
-def test_edit_floated_star_keeps_its_reading(client):
+def test_a_lit_star_is_locked_but_its_title_can_change(client):
+    """11.2: body and moods are locked once a star has starlight; 고쳐 쓰기 makes a new star."""
     h, other = sign_in(client), sign_in(client, "other")
     star = float_star(client, h)
-    coins = client.get("/v1/me", headers=h).json()["coins"]
+    assert star["has_starlight"] is True and star["locked"] is True
     quote = DEEP_BODY.split(". ")[0] + "."
     share = client.put(f"/v1/stars/{star['id']}/share", json={"quote": quote}, headers=h).json()
 
-    assert client.patch(f"/v1/stars/{star['id']}", json={"mood": "calm"}, headers=h).json()["error"]["code"] \
-        == "mood_fixed"
-    r = client.patch(f"/v1/stars/{star['id']}", json={"title": "고친 제목", "body": "완전히 새로 쓴 본문",
+    for body in ({"mood": "calm"}, {"moods": ["insight", "calm"]}, {"body": "완전히 새로 쓴 본문"}):
+        r = client.patch(f"/v1/stars/{star['id']}", json=body, headers=h)
+        assert r.status_code == 409 and r.json()["error"]["code"] == "star_locked", body
+    # The same body and mood (an app sending every field) is fine.
+    r = client.patch(f"/v1/stars/{star['id']}", json={"title": "고친 제목", "body": DEEP_BODY,
                                                       "mood": star["mood"]}, headers=h)
     assert r.status_code == 200, r.text
     edited = r.json()["star"]
-    assert edited["body"] == "완전히 새로 쓴 본문" and edited["title"] == "고친 제목"
-    assert edited["starlight"] == star["starlight"] and edited["analysis"] == star["analysis"]
-    assert edited["state"] == "floated" and client.get("/v1/me", headers=h).json()["coins"] == coins
+    assert edited["title"] == "고친 제목" and edited["analysis"] == star["analysis"]
 
-    # The plaza keeps what was shared.
+    # A sentence-only share keeps what was shared.
     item = client.get("/v1/plaza/stars", headers=other).json()["items"][0]
-    assert item["id"] == share["share_id"] and item["quote"] == share["quote"]
-    assert "고친" not in str(item)
+    assert item["id"] == share["share_id"] and "고친" not in str(item)
 
 
 def test_edit_runs_the_crisis_check_again(client):

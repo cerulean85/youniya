@@ -4,15 +4,18 @@
 from datetime import datetime, timedelta, timezone
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Query
+import logging
+
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from .. import privacy
+from .. import nickname, privacy
+from ..push import Message, notify
 from ..blocks import can_see, hidden_users, visible_shares
 from ..deps import ApiError, consented_user, get_cipher, get_db
-from ..models import Beside, LineReport, NebulaShare, Resonance, ShareReport, Star, StarlightLine, StarShare, User
+from ..models import AdminLog, Beside, LineReport, NebulaShare, Resonance, ShareReport, Star, StarlightLine, StarShare, User
 from ..rules import LINE_LIFETIME_HOURS, LINE_MAX_LENGTH, LINE_REPORT_REASONS
 from ..security import Cipher
 from ..views import KST, iso
@@ -21,11 +24,24 @@ from .blocks import block
 from .stars import owned_star
 
 router = APIRouter(prefix="/v1", tags=["plaza"])
+log = logging.getLogger(__name__)
 
 Kind = Literal["star", "nebula"]
 _MODELS = {"star": StarShare, "nebula": NebulaShare}
 # A line hidden for everyone once this many people report it.
 HIDE_AFTER_REPORTS = 3
+# 18.3: these take a share down at the first report, and tell the operators.
+URGENT_REASONS = ("personal_info", "self_harm")
+
+
+def _alert_operators(db: Session, request: Request, kind: str, target_id: str, reason: str) -> None:
+    """A log line (it reaches Sentry), an AdminLog, and a push to OPERATOR_USER_IDS' devices."""
+    log.error("urgent report: %s %s (%s) hidden at the first report", kind, target_id, reason)
+    db.add(AdminLog(action=f"urgent_report_{kind}", target_id=target_id))
+    settings = request.app.state.settings
+    if settings.operator_user_ids:
+        notify(db, request.app.state.push, list(settings.operator_user_ids),
+               Message(title="바로 숨긴 신고가 있어요", body="개인정보 또는 위기 관련 신고예요. 관리 화면에서 살펴봐 주세요."))
 
 
 class ScanIn(BaseModel):
@@ -62,13 +78,14 @@ def share_star(star_id: str, body: StarShareIn, user: User = Depends(consented_u
     sentence as its 대표 문장, only contacts and identifying numbers masked (names and places stay).
     Without it, only the chosen sentence goes out, with names and places masked too."""
     star = owned_star(db, user, star_id)
-    if star.state != "floated":
-        raise ApiError(422, "not_floated", "떠 있는 별만 나눌 수 있어요.")
     if star.crisis:
         raise ApiError(422, "crisis", "지금은 나누지 않아도 괜찮아요.")
     if body.quote not in cipher.dec(star.body_enc):
         raise ApiError(422, "quote_not_found", "내가 쓴 문장 중에서 골라 주세요.")
-    a = cipher.dec_json(star.analysis_enc)
+    # 17.2: a star without starlight can be shared too; it has no reading, so a plain shape.
+    a = cipher.dec_json(star.analysis_enc) if star.state == "floated" else {
+        "moods": [{"mood": m} for m in (star.moods or [star.mood])], "depth_level": 0,
+        "shape": {"points": 3, "sharpness": "soft"}}
     row = db.scalar(select(StarShare).where(StarShare.star_id == star.id)) or StarShare(
         star_id=star.id, user_id=user.id)
     mode = "contacts" if body.full_text else "all"
@@ -113,11 +130,17 @@ def _similar_order(db: Session, user: User, rows: list) -> list:
     return sorted(rows, key=lambda r: (-sum(profile.get(m, 0) for m in r.moods), -r.created_at.timestamp()))
 
 
-def _star_item(s: StarShare, res: set[str], bes: set[str]) -> dict:
-    """The list item: the 대표 문장, never the writing (75 has it)."""
-    return {"id": s.id, "name": s.name, "quote": s.quote, "mood": s.mood, "moods": s.moods,
+def _nicks(db: Session, rows) -> dict[str, str | None]:
+    ids = {r.user_id for r in rows}
+    return {i: n for i, n in db.execute(select(User.id, User.nickname).where(User.id.in_(ids)))} if ids else {}
+
+
+def _star_item(s: StarShare, res: set[str], bes: set[str], nicks: dict | None = None) -> dict:
+    """The list item: the 대표 문장, never the writing (75 has it). `nickname`: the 별지기 이름 (15장)."""
+    return {"id": s.id, "name": s.name, "nickname": (nicks or {}).get(s.user_id), "quote": s.quote, "mood": s.mood, "moods": s.moods,
             "depth_level": s.depth_level, "shape": s.shape, "created_at": iso(s.created_at),
-            "full_text": s.full_text, "resonated": s.id in res, "beside": s.id in bes}
+            "full_text": s.full_text, "has_starlight": s.depth_level > 0,
+            "resonated": s.id in res, "beside": s.id in bes}
 
 
 def _nebula_item(n: NebulaShare, res: set[str], bes: set[str]) -> dict:
@@ -137,10 +160,15 @@ def plaza_stars(sort: Literal["new", "similar", "beside"] = "new", limit: int = 
     # builds before 20261108 cannot read a share without one.
     stmt = stmt.where(StarShare.quote.is_not(None))
     rows = db.scalars(stmt.limit(500)).all()
+    # 17.2: stars without starlight (depth_level 0) come after the lit ones, and not among the similar.
     if sort == "similar":
-        rows = _similar_order(db, user, rows)
+        rows = _similar_order(db, user, [r for r in rows if r.depth_level > 0])
+    elif sort == "new":
+        rows = sorted(rows, key=lambda r: r.depth_level == 0)
     res, bes = _marks(db, user, "star")
-    return {"items": [_star_item(s, res, bes) for s in rows[:limit]]}
+    rows = rows[:limit]
+    nicks = _nicks(db, rows)
+    return {"items": [_star_item(s, res, bes, nicks) for s in rows]}
 
 
 @router.get("/plaza/stars/{share_id}")
@@ -152,7 +180,7 @@ def plaza_star(share_id: str, user: User = Depends(consented_user), db: Session 
     if s is None or s.quote is None or not can_see(db, user.id, s):
         raise ApiError(404, "not_found", "별을 찾지 못했어요.")
     full = s.full_text and s.body_masked_enc
-    return _star_item(s, *_marks(db, user, "star")) | {
+    return _star_item(s, *_marks(db, user, "star"), _nicks(db, [s])) | {
         "title_masked": s.name if full else None, "body_masked": cipher.dec(s.body_masked_enc) if full else None}
 
 
@@ -283,17 +311,18 @@ def report_line(line_id: str, body: ReportIn, user: User = Depends(consented_use
         db.add(LineReport(line_id=line.id, user_id=user.id, reason=body.reason))
         db.flush()
         count = db.scalar(select(func.count()).select_from(LineReport).where(LineReport.line_id == line.id))
-        if count >= HIDE_AFTER_REPORTS:
+        if count >= HIDE_AFTER_REPORTS or body.reason in URGENT_REASONS:
             line.hidden = True
     db.commit()
     return {"reported": True, "blocked": blocked}
 
 
 @router.post("/plaza/{kind}/{target_id}/report", dependencies=[per_user("report", 30, 3600)])
-def report_share(kind: Kind, target_id: str, body: ReportIn, user: User = Depends(consented_user),
+def report_share(kind: Kind, target_id: str, body: ReportIn, request: Request, user: User = Depends(consented_user),
                  db: Session = Depends(get_db)):
-    """100 신고하기 for a plaza star or nebula. It leaves the reporter's plaza at once;
-    three reports take it down for everyone until an operator looks."""
+    """100 신고하기 for a plaza star or nebula. It leaves the reporter's plaza at once; three reports
+    take it down for everyone until an operator looks. 18.3: personal_info or self_harm takes it down
+    at the first report, and the operators hear of it at once."""
     row = _target(db, user, kind, target_id)
     blocked = False
     if body.block:
@@ -304,10 +333,28 @@ def report_share(kind: Kind, target_id: str, body: ReportIn, user: User = Depend
         db.flush()
         count = db.scalar(select(func.count()).select_from(ShareReport)
                           .where(ShareReport.kind == kind, ShareReport.target_id == target_id))
-        if count >= HIDE_AFTER_REPORTS:
+        urgent = body.reason in URGENT_REASONS
+        if (urgent or count >= HIDE_AFTER_REPORTS) and not row.hidden:
             row.hidden = True
+            if urgent:
+                _alert_operators(db, request, kind, target_id, body.reason)
     db.commit()
     return {"reported": True, "blocked": blocked}
+
+
+@router.get("/keepers/{name}")
+def keeper(name: str, user: User = Depends(consented_user), db: Session = Depends(get_db)):
+    """15장 별지기 페이지: only the stars this keeper shared, newest first. No counts, no starlight
+    numbers, nothing unshared. A keeper blocked either way is not found."""
+    owner = db.scalar(select(User).where(User.nickname_key == nickname.key(name)))
+    if owner is None or owner.id in hidden_users(db, user.id):
+        raise ApiError(404, "not_found", "별지기를 찾지 못했어요.")
+    rows = db.scalars(select(StarShare).where(StarShare.user_id == owner.id, StarShare.quote.is_not(None),
+                                              *visible_shares(db, user.id, StarShare))
+                      .order_by(StarShare.created_at.desc()).limit(200)).all()
+    res, bes = _marks(db, user, "star")
+    return {"nickname": owner.nickname, "mine": owner.id == user.id,
+            "items": [_star_item(s, res, bes, {owner.id: owner.nickname}) for s in rows]}
 
 
 @router.get("/plaza/tonight")

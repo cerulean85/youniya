@@ -6,15 +6,15 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import delete, or_, select
 from sqlalchemy.orm import Session
 
 from ..deps import ApiError, consented_user, get_cipher, get_db
-from ..models import Draft, Nebula, Star, StarShare, User, now
+from ..models import Draft, Nebula, Star, StarLink, StarShare, User, now
 from ..prism.filters import CRISIS_GUIDANCE, has_crisis_signal
 from .. import ai_cost, allowance, coins, membership, privacy
 from ..rules import (DEEP_DEPTH_SCORE, FIRST_STAGE_STARS, STAGE_NAMES, STAR_FLOAT_COST, SUPERNOVA_STARLIGHT,
-                     growth_stage)
+                     UNLIT_PER_DAY, growth_stage)
 from ..security import Cipher
 from ..views import aware, iso, local, shared_star_ids, star_view
 from ..ratelimit import per_user
@@ -25,24 +25,43 @@ Mood = Literal["calm", "sorrow", "anger", "insight"]
 
 
 class StarIn(BaseModel):
-    mood: Mood
+    mood: Mood | None = None
+    # 17.5 감정 여러 개: the first is the star's colour. Given both, `moods` wins.
+    moods: list[Mood] | None = Field(None, min_length=1, max_length=4)
     title: str = Field("", max_length=60)
     body: str = Field(..., min_length=1, max_length=20000)
-    mode: Literal["float", "keep"]  # 별 띄우기 | 조용히 간직하기
-    rewrite_of: str | None = None  # 14 다시 쓰기
+    # 17.1 lit 별빛 받고 띄우기 | unlit 별빛 없이 띄우기. float and keep (before 20261109) mean the same.
+    mode: Literal["lit", "unlit", "float", "keep"]
+    # 14 다시 쓰기 / 11.2 고쳐 쓰기: the star this one rewrites; the two are linked (별 잇기).
+    rewrite_of: str | None = None
+    # 11.5 새 글을 써서 잇기: my stars to link the new one to (not a rewrite).
+    link_to: list[str] = Field(default_factory=list, max_length=200)
 
 
 class StarEdit(BaseModel):
-    """Only what is given changes. `mood` only while the star is kept."""
+    """Only what is given changes. Body and moods only while the star has no starlight (11.2)."""
     mood: Mood | None = None
+    moods: list[Mood] | None = Field(None, min_length=1, max_length=4)
     title: str | None = Field(None, max_length=60)
     body: str | None = Field(None, min_length=1, max_length=20000)
 
 
 class DraftIn(BaseModel):
     mood: Mood = "calm"
+    moods: list[Mood] | None = Field(None, min_length=1, max_length=4)
     title: str = Field("", max_length=60)
     body: str = Field("", max_length=20000)
+    source_star_id: str | None = None  # 11.2 고쳐 쓰기: the star being rewritten
+
+
+class LinksIn(BaseModel):
+    star_ids: list[str] = Field(..., min_length=1, max_length=200)
+
+
+def _moods(mood: str | None, moods: list[str] | None) -> list[str] | None:
+    if moods:
+        return list(dict.fromkeys(moods))
+    return [mood] if mood else None
 
 
 def owned_star(db: Session, user: User, star_id: str) -> Star:
@@ -55,6 +74,7 @@ def owned_star(db: Session, user: User, star_id: str) -> Star:
 def _apply(star: Star, analysis: dict, cipher: Cipher) -> None:
     star.state = "floated"
     star.floated_at = now()
+    analysis["starlight"] = max(1, analysis["starlight"])  # 17.3: a lit star has at least 1
     star.starlight = analysis["starlight"]
     star.depth_score = analysis["scores"]["depth"]
     star.analysis_enc = cipher.enc_json(analysis)
@@ -109,35 +129,75 @@ def _response(db: Session, star: Star, cipher: Cipher, crisis: bool, charged: in
 @router.post("/stars", status_code=201, dependencies=[per_user("prism", 30, 3600)])
 def create_star(body: StarIn, request: Request, user: User = Depends(consented_user),
                 db: Session = Depends(get_db), cipher: Cipher = Depends(get_cipher)):
+    """05 별 만들기. lit: read by the prism and priced as before. unlit: no model, free,
+    UNLIT_PER_DAY a Korean day (429 unlit_daily_limit). A crisis signal: saved unlit, never read
+    or charged (37). With `rewrite_of`, the new star is linked to the one it rewrites."""
     if body.rewrite_of:
         owned_star(db, user, body.rewrite_of)
+    links = list(dict.fromkeys(body.link_to))
+    if links and len(set(db.scalars(select(Star.id).where(Star.id.in_(links), Star.user_id == user.id)))) != len(links):
+        raise ApiError(422, "invalid_stars", "이을 수 없는 별이 있어요.")
+    moods = _moods(body.mood, body.moods)
+    if not moods:
+        raise ApiError(422, "mood_required", "기분을 하나 골라 주세요.")
+    lit = body.mode in ("lit", "float")
     title = body.title.strip() or "제목 없는 별"
-    star = Star(user_id=user.id, mood=body.mood, title_enc=cipher.enc(title), body_enc=cipher.enc(body.body),
-                state="kept", rewrite_of=body.rewrite_of)
+    star = Star(user_id=user.id, mood=moods[0], moods=moods, title_enc=cipher.enc(title),
+                body_enc=cipher.enc(body.body), state="kept", rewrite_of=body.rewrite_of)
     # 37 위기 돌봄: the writing is always saved as written, but never scored.
     crisis = has_crisis_signal(f"{title}\n{body.body}")
     star.crisis = crisis
     charged = 0
-    if body.mode == "float" and not crisis:
+    if lit and not crisis:
         _, charged = _float(db, user, star, request, cipher)  # 402/422 before anything is stored
+    elif not lit and not allowance.use_unlit(db, user, UNLIT_PER_DAY):
+        raise ApiError(429, "unlit_daily_limit", f"별빛 없이 띄우기는 하루 {UNLIT_PER_DAY}개까지예요.",
+                       limit=UNLIT_PER_DAY)
     db.add(star)
     draft = db.get(Draft, user.id)
-    if draft:
+    # 11.2 고쳐 쓰기: from `rewrite_of`, or from the draft that was filled with the original.
+    source = body.rewrite_of or (draft.source_star_id if draft and not links else None)
+    db.flush()
+    if source and db.get(Star, source) is not None:
+        star.rewrite_of = source
+        _link(db, user, star.id, source)
+    for other in links:
+        _link(db, user, star.id, other)
+    # The draft goes when it is this writing's: a rewrite's draft with the rewrite, a plain one otherwise.
+    if draft and draft.source_star_id == (source if source else None):
         db.delete(draft)
     db.commit()
     return _response(db, star, cipher, crisis, charged)
 
 
+@router.post("/stars/{star_id}/starlight", dependencies=[per_user("prism", 30, 3600)])
+def light_star(star_id: str, request: Request, user: User = Depends(consented_user),
+               db: Session = Depends(get_db), cipher: Cipher = Depends(get_cipher)):
+    """17.1 나중에 별빛 받기, priced like a new lit star; 36 다시 시도 too. The writing is locked after."""
+    star = owned_star(db, user, star_id)
+    if star.state == "floated":
+        raise ApiError(409, "already_lit", "이미 별빛을 받은 별이에요.")
+    return _light(db, user, star, request, cipher)
+
+
 @router.post("/stars/{star_id}/float", dependencies=[per_user("prism", 30, 3600)])
 def float_star(star_id: str, request: Request, user: User = Depends(consented_user),
                db: Session = Depends(get_db), cipher: Cipher = Depends(get_cipher)):
-    """36 다시 시도, or floating a kept star later."""
+    """Before 20261109: POST /v1/stars/{id}/starlight, with its old 409 code."""
     star = owned_star(db, user, star_id)
     if star.state == "floated":
         raise ApiError(409, "already_floated", "이미 떠 있는 별이에요.")
+    return _light(db, user, star, request, cipher)
+
+
+def _light(db: Session, user: User, star: Star, request: Request, cipher: Cipher) -> dict:
     if star.crisis:
         return _response(db, star, cipher, crisis=True)
     status, charged = _float(db, user, star, request, cipher)
+    share = db.scalar(select(StarShare).where(StarShare.star_id == star.id))
+    if share is not None and star.state == "floated":  # shared before its starlight: now with its reading
+        a = cipher.dec_json(star.analysis_enc)
+        share.moods, share.depth_level, share.shape = [m["mood"] for m in a["moods"]], a["depth_level"], a["shape"]
     db.commit()
     if status == "failed":
         raise ApiError(502, "analysis_failed", "별을 읽지 못했어요. 글은 그대로 보관돼요.")
@@ -150,17 +210,18 @@ def list_stars(
     db: Session = Depends(get_db),
     cipher: Cipher = Depends(get_cipher),
     state: Literal["floated", "kept"] | None = None,
-    mood: Mood | None = None,
+    starlight: Literal["lit", "unlit"] | None = Query(None, description="17.1 별빛 받은 별 | 별빛 없는 별"),
+    mood: Mood | None = Query(None, description="any of the star's moods"),
     q: str | None = Query(None, max_length=50, description="117 제목 · 본문 검색"),
     month: str | None = Query(None, pattern=r"^\d{4}-\d{2}$", description="YYYY-MM, Korean time"),
     before: datetime | None = None,
     limit: int = Query(50, ge=1, le=200),
 ):
     stmt = select(Star).where(Star.user_id == user.id).order_by(Star.created_at.desc())
+    if starlight:
+        state = "floated" if starlight == "lit" else "kept"
     if state:
         stmt = stmt.where(Star.state == state)
-    if mood:
-        stmt = stmt.where(Star.mood == mood)
     if before:
         stmt = stmt.where(Star.created_at < before)
     shared = shared_star_ids(db, user.id)
@@ -168,6 +229,8 @@ def list_stars(
     # Titles and bodies are encrypted, so search and month filtering happen here.
     for star in db.scalars(stmt):
         if month and local(star.created_at).strftime("%Y-%m") != month:
+            continue
+        if mood and mood not in (star.moods or [star.mood]):
             continue
         if q and q not in cipher.dec(star.title_enc) and q not in cipher.dec(star.body_enc):
             continue
@@ -204,30 +267,76 @@ def summary(user: User = Depends(consented_user), db: Session = Depends(get_db),
 @router.get("/stars/{star_id}")
 def get_star(star_id: str, user: User = Depends(consented_user), db: Session = Depends(get_db),
              cipher: Cipher = Depends(get_cipher)):
+    """12 별 상세, with `linked_stars` (11.5 별 잇기)."""
     star = owned_star(db, user, star_id)
-    return star_view(star, cipher, shared=star.id in shared_star_ids(db, user.id))
+    return star_view(star, cipher, shared=star.id in shared_star_ids(db, user.id)) | {
+        "linked_stars": _linked(db, star, cipher)}
+
+
+def _link(db: Session, user: User, a: str, b: str) -> bool:
+    a, b = sorted((a, b))
+    if a == b or db.scalar(select(StarLink.id).where(StarLink.star_a == a, StarLink.star_b == b)):
+        return False
+    db.add(StarLink(user_id=user.id, star_a=a, star_b=b))
+    db.flush()
+    return True
+
+
+def _linked(db: Session, star: Star, cipher: Cipher) -> list[dict]:
+    ids = [b if a == star.id else a for a, b in db.execute(
+        select(StarLink.star_a, StarLink.star_b).where(or_(StarLink.star_a == star.id, StarLink.star_b == star.id)))]
+    stars = db.scalars(select(Star).where(Star.id.in_(ids)).order_by(Star.created_at)).all()
+    return [{"id": s.id, "title": cipher.dec(s.title_enc), "created_at": iso(s.created_at), "mood": s.mood,
+             "moods": s.moods or [s.mood], "has_starlight": s.state == "floated"} for s in stars]
+
+
+@router.post("/stars/{star_id}/links", dependencies=[per_user("links", 120, 3600)])
+def add_links(star_id: str, body: LinksIn, user: User = Depends(consented_user), db: Session = Depends(get_db),
+              cipher: Cipher = Depends(get_cipher)):
+    """11.5 별 잇기: several of my stars at once. Already linked ones are left as they are."""
+    star = owned_star(db, user, star_id)
+    ids = list(dict.fromkeys(i for i in body.star_ids if i != star.id))
+    found = set(db.scalars(select(Star.id).where(Star.id.in_(ids), Star.user_id == user.id)))
+    if len(found) != len(ids) or not ids:
+        raise ApiError(422, "invalid_stars", "이을 수 없는 별이 있어요.")
+    added = sum(_link(db, user, star.id, other) for other in ids)
+    db.commit()
+    return {"added": added, "linked_stars": _linked(db, star, cipher)}
+
+
+@router.delete("/stars/{star_id}/links/{other_id}", status_code=204)
+def remove_link(star_id: str, other_id: str, user: User = Depends(consented_user), db: Session = Depends(get_db)):
+    owned_star(db, user, star_id)
+    a, b = sorted((star_id, other_id))
+    db.execute(delete(StarLink).where(StarLink.star_a == a, StarLink.star_b == b, StarLink.user_id == user.id))
+    db.commit()
 
 
 @router.patch("/stars/{star_id}", dependencies=[per_user("star_edit", 60, 3600)])
 def edit_star(star_id: str, body: StarEdit, user: User = Depends(consented_user), db: Session = Depends(get_db),
               cipher: Cipher = Depends(get_cipher)):
-    """글 수정. A kept star: title, body and mood. A floated star: title and body only; its mood, shape,
-    starlight, analysis and telescope reports stay as first read (nothing is read again or charged).
+    """글 수정 (11.2). A star without starlight: title, body and moods. A lit star is locked: title only;
+    a different body or moods is 409 star_locked (고쳐 쓰기 makes a new star instead).
     The crisis check runs again: a new signal takes the star off the plaza (`share_removed`).
     A full-text share follows the new title and writing; if its 대표 문장 is gone from the writing,
     the sentence is cleared and `quote_missing` asks for another. A sentence-only share keeps the
     sentence copied when shared."""
     star = owned_star(db, user, star_id)
-    if body.mood is not None and body.mood != star.mood and star.state == "floated":
-        raise ApiError(409, "mood_fixed", "띄운 별의 기분은 바꿀 수 없어요.")
+    moods = _moods(body.mood, body.moods)
+    if star.state == "floated":
+        if moods is not None and moods != (star.moods or [star.mood]) and moods != [star.mood]:
+            raise ApiError(409, "star_locked", "별빛을 받은 별은 기분을 바꿀 수 없어요. 고쳐 쓰기로 새 별을 띄워 보세요.")
+        if body.body is not None and body.body != cipher.dec(star.body_enc):
+            raise ApiError(409, "star_locked", "별빛을 받은 별은 글을 바꿀 수 없어요. 고쳐 쓰기로 새 별을 띄워 보세요.")
+        moods = None
     if body.body is not None and not body.body.strip():
         raise ApiError(422, "empty_body", "본문을 비울 수는 없어요.")
     if body.title is not None:
         star.title_enc = cipher.enc(body.title.strip() or "제목 없는 별")
     if body.body is not None:
         star.body_enc = cipher.enc(body.body)
-    if body.mood is not None:
-        star.mood = body.mood
+    if moods is not None:
+        star.mood, star.moods = moods[0], moods
     crisis = has_crisis_signal(f"{cipher.dec(star.title_enc)}\n{cipher.dec(star.body_enc)}")
     star.crisis = crisis
     star.updated_at = datetime.now(timezone.utc)
@@ -324,16 +433,20 @@ def get_draft(user: User = Depends(consented_user), db: Session = Depends(get_db
     d = db.get(Draft, user.id)
     if d is None:
         return None
-    return {"mood": d.mood, "title": cipher.dec(d.title_enc), "body": cipher.dec(d.body_enc),
-            "updated_at": iso(d.updated_at)}
+    return {"mood": d.mood, "moods": d.moods or [d.mood], "title": cipher.dec(d.title_enc),
+            "body": cipher.dec(d.body_enc), "source_star_id": d.source_star_id, "updated_at": iso(d.updated_at)}
 
 
 @router.put("/drafts/current")
 def save_draft(body: DraftIn, user: User = Depends(consented_user), db: Session = Depends(get_db),
                cipher: Cipher = Depends(get_cipher)):
     """34 임시 저장하고 나가기"""
+    if body.source_star_id:
+        owned_star(db, user, body.source_star_id)
+    moods = _moods(body.mood, body.moods)
     d = db.get(Draft, user.id) or Draft(user_id=user.id)
-    d.mood, d.title_enc, d.body_enc = body.mood, cipher.enc(body.title), cipher.enc(body.body)
+    d.mood, d.moods, d.title_enc, d.body_enc = moods[0], moods, cipher.enc(body.title), cipher.enc(body.body)
+    d.source_star_id = body.source_star_id
     db.add(d)
     db.commit()
     return {"saved": True, "updated_at": iso(aware(d.updated_at)) if d.updated_at else None}

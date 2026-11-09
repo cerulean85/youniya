@@ -35,7 +35,10 @@ def star_view(star: Star, cipher: Cipher, shared: bool = False, body: bool = Tru
         "id": star.id,
         "title": cipher.dec(star.title_enc),
         "mood": star.mood,
-        "state": star.state,
+        "moods": star.moods or [star.mood],
+        "state": star.state,  # floated | kept, for builds before 20261109; has_starlight says the same
+        "has_starlight": star.state == "floated",
+        "locked": star.state == "floated",  # 11.2: body and moods can no longer change
         "created_at": iso(star.created_at),
         "updated_at": iso(star.updated_at),
         "starlight": star.starlight,

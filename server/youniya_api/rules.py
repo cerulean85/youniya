@@ -6,6 +6,9 @@ MOOD_LABELS = {"calm": "평온", "sorrow": "슬픔", "anger": "분노", "insight
 # 104/105: floating (analysis) needs 50 characters (1,000 until 20261108); keeping has no minimum.
 MIN_FLOAT_LENGTH = 50
 
+# 17.1 별빛 없이 띄우기: no model, free, this many a Korean day.
+UNLIT_PER_DAY = 10
+
 # Prices (기획 확정 20261107, 1 coin = 10 KRW). Free uses: youniya_api/allowance.py.
 STAR_FLOAT_COST = 5  # 별 띄우기 after the day's free one
 TELESCOPE_COST = 20  # 24 마음 망원경
@@ -42,7 +45,9 @@ MEMBER_SILHOUETTES = ("cherry_blossom", "wave", "maple", "snowflake")
 # 74 별빛 한 줄: one line per nebula per person, 60 characters, fades after a day.
 LINE_MAX_LENGTH = 60
 LINE_LIFETIME_HOURS = 24
-LINE_REPORT_REASONS = ("hurtful", "personal_info", "spam", "other")
+# 18.3: personal_info (연락처·주소) and self_harm (자해·위기) hide at once; the rest at three reports.
+LINE_REPORT_REASONS = ("hurtful", "personal_info", "spam", "other",
+                       "self_harm", "harassment", "hate", "impersonation", "advertising", "nickname")
 
 SKY_THEMES = ("violet", "aurora", "ember", "ocean", "rose")
 # 기획서 13장: violet and ocean for everyone; the rest are 별지기 멤버십 skies (from v1.0 on).

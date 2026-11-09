@@ -49,8 +49,10 @@ def test_sentence_only_share_stays_as_before(client):
 
 
 def test_edit_follows_a_full_text_share(client):
+    """A star without starlight can still be rewritten in place; its share follows."""
     h, other = sign_in(client), sign_in(client, "other")
-    star = float_star(client, h)
+    star = client.post("/v1/stars", json={"mood": "insight", "title": "t", "body": DEEP_BODY, "mode": "unlit"},
+                       headers=h).json()["star"]
     sid = client.put(f"/v1/stars/{star['id']}/share", json={"quote": QUOTE, "full_text": True},
                      headers=h).json()["share_id"]
 
@@ -79,7 +81,7 @@ def test_a_new_crisis_signal_takes_the_star_off_the_plaza(client):
     h, other = sign_in(client), sign_in(client, "other")
     star = float_star(client, h)
     client.put(f"/v1/stars/{star['id']}/share", json={"quote": QUOTE, "full_text": True}, headers=h)
-    r = client.patch(f"/v1/stars/{star['id']}", json={"body": DEEP_BODY + " 그냥 사라지고 싶다."}, headers=h).json()
+    r = client.patch(f"/v1/stars/{star['id']}", json={"title": "그냥 사라지고 싶다"}, headers=h).json()
     assert r["share_removed"] is True and r["crisis"] is not None and r["star"]["shared"] is False
     assert client.get("/v1/plaza/stars", headers=other).json()["items"] == []
 

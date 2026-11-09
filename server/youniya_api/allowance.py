@@ -49,6 +49,17 @@ def use_star(db: Session, user: User, per_day: int) -> bool:
                free_star_count=User.free_star_count + 1)
 
 
+def use_unlit(db: Session, user: User, per_day: int) -> bool:
+    """One of today's 별빛 없이 띄우기 (17.1)."""
+    day = today()
+    return _claim(db, user, or_(User.unlit_day.is_(None), User.unlit_day != day), unlit_day=day, unlit_count=1) or \
+        _claim(db, user, User.unlit_day == day, User.unlit_count < per_day, unlit_count=User.unlit_count + 1)
+
+
+def unlit_left(user: User, per_day: int) -> int:
+    return max(0, per_day - (user.unlit_count if user.unlit_day == today() else 0))
+
+
 def use_telescope(db: Session, user: User) -> bool:
     """This month's free one first (it does not carry over), then the sign-up one."""
     month = this_month()

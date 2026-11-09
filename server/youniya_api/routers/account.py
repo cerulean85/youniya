@@ -3,12 +3,13 @@
 from datetime import datetime, timezone
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, Query, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from .. import allowance, membership
+from .. import allowance, membership, nickname
 from ..blocks import hidden_users
 from ..deps import ApiError, current_user, get_cipher, get_db
 from ..export import StarEntry, as_pdf, as_text
@@ -83,11 +84,45 @@ def me(request: Request, user: User = Depends(current_user), db: Session = Depen
         "provider": user.provider,
         "needs_consent": user.consented_at is None,
         "marketing_opt_in": user.marketing_opt_in,
+        "nickname": user.nickname,  # 별지기 이름 (15장); null until chosen
+        "nickname_next_change": iso(nickname.next_change(user)),
         "coins": user.coins,
         "free_telescope_available": allowance.telescopes_left(user) > 0,
         **membership.free_summary(db, settings, user),
         "settings": settings_of(user, member).model_dump(),
     } | ({"membership": membership.view(db, settings, user)} if settings.membership else {})
+
+
+class NicknameIn(BaseModel):
+    name: str = Field(..., min_length=1, max_length=40)
+
+
+@router.get("/me/nickname/check")
+def check_nickname(name: str = Query(..., max_length=40), user: User = Depends(current_user),
+                   db: Session = Depends(get_db)):
+    """15장 별지기 이름: {available, reason (form | hurtful | reserved | taken), message}."""
+    why = nickname.problem(db, name, user)
+    return {"available": why is None, "reason": why, "message": nickname.MESSAGES.get(why)}
+
+
+@router.put("/me/nickname", dependencies=[per_user("nickname", 20, 3600)])
+def set_nickname(body: NicknameIn, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """The first name any time; after that once in 30 days (429 nickname_too_soon, with `next_change`)."""
+    name = body.name.strip()
+    if user.nickname == name:
+        return {"nickname": name, "next_change": iso(nickname.next_change(user))}
+    if (at := nickname.next_change(user)) is not None:
+        raise ApiError(429, "nickname_too_soon", "별지기 이름은 30일에 한 번 바꿀 수 있어요.", next_change=iso(at))
+    if (why := nickname.problem(db, name, user)) is not None:
+        raise ApiError(409 if why == "taken" else 422, f"nickname_{why}", nickname.MESSAGES[why])
+    user.nickname, user.nickname_key = name, nickname.key(name)
+    user.nickname_changed_at = datetime.now(timezone.utc)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise ApiError(409, "nickname_taken", nickname.MESSAGES["taken"])
+    return {"nickname": name, "next_change": iso(nickname.next_change(user))}
 
 
 @router.post("/me/consent")

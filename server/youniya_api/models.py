@@ -52,6 +52,13 @@ class User(Base):
     member_telescope_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     # Unused since 서사 다듬기 was removed (20261108).
     member_story_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    # 별지기 이름 (15장): unique ignoring case (uq_users_nickname_key), shown on the plaza.
+    nickname: Mapped[str | None] = mapped_column(String(12))
+    nickname_key: Mapped[str | None] = mapped_column(String(12), unique=True)
+    nickname_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # 별빛 없이 띄우기 (17.1): UNLIT_PER_DAY a Korean day, free.
+    unlit_day: Mapped[str | None] = mapped_column(String(10))
+    unlit_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
 
 class RefreshToken(Base):
@@ -69,8 +76,11 @@ class Draft(Base):
 
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     mood: Mapped[str] = mapped_column(String(16))
+    moods: Mapped[list | None] = mapped_column(JSON)  # 17.5, the first is `mood`
     title_enc: Mapped[str] = mapped_column(Text)
     body_enc: Mapped[str] = mapped_column(Text)
+    # 11.2 고쳐 쓰기: the star this draft rewrites; floating it links the two.
+    source_star_id: Mapped[str | None] = mapped_column(ForeignKey("stars.id", ondelete="SET NULL"))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
 
 
@@ -95,6 +105,21 @@ class Star(Base):
     floated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     # Set when the owner edits the writing; null for one never edited.
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # 17.5 감정 여러 개, the first is `mood` (the star's colour). Null for stars before 20261109: [mood].
+    moods: Mapped[list | None] = mapped_column(JSON)
+
+
+class StarLink(Base):
+    """11.5 별 잇기: two of my stars joined, no direction (star_a < star_b), any number per star."""
+
+    __tablename__ = "star_links"
+    __table_args__ = (UniqueConstraint("star_a", "star_b"), CheckConstraint("star_a < star_b"))
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    user_id: Mapped[str] = user_fk()
+    star_a: Mapped[str] = mapped_column(ForeignKey("stars.id", ondelete="CASCADE"), index=True)
+    star_b: Mapped[str] = mapped_column(ForeignKey("stars.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
 class StarShare(Base):
