@@ -61,7 +61,7 @@ export default async function InquiriesPage({ searchParams }: PageProps<"/inquir
             )}
             {open.replies.length > 0 && (
               <div className="thread">
-                {open.replies.map((r, i) => <div key={i}><p className="faint">{dateTime(r.at)} · {r.operator.split("@")[0]}</p><p>{r.body}</p></div>)}
+                {open.replies.map((r, i) => <div key={i}><p className="faint">{dateTime(r.at)} · {r.operator.split("@")[0]}{r.sent === false ? " · 발송 실패" : ""}</p><p>{r.body}</p></div>)}
               </div>
             )}
             <ReplyForm id={open.id} />

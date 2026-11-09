@@ -19,12 +19,13 @@ reason) and the audit log (`/v1/admin/audit`). `lib/api.ts` is the only place th
 
 Until the API exists the console runs on mock data (`lib/mock.ts`, in memory). It does so whenever
 `YOUNIYA_API_URL` is unset, or with `ADMIN_MOCK=1`. With an API, `ADMIN_REAL` lists the parts that are live
-(`auth,operators,audit` since the API Dev Session's first step 7 batch; `all` by default) and the rest stays on
+(`auth,operators,audit` from the API Dev Session's first step 7 batch, `reports,keepers,inquiries` from the
+second; `all` by default) and the rest stays on
 mock data under the real session. For the home-desktop dev API, in `admin/.env.development.local` (gitignored):
 
 ```
 YOUNIYA_API_URL=http://100.126.111.107:8000
-ADMIN_REAL=auth,operators,audit
+ADMIN_REAL=auth,operators,audit,reports,keepers,inquiries
 ```
 
 Operators join by invitation: A-14 shows a one-time setup link (`/setup?token=…`, 3 days) where the new

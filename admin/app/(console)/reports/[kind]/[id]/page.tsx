@@ -9,7 +9,7 @@ import { ActionPanel } from "./ActionPanel";
 
 export const metadata: Metadata = { title: "신고 상세" };
 
-const KINDS: ReportKind[] = ["star", "star_line", "line", "nickname"];
+const KINDS: ReportKind[] = ["star", "nebula", "star_line", "line", "nickname"];
 
 // Figma A-04 (18.1): only what the plaza shows; never unshared writing, starlight numbers or telescope results.
 export default async function ReportPage({ params }: PageProps<"/reports/[kind]/[id]">) {
@@ -25,7 +25,9 @@ export default async function ReportPage({ params }: PageProps<"/reports/[kind]/
   }
   const first = r.reports.map((x) => x.at).sort()[0];
   const instant = r.reports.some((x) => INSTANT_REASONS.includes(x.reason));
-  const actions: ActionKind[] = [r.status === "hidden" || r.auto_hidden ? "restore" : null, r.kind === "nickname" ? null : "take_down",
+  // A name can't be taken down or restored (422 wrong_action); ask for a new one instead.
+  const nick = r.kind === "nickname";
+  const actions: ActionKind[] = [!nick && (r.status === "hidden" || r.auto_hidden) ? "restore" : null, nick ? null : "take_down",
     "request_rename", "restrict_7d", "restrict_30d", "note"].filter(Boolean) as ActionKind[];
   return (
     <>
@@ -41,7 +43,7 @@ export default async function ReportPage({ params }: PageProps<"/reports/[kind]/
           <section className="card panel">
             <h2>광장에 공개된 내용</h2>
             <dl className="kv">
-              <dt>별지기</dt><dd>{r.keeper.nickname}</dd>
+              <dt>별지기</dt><dd><Link href={`/keepers/${encodeURIComponent(r.keeper.id)}`}>{r.keeper.nickname ?? "이름 없음"}{r.keeper.no ? ` (${r.keeper.no})` : ""}</Link></dd>
               {r.content.shared_at && <><dt>나눈 날</dt><dd>{dateTime(r.content.shared_at)}</dd></>}
               {r.content.quote && <><dt>대표 문장</dt><dd>“{r.content.quote}”</dd></>}
               {r.content.body_masked && <><dt>글 전체</dt><dd>{r.content.body_masked}</dd></>}

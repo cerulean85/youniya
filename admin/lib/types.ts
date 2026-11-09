@@ -2,7 +2,8 @@
 export type Role = "owner" | "moderator";
 export type Operator = { id: string; email: string; role: Role };
 
-export type ReportKind = "star" | "star_line" | "line" | "nickname";
+/** line = a line left on a nebula (older builds); star_line = one left on a star; nickname: target_id is the keeper's id. */
+export type ReportKind = "star" | "nebula" | "star_line" | "line" | "nickname";
 export type ReportStatus = "pending" | "hidden" | "done";
 export type ReportItem = {
   id: string; kind: ReportKind; target_id: string;
@@ -16,12 +17,12 @@ export type ReportDetail = {
   kind: ReportKind; target_id: string; status: ReportStatus; auto_hidden: boolean;
   /** 공개된 것만: 대표 문장 · 공개 본문 · 한 줄 · 이름. */
   content: { quote?: string; body_masked?: string; line?: string; nickname?: string; shared_at?: string };
-  keeper: { id: string; nickname: string };
+  keeper: { id: string; no?: string; nickname: string | null };
   reports: { reporter_no: string; reason: string; note?: string | null; at: string }[];
   actions: AuditEntry[];
 };
 
-export const KIND_LABEL: Record<ReportKind, string> = { star: "별", star_line: "별빛 한 줄", line: "별빛 한 줄", nickname: "별지기 이름" };
+export const KIND_LABEL: Record<ReportKind, string> = { star: "별", nebula: "성운", star_line: "별빛 한 줄", line: "성운 별빛 한 줄", nickname: "별지기 이름" };
 export const STATUS_LABEL: Record<ReportStatus, string> = { pending: "대기", hidden: "숨김", done: "처리 완료" };
 export const REASON_LABEL: Record<string, string> = {
   hurtful: "상처 주는 말", personal_info: "개인정보", self_harm: "자해", harassment: "괴롭힘", hate: "혐오·비하",
@@ -64,7 +65,8 @@ export type InquiryDetail = InquiryRow & {
   keeper: { id: string; no: string; nickname: string | null } | null;
   app: { platform: string; version: string; device: string } | null;
   purchase: { transaction_id: string; status: string } | null;
-  replies: { at: string; operator: string; body: string }[];
+  /** `sent`: whether the email went out (Resend). */
+  replies: { at: string; operator: string; body: string; sent?: boolean }[];
 };
 export const INQUIRY_KIND_LABEL: Record<string, string> = { payment: "결제", bug: "오류", account: "계정", idea: "제안", other: "기타" };
 

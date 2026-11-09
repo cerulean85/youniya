@@ -14,7 +14,11 @@ export async function sendReply(id: string, _prev: ReplyState, form: FormData): 
   try {
     await replyInquiry(id, body);
   } catch (e) {
-    if (e instanceof ApiError) return { error: e.message };
+    if (e instanceof ApiError) {
+      if (e.code === "mail_unavailable") return { error: "메일 발송이 아직 설정되지 않았어요(Resend 키 없음). 답장은 보내지 않았어요." };
+      if (e.code === "mail_failed") return { error: "메일을 보내지 못했어요. 잠시 뒤에 다시 시도해 주세요." };
+      return { error: e.message };
+    }
     throw e;
   }
   refresh();
