@@ -10,13 +10,13 @@ import styles from "./coins.module.css";
 const CLIENT_KEY = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
 
 // Figma W-18 충전하기: pick a package, agree to the payment and refund policy, then Toss's payment window.
-export function Recharge({ packages, site }: { packages: CoinsInfo["packages"]; site: string }) {
+export function Recharge({ packages, available, site }: { packages: CoinsInfo["packages"]; available: boolean; site: string }) {
   const [picked, setPicked] = useState(packages.at(-1)?.product_id ?? "");
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const pack = packages.find((p) => p.product_id === picked);
-  const ready = Boolean(CLIENT_KEY);
+  const ready = Boolean(CLIENT_KEY) && available;
 
   const pay = () => start(async () => {
     setError(null);

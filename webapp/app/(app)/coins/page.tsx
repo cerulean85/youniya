@@ -24,7 +24,12 @@ export default function CoinsPage({ searchParams }: PageProps<"/coins">) {
 
 async function Coins({ searchParams }: Pick<PageProps<"/coins">, "searchParams">) {
   const sp = await searchParams;
-  const [info, history] = await Promise.all([api<CoinsInfo>("/v1/coins"), api<{ items: CoinEntryRow[] }>("/v1/coins/history")]);
+  const [info, history, toss] = await Promise.all([
+    api<CoinsInfo>("/v1/coins"), api<{ items: CoinEntryRow[] }>("/v1/coins/history"),
+    // Web payments: available is false when the server has no Toss secret key (older servers: no endpoint).
+    api<{ items: { id: string; coins: number; bonus: number; price: number }[]; available: boolean }>("/v1/payments/toss/packages").catch(() => null),
+  ]);
+  const packages = toss?.items.map((p) => ({ product_id: p.id, coins: p.coins, price: p.price, bonus: p.bonus })) ?? info.packages;
   await connection();
   const recent = lastDays(history.items, 30);
   const charged = typeof sp.charged === "string" ? Number(sp.charged) : null;
@@ -34,7 +39,7 @@ async function Coins({ searchParams }: Pick<PageProps<"/coins">, "searchParams">
         aside={<span className={styles.balance}><Coin size={18} />보유 <b>{info.coins.toLocaleString("ko-KR")} 코인</b></span>} />
       {charged != null && charged > 0 && <p className={styles.notice} role="status">{charged.toLocaleString("ko-KR")} 코인을 충전했어요.</p>}
       <div className={styles.body}>
-        <Recharge packages={info.packages} site={SITE_URL} />
+        <Recharge packages={packages} available={Boolean(toss?.available)} site={SITE_URL} />
         <div className={styles.side}>
           <section className={`card ${styles.free}`} aria-labelledby="free-title">
             <h2 id="free-title" className="label-m">무료로 남은 횟수</h2>

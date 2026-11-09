@@ -12,11 +12,14 @@ export async function GET(request: NextRequest) {
   if (!paymentKey || !orderId || !Number.isFinite(amount)) return back("/coins/fail?code=INVALID_REQUEST");
   const token = (await cookies()).get(ACCESS)?.value;
   if (!token) return back("/login?next=/coins");
-  const res = await fetch(`${API_URL}/v1/payments/toss/confirm`, {
+  const confirm = () => fetch(`${API_URL}/v1/payments/toss/confirm`, {
     method: "POST", cache: "no-store",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ payment_key: paymentKey, order_id: orderId, amount }),
   }).catch(() => null);
+  // 502 payment_unconfirmed: Toss didn't answer; the same confirm again is safe (granted once).
+  let res = await confirm();
+  if (!res || res.status === 502) res = await confirm();
   if (!res?.ok) {
     const err = res ? ((await res.json().catch(() => null))?.error ?? {}) : {};
     return back(`/coins/fail?${new URLSearchParams({ code: err.code ?? "CONFIRM_FAILED", message: err.message ?? "결제를 확인하지 못했어요." })}`);
