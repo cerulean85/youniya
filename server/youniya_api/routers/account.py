@@ -89,6 +89,9 @@ def me(request: Request, user: User = Depends(current_user), db: Session = Depen
         "marketing": marketing.view(user),  # 14.3: {opt_in, consented_at, revoked_at, reconfirm_due}
         "nickname": user.nickname,  # 별지기 이름 (15장); null until chosen
         "nickname_next_change": iso(nickname.next_change(user)),
+        # 18.3: an operator asked for another 별지기 이름; it can change now, whatever the 30 days.
+        "nickname_rename_required": user.nickname_rename_requested_at is not None,
+        "plaza_restricted_until": iso(user.plaza_restricted_until),
         "coins": user.coins,
         "free_telescope_available": allowance.telescopes_left(user) > 0,
         **membership.free_summary(db, settings, user),
@@ -119,7 +122,7 @@ def set_nickname(body: NicknameIn, user: User = Depends(current_user), db: Sessi
     if (why := nickname.problem(db, name, user)) is not None:
         raise ApiError(409 if why == "taken" else 422, f"nickname_{why}", nickname.MESSAGES[why])
     user.nickname, user.nickname_key = name, nickname.key(name)
-    user.nickname_changed_at = datetime.now(timezone.utc)
+    user.nickname_changed_at, user.nickname_rename_requested_at = datetime.now(timezone.utc), None
     try:
         db.commit()
     except IntegrityError:
@@ -285,9 +288,12 @@ def export(format: Literal["text", "pdf"] = "text", user: User = Depends(current
 
 
 @router.post("/inquiries", status_code=201, dependencies=[per_user("inquiry", 5, 3600)])
-def inquire(body: InquiryIn, user: User = Depends(current_user), db: Session = Depends(get_db),
+def inquire(body: InquiryIn, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db),
             cipher: Cipher = Depends(get_cipher)):
-    row = Inquiry(user_id=user.id, kind=body.kind, email=body.email, body_enc=cipher.enc(body.body))
+    h = request.headers
+    app = {"platform": h.get("x-app-platform"), "version": h.get("x-app-version"), "device": h.get("x-device-model")}
+    row = Inquiry(user_id=user.id, kind=body.kind, email=body.email, body_enc=cipher.enc(body.body),
+                  app_info=app if any(app.values()) else None)
     db.add(row)
     db.commit()
     return {"id": row.id}

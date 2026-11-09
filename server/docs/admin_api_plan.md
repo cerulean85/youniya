@@ -37,6 +37,13 @@ is built against these shapes with mock data. Agreed with the Web Dev Session, 2
   reason, note?} → {status, action_id}
 - 18.3: personal_info / self_harm hide at the first report and push the operators (done in step 1); others at 3.
 
+- Built (step 7-2): kinds star | nebula | line (성운 한 줄) | star_line (별에 남긴 한 줄) | nickname (target = the
+  keeper's user id; from star reports with reason "nickname"). Status: done once every report is answered,
+  else hidden (auto_hidden: true) or pending. take_down/restore answer the reporters by push; request_rename,
+  take_down and restrict_* tell the keeper. 422 wrong_action for take_down/restore on a nickname.
+  Plaza restriction: users.plaza_restricted_until → 403 plaza_restricted {until} on sharing, 공명, 곁에 두기 and
+  별빛 한 줄; writing is not restricted. A rename request lifts the 30-day wait (/v1/me nickname_rename_required).
+
 ## 별지기 (A-05·06)
 - GET /v1/admin/keepers?q=&filter=all|restricted|reported|invite → {items:[{id, no, nickname, joined_at, provider, stars,
   shared, reports, coins, status: active|restricted, restricted_until}]}; format=csv owner only (numbers only)
@@ -45,11 +52,18 @@ is built against these shapes with mock data. Agreed with the Web Dev Session, 2
 - POST /v1/admin/keepers/{id}/actions {action: lift_restriction|extend_restriction|request_rename|grant_coins|process_deletion,
   reason, amount? (1–10000), days? (7|30)}; moderator only the first three
 
+- Built (step 7-2): `no` is users.keeper_no (numbered in joining order); last_seen_at updates at most every
+  10 minutes; terms_version and deletion_requested_at are null (no such records yet). process_deletion keeps
+  store purchase records detached for 5 years, as a keeper's own deletion does.
+
 ## 문의 (A-07)
 - GET /v1/admin/inquiries?status=new|answered → {items:[{id, kind, title, created_at, status}], counts:{new, answered}}
 - GET /v1/admin/inquiries/{id} → {…, body, email_masked, keeper|null, app:{platform, version, device}|null,
   purchase:{transaction_id, status}|null, replies:[{at, operator, body}]}
 - POST /v1/admin/inquiries/{id}/reply {body} → email to the address given, status answered
+- Built (step 7-2): mail through Resend (RESEND_API_KEY, MAIL_FROM); without the key 503 mail_unavailable, a
+  refusal 502 mail_failed, and nothing is marked answered. `app` comes from X-App-Platform, X-App-Version and
+  X-Device-Model on POST /v1/inquiries; `purchase` is the latest store purchase of a payment inquiry.
 
 ## owner 화면 (A-02, A-08~A-12, A-14; owner only, every change needs a reason; console f7d29f4)
 - GET /v1/admin/dashboard?range=today|week|month

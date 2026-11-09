@@ -66,6 +66,9 @@ class Settings:
     allow_sandbox_purchases: bool = field(default_factory=lambda: os.getenv("ALLOW_SANDBOX_PURCHASES", "1") == "1")
     # X-Admin-Token for /v1/admin. Without it the operator API does not exist.
     admin_token: str | None = field(default_factory=lambda: os.getenv("ADMIN_TOKEN") or None)
+    # A-07 문의 답장 by email through Resend (https://resend.com). Without the key, replies are refused.
+    resend_api_key: str | None = field(default_factory=lambda: os.getenv("RESEND_API_KEY") or None)
+    mail_from: str = field(default_factory=lambda: os.getenv("MAIL_FROM", "YOUNIYA <support@youniya.dycdyp.com>"))
     # Accounts whose devices hear of urgent reports (18.3), comma separated user ids.
     operator_user_ids: tuple[str, ...] = field(default_factory=lambda: tuple(
         i.strip() for i in os.getenv("OPERATOR_USER_IDS", "").split(",") if i.strip()))

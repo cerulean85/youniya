@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from .. import nickname, privacy
 from ..push import Message, notify
 from ..blocks import can_see, hidden_users, visible_shares
-from ..deps import ApiError, consented_user, get_cipher, get_db
+from ..deps import ApiError, consented_user, get_cipher, get_db, plaza_user
 from ..models import AdminLog, Beside, StarLine, LineReport, NebulaShare, Resonance, ShareReport, Star, StarlightLine, StarShare, User
 from ..rules import LINE_CHIPS, LINE_LIFETIME_HOURS, LINE_MAX_LENGTH, LINE_REPORT_REASONS
 from ..security import Cipher
@@ -73,7 +73,7 @@ def privacy_scan(body: ScanIn, user: User = Depends(consented_user)):
 
 
 @router.put("/stars/{star_id}/share")
-def share_star(star_id: str, body: StarShareIn, user: User = Depends(consented_user),
+def share_star(star_id: str, body: StarShareIn, user: User = Depends(plaza_user),
                db: Session = Depends(get_db), cipher: Cipher = Depends(get_cipher)):
     """19 익명으로 나누기. With `full_text`, the title and the whole writing go out with the chosen
     sentence as its 대표 문장, only contacts and identifying numbers masked (names and places stay).
@@ -243,7 +243,7 @@ def _toggle(table, on: bool, kind: str, target_id: str, user: User, db: Session)
 
 
 @router.put("/plaza/{kind}/{target_id}/resonance")
-def resonate(kind: Kind, target_id: str, user: User = Depends(consented_user), db: Session = Depends(get_db)):
+def resonate(kind: Kind, target_id: str, user: User = Depends(plaza_user), db: Session = Depends(get_db)):
     """공명 남기기"""
     return _toggle(Resonance, True, kind, target_id, user, db)
 
@@ -254,7 +254,7 @@ def unresonate(kind: Kind, target_id: str, user: User = Depends(consented_user),
 
 
 @router.put("/plaza/{kind}/{target_id}/beside")
-def keep_beside(kind: Kind, target_id: str, user: User = Depends(consented_user), db: Session = Depends(get_db)):
+def keep_beside(kind: Kind, target_id: str, user: User = Depends(plaza_user), db: Session = Depends(get_db)):
     """곁에 두기: it shows in my 컬렉션 (79, 80)."""
     return _toggle(Beside, True, kind, target_id, user, db)
 
@@ -287,7 +287,7 @@ def lines(share_id: str, user: User = Depends(consented_user), db: Session = Dep
 
 
 @router.post("/plaza/nebulae/{share_id}/lines", status_code=201, dependencies=[per_user("lines", 30, 3600)])
-def leave_line(share_id: str, body: LineIn, user: User = Depends(consented_user), db: Session = Depends(get_db)):
+def leave_line(share_id: str, body: LineIn, user: User = Depends(plaza_user), db: Session = Depends(get_db)):
     share = _nebula_share(db, share_id, user)
     if share.user_id == user.id:
         raise ApiError(422, "own_share", "내가 띄운 성운이에요.")
@@ -359,7 +359,7 @@ class StarLineIn(BaseModel):
 
 
 @router.post("/plaza/stars/{share_id}/lines", status_code=201, dependencies=[per_user("lines", 30, 3600)])
-def leave_star_line(share_id: str, body: StarLineIn, user: User = Depends(consented_user),
+def leave_star_line(share_id: str, body: StarLineIn, user: User = Depends(plaza_user),
                     db: Session = Depends(get_db)):
     """10.1 별빛 한 줄 on someone's shared star: words (60 characters) or a 빠른 공감 chip. One per person
     per star. Only the owner reads it; it stays, even after the star leaves the plaza."""

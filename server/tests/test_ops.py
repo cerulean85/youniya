@@ -101,14 +101,14 @@ def test_operator_api(make_app):
     op = {"X-Admin-Token": "op-token"}
     assert client.get("/v1/admin/reports").status_code == 404
     assert client.get("/v1/admin/reports", headers={"X-Admin-Token": "wrong"}).status_code == 404
-    reports = client.get("/v1/admin/reports", headers=op).json()["items"]
-    assert reports[0]["line_id"] == line["id"] and reports[0]["reasons"] == {"spam": 1}
+    reports = client.get("/v1/admin/reports", params={"kind": "line"}, headers=op).json()["items"]
+    assert reports[0]["target_id"] == line["id"] and reports[0]["reasons"] == {"spam": 1}
 
     client.post(f"/v1/admin/lines/{line['id']}/hide", headers=op)
     assert client.get(f"/v1/plaza/nebulae/{share['share_id']}/lines", headers=writer).json()["items"] == []
 
     actions = [e["action"] for e in client.get("/v1/admin/logs", headers=op).json()["items"]]
-    assert actions == ["hide_line", "list_reports"]
+    assert actions == ["hide_line"]
     # Without ADMIN_TOKEN the operator API does not exist.
     assert TestClient(make_app()).get("/v1/admin/logs", headers=op).status_code == 404
 

@@ -48,8 +48,8 @@ MESSAGES = {
 def next_change(user: User) -> datetime | None:
     """When the name can change again; None when it can change now. The first name is chosen any time;
     each name then stays 30 days."""
-    if user.nickname is None or user.nickname_changed_at is None:
-        return None
+    if user.nickname is None or user.nickname_changed_at is None or user.nickname_rename_requested_at is not None:
+        return None  # an operator's rename request (18.3) lifts the wait
     at = user.nickname_changed_at
     at = at if at.tzinfo else at.replace(tzinfo=timezone.utc)
     return at + CHANGE_EVERY if at + CHANGE_EVERY > datetime.now(timezone.utc) else None

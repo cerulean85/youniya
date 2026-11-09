@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from sqlalchemy import (JSON, Boolean, CheckConstraint, DateTime, Float, ForeignKey, Index, Integer, String, Text,
                         UniqueConstraint, false, true as sa_true)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy import event, func, select
 
 
 def new_id() -> str:
@@ -60,6 +61,11 @@ class User(Base):
     nickname: Mapped[str | None] = mapped_column(String(12))
     nickname_key: Mapped[str | None] = mapped_column(String(12), unique=True)
     nickname_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # 관리자 콘솔 (18장): the #번호 operators search by; a plaza restriction; an operator's rename request.
+    keeper_no: Mapped[int | None] = mapped_column(Integer, unique=True)
+    plaza_restricted_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    nickname_rename_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # 별빛 없이 띄우기 (17.1): UNLIT_PER_DAY a Korean day, free.
     unlit_day: Mapped[str | None] = mapped_column(String(10))
     unlit_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
@@ -247,6 +253,7 @@ class StarLineReport(Base):
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     reason: Mapped[str] = mapped_column(String(20))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # looked at by an operator
 
 
 class LineReport(Base):
@@ -315,6 +322,21 @@ class Inquiry(Base):
     kind: Mapped[str] = mapped_column(String(16))
     email: Mapped[str] = mapped_column(String(255))
     body_enc: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    status: Mapped[str] = mapped_column(String(16), default="new", server_default="new")  # new | answered
+    app_info: Mapped[dict | None] = mapped_column(JSON)  # {platform, version, device} from the request headers
+
+
+class InquiryReply(Base):
+    """A-07 답장, sent by email to the address the inquiry gave."""
+
+    __tablename__ = "inquiry_replies"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    inquiry_id: Mapped[str] = mapped_column(ForeignKey("inquiries.id", ondelete="CASCADE"), index=True)
+    operator_email: Mapped[str] = mapped_column(String(254))
+    body_enc: Mapped[str] = mapped_column(Text)
+    sent: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
@@ -496,3 +518,11 @@ class AdminAudit(Base):
     target: Mapped[str | None] = mapped_column(String(80))
     reason: Mapped[str | None] = mapped_column(Text)
     detail: Mapped[dict | None] = mapped_column(JSON)
+
+
+@event.listens_for(User, "before_insert")
+def _keeper_no(mapper, connection, target: User) -> None:
+    """The next #번호. Two sign-ups at once can collide on the unique key; that request fails and is retried."""
+    if target.keeper_no is None:
+        top = connection.execute(select(func.max(User.keeper_no))).scalar()
+        target.keeper_no = (top or 0) + 1

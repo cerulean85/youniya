@@ -86,37 +86,7 @@ def error_test():
     raise OperatorTestError("operator test")
 
 
-@router.get("/reports")
-def reported_lines(db: Session = Depends(get_db), cipher: Cipher = Depends(get_cipher)):
-    """Lines with at least one report, most reported first."""
-    counts = (select(LineReport.line_id, LineReport.reason, func.count().label("n"))
-              .group_by(LineReport.line_id, LineReport.reason))
-    by_line: dict[str, dict[str, int]] = {}
-    for line_id, reason, n in db.execute(counts):
-        by_line.setdefault(line_id, {})[reason] = n
-    rows = db.execute(select(StarlightLine, NebulaShare.name)
-                      .join(NebulaShare, NebulaShare.id == StarlightLine.share_id)
-                      .where(StarlightLine.id.in_(by_line))).all()
-    items = [{"line_id": line.id, "text": line.text, "nebula": name, "hidden": line.hidden,
-              "created_at": iso(line.created_at), "reasons": by_line[line.id],
-              "reports": sum(by_line[line.id].values())} for line, name in rows]
-    shares = []
-    share_counts = (select(ShareReport.kind, ShareReport.target_id, ShareReport.reason, func.count().label("n"))
-                    .group_by(ShareReport.kind, ShareReport.target_id, ShareReport.reason))
-    by_share: dict[tuple[str, str], dict[str, int]] = {}
-    for kind, target_id, reason, n in db.execute(share_counts):
-        by_share.setdefault((kind, target_id), {})[reason] = n
-    for (kind, target_id), reasons in by_share.items():
-        row = db.get(StarShare if kind == "star" else NebulaShare, target_id)
-        if row:
-            # A reported full-text star is judged on what the plaza shows: its masked writing too.
-            body = cipher.dec(row.body_masked_enc) if kind == "star" and row.full_text and row.body_masked_enc else None
-            shares.append({"kind": kind, "id": row.id, "name": row.name, "quote": row.quote, "body_masked": body,
-                           "hidden": row.hidden,
-                           "created_at": iso(row.created_at), "reasons": reasons, "reports": sum(reasons.values())})
-    _log(db, "list_reports")
-    return {"items": sorted(items, key=lambda i: -i["reports"]),
-            "shares": sorted(shares, key=lambda i: -i["reports"])}
+# GET /v1/admin/reports and /inquiries: routers/admin_ops.py (관리자 콘솔 A-03, A-07).
 
 
 # 101 "살펴본 뒤 결과를 알림으로 알려 드릴게요". The line itself is never quoted.
@@ -187,14 +157,6 @@ def announce(body: AnnouncementIn, request: Request, db: Session = Depends(get_d
         return {"recipients": len(users), "title": message.title, "sent": None}
     _log(db, "announce")
     return {"recipients": len(users), "title": message.title, "sent": notify(db, request.app.state.push, users, message)}
-
-
-@router.get("/inquiries")
-def inquiries(db: Session = Depends(get_db), cipher: Cipher = Depends(get_cipher)):
-    rows = db.scalars(select(Inquiry).order_by(Inquiry.created_at.desc()).limit(200)).all()
-    _log(db, "list_inquiries")
-    return {"items": [{"id": r.id, "kind": r.kind, "email": r.email, "body": cipher.dec(r.body_enc),
-                       "created_at": iso(r.created_at)} for r in rows]}
 
 
 @router.get("/logs", dependencies=[Depends(owner)])

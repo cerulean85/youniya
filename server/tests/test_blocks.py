@@ -106,10 +106,10 @@ def test_star_and_nebula_reports(make_app):
     assert star not in _plaza(client, viewer)[0]  # three reports take it down
     assert client.get("/v1/me/shares", headers=owner).json()["stars"][0]["hidden"] is True
 
-    reports = client.get("/v1/admin/reports", headers=OP).json()["shares"]
-    assert reports == [{"kind": "star", "id": star, "name": "걔 소식을 들은 날", "quote": reports[0]["quote"], "body_masked": None,
-                        "hidden": True, "created_at": reports[0]["created_at"],
-                        "reasons": {"hurtful": 1, "spam": 2}, "reports": 3}]
+    reports = client.get("/v1/admin/reports", params={"kind": "star"}, headers=OP).json()
+    assert [(r["target_id"], r["status"], r["reasons"], r["reports"]) for r in reports["items"]] == [
+        (star, "hidden", {"hurtful": 1, "spam": 2}, 3)]
+    assert reports["counts"] == {"pending": 0, "hidden": 1, "done": 0}
     done = client.post(f"/v1/admin/shares/star/{star}/restore", headers=OP).json()
     assert done["hidden"] is False and done["reporters_told"] == 3
     assert star in _plaza(client, viewer)[0] and star not in _plaza(client, r1)[0]

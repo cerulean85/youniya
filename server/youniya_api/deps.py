@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 from collections.abc import Iterator
 
 import jwt
@@ -45,6 +46,12 @@ def current_user(
     user = db.get(User, user_id)
     if user is None:
         raise ApiError(401, "unauthorized", "로그인이 필요해요.")
+    # 관리자 A-06 마지막 접속, at most every ten minutes.
+    now = datetime.now(timezone.utc)
+    seen = user.last_seen_at
+    if seen is None or (seen if seen.tzinfo else seen.replace(tzinfo=timezone.utc)) < now - timedelta(minutes=10):
+        user.last_seen_at = now
+        db.commit()
     return user
 
 
@@ -52,4 +59,14 @@ def consented_user(user: User = Depends(current_user)) -> User:
     """Writing is sensitive information: nothing is stored before 11 가입 동의."""
     if user.consented_at is None:
         raise ApiError(403, "consent_required", "시작하기 전에 동의가 필요해요.")
+    return user
+
+
+def plaza_user(user: User = Depends(consented_user)) -> User:
+    """18.3 광장 이용 제한: sharing, 공명 and 별빛 한 줄 wait until the restriction ends."""
+    until = user.plaza_restricted_until
+    if until is not None:
+        until = until if until.tzinfo else until.replace(tzinfo=timezone.utc)
+        if until > datetime.now(timezone.utc):
+            raise ApiError(403, "plaza_restricted", "지금은 우주 광장에 나누거나 남길 수 없어요.", until=until.isoformat())
     return user
