@@ -16,6 +16,15 @@
 [data-unlit][data-phase="1"] .core { width: 12px; height: 12px; opacity: 0.7; }
 [data-unlit][data-phase="2"] .core { width: 20px; height: 20px; opacity: 0.7; }
 [data-unlit][data-phase="3"] .core { width: 22px; height: 22px; opacity: 0.7; box-shadow: 0 0 20px color-mix(in srgb, var(--core) 25%, transparent); }
+.shape { position: absolute; left: 50%; top: 50%; width: 120px; height: 120px; transform: translate(-50%, -50%) scale(0.7); opacity: 0; overflow: visible;
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out, filter 0.5s; }
+.shape polygon { fill: var(--mood, var(--gold)); stroke: #fff; stroke-opacity: 0.5; stroke-width: 1.5; }
+.shape circle { fill: #fff; opacity: 0.85; }
+[data-phase="2"] .shape { opacity: 0.4; transform: translate(-50%, -50%) scale(0.88); }
+[data-phase="3"] .shape { opacity: 1; transform: translate(-50%, -50%) scale(1); filter: drop-shadow(0 0 18px var(--mood, var(--gold))); }
+/* With a shape the gold core gives way to it, and the halo takes the mood's colour. */
+[data-shaped][data-phase="2"] .core, [data-shaped][data-phase="3"] .core { width: 12px; height: 12px; opacity: 0; }
+.overlay[data-shaped][data-phase="2"], .overlay[data-shaped][data-phase="3"] { --halo: var(--mood, var(--primary)); }
 .sparkA, .sparkB { position: absolute; border-radius: 50%; animation: fade 0.5s ease-out; }
 .sparkA { width: 6px; height: 6px; left: calc(50% - 87px); top: calc(50% - 85px); background: #fff; box-shadow: 0 0 10px rgba(255, 255, 255, 0.4); }
 .sparkB { width: 5px; height: 5px; left: calc(50% + 85px); top: calc(50% + 66px); background: var(--primary); box-shadow: 0 0 12px rgb(var(--primary-rgb) / 0.35); }

@@ -31,7 +31,7 @@ export function FloatButton({ id, free, coins }: { id: string; free: boolean; co
           )}
           <Pending label={free ? "별빛 받기 · 오늘 무료 1번" : "별빛 받기 · 5코인"} busy="별빛 프리즘이 비추는 중…" />
           <button type="button" className="btn btn-ghost" onClick={() => dialog.current?.close()}>다음에</button>
-          <PrismOverlay />
+          <PrismOverlay stop={id} />
         </form>
       </dialog>
     </>
@@ -45,7 +45,7 @@ export function RetryFloat({ id }: { id: string }) {
     <form action={action} style={{ display: "contents" }}>
       {state?.error && <p className="body-s" role="alert">{state.error} {state.code === "insufficient_coins" && <CoinsLink className={styles.link}>코인 충전하기</CoinsLink>}</p>}
       <Pending label="다시 시도" busy="별빛 프리즘이 비추는 중…" />
-      <PrismOverlay />
+      <PrismOverlay stop={id} />
     </form>
   );
 }

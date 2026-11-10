@@ -58,7 +58,7 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
     </StatusScreen>
   );
   // W-102: the birth plays once over the new star, lit or not.
-  if (justFloated) return <><StarBirth id={star.id} /><Result star={star} /></>;
+  if (justFloated) return <><StarBirth id={star.id} shape={star.analysis?.shape} color={mood.color} /><Result star={star} /></>;
   return (
     <div className={styles.body}>
       <article className={styles.article}>
@@ -129,6 +129,7 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
           <DeleteButton id={star.id} title={title} />
         </div>
       </aside>
+      {sp.stopped === "1" && <Toast title="별빛 받기를 그만뒀어요" sub="무료와 코인은 그대로예요" />}
       {sp.kept === "1" && <><StarBirth id={star.id} unlit={mood.color} /><Toast title="별빛 없이 띄웠어요" /></>}
     </div>
   );
