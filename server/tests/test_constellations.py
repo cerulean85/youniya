@@ -75,3 +75,13 @@ def test_links_across_months(client):
     got = client.get("/v1/constellations", headers=h).json()["cross_links"]
     months = sorted({(datetime.now(KST) - timedelta(days=40)).strftime("%Y-%m"), datetime.now(KST).strftime("%Y-%m")})
     assert got == [months]
+
+
+def test_each_star_carries_its_shape(client):
+    from .conftest import float_star, sign_in
+    h = sign_in(client)
+    lit = float_star(client, h)
+    client.post("/v1/stars", json={"mood": "calm", "title": "t", "body": "별빛 없이 띄운 글이에요.", "mode": "unlit"}, headers=h)
+    month = lit["created_at"][:7]
+    stars = [s["star"] for s in client.get(f"/v1/constellations/{month}", headers=h).json()["slots"] if s["star"]]
+    assert stars[0]["shape"] == lit["analysis"]["shape"] and stars[1]["shape"] is None

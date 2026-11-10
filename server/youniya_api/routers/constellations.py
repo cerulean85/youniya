@@ -15,7 +15,7 @@ from ..models import Star, StarLink, User
 from ..prism.engine import split_sentences
 from ..rules import DEEP_DEPTH_SCORE
 from ..security import Cipher
-from ..views import KST, iso, local
+from ..views import KST, _shape, iso, local
 
 router = APIRouter(prefix="/v1/constellations", tags=["constellations"])
 
@@ -41,7 +41,8 @@ def _stars(db: Session, user: User, month: str) -> list[Star]:
 
 def _star(s: Star, cipher: Cipher) -> dict:
     return {"id": s.id, "title": cipher.dec(s.title_enc), "mood": s.mood, "moods": s.moods or [s.mood],
-            "has_starlight": s.state == "floated", "starlight": s.starlight, "created_at": iso(s.created_at)}
+            "has_starlight": s.state == "floated", "starlight": s.starlight, "created_at": iso(s.created_at),
+            "shape": _shape(s, cipher)}  # 76 별 모양 {points, sharpness}; null without starlight
 
 
 def _summary(month: str, stars: list[Star]) -> dict:
