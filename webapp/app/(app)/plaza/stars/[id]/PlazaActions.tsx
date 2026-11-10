@@ -22,7 +22,7 @@ export const REASONS = [
 
 type Lines = "open" | "left" | "closed";
 
-export function PlazaActions({ id, resonated, keeper, lines }: { id: string; resonated: boolean; beside: boolean; keeper: string | null; lines: Lines }) {
+export function PlazaActions({ id, resonated, keeper, lines, name = null }: { id: string; resonated: boolean; beside: boolean; keeper: string | null; lines: Lines; name?: string | null }) {
   const [on, setOn] = useOptimistic(resonated);
   const [, start] = useTransition();
   const report = useRef<HTMLDialogElement>(null);
@@ -71,14 +71,13 @@ export function PlazaActions({ id, resonated, keeper, lines }: { id: string; res
         </form>
       </dialog>
 
-      <dialog ref={block} className={`card ${styles.dialog}`} aria-labelledby="block-title">
+      {/* Figma W-95. */}
+      <dialog ref={block} className="card sheet" aria-labelledby="block-title">
         <form action={blockOwner.bind(null, id)}>
-          <h2 id="block-title" className="h2">이 별지기를 차단할까요?</h2>
-          <p className="body-s muted">서로의 별과 별빛 한 줄이 어디에서도 보이지 않아요. 상대에게는 알리지 않고, 설정 › 차단한 별지기에서 풀 수 있어요.</p>
-          <div className={styles.dialogActions}>
-            <button type="button" className="btn btn-ghost" onClick={() => block.current?.close()}>취소</button>
-            <Submit label="차단하기" busy="차단하는 중…" />
-          </div>
+          <h2 id="block-title" className="h3">{name ? `${name}${/[가-힣]/.test(name.slice(-1)) && (name.charCodeAt(name.length - 1) - 0xac00) % 28 ? "을" : "를"}` : "이 별지기를"} 차단할까요?</h2>
+          <p className="body-s muted">차단하면 이 사람의 별과 별빛 한 줄이 내 화면에 더 이상 보이지 않아요. 상대에게는 알리지 않고, 설정 › 차단한 별지기에서 언제든 풀 수 있어요.</p>
+          <BlockSubmit />
+          <button type="button" className="btn btn-secondary btn-block" onClick={() => block.current?.close()}>취소</button>
         </form>
       </dialog>
     </>
@@ -131,4 +130,9 @@ function SendButton({ disabled }: { disabled: boolean }) {
 function Submit({ label, busy }: { label: string; busy: string }) {
   const { pending } = useFormStatus();
   return <button className={`btn ${styles.danger}`} disabled={pending}>{pending ? busy : label}</button>;
+}
+
+function BlockSubmit() {
+  const { pending } = useFormStatus();
+  return <button className="btn btn-danger btn-block" disabled={pending}>{pending ? "차단하는 중…" : "차단하기"}</button>;
 }

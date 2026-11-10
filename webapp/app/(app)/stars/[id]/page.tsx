@@ -108,7 +108,7 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
           </div>
         )}
         {(star.shared || (star.line_count ?? 0) > 0) && (
-          <Suspense fallback={null}><ReceivedLines id={star.id} /></Suspense>
+          <Suspense fallback={null}><ReceivedLines id={star.id} shared={star.shared} /></Suspense>
         )}
         {linked.length > 0 && (
           <section className={styles.linked} aria-label="이어진 별">

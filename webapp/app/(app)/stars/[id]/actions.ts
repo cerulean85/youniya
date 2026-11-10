@@ -67,7 +67,9 @@ export async function deleteLine(id: string, lineId: string) {
 }
 
 export async function reportLine(id: string, lineId: string, form: FormData) {
-  await api(`/v1/stars/${id}/lines/${lineId}/report`, { method: "POST", body: JSON.stringify({ reason: String(form.get("reason") ?? "hurtful"), block: form.get("block") === "on" }) });
+  const block = form.get("block") === "on";
+  await api(`/v1/stars/${id}/lines/${lineId}/report`, { method: "POST", body: JSON.stringify({ reason: String(form.get("reason") ?? "hurtful"), block }) });
+  await flash("신고했어요", block ? "그 별지기도 차단했어요" : "바로 가려졌어요");
   refresh();
 }
 
