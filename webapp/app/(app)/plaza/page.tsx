@@ -54,13 +54,17 @@ async function Gate({ searchParams }: Pick<PageProps<"/plaza">, "searchParams">)
   );
 }
 
+const FIRST = 60, MAX = 100;
+
 async function Plaza({ searchParams }: Pick<PageProps<"/plaza">, "searchParams">) {
   const sp = await searchParams;
   const filter: Filter = FILTERS.some((f) => f.key === sp.filter) ? (sp.filter as Filter) : "new";
   const me = await requireNickname(filter === "new" ? "/plaza" : `/plaza?filter=${filter}`);
+  // 더 보기: 60 at first, then the 100 the API gives at most (it has no further pages yet).
+  const more = sp.more === "1", limit = more ? MAX : FIRST;
   const [tonight, stars, mine, beside] = await Promise.all([
     api<{ count: number; mine: number }>("/v1/plaza/tonight"),
-    api<{ items: PlazaStar[] }>(`/v1/plaza/stars?sort=${filter}&limit=60`),
+    api<{ items: PlazaStar[] }>(`/v1/plaza/stars?sort=${filter}&limit=${limit}`),
     api<{ stars: MyShare[] }>("/v1/me/shares"),
     filter === "beside" ? null : api<{ items: PlazaStar[] }>("/v1/plaza/stars?sort=beside&limit=100"),
   ]);
@@ -95,6 +99,9 @@ async function Plaza({ searchParams }: Pick<PageProps<"/plaza">, "searchParams">
               {rows.map(({ star, ago }) => <li key={star.id}><PlazaRow star={star} ago={ago} /></li>)}
             </ul>
           )}
+          {stars.items.length >= limit && (more
+            ? <p className={`caption faint ${styles.listEnd}`}>최근 {MAX}개까지 보여요</p>
+            : <Link href={`/plaza?${new URLSearchParams({ ...(filter !== "new" && { filter }), more: "1" })}`} scroll={false} className={`btn btn-secondary ${styles.more}`}>더 보기</Link>)}
         </section>
         <aside className={styles.side}>
           <div className={`card ${styles.mine}`}>
