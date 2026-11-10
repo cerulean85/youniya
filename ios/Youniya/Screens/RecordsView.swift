@@ -124,7 +124,7 @@ struct RecordsView: View {
         .cosmos("records-search", in: RoundedRectangle(cornerRadius: Radius.md))
         .background(Color.bgSurface, in: .rect(cornerRadius: Radius.md))
         .overlay(RoundedRectangle(cornerRadius: Radius.md)
-            .strokeBorder(searching || !query.isEmpty ? Color.hex(0x8555EF) : Color.borderDefault, lineWidth: 1))
+            .strokeBorder(searching || !query.isEmpty ? Color.brandPrimary : Color.borderDefault, lineWidth: 1))
     }
 
     private var chips: some View {
@@ -154,7 +154,7 @@ struct RecordsView: View {
                 .padding(.horizontal, Space.md).padding(.vertical, Space.sm)
                 .cosmos("rchip-\(title)", in: Capsule(), intensity: 0.6)
                 .background(on ? Color.tintPrimary : Color.bgSurface, in: .capsule)
-                .overlay(Capsule().strokeBorder(on ? Color.hex(0x8555EF) : Color.borderDefault, lineWidth: 1))
+                .overlay(Capsule().strokeBorder(on ? Color.brandPrimary : Color.borderDefault, lineWidth: 1))
                 .contentShape(.capsule)
         }
         .buttonStyle(.plain)
@@ -272,7 +272,7 @@ struct RecordsView: View {
                             .background {
                                 if on {
                                     RoundedRectangle(cornerRadius: Radius.md).fill(Color.tintPrimary)
-                                        .overlay(RoundedRectangle(cornerRadius: Radius.md).strokeBorder(Color.hex(0x8555EF), lineWidth: 1))
+                                        .overlay(RoundedRectangle(cornerRadius: Radius.md).strokeBorder(Color.brandPrimary, lineWidth: 1))
                                 }
                             }
                             .contentShape(.rect)

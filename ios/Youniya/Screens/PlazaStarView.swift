@@ -17,7 +17,11 @@ struct PlazaStarView: View {
     /// Live 75-3: the whole text, from the plaza star's detail.
     @State private var liveText: (title: String, body: String)?
 
-    private var title: String { star.name }
+    /// 75-4: the star's own title as its keeper wrote it, not the AI star name.
+    private var title: String {
+        if let t = liveText?.title, !t.isEmpty { return t }
+        return star.fullTitle ?? star.starTitle ?? star.name
+    }
     private var key: String { star.id }
     private var resonated: Bool { model.resonated.contains(key) }
     private var quote: String { star.line }
@@ -37,48 +41,7 @@ struct PlazaStarView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
-                    Text(title)
-                        .textStyle(.h2).foregroundStyle(Color.textPrimary)
-                        .accessibilityAddTraits(.isHeader)
-                    HStack(spacing: Space.sm) {
-                        if let name = star.nickname {
-                            // 75-4: the keeper's name opens their page.
-                            Button { onKeeper(name) } label: { Tag(text: "\(name) ›", tone: .neutral) }
-                                .buttonStyle(.plain)
-                                .accessibilityLabel("\(name)의 밤하늘 보기")
-                        } else {
-                            Tag(text: "익명의 별지기", tone: .neutral)
-                        }
-                        if !star.hasStarlight {
-                            Tag(text: "별빛 없는 별", tone: .neutral)
-                        } else {
-                            Tag(text: "깊이 \(depth)단계", tone: .gold)
-                        }
-                    }
-
-                    // Figma `Hero`: the star in gold, a dotted orbit, four small stars.
-                    // Figma: a tilted elliptical orbit (190×120) with two dashed rings.
-                    ZStack {
-                        Circle()
-                            .fill(RadialGradient(colors: [Color.starBright.opacity(0.25), .clear],
-                                                 center: .center, startRadius: 0, endRadius: 100))
-                            .frame(width: 200, height: 200)
-                        ForEach([1.0, 0.72], id: \.self) { k in
-                            Ellipse()
-                                .strokeBorder(Color.textTertiary.opacity(0.5), style: StrokeStyle(lineWidth: 1, dash: [2, 4]))
-                                .frame(width: 190 * k, height: 120 * k)
-                        }
-                        ForEach(0..<4, id: \.self) { i in
-                            let a = [192.0, 300.0, 15.0, 120.0][i] * .pi / 180
-                            Circle().fill([Color.emotionSorrow, .emotionCalm, .brandWarm, .brandPrimary][i])
-                                .frame(width: i == 3 ? 7 : 10, height: i == 3 ? 7 : 10)
-                                .offset(x: cos(a) * 95, y: sin(a) * 60)
-                        }
-                        ShapeStar(spec: spec, color: .starBright, size: 58, rays: true)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 220)
-                    .accessibilityHidden(true)
+                    header
 
                     VStack(alignment: .leading, spacing: Space.xs) {
                         // The quote is empty while its owner picks a new one (12-3).
@@ -96,9 +59,8 @@ struct PlazaStarView: View {
                     .flatCard(seed: "star-quote")
 
                     if let fullText {
+                        // The title is in the header above, so only the body here.
                         VStack(alignment: .leading, spacing: Space.sm) {
-                            Text(fullText.title)
-                                .textStyle(.h3).foregroundStyle(Color.textPrimary)
                             // Figma: Serif 15, line height 175%.
                             Text(fullText.body)
                                 .font(.custom("NotoSerifKR-Regular", size: 15, relativeTo: .callout))
@@ -125,6 +87,41 @@ struct PlazaStarView: View {
         }
         .modifier(PlazaSafetyModifier(showMenu: $showMenu, target: .star, nebulaName: title,
                                        serverID: star.serverID, onBlocked: onBlocked))
+    }
+
+    /// 75-4 `Star Header`: a 56×56 gold thumbnail of the star beside its
+    /// title, the keeper's name and the depth, so the text comes right after.
+    private var header: some View {
+        HStack(spacing: 14) {
+            ShapeStar(spec: spec, color: .starBright, size: 38, rays: true)
+                .frame(width: 56, height: 56)
+                .background(Color.starBright.opacity(0.1), in: .rect(cornerRadius: 16))
+                .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Color.starBright.opacity(0.35), lineWidth: 1))
+                .clipShape(.rect(cornerRadius: 16))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: Space.sm) {
+                Text(title)
+                    .textStyle(.h2).foregroundStyle(Color.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
+                HStack(spacing: Space.sm) {
+                    if let name = star.nickname {
+                        // 75-4: the keeper's name opens their page.
+                        Button { onKeeper(name) } label: { Tag(text: "\(name) ›", tone: .neutral) }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("\(name)의 밤하늘 보기")
+                    } else {
+                        Tag(text: "익명의 별지기", tone: .neutral)
+                    }
+                    if !star.hasStarlight {
+                        Tag(text: "별빛 없는 별", tone: .neutral)
+                    } else {
+                        Tag(text: "깊이 \(depth)단계", tone: .gold)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 
     @ViewBuilder private var actions: some View {

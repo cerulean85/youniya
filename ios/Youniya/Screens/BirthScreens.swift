@@ -150,7 +150,7 @@ struct TelescopeObserveView: View {
                     .background {
                         if on {
                             RoundedRectangle(cornerRadius: 6).fill(Color.tintPrimary)
-                                .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.hex(0x8555EF), lineWidth: 1))
+                                .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.brandPrimary, lineWidth: 1))
                                 .shadow(color: Color.hex(0x8C5CF5).opacity(0.35), radius: 6)
                         }
                     }

@@ -185,7 +185,7 @@ struct MembershipSheet: View {
     }
 
     private func link(_ title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) { Text(title).underline().foregroundStyle(Color.hex(0xA78BFA)) }
+        Button(action: action) { Text(title).underline().foregroundStyle(Color.borderFocus) }
             .buttonStyle(.plain)
     }
 }
@@ -242,10 +242,10 @@ struct MembershipCard: View {
             .padding(.horizontal, Space.lg)
             .padding(.vertical, Space.md)
             .background(
-                LinearGradient(colors: [Color.hex(0x8B5CF6).opacity(0.35), Color.hex(0xEC4899).opacity(0.18)],
+                LinearGradient(colors: [Color.accentTint.opacity(0.35), Color.brandWarm.opacity(0.18)],
                                startPoint: .leading, endPoint: .trailing),
                 in: .rect(cornerRadius: Radius.xl))
-            .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Color.hex(0xA78BFA), lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Color.borderFocus, lineWidth: 1))
             .contentShape(.rect)
         }
         .buttonStyle(.plain)

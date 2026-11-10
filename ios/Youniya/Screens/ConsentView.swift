@@ -147,7 +147,8 @@ struct NoticeBanner: View {
         HStack(alignment: .top, spacing: Space.md) {
             switch tone {
             case .info:
-                Image(.iconInfo).resizable().frame(width: 20, height: 20)
+                Image(.iconInfo).renderingMode(.template).resizable().frame(width: 20, height: 20)
+                    .foregroundStyle(Color.accentTint)
             case .warm:
                 Image(.iconStar).renderingMode(.template).resizable()
                     .frame(width: 20, height: 20)

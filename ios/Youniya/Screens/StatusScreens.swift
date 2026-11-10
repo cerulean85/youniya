@@ -360,7 +360,7 @@ struct ExportProgressSheet: View {
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         Capsule().fill(Color.borderDefault.opacity(0.5))
-                        Capsule().fill(Color.hex(0x8555EF)).frame(width: geo.size.width * progress)
+                        Capsule().fill(Color.brandPrimary).frame(width: geo.size.width * progress)
                     }
                 }
                 .frame(height: 6)

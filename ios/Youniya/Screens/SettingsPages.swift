@@ -190,7 +190,8 @@ struct SkyColorView: View {
             // 68-1: fixed above the button so the scroll never hides it.
             if model.membershipOn && !model.isMember {
                 HStack(alignment: .top, spacing: Space.md) {
-                    Image(.iconInfo).resizable().frame(width: 20, height: 20).accessibilityHidden(true)
+                    Image(.iconInfo).renderingMode(.template).resizable().frame(width: 20, height: 20)
+                        .foregroundStyle(Color.accentTint).accessibilityHidden(true)
                     Text("오로라 숲, 잔불 노을, 장미빛 새벽은 별지기 멤버십으로 열 수 있어요. 눌러서 미리 볼 수 있어요.")
                         .textStyle(.bodyS).foregroundStyle(Color.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)

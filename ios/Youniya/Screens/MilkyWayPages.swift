@@ -276,7 +276,7 @@ struct BrightnessFlowView: View {
                         ZStack(alignment: .leading) {
                             Capsule().fill(Color.borderDefault.opacity(0.5))
                             // Figma: 1pt of bar per 5 starlight.
-                            Capsule().fill(current ? Color.starBright : Color.hex(0x8555EF))
+                            Capsule().fill(current ? Color.starBright : Color.brandPrimary)
                                 .frame(width: min(geo.size.width, CGFloat(row.average) / 5))
                         }
                     }
@@ -320,11 +320,11 @@ private struct TrendChart: View {
                         .offset(y: y(v) - 9)
                 }
                 smooth(pts, closed: true, bottom: 159)
-                    .fill(Color.hex(0x8555EF).opacity(0.14))
+                    .fill(Color.brandPrimary.opacity(0.14))
                 smooth(pts, closed: false, bottom: 159)
-                    .stroke(Color.hex(0x8555EF), lineWidth: 2)
+                    .stroke(Color.brandPrimary, lineWidth: 2)
                 ForEach(pts.indices.dropLast(), id: \.self) { i in
-                    Circle().fill(Color.hex(0x8555EF)).frame(width: 5, height: 5)
+                    Circle().fill(Color.brandPrimary).frame(width: 5, height: 5)
                         .position(pts[i])
                 }
                 if let last = pts.last {
@@ -508,7 +508,7 @@ private struct GalaxyRiver: View {
 
             ZStack(alignment: .topLeading) {
                 river(in: size)
-                    .stroke(Color.hex(0x8555EF).opacity(0.3), style: StrokeStyle(lineWidth: 80, lineCap: .round))
+                    .stroke(Color.brandPrimary.opacity(0.3), style: StrokeStyle(lineWidth: 80, lineCap: .round))
                     // Figma layer blur 30 ≈ SwiftUI radius 15.
                     .blur(radius: 15)
                 river(in: size)

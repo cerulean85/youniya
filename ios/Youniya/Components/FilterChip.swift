@@ -16,7 +16,7 @@ struct FilterChip: View {
                 .padding(.vertical, Space.sm)
                 .cosmos("chip-\(title)", in: Capsule(), intensity: 0.6)
                 .background(isSelected ? Color.tintPrimary : Color.bgSurface, in: .capsule)
-                .overlay(Capsule().strokeBorder(isSelected ? Color.hex(0x8555EF) : Color.borderDefault, lineWidth: 1))
+                .overlay(Capsule().strokeBorder(isSelected ? Color.brandPrimary : Color.borderDefault, lineWidth: 1))
                 .contentShape(.capsule)
         }
         .buttonStyle(.plain)

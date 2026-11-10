@@ -10,7 +10,7 @@ struct PrimaryButtonStyle: ButtonStyle {
         // 68: the gradient follows the chosen sky; violet keeps its Hover variant.
         let a = theme.accent
         let colors: [Color] = configuration.isPressed
-            ? (theme == .violet ? [.primaryHoverGradientStart, .primaryHoverGradientEnd] : [a.bottom, a.bottom])
+            ? (theme == .violet ? [.hex(0x7A4DD0), .hex(0x5C1FC0)] : [a.bottom, a.bottom])
             : [a.top, a.bottom]
         configuration.label
             .textStyle(.labelM)

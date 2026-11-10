@@ -62,6 +62,11 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.6), value: model.isSignedIn)
         .environment(\.motionReduced, systemReduceMotion || model.settings.reduceAnimations)
         .environment(\.skyTheme, model.previewSky ?? model.settings.sky)
+        // 14.7: system controls (toggles, pickers) and the `Color` accent tokens follow the sky.
+        .tint((model.previewSky ?? model.settings.sky).accent.strong)
+        .onChange(of: model.previewSky ?? model.settings.sky, initial: true) { _, sky in
+            AppliedSky.shared.theme = sky
+        }
         .environment(\.skyScene, model.showsSkyScene)
         .animation(.easeInOut(duration: 0.6), value: model.previewSky)
         .animation(.easeInOut(duration: 0.4), value: model.hasConsented)

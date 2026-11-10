@@ -34,7 +34,7 @@ struct LoginView: View {
                     Text("초대 계정으로 로그인")
                         .textStyle(.caption)
                         .underline()
-                        .foregroundStyle(Color.hex(0xA78BFA))
+                        .foregroundStyle(Color.borderFocus)
                         .frame(maxWidth: .infinity)
                         .frame(minHeight: 32)
                         .contentShape(.rect)
