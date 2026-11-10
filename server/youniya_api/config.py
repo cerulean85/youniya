@@ -63,6 +63,13 @@ class Settings:
     apns_key_id: str | None = field(default_factory=lambda: os.getenv("APNS_KEY_ID") or None)
     apns_private_key_base64: str | None = field(default_factory=lambda: os.getenv("APNS_PRIVATE_KEY_BASE64") or None)
     apns_private_key_path: str | None = field(default_factory=lambda: os.getenv("APNS_PRIVATE_KEY_PATH") or None)
+    # Sign in with Apple key (Certificates, IDs & Profiles › Keys, with Sign in with Apple; yet another .p8).
+    # Revokes the Apple tokens when an account is deleted (5.1.1(v)). The team id falls back to APNS_TEAM_ID.
+    apple_team_id: str | None = field(default_factory=lambda: os.getenv("APPLE_TEAM_ID") or os.getenv("APNS_TEAM_ID") or None)
+    apple_siwa_key_id: str | None = field(default_factory=lambda: os.getenv("APPLE_SIWA_KEY_ID") or None)
+    apple_siwa_private_key_base64: str | None = field(
+        default_factory=lambda: os.getenv("APPLE_SIWA_PRIVATE_KEY_BASE64") or None)
+    apple_siwa_private_key_path: str | None = field(default_factory=lambda: os.getenv("APPLE_SIWA_PRIVATE_KEY_PATH") or None)
     allow_sandbox_purchases: bool = field(default_factory=lambda: os.getenv("ALLOW_SANDBOX_PURCHASES", "1") == "1")
     # X-Admin-Token for /v1/admin. Without it the operator API does not exist.
     admin_token: str | None = field(default_factory=lambda: os.getenv("ADMIN_TOKEN") or None)
@@ -105,6 +112,9 @@ class Settings:
 
     def apns_private_key(self) -> str | None:
         return _pem(self.apns_private_key_base64, self.apns_private_key_path)
+
+    def siwa_private_key(self) -> str | None:
+        return _pem(self.apple_siwa_private_key_base64, self.apple_siwa_private_key_path)
 
 
 def _pem(b64: str | None, path: str | None) -> str | None:

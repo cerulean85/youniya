@@ -1,8 +1,10 @@
 """11 가입 동의, 87 설정, 91 계정 삭제, 92 공유 거두기, 93 내보내기, 32 문의하기."""
 
+import logging
 from datetime import datetime, timezone
 from typing import Literal
 
+import httpx
 from fastapi import APIRouter, Depends, Query, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select, update
@@ -20,7 +22,9 @@ from ..rules import INQUIRY_KINDS, MOOD_LABELS, SKY_THEMES, SOUNDS
 from ..security import Cipher
 from ..views import iso, local
 from ..ratelimit import per_user
+from ..siwa import ReauthRequired
 
+log = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1", tags=["account"])
 
 
@@ -84,6 +88,7 @@ def me(request: Request, user: User = Depends(current_user), db: Session = Depen
     return {
         "id": user.id,
         "provider": user.provider,
+        "joined_at": iso(user.created_at),  # 87-6 가입한 날
         "needs_consent": user.consented_at is None,
         "marketing_opt_in": user.marketing_opt_in,
         "marketing": marketing.view(user),  # 14.3: {opt_in, consented_at, revoked_at, reconfirm_due}
@@ -167,11 +172,34 @@ def update_settings(body: SettingsPatch, request: Request, user: User = Depends(
     return user.settings
 
 
+class DeleteIn(BaseModel):
+    # Apple accounts: ASAuthorizationAppleIDCredential.authorizationCode, fresh (it lasts 5 minutes, once).
+    apple_authorization_code: str | None = Field(None, min_length=1, max_length=2000)
+
+
 @router.delete("/me", status_code=204)
-def delete_account(user: User = Depends(current_user), db: Session = Depends(get_db)):
+def delete_account(request: Request, body: DeleteIn | None = None, user: User = Depends(current_user),
+                   db: Session = Depends(get_db)):
     """91: stars, nebulae, the milky way and the account go, with no way back.
     Everything hangs off users.id with ON DELETE CASCADE, except the store purchase and refund
-    records: they stay, cut off from the account, for 5 years (전자상거래법; 개인정보 처리방침 3)."""
+    records: they stay, cut off from the account, for 5 years (전자상거래법; 개인정보 처리방침 3).
+
+    Apple accounts send `apple_authorization_code`: the Apple tokens are revoked first (App Review 5.1.1(v)).
+    A code Apple refuses is 400 apple_reauth_required (get a new one and try again); Apple being unreachable
+    never stops the deletion (logged to Sentry). Without a code (older apps, Google, invite) nothing changes."""
+    code = body.apple_authorization_code if body else None
+    if code and user.provider == "apple":
+        siwa = request.app.state.siwa
+        if siwa is None:
+            log.error("Sign in with Apple key not configured: Apple tokens of %s not revoked", user.id)
+        else:
+            try:
+                siwa.revoke_with_code(code)
+            except ReauthRequired as e:
+                raise ApiError(400, "apple_reauth_required", "Apple 계정 확인이 필요해요. 다시 시도해 주세요.",
+                               apple_error=str(e))
+            except (httpx.HTTPError, ValueError, KeyError):
+                log.exception("revoking the Apple tokens of %s failed; deleting anyway", user.id)
     db.execute(update(CoinEntry).where(CoinEntry.user_id == user.id, CoinEntry.transaction_id.is_not(None))
                .values(user_id=None))
     db.delete(user)

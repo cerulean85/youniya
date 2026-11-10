@@ -241,3 +241,101 @@ def test_refused_payment_key_can_be_used_by_no_other_order_but_frees_its_own(mak
     r = client.post("/v1/payments/toss/confirm", json={"payment_key": "pk_same", "order_id": b["order_id"],
                                                        "amount": 1100}, headers=h)
     assert r.status_code == 409 and r.json()["error"]["code"] == "payment_key_used"
+
+
+def _admin(make_app):
+    from .test_admin_auth import _operator, _sign_in
+    app = make_app(toss_secret_key="test_sk_fake", toss_test_open=True, admin_token="op-token")
+    app.state.toss = fake = FakeToss()
+    client = TestClient(app)
+    oh, _ = _sign_in(client, _operator(client))
+    mh, _ = _sign_in(client, _operator(client, "mod@youniya.app", "moderator", oh), "mod@youniya.app")
+    h = sign_in(client)
+    keeper = client.get("/v1/me", headers=h).json()["id"]
+    return client, fake, oh, mh, h, keeper
+
+
+def _paid(client, h, key, package="coin_330", amount=3300):
+    o = _order(client, h, package)
+    r = client.post("/v1/payments/toss/confirm", json={"payment_key": key, "order_id": o["order_id"], "amount": amount},
+                    headers=h)
+    assert r.status_code == 200, r.text
+    return o["order_id"]
+
+
+def test_operator_refund_by_policy_and_forced(make_app):
+    client, fake, oh, mh, h, keeper = _admin(make_app)
+    before = _coins(client, h)
+    a = _paid(client, h, "pk_a")
+    rows = client.get(f"/v1/admin/keepers/{keeper}/orders", headers=mh).json()["items"]  # moderators may look
+    assert rows[0]["id"] == a and rows[0]["refundable"] is True and rows[0]["refund_block"] is None
+    url = f"/v1/admin/orders/{a}/refund"
+    assert client.post(url, json={"reason": "문의 환불"}, headers=mh).status_code == 403  # owners only
+    r = client.post(url, json={"reason": "문의 환불"}, headers=oh)
+    assert r.status_code == 200, r.text
+    assert r.json()["coins_taken"] == 330 and r.json()["order"]["status"] == "canceled"
+    assert r.json()["keeper"]["coins"] == before and _coins(client, h) == before
+    assert client.post(url, json={"reason": "again"}, headers=oh).status_code == 409
+    item = client.get("/v1/coins/history", headers=h).json()["items"][0]
+    assert (item["kind"], item["title"], item["delta"], item["source"]) == ("refund", "운영자 환불", -330, "toss")
+    inbox = client.get("/v1/me/notifications", headers=h).json()["items"][0]
+    assert inbox["title"] == "결제가 환불됐어요" and inbox["body"] == "3,300원이 환불되고 코인 330개가 회수됐어요."
+    # Some coins spent: refused by the policy, done with force, taking only what is left.
+    b = _paid(client, h, "pk_b")
+    with client.app.state.sessions() as db:
+        from youniya_api.models import User
+        db.get(User, keeper).coins = before + 100
+        db.commit()
+    assert client.get(f"/v1/admin/keepers/{keeper}/orders", headers=oh).json()["items"][0]["refund_block"] == "coins_spent"
+    r = client.post(f"/v1/admin/orders/{b}/refund", json={"reason": "문의 환불"}, headers=oh)
+    assert r.status_code == 409 and r.json()["error"]["code"] == "coins_spent"
+    r = client.post(f"/v1/admin/orders/{b}/refund", json={"reason": "장애 보상 환불", "force": True}, headers=oh)
+    assert r.status_code == 200 and r.json()["coins_taken"] == min(330, before + 100)
+    assert _coins(client, h) == before + 100 - min(330, before + 100)
+    audit = [a for a in client.get("/v1/admin/audit", headers=oh).json()["items"] if a["action"] == "keeper_refund"]
+    assert len(audit) == 2
+    # The cancel the webhook later reports is not taken twice.
+    taken_before = _coins(client, h)
+    client.post("/v1/payments/toss/webhook", json={"eventType": "PAYMENT_STATUS_CHANGED", "data": {"paymentKey": "pk_b"}})
+    assert _coins(client, h) == taken_before
+    ledger = client.get("/v1/admin/coins", headers=oh).json()
+    refunds = [i for i in ledger["items"] if i["kind"] == "refund"]
+    assert refunds and all(i["source"] == "operator" and i["payment"] == "toss" for i in refunds)
+
+
+def test_operator_refund_window_and_toss_failure(make_app):
+    client, fake, oh, _, h, keeper = _admin(make_app)
+    a = _paid(client, h, "pk_w")
+    fake.fail = TossError(400, "NOT_CANCELABLE_PAYMENT", "취소 할 수 없는 결제 입니다.")
+    before = _coins(client, h)
+    r = client.post(f"/v1/admin/orders/{a}/refund", json={"reason": "문의"}, headers=oh)
+    assert r.status_code == 402 and _coins(client, h) == before  # nothing kept
+    fake.fail = None
+    with client.app.state.sessions() as db:
+        db.get(TossOrder, a).approved_at = datetime.now(timezone.utc) - timedelta(days=8)
+        db.commit()
+    rows = client.get(f"/v1/admin/keepers/{keeper}/orders", headers=oh).json()["items"]
+    assert rows[0]["refund_block"] == "window_passed"
+    r = client.post(f"/v1/admin/orders/{a}/refund", json={"reason": "문의"}, headers=oh)
+    assert r.status_code == 409 and r.json()["error"]["code"] == "refund_window_passed"
+    assert client.post(f"/v1/admin/orders/{a}/refund", json={"reason": "장애", "force": True}, headers=oh).json()[
+        "coins_taken"] == 330
+
+
+def test_revoke_coins(make_app):
+    client, _, oh, mh, h, keeper = _admin(make_app)
+    url = f"/v1/admin/keepers/{keeper}/actions"
+    client.post(url, json={"action": "grant_coins", "amount": 50, "reason": "보상"}, headers=oh)
+    have = _coins(client, h)
+    assert client.post(url, json={"action": "revoke_coins", "amount": 10, "reason": "잘못 지급"},
+                       headers=mh).status_code == 403
+    r = client.post(url, json={"action": "revoke_coins", "amount": have + 1, "reason": "잘못 지급"}, headers=oh)
+    assert r.status_code == 409 and r.json()["error"]["code"] == "insufficient_balance"
+    r = client.post(url, json={"action": "revoke_coins", "amount": 50, "reason": "잘못 지급"}, headers=oh)
+    assert r.status_code == 200 and r.json()["coins"] == have - 50
+    item = client.get("/v1/coins/history", headers=h).json()["items"][0]
+    assert (item["title"], item["delta"]) == ("운영자 회수", -50)
+    row = [i for i in client.get("/v1/admin/coins", headers=oh).json()["items"] if i["title"] == "운영자 회수"][0]
+    assert row["kind"] == "revoke" and row["source"] == "operator"
+    actions = [a["action"] for a in client.get("/v1/admin/audit", headers=oh).json()["items"]]
+    assert "keeper_revoke_coins" in actions

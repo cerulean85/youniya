@@ -19,11 +19,12 @@ from .. import coins, marketing, mailer, nickname
 from .. import operators as ops
 from ..deps import ApiError, get_cipher, get_db
 from ..models import (CoinEntry, Inquiry, InquiryReply, LineReport, NebulaShare, Operator, ShareReport, Star,
-                      StarLine, StarLineReport, StarlightLine, StarShare, User)
+                      StarLine, StarLineReport, StarlightLine, StarShare, TossOrder, User)
 from ..push import Message, notify
 from ..security import Cipher
 from ..views import aware, iso
 from .admin_auth import anyone, owner
+from . import payments
 
 router = APIRouter(prefix="/v1/admin", tags=["admin"])
 
@@ -308,13 +309,14 @@ def keeper(user_id: str, op: Operator = Depends(anyone), db: Session = Depends(g
 
 
 class KeeperAction(BaseModel):
-    action: Literal["lift_restriction", "extend_restriction", "request_rename", "grant_coins", "process_deletion"]
+    action: Literal["lift_restriction", "extend_restriction", "request_rename", "grant_coins", "revoke_coins",
+                    "process_deletion"]
     reason: str = Field(..., min_length=1, max_length=500)
     amount: int | None = Field(None, ge=1, le=10000)
     days: Literal[7, 30] | None = None
 
 
-OWNER_ONLY = ("grant_coins", "process_deletion")
+OWNER_ONLY = ("grant_coins", "revoke_coins", "process_deletion")
 
 
 @router.post("/keepers/{user_id}/actions")
@@ -345,6 +347,18 @@ def keeper_action(user_id: str, body: KeeperAction, request: Request, op: Operat
             raise ApiError(422, "amount_required", "지급할 코인 수를 적어 주세요.")
         coins.add(db, u, body.amount, "운영자 지급")
         tell = ("코인이 지급됐어요", f"{body.amount}코인을 받았어요.", {"screen": "coin_history"})
+    elif a == "revoke_coins":
+        if body.amount is None:
+            raise ApiError(422, "amount_required", "회수할 코인 수를 적어 주세요.")
+        # Never below 0: more than the balance is refused, not cut down.
+        if not db.execute(update(User).where(User.id == u.id, User.coins >= body.amount)
+                          .values(coins=User.coins - body.amount)).rowcount:
+            db.rollback()
+            raise ApiError(409, "insufficient_balance", "남은 코인보다 많이 회수할 수 없어요.", coins=u.coins)
+        db.add(CoinEntry(user_id=u.id, title="운영자 회수", delta=-body.amount))
+        db.refresh(u)
+        tell = ("코인이 회수됐어요", f"운영자가 코인 {body.amount}개를 회수했어요. 궁금한 점은 문의하기로 알려 주세요.",
+                {"screen": "coin_history"})
     elif a == "process_deletion":
         ops.audit(db, actor, "keeper_process_deletion", target=f"keeper:{u.id}", reason=body.reason, no=u.keeper_no)
         db.execute(update(CoinEntry).where(CoinEntry.user_id == u.id, CoinEntry.transaction_id.is_not(None))
@@ -358,6 +372,59 @@ def keeper_action(user_id: str, body: KeeperAction, request: Request, op: Operat
     if tell:
         notify(db, request.app.state.push, [u.id], Message(tell[0], tell[1], "report_result", tell[2] if len(tell) > 2 else None))
     return _keeper_row(db, u)
+
+
+# --- 웹 결제 (토스) 환불 ---------------------------------------------------------------------------
+
+def _order_view(o: TossOrder, balance: int) -> dict:
+    block = payments.refund_block(o, balance)
+    return {"id": o.id, "created_at": iso(o.created_at), "approved_at": iso(o.approved_at), "package_id": o.package_id,
+            "coins": o.coins, "amount": o.amount, "method": o.method, "status": o.status,
+            "canceled_at": iso(o.canceled_at), "refundable": block is None, "refund_block": block}
+
+
+@router.get("/keepers/{user_id}/orders")
+def keeper_orders(user_id: str, op: Operator = Depends(anyone), db: Session = Depends(get_db)):
+    """The keeper's web (Toss) orders, newest first. `refund_block`: why the policy refund can't be done
+    (not_done · window_passed · coins_spent), or null."""
+    u = db.get(User, user_id)
+    if u is None:
+        raise ApiError(404, "not_found", "별지기를 찾지 못했어요.")
+    rows = db.scalars(select(TossOrder).where(TossOrder.user_id == u.id).order_by(TossOrder.created_at.desc())).all()
+    return {"items": [_order_view(o, u.coins) for o in rows]}
+
+
+class RefundIn(BaseModel):
+    reason: str = Field(..., min_length=1, max_length=500)
+    force: bool = False
+
+
+@router.post("/orders/{order_id}/refund")
+def refund_order(order_id: str, body: RefundIn, request: Request, op: Operator = Depends(owner),
+                 db: Session = Depends(get_db)):
+    """A 문의 refund request. By the policy (7 days, coins unspent: 409 refund_window_passed · coins_spent);
+    `force` cancels the whole payment anyway and takes back what is left of its coins (min(order, balance))."""
+    toss = request.app.state.toss
+    if toss is None:
+        raise ApiError(503, "payments_unavailable", "토스 결제가 설정되지 않았어요.")
+    o = db.get(TossOrder, order_id)
+    if o is None:
+        raise ApiError(404, "order_not_found", "주문을 찾지 못했어요.")
+    if o.status == "canceled":
+        raise ApiError(409, "order_canceled", "이미 환불된 주문이에요.")
+    taken = payments.refund(db, toss, o, body.reason[:200], title="운영자 환불", force=body.force)
+    u = db.get(User, o.user_id) if o.user_id else None
+    ops.audit(db, op if op.id else None, "keeper_refund", target=f"keeper:{o.user_id}" if o.user_id else None,
+              reason=body.reason, order=o.id, amount=o.amount, coins_taken=taken, force=body.force)
+    if not payments.commit_refund(db, o):
+        raise ApiError(409, "order_canceled", "이미 환불된 주문이에요.")
+    if u is not None:
+        db.refresh(u)
+        notify(db, request.app.state.push, [u.id], Message(
+            "결제가 환불됐어요", f"{o.amount:,}원이 환불되고 코인 {taken}개가 회수됐어요.", "report_result",
+            {"screen": "coin_history"}))
+    return {"order": _order_view(o, u.coins if u else 0), "coins_taken": taken,
+            "keeper": _keeper_row(db, u) if u else None}
 
 
 # --- 문의 -----------------------------------------------------------------------------------------
