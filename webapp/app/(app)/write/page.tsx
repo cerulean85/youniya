@@ -9,7 +9,7 @@ import styles from "./write.module.css";
 
 export const metadata: Metadata = { title: "별 만들기" };
 
-// Figma W-11 (별 만들기) with W-23 (분석 중) while a star is made; ?rewrite= is 고쳐 쓰기 (W-46),
+// Figma W-11 (별 만들기) with W-23 (분석 중) while a star is made; ?rewrite= is 고쳐 쓰기 (W-73, W-46),
 // ?link= is 별 잇기 · 새 별 쓰기 (W-39).
 export default function WritePage({ searchParams }: PageProps<"/write">) {
   return (
@@ -36,11 +36,11 @@ async function Editor({ searchParams }: Pick<PageProps<"/write">, "searchParams"
   const back = source ? `/stars/${source.id}` : "/";
   return (
     <>
-      <div className={styles.top}>
+      {source?.kind !== "rewrite" && <div className={styles.top}>
         <Link href={back} className={styles.close}><Close size={18} />닫기</Link>
-        <span className="label-m">{source?.kind === "rewrite" ? "고쳐 쓰기" : source ? "별 잇기 · 새 별 쓰기" : "별 만들기"}</span>
+        <span className="label-m">{source ? "별 잇기 · 새 별 쓰기" : "별 만들기"}</span>
         <span className={styles.spacer} />
-      </div>
+      </div>}
       <WriteForm key={source ? `${source.kind}-${source.id}` : "new"} draft={own} source={source}
         freeStarToday={me.free_star_today} coins={me.coins} />
     </>

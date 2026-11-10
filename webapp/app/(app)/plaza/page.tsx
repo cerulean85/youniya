@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PlazaSkeleton } from "@/components/Skeleton";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
@@ -10,6 +11,7 @@ import { api } from "@/lib/api";
 import { requireNickname, withAgo } from "@/lib/plaza";
 import type { MyShare, PlazaStar } from "@/lib/types";
 import styles from "./plaza.module.css";
+import { PlazaWelcome } from "./Welcome";
 
 export const metadata: Metadata = { title: "우주 광장" };
 
@@ -24,11 +26,27 @@ type Filter = (typeof FILTERS)[number]["key"];
 // sit below. No resonance counts for anyone else's star.
 export default function PlazaPage({ searchParams }: PageProps<"/plaza">) {
   return (
+    <Suspense fallback={<><Header /><PlazaSkeleton /></>}>
+      <Gate searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+function Header() {
+  return (
+    <header className={styles.header}>
+      <h1 className="h1">우주 광장</h1>
+      <p className="body-m muted">별지기들이 나눈 별이에요. 눌러서 글을 읽고, 마음이 닿으면 공명을 남겨 보세요.</p>
+    </header>
+  );
+}
+
+// W-76: the first visit gets the guide until 둘러보기 is pressed.
+async function Gate({ searchParams }: Pick<PageProps<"/plaza">, "searchParams">) {
+  if (!(await cookies()).get("yn_plaza_seen")) return <PlazaWelcome />;
+  return (
     <>
-      <header className={styles.header}>
-        <h1 className="h1">우주 광장</h1>
-        <p className="body-m muted">별지기들이 나눈 별이에요. 눌러서 글을 읽고, 마음이 닿으면 공명을 남겨 보세요.</p>
-      </header>
+      <Header />
       <Suspense fallback={<PlazaSkeleton />}>
         <Plaza searchParams={searchParams} />
       </Suspense>

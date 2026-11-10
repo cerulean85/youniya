@@ -3,11 +3,20 @@
 import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
-import { Lock } from "@/components/icons";
-import { scanSentences, shareStar, unshareStar } from "./actions";
+import { Info, Lock } from "@/components/icons";
+import { scanBody, scanSentences, shareStar, unshareStar } from "./actions";
 import styles from "./star.module.css";
 
 type Option = { text: string; masked: string; total: number };
+
+// The server counts every contact as one kind; the same patterns split them for the W-75 card.
+const PHONE = /(?<!\d)0\d{1,2}[-. ]?\d{3,4}[-. ]?\d{4}(?!\d)/g;
+const EMAIL = /[\w.+-]+@[\w-]+\.[A-Za-z.]+/g;
+function breakdown(body: string, total: number) {
+  const phone = body.match(PHONE)?.length ?? 0, email = body.match(EMAIL)?.length ?? 0;
+  const other = Math.max(0, total - phone - email);
+  return [["전화번호", phone], ["이메일", email], ["계좌·카드번호", other]].filter(([, n]) => n).map(([k, n]) => `${k} ${n}`).join(" · ");
+}
 
 function sentencesOf(body: string) {
   return body.split(/(?<=[.!?。…])\s+|\n+/).map((s) => s.trim()).filter((s) => s.length >= 4 && s.length <= 300).slice(0, 12);
@@ -18,6 +27,8 @@ function sentencesOf(body: string) {
 export function ShareStar({ id, title, body, shared, lit, nickname }: { id: string; title: string; body: string; shared: boolean; lit: boolean; nickname: string | null }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [options, setOptions] = useState<Option[] | null>(null);
+  const [check, setCheck] = useState<number | null>(null);
+  const [step, setStep] = useState<"check" | "pick">("check");
   const [loading, start] = useTransition();
 
   if (shared) {
@@ -29,10 +40,12 @@ export function ShareStar({ id, title, body, shared, lit, nickname }: { id: stri
     );
   }
   const open = () => {
+    setStep("check");
     dialog.current?.showModal();
     if (!options) start(async () => {
       const list = sentencesOf(body);
-      const scans = await scanSentences(list);
+      const [whole, scans] = await Promise.all([scanBody(`${title}\n${body}`), scanSentences(list)]);
+      setCheck(whole.total);
       setOptions(list.map((text, i) => ({ text, masked: scans[i].masked, total: scans[i].total })));
     });
   };
@@ -41,7 +54,24 @@ export function ShareStar({ id, title, body, shared, lit, nickname }: { id: stri
   return (
     <>
       <button type="button" className="btn btn-secondary btn-block" onClick={open}>우주 광장에 나누기</button>
-      <dialog ref={dialog} className={`card ${styles.dialog} ${styles.shareDialog}`} aria-labelledby="share-title">
+      <dialog ref={dialog} className={`card ${styles.dialog} ${styles.shareDialog}`} aria-labelledby={step === "check" ? "check-title" : "share-title"}>
+        {/* Figma W-75 (iOS 20): before picking, how the whole writing will go out. */}
+        {step === "check" ? (
+          <div className={styles.check}>
+            <h2 id="check-title" className="h2">나누기 전에 한 번 확인해 주세요</h2>
+            <p className="body-s muted">전화번호와 이메일을 가려 두었어요. 이름과 장소는 그대로 보이니 확인하고 나눠 주세요.</p>
+            <p className={styles.checkBanner}><Info size={16} />전화번호·이메일·계좌번호는 자동으로 가려져요.</p>
+            <div className={styles.checkCard}>
+              {check == null ? <span className="body-s faint">글을 살펴보는 중…</span> : check > 0 ? (
+                <><span className="label-m">가려진 항목 {check}개</span><span className="body-s muted">{breakdown(`${title}\n${body}`, check)}</span></>
+              ) : (
+                <><span className="label-m">가려진 항목이 없어요</span><span className="body-s muted">그대로 나눠도 괜찮아 보여요.</span></>
+              )}
+            </div>
+            <button type="button" className="btn btn-primary btn-block" disabled={check == null} onClick={() => setStep("pick")}>확인했어요</button>
+            <button type="button" className="btn btn-ghost btn-block" onClick={() => dialog.current?.close()}>취소</button>
+          </div>
+        ) : (
         <form action={async (f) => { await shareStar(id, f); dialog.current?.close(); }}>
           <p className="caption faint">{title}</p>
           <h2 id="share-title" className="h2">어떤 문장을 나눌까요?</h2>
@@ -66,6 +96,7 @@ export function ShareStar({ id, title, body, shared, lit, nickname }: { id: stri
             <Pending label="이 문장으로 나누기" busy="나누는 중…" style="btn-primary" disabled={!options?.length} />
           </div>
         </form>
+        )}
       </dialog>
     </>
   );

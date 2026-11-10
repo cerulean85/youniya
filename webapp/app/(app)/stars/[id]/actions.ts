@@ -38,6 +38,11 @@ export async function scanSentences(sentences: string[]) {
   return Promise.all(sentences.map((text) => api<Scan>("/v1/plaza/privacy-scan", { method: "POST", body: JSON.stringify({ text }) })));
 }
 
+/** W-75: how the whole writing goes out (contacts and identifying numbers only; names and places stay). */
+export async function scanBody(text: string) {
+  return api<Scan>("/v1/plaza/privacy-scan", { method: "POST", body: JSON.stringify({ text: text.slice(0, 20000), mode: "contacts" }) });
+}
+
 /** W-26: the 대표 문장 and the whole writing go out with the 별지기 이름, masked by the server. */
 export async function shareStar(id: string, form: FormData) {
   const quote = String(form.get("quote") ?? "").trim();

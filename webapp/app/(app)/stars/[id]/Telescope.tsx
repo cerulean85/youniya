@@ -8,14 +8,14 @@ import styles from "./telescope.module.css";
 const PARTS = [["start", "글의 시작"], ["middle", "글의 중간"], ["end", "글의 끝"]] as const;
 
 // Figma W-54: the mind telescope inside star detail, folded with 접기. The name ending in 별 shows only here.
-export async function Telescope({ id, analysis, telescope }: { id: string; analysis: Analysis; telescope: Star["telescope"] }) {
+export async function Telescope({ id, body, analysis, telescope }: { id: string; body: string; analysis: Analysis; telescope: Star["telescope"] }) {
   if (!telescope) {
     const offer = await api<TelescopeOffer>("/v1/telescope/offer");
     return (
       <div id="telescope" className={`card ${styles.offer}`}>
         <span className={styles.head}><TelescopeIcon size={16} />마음 망원경</span>
         <p className="body-s">{analysis.telescope_teaser ?? "별빛 풀이보다 한 걸음 더, 글 속에 숨은 마음의 결을 들여다봐요."}</p>
-        <OpenTelescope id={id} label={offer.free ? `마음 망원경 켜기 · 무료 ${offer.free_left}번 남음` : `마음 망원경 켜기 · ${offer.cost}코인`}
+        <OpenTelescope id={id} body={body} label={offer.free ? `마음 망원경 켜기 · 무료 ${offer.free_left}번 남음` : `마음 망원경 켜기 · ${offer.cost}코인`}
           cost={offer.free ? `무료 몫을 1번 써요(${offer.free_left}번 남음).` : `${offer.cost}코인이 들어요(보유 ${offer.coins}).`} />
       </div>
     );

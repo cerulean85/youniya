@@ -5,6 +5,7 @@ import { useActionState, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import { Close } from "@/components/icons";
 import { PrismOverlay } from "@/components/PrismOverlay";
+import { TelescopeObserve } from "@/components/TelescopeObserve";
 import { moodOf, monthDay } from "@/lib/format";
 import type { LinkedStar } from "@/lib/types";
 import { deleteStar, floatStar, openTelescope, unlinkStar } from "./actions";
@@ -70,8 +71,8 @@ function DeleteSubmit() {
   return <button className={`btn ${styles.danger}`} disabled={pending}>{pending ? "지우는 중…" : "영구 삭제"}</button>;
 }
 
-// W-54 with iOS 24 (확인) and 25 (들여다보는 중): what it costs first, then the telescope at work.
-export function OpenTelescope({ id, label, cost }: { id: string; label: string; cost: string }) {
+// W-54 with iOS 24 (확인), then W-74 (관측 연출): what it costs first, then the telescope at work.
+export function OpenTelescope({ id, label, cost, body }: { id: string; label: string; cost: string; body: string }) {
   const [state, action] = useActionState(openTelescope.bind(null, id), null);
   const dialog = useRef<HTMLDialogElement>(null);
   return (
@@ -88,7 +89,7 @@ export function OpenTelescope({ id, label, cost }: { id: string; label: string; 
           )}
           <Pending label="들여다보기" busy="들여다보는 중…" />
           <button type="button" className="btn btn-ghost" onClick={() => dialog.current?.close()}>다음에</button>
-          <PrismOverlay title="별을 들여다보는 중이에요" body={<>조금만 기다려 주세요.<br />잠시 나가도 괜찮아요.</>} />
+          <TelescopeObserve body={body} onAway={() => dialog.current?.close()} />
         </form>
       </dialog>
     </>

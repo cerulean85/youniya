@@ -31,3 +31,9 @@
 .dialog { max-width: 460px; padding: 28px; color: var(--text); }
 .dialog[open] { display: flex; flex-direction: column; gap: 12px; }
 .dialog::backdrop { background: rgba(11, 15, 25, 0.7); }
+/* Figma W-73: 고쳐 쓰기, one 720px column without the side panel. */
+.rewrite { width: 100%; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+.rewriteTop { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+.saved { justify-self: end; }
+.rewriteText { min-height: 420px; field-sizing: content; line-height: 1.9; }
+.count { align-self: flex-end; }

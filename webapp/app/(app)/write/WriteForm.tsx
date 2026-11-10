@@ -48,6 +48,73 @@ export function WriteForm({ draft, source, freeStarToday, coins }: { draft: Draf
   const canFloat = length >= MIN_FLOAT_LENGTH;
   const freeLeft = freeStarToday > 0;
 
+  const confirmDialog = (
+    <>
+      {/* Figma W-45 (기획서 17.5): floating with starlight locks the writing, so it asks first. */}
+      <dialog ref={confirm} className={`card ${styles.dialog}`} aria-labelledby="float-title">
+        {rewrite ? (
+          <>
+            {/* Figma W-46: a rewrite becomes a new star; the old one and its starlight stay. */}
+            <h2 id="float-title" className="h2">고쳐 쓴 글을 새 별로 띄울까요?</h2>
+            <p className="body-s muted">「{rewrite.title}」를 고쳐 쓴 글이에요. 원래 별과 별빛은 그대로 남고, 새 별이 하나 더 생겨 원래 별과 이어져요.</p>
+            <p className="body-s muted">별빛을 받으면 {freeLeft ? "오늘 무료 1번을 써요" : `${STAR_COST}코인이 들어요 (보유 ${coins})`}. 별빛 없이 띄우면 무료예요.</p>
+            {canFloat ? <ConfirmFloat label="별빛 받고 새 별로 띄우기" onDone={() => confirm.current?.close()} />
+              : <p className="caption faint">별빛은 {MIN_FLOAT_LENGTH}자부터 받을 수 있어요.</p>}
+            <ConfirmKeep label="별빛 없이 새 별로 띄우기" onDone={() => confirm.current?.close()} />
+            <button type="button" className="btn btn-ghost" onClick={() => confirm.current?.close()}>조금 더 고칠게요</button>
+          </>
+        ) : (
+        <>
+        <h2 id="float-title" className="h2">별빛을 받아 띄울까요?</h2>
+        <p className="body-s muted">별빛 프리즘이 글을 읽고 별빛·깊이·고유한 별 모양을 줘요. {freeLeft ? "오늘 무료 1번 남았어요." : `${STAR_COST}코인이 들어요 (보유 ${coins}).`}</p>
+        <p className="body-s muted">별빛을 받으면 이 글은 잠겨서 고칠 수 없어요. 고치고 싶으면 &lsquo;고쳐 쓰기&rsquo;로 새 별을 만들 수 있어요.</p>
+        <ConfirmFloat label={freeLeft ? "별빛 받고 띄우기 · 오늘 무료 1번" : `별빛 받고 띄우기 · ${STAR_COST}코인`} onDone={() => confirm.current?.close()} />
+        <button type="button" className="btn btn-ghost" onClick={() => confirm.current?.close()}>조금 더 쓸게요</button>
+        </>
+        )}
+      </dialog>
+    </>
+  );
+
+  // Figma W-73: 고쳐 쓰기 is one quiet column; the old star stays, the new one is linked to it.
+  if (rewrite) {
+    return (
+      <form action={action} className={styles.rewrite}>
+        <input type="hidden" name="moods" value={moods.join(",")} />
+        <input type="hidden" name="rewrite_of" value={rewrite.id} />
+        <div className={styles.rewriteTop}>
+          <Link href={`/stars/${rewrite.id}`} className={styles.close}>닫기</Link>
+          <span className="label-m">고쳐 쓰기</span>
+          <span className={`caption faint ${styles.saved}`}>{saved ?? ""}</span>
+        </div>
+        <div className={styles.banner}>
+          <Info size={18} />
+          <span>「{rewrite.title}」를 고쳐 쓰고 있어요. 원래 별과 별빛은 그대로 남고, 띄우면 새 별이 되어 원래 별과 이어져요.</span>
+        </div>
+        <div className={styles.moods} role="group" aria-label="오늘의 기분">
+          {MOODS.map((m) => (
+            <button key={m.key} type="button" aria-pressed={moods.includes(m.key)} className={styles.mood}
+              style={{ ["--c" as string]: m.color }} onClick={() => toggleMood(m.key)}>{m.label}</button>
+          ))}
+        </div>
+        <input name="title" className={`h2 ${styles.title}`} placeholder="제목 없는 별" value={title} maxLength={60}
+          onChange={(e) => setTitle(e.target.value)} aria-label="제목" />
+        <textarea name="body" className={`journal ${styles.text} ${styles.rewriteText}`} value={body} maxLength={20000}
+          onChange={(e) => setBody(e.target.value)} aria-label="본문" />
+        <span className={`caption faint ${styles.count}`}>{length.toLocaleString("ko-KR")}자</span>
+        {state?.error && (
+          <div className={styles.error} role="alert">
+            {state.error}
+            {state.code === "insufficient_coins" && <Link href="/coins" className={styles.link}>코인 충전하기</Link>}
+          </div>
+        )}
+        <button type="button" className="btn btn-primary btn-block" disabled={length === 0} onClick={() => confirm.current?.showModal()}>새 별로 띄우기</button>
+        <PrismOverlay mode="float" />
+        {confirmDialog}
+      </form>
+    );
+  }
+
   return (
     <form action={action} className={styles.body}>
       <input type="hidden" name="moods" value={moods.join(",")} />
@@ -103,29 +170,7 @@ export function WriteForm({ draft, source, freeStarToday, coins }: { draft: Draf
         <p className={`caption faint ${styles.privacy}`}><Lock size={16} />글은 나에게만 보여요. 우주 광장에는 내가 고른 한 줄만 나가요.</p>
       </aside>
       <PrismOverlay mode="float" />
-      {/* Figma W-45 (기획서 17.5): floating with starlight locks the writing, so it asks first. */}
-      <dialog ref={confirm} className={`card ${styles.dialog}`} aria-labelledby="float-title">
-        {rewrite ? (
-          <>
-            {/* Figma W-46: a rewrite becomes a new star; the old one and its starlight stay. */}
-            <h2 id="float-title" className="h2">고쳐 쓴 글을 새 별로 띄울까요?</h2>
-            <p className="body-s muted">「{rewrite.title}」를 고쳐 쓴 글이에요. 원래 별과 별빛은 그대로 남고, 새 별이 하나 더 생겨 원래 별과 이어져요.</p>
-            <p className="body-s muted">별빛을 받으면 {freeLeft ? "오늘 무료 1번을 써요" : `${STAR_COST}코인이 들어요 (보유 ${coins})`}. 별빛 없이 띄우면 무료예요.</p>
-            {canFloat ? <ConfirmFloat label="별빛 받고 새 별로 띄우기" onDone={() => confirm.current?.close()} />
-              : <p className="caption faint">별빛은 {MIN_FLOAT_LENGTH}자부터 받을 수 있어요.</p>}
-            <ConfirmKeep label="별빛 없이 새 별로 띄우기" onDone={() => confirm.current?.close()} />
-            <button type="button" className="btn btn-ghost" onClick={() => confirm.current?.close()}>조금 더 고칠게요</button>
-          </>
-        ) : (
-        <>
-        <h2 id="float-title" className="h2">별빛을 받아 띄울까요?</h2>
-        <p className="body-s muted">별빛 프리즘이 글을 읽고 별빛·깊이·고유한 별 모양을 줘요. {freeLeft ? "오늘 무료 1번 남았어요." : `${STAR_COST}코인이 들어요 (보유 ${coins}).`}</p>
-        <p className="body-s muted">별빛을 받으면 이 글은 잠겨서 고칠 수 없어요. 고치고 싶으면 &lsquo;고쳐 쓰기&rsquo;로 새 별을 만들 수 있어요.</p>
-        <ConfirmFloat label={freeLeft ? "별빛 받고 띄우기 · 오늘 무료 1번" : `별빛 받고 띄우기 · ${STAR_COST}코인`} onDone={() => confirm.current?.close()} />
-        <button type="button" className="btn btn-ghost" onClick={() => confirm.current?.close()}>조금 더 쓸게요</button>
-        </>
-        )}
-      </dialog>
+      {confirmDialog}
     </form>
   );
 }

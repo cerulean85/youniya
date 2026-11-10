@@ -64,3 +64,8 @@
 .lineMeta form { margin-left: auto; }
 .lineMeta button { background: none; border: 0; cursor: pointer; font: 500 11px/16px var(--sans); color: var(--text-3); }
 .lineMeta button:hover { color: var(--text); }
+/* Figma W-75: the privacy check before picking a sentence. */
+.check { display: flex; flex-direction: column; gap: 14px; }
+.checkBanner { display: flex; gap: 8px; align-items: center; margin: 0; padding: 14px 16px; border-radius: 12px; background: var(--tint); font: 400 13px/20px var(--sans); }
+.checkBanner svg { flex: none; color: var(--primary-text); }
+.checkCard { display: flex; flex-direction: column; gap: 4px; padding: 16px; border-radius: 14px; background: var(--raised); border: 1px solid var(--border); margin-bottom: 8px; }

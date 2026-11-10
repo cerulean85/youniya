@@ -1,0 +1,11 @@
+.welcome { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; min-height: 70vh; }
+.hero { position: relative; width: 342px; height: 140px; margin-bottom: 8px; }
+.hero i { position: absolute; width: 5px; height: 5px; margin: -2.5px; border-radius: 50%; background: var(--text-2); opacity: 0.7; animation: twinkle 2s ease-in-out infinite alternate; }
+.orbit, .orbitInner { position: absolute; left: 50%; top: 50%; border-radius: 50%; border: 1px solid rgb(var(--primary-rgb) / 0.35); transform: translate(-50%, -50%); }
+.orbit { width: 140px; height: 140px; border-color: rgb(var(--primary-rgb) / 0.2); }
+.orbitInner { width: 92px; height: 92px; }
+.star { position: absolute; left: 50%; top: 50%; width: 28px; height: 28px; transform: translate(-50%, -50%); border-radius: 50%; background: var(--primary); box-shadow: 0 0 24px rgb(var(--primary-rgb) / 0.8); display: grid; place-items: center; }
+.star b { width: 10px; height: 10px; border-radius: 50%; background: var(--gold); }
+.actions { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 360px; margin-top: 24px; }
+@keyframes twinkle { from { opacity: 0.2; } to { opacity: 0.8; } }
+@media (prefers-reduced-motion: reduce) { .hero i { animation: none; } }
