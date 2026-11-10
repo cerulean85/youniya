@@ -136,8 +136,6 @@ struct SettingsView: View {
                     SettingsSection("화면과 움직임") {
                         SettingsRow(icon: .iconMoon, title: "우주의 색") { onSky() }
                         SettingsToggleRow(icon: .iconStar, title: "애니메이션 줄이기", isOn: $model.settings.reduceAnimations)
-                        // TODO: Haptics are not used anywhere yet.
-                        SettingsToggleRow(icon: .iconVibrate, title: "진동", isOn: $model.settings.haptics)
                     }
 
                     SettingsSection("알림", note: model.settings.starReminder
