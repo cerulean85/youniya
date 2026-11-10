@@ -10,7 +10,7 @@ import styles from "./coins.module.css";
 const CLIENT_KEY = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
 
 // Figma W-18 충전하기: pick a package, agree to the payment and refund policy, then Toss's payment window.
-export function Recharge({ packages, available, site }: { packages: CoinsInfo["packages"]; available: boolean; site: string }) {
+export function Recharge({ packages, available, site , from }: { packages: CoinsInfo["packages"]; available: boolean; site: string ; from?: string | null }) {
   const [picked, setPicked] = useState(packages.at(-1)?.product_id ?? "");
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,8 +30,8 @@ export function Recharge({ packages, available, site }: { packages: CoinsInfo["p
         amount: { currency: "KRW", value: r.order.amount },
         orderId: r.order.order_id,
         orderName: r.order.order_name,
-        successUrl: `${window.location.origin}/coins/success`,
-        failUrl: `${window.location.origin}/coins/fail`,
+        successUrl: `${window.location.origin}/coins/success${from ? `?from=${encodeURIComponent(from)}` : ""}`,
+        failUrl: `${window.location.origin}/coins/fail${from ? `?from=${encodeURIComponent(from)}` : ""}`,
       });
     } catch (e) {
       // Closing the window is a choice, not an error.

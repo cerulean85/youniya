@@ -36,5 +36,6 @@ export async function createStar(_: CreateState, form: FormData): Promise<Create
   }
   const { star, crisis } = result;
   refresh(); // coins and counts in the sidebar
-  redirect(crisis ? `/stars/${star.id}?care=1` : mode === "float" ? `/stars/${star.id}?new=1` : `/stars/${star.id}?kept=1`);
+  // W-85: the prism couldn't read it; the writing is kept and nothing was charged.
+  redirect(crisis ? `/stars/${star.id}?care=1` : mode === "float" && star.analysis_failed ? `/stars/${star.id}?failed=1` : mode === "float" ? `/stars/${star.id}?new=1` : `/stars/${star.id}?kept=1`);
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { CoinsLink } from "@/components/CoinsLink";
 import Link from "next/link";
 import { useActionState, useRef } from "react";
 import { useFormStatus } from "react-dom";
@@ -25,7 +26,7 @@ export function FloatButton({ id, free, coins }: { id: string; free: boolean; co
           <p className="body-m muted">별빛을 받으면 이 글은 잠겨서 고칠 수 없어요. 고치고 싶은 곳이 있으면 먼저 고친 뒤 받아 주세요.</p>
           {state?.error && (
             <p className="body-s" role="alert">
-              {state.error} {state.code === "insufficient_coins" && <Link href="/coins" className={styles.link}>코인 충전하기</Link>}
+              {state.error} {state.code === "insufficient_coins" && <CoinsLink className={styles.link}>코인 충전하기</CoinsLink>}
             </p>
           )}
           <Pending label={free ? "별빛 받기 · 오늘 무료 1번" : "별빛 받기 · 5코인"} busy="별빛 프리즘이 비추는 중…" />
@@ -34,6 +35,18 @@ export function FloatButton({ id, free, coins }: { id: string; free: boolean; co
         </form>
       </dialog>
     </>
+  );
+}
+
+// W-85: '다시 시도' reads it again straight away (nothing was charged the first time).
+export function RetryFloat({ id }: { id: string }) {
+  const [state, action] = useActionState(floatStar.bind(null, id), null);
+  return (
+    <form action={action} style={{ display: "contents" }}>
+      {state?.error && <p className="body-s" role="alert">{state.error} {state.code === "insufficient_coins" && <CoinsLink className={styles.link}>코인 충전하기</CoinsLink>}</p>}
+      <Pending label="다시 시도" busy="별빛 프리즘이 비추는 중…" />
+      <PrismOverlay />
+    </form>
   );
 }
 
@@ -84,7 +97,7 @@ export function OpenTelescope({ id, label, cost, body }: { id: string; label: st
           <p className="body-m muted">망원경 빛이 이 별의 문장을 하나씩 비추며 숨은 마음의 결을 보여줘요. {cost}</p>
           {state?.error && (
             <p className="body-s" role="alert">
-              {state.error} {state.code === "insufficient_coins" && <Link href="/coins" className={styles.link}>코인 충전하기</Link>}
+              {state.error} {state.code === "insufficient_coins" && <CoinsLink className={styles.link}>코인 충전하기</CoinsLink>}
             </p>
           )}
           <Pending label="들여다보기" busy="들여다보는 중…" />

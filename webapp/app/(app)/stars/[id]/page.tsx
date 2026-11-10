@@ -3,7 +3,7 @@ import { StarSkeleton } from "@/components/Skeleton";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ChevronLeft, Heart, StarFilled, Telescope as TelescopeIcon } from "@/components/icons";
+import { ChevronLeft, Heart, StarFilled, Telescope as TelescopeIcon, Warn } from "@/components/icons";
 import { StarCard } from "@/components/StarCard";
 import { StarlightReading } from "@/components/StarlightReading";
 import { api, ApiError } from "@/lib/api";
@@ -14,7 +14,8 @@ import { ShareStar } from "./ShareStar";
 import { CrisisCare } from "@/components/CrisisCare";
 import { SaveStarImage } from "@/components/SaveStarImage";
 import { StarBirth } from "@/components/StarBirth";
-import { DeleteButton, ExportButton, FloatButton, LinkedChip, Toast } from "./StarActions";
+import { StatusScreen } from "@/components/Status";
+import { DeleteButton, ExportButton, FloatButton, LinkedChip, RetryFloat, Toast } from "./StarActions";
 import { ReceivedLines } from "./ReceivedLines";
 import { Telescope } from "./Telescope";
 import styles from "./star.module.css";
@@ -50,6 +51,13 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
   const justFloated = sp.new === "1" && floated;
   const care = sp.care === "1";
   const mood = moodOf(star.mood);
+  // W-85 별을 읽지 못했어요: right after a reading that failed.
+  if (sp.failed === "1" && star.analysis_failed && !floated) return (
+    <StatusScreen icon={<Warn size={22} />} title="별을 읽지 못했어요" body="글은 그대로 보관되고, 코인도 차감되지 않았어요.">
+      <RetryFloat id={star.id} />
+      <Link href={`/stars/${star.id}?kept=1`} className="btn btn-secondary btn-block">별빛 없이 띄우기</Link>
+    </StatusScreen>
+  );
   // W-102: the birth plays once over the new star, lit or not.
   if (justFloated) return <><StarBirth id={star.id} /><Result star={star} /></>;
   return (

@@ -21,7 +21,7 @@ export async function floatStar(id: string, _prev: ActionState): Promise<ActionS
     throw e;
   }
   refresh();
-  redirect(r.crisis ? `/stars/${id}?care=1` : `/stars/${id}?new=1`);
+  redirect(r.crisis ? `/stars/${id}?care=1` : r.star?.analysis_failed ? `/stars/${id}?failed=1` : `/stars/${id}?new=1`);
 }
 
 /** 15 영구 삭제: the writing, its analysis and its plaza share go. */

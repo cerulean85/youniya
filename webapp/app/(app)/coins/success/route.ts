@@ -25,5 +25,7 @@ export async function GET(request: NextRequest) {
     return back(`/coins/fail?${new URLSearchParams({ code: err.code ?? "CONFIRM_FAILED", message: err.message ?? "결제를 확인하지 못했어요." })}`);
   }
   const r = await res.json().catch(() => ({}));
-  return back(`/coins?charged=${encodeURIComponent(String(r.granted ?? ""))}`);
+  // W-84 충전이 끝났어요, with the way back to whatever needed the coins.
+  const from = q.get("from");
+  return back(`/coins/done?${new URLSearchParams({ added: String(r.granted ?? ""), ...(from && { from }) })}`);
 }

@@ -5,7 +5,7 @@ import { NextResponse, type NextRequest } from "next/server";
 const ACCESS = "yn_at";
 const REFRESH = "yn_rt";
 const API_URL = process.env.YOUNIYA_API_URL ?? "https://youniya-api.dycdyp.com";
-const PUBLIC = ["/login", "/auth/", "/maintenance"];
+const PUBLIC = ["/login", "/auth/", "/maintenance", "/deleted", "/expired"];
 
 function expiresSoon(jwt: string | undefined) {
   if (!jwt) return true;
@@ -17,8 +17,9 @@ function expiresSoon(jwt: string | undefined) {
   }
 }
 
-function toLogin(request: NextRequest) {
-  const url = new URL("/login", request.url);
+/** Signed out: to /login. A session that could no longer refresh: W-87 다시 로그인해 주세요 first. */
+function toLogin(request: NextRequest, expired = false) {
+  const url = new URL(expired ? "/expired" : "/login", request.url);
   const next = request.nextUrl.pathname + request.nextUrl.search;
   if (next !== "/") url.searchParams.set("next", next);
   const res = NextResponse.redirect(url);
@@ -33,7 +34,9 @@ export async function proxy(request: NextRequest) {
 
   const refresh = request.cookies.get(REFRESH)?.value;
   if (!refresh) return toLogin(request);
-  if (!expiresSoon(request.cookies.get(ACCESS)?.value)) return NextResponse.next();
+  // The screen being shown, for W-88's '다시 시도' after a 429 (lib/api).
+  request.headers.set("x-yn-path", request.nextUrl.pathname + request.nextUrl.search);
+  if (!expiresSoon(request.cookies.get(ACCESS)?.value)) return NextResponse.next({ request: { headers: request.headers } });
 
   const r = await fetch(`${API_URL}/v1/auth/refresh`, {
     method: "POST",
@@ -41,7 +44,7 @@ export async function proxy(request: NextRequest) {
     body: JSON.stringify({ refresh_token: refresh }),
     cache: "no-store",
   }).catch(() => null);
-  if (!r?.ok) return toLogin(request);
+  if (!r?.ok) return toLogin(request, Boolean(r && r.status === 401));
   const t = (await r.json()) as { access_token: string; refresh_token: string };
 
   request.cookies.set(ACCESS, t.access_token);

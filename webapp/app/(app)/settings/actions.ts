@@ -40,7 +40,7 @@ export async function deleteAccount(form: FormData) {
   if (form.get("confirm") !== "삭제") return;
   await api("/v1/me", { method: "DELETE" });
   clearTokens(await cookies());
-  redirect("/login?deleted=1");
+  redirect("/deleted"); // W-83
 }
 
 /** 우주의 색: violet and ocean for everyone; the rest answer 403 member_only for non-members. */

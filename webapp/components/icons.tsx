@@ -40,3 +40,4 @@ export const Shield = (p: IconProps) => <svg {...base(p)}><path d="M12 3.5 5 6v5
 export const User = (p: IconProps) => <svg {...base(p)}><circle cx="12" cy="8.5" r="3.5" /><path d="M5 20a7 7 0 0 1 14 0" /></svg>;
 export const Search = (p: IconProps) => <svg {...base(p)}><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4.2-4.2" /></svg>;
 export const WifiOff = (p: IconProps) => <svg {...base(p)}><path d="M3 3l18 18M8.5 16.5a5 5 0 0 1 7 0M5 13a10 10 0 0 1 5-2.7M14.5 10.4A10 10 0 0 1 19 13M2 9.5a15 15 0 0 1 4.5-2.8M11 5.6a15 15 0 0 1 11 3.9" /><circle cx="12" cy="20" r=".5" fill="currentColor" /></svg>;
+export const Warn = (p: IconProps) => <svg {...base(p)}><path d="M12 4 21 19.5H3L12 4Z" /><path d="M12 10v4.5M12 17h.01" /></svg>;

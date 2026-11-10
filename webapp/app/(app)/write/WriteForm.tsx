@@ -1,5 +1,6 @@
 "use client";
 
+import { CoinsLink } from "@/components/CoinsLink";
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
@@ -139,7 +140,7 @@ export function WriteForm({ draft, source, freeStarToday, coins }: { draft: Draf
         {state?.error && (
           <div className={styles.error} role="alert">
             {state.error}
-            {state.code === "insufficient_coins" && <Link href="/coins" className={styles.link}>코인 충전하기</Link>}
+            {state.code === "insufficient_coins" && <CoinsLink className={styles.link}>코인 충전하기</CoinsLink>}
           </div>
         )}
         <button type="button" className="btn btn-primary btn-block" disabled={length === 0} onClick={() => confirm.current?.showModal()}>새 별로 띄우기</button>
@@ -191,7 +192,7 @@ export function WriteForm({ draft, source, freeStarToday, coins }: { draft: Draf
         {state?.error && (
           <div className={styles.error} role="alert">
             {state.error}
-            {state.code === "insufficient_coins" && <Link href="/coins" className={styles.link}>코인 충전하기</Link>}
+            {state.code === "insufficient_coins" && <CoinsLink className={styles.link}>코인 충전하기</CoinsLink>}
           </div>
         )}
         <div className={`card ${styles.tips}`}>

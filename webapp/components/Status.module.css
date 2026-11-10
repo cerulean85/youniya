@@ -1,0 +1,9 @@
+.status { flex: 1; width: 100%; max-width: 720px; margin: 0 auto; min-height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; padding: 32px 16px; }
+.status[data-full] { min-height: 100vh; }
+.status p { margin: 0; white-space: pre-line; }
+.orb { position: relative; width: 120px; height: 120px; display: grid; place-items: center; color: var(--gold); margin-bottom: 12px; }
+.orb span { position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgb(var(--primary-rgb) / 0.3); }
+.orb i { position: absolute; inset: 22px; border-radius: 50%; border: 1px solid rgb(var(--primary-rgb) / 0.5); background: rgb(var(--primary-rgb) / 0.22); box-shadow: 0 0 32px rgb(var(--primary-rgb) / 0.45); }
+.orb b { position: absolute; width: 6px; height: 6px; border-radius: 50%; right: 18px; top: 10px; background: var(--gold); box-shadow: -96px 76px 0 -1px #22d3ee; }
+.orb svg { position: relative; }
+.actions { width: 100%; display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }

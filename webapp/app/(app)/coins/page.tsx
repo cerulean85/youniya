@@ -39,7 +39,7 @@ async function Coins({ searchParams }: Pick<PageProps<"/coins">, "searchParams">
         aside={<span className={styles.balance}><Coin size={18} />보유 <b>{info.coins.toLocaleString("ko-KR")} 코인</b></span>} />
       {charged != null && charged > 0 && <p className={styles.notice} role="status">{charged.toLocaleString("ko-KR")} 코인을 충전했어요.</p>}
       <div className={styles.body}>
-        <Recharge packages={packages} available={Boolean(toss?.available)} site={SITE_URL} />
+        <Recharge packages={packages} available={Boolean(toss?.available)} site={SITE_URL} from={typeof sp.from === "string" && sp.from.startsWith("/") && !sp.from.startsWith("//") ? sp.from : null} />
         <div className={styles.side}>
           <section className={`card ${styles.free}`} aria-labelledby="free-title">
             <h2 id="free-title" className="label-m">무료로 남은 횟수</h2>
