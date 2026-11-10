@@ -13,9 +13,11 @@ export const metadata: Metadata = { title: "별자리 이야기" };
 // Figma W-40 (390:10724, 기획서 16장 83): the month's key sentences in time order, separated by ✦, never changed.
 export default function StoryPage({ searchParams }: PageProps<"/constellation/story">) {
   return (
-    <Suspense fallback={<div className={`card ${styles.card}`} style={{ minHeight: 400, opacity: 0.5 }} aria-busy="true" />}>
-      <Story searchParams={searchParams} />
-    </Suspense>
+    <div className="page-column">
+      <Suspense fallback={<div className={`card ${styles.card}`} style={{ minHeight: 400, opacity: 0.5 }} aria-busy="true" />}>
+        <Story searchParams={searchParams} />
+      </Suspense>
+    </div>
   );
 }
 

@@ -11,11 +11,11 @@
 .chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; font: 500 12px/18px var(--sans); background: var(--raised); border: 1px solid var(--border); color: var(--text-2); }
 .chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--c, var(--primary)); }
 .chip[aria-current="true"] { color: var(--text); border-color: var(--c, var(--primary)); background: color-mix(in srgb, var(--c, var(--primary)) 16%, transparent); }
-.list { display: flex; flex-direction: column; gap: 24px; max-width: 760px; }
+.list { display: flex; flex-direction: column; gap: 24px; }
 .group { display: flex; flex-direction: column; gap: 12px; }
 .groupHead { display: flex; justify-content: space-between; align-items: center; }
 .more { align-self: center; }
-.empty { padding: 48px; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; max-width: 760px; }
+.empty { padding: 48px; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
 .calBody { display: flex; gap: 28px; align-items: flex-start; }
 .calendar { flex: 1; min-width: 0; padding: 16px 16px 20px; border-radius: 20px; }
 .calHead { display: flex; align-items: center; gap: 16px; padding: 4px 10px 12px; }

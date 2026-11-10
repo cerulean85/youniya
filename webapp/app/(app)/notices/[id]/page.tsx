@@ -12,12 +12,12 @@ export const metadata: Metadata = { title: "공지" };
 // Figma W-59 (Mobile 131 공지 상세): from GET /v1/notices, the published ones.
 export default function NoticePage({ params }: PageProps<"/notices/[id]">) {
   return (
-    <>
+    <div className="page-column" style={{ ["--column" as string]: "720px" }}>
       <Link href="/notifications" className={styles.back}><ChevronLeft size={16} />알림</Link>
       <Suspense fallback={<div className={styles.loading} aria-busy="true" />}>
         <Body params={params} />
       </Suspense>
-    </>
+    </div>
   );
 }
 

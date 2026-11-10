@@ -17,9 +17,11 @@ const SUB = "운영자 조치와 공지를 모아 둬요. 90일 동안 보관돼
 // Figma W-58 (Mobile 130 알림함): operator actions and notices, kept 90 days. A card opens its screen.
 export default function NotificationsPage({ searchParams }: PageProps<"/notifications">) {
   return (
-    <Suspense fallback={<><PageHeader title="알림" sub={SUB} /><div className={styles.loading} aria-busy="true" /></>}>
-      <List searchParams={searchParams} />
-    </Suspense>
+    <div className="page-column">
+      <Suspense fallback={<><PageHeader title="알림" sub={SUB} /><div className={styles.loading} aria-busy="true" /></>}>
+        <List searchParams={searchParams} />
+      </Suspense>
+    </div>
   );
 }
 
