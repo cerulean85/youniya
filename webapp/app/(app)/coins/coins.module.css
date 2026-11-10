@@ -31,3 +31,5 @@
 .delta[data-tone="plus"] { color: var(--gold); }
 .delta[data-tone="free"] { color: var(--calm); }
 @media (max-width: 1100px) { .body { grid-template-columns: 1fr; } }
+.historyLink { color: var(--primary-text); }
+.historyLink:hover { color: var(--text); }

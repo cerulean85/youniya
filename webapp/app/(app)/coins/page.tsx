@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
+import Link from "next/link";
 import { Suspense } from "react";
 import { Coin } from "@/components/icons";
 import { PageHeader } from "@/components/Page";
@@ -31,7 +32,9 @@ async function Coins({ searchParams }: Pick<PageProps<"/coins">, "searchParams">
   ]);
   const packages = toss?.items.map((p) => ({ product_id: p.id, coins: p.coins, price: p.price, bonus: p.bonus })) ?? info.packages;
   await connection();
-  const recent = lastDays(history.items, 30);
+  // 전체 보기: the API sends every entry; the page shows the last 30 days unless asked for all of them.
+  const all = sp.history === "all";
+  const recent = all ? history.items : lastDays(history.items, 30);
   const charged = typeof sp.charged === "string" ? Number(sp.charged) : null;
   return (
     <>
@@ -48,15 +51,17 @@ async function Coins({ searchParams }: Pick<PageProps<"/coins">, "searchParams">
             </div>
           </section>
           <section className={`card ${styles.history}`} aria-labelledby="history-title">
-            <div className={styles.historyHead}><h2 id="history-title" className="label-m">사용 내역</h2><span className="caption faint">최근 30일</span></div>
-            {recent.length === 0 ? <p className="body-s muted">최근 30일 동안 코인을 쓰거나 충전한 기록이 없어요.</p> : (
+            <div className={styles.historyHead}><h2 id="history-title" className="label-m">사용 내역</h2>{all ? <Link href="/coins" scroll={false} className={`caption ${styles.historyLink}`}>최근 30일만 보기</Link>
+              : history.items.length > recent.length ? <Link href="/coins?history=all" scroll={false} className={`caption ${styles.historyLink}`}>전체 보기</Link>
+              : <span className="caption faint">최근 30일</span>}</div>
+            {recent.length === 0 ? <p className="body-s muted">{all ? "아직 코인을 쓰거나 충전한 기록이 없어요." : "최근 30일 동안 코인을 쓰거나 충전한 기록이 없어요."}</p> : (
               <ul>
                 {recent.map((x) => {
                   const plus = x.delta > 0, free = x.delta === 0;
                   return (
                     <li key={x.id}>
                       <span className="caption faint">{day(x.created_at)}</span>
-                      <span className={styles.what}><span className="label-m">{x.title}</span>{x.source && <span className="caption faint">{x.source === "toss" ? "웹 결제" : x.source === "app_store" ? "App Store" : x.source}</span>}</span>
+                      <span className={styles.what}><span className="label-m">{x.title}</span>{(x.source === "toss" || x.source === "app_store") && <span className="caption faint">{x.source === "toss" ? "웹 결제" : "App Store"}</span>}</span>
                       <span className={styles.delta} data-tone={free ? "free" : plus ? "plus" : undefined}>{free ? "무료" : plus ? `+${x.delta.toLocaleString("ko-KR")}` : `−${(-x.delta).toLocaleString("ko-KR")}`}</span>
                     </li>
                   );
