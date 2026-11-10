@@ -130,3 +130,12 @@ h1, h2, h3, p { margin: 0; }
 
 /* 설정 › 애니메이션 줄이기 (iOS 87): the same as the OS setting, chosen in the account. */
 :root[data-motion="reduce"] *, :root[data-motion="reduce"] *::before, :root[data-motion="reduce"] *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+
+/* Figma W-91~W-101: the web's 480px dialogs (the app's sheets), with the grabber line on top. */
+dialog.sheet { width: calc(100% - 32px); max-width: 480px; padding: 28px 24px 24px; border-radius: 22px; color: var(--text); }
+dialog.sheet::before { content: ""; position: absolute; top: 10px; left: 50%; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: rgba(255, 255, 255, 0.18); }
+dialog.sheet::backdrop { background: rgba(11, 15, 25, 0.72); }
+dialog.sheet[open], dialog.sheet > form { display: flex; flex-direction: column; gap: 12px; }
+dialog.sheet h2 { margin: 0; }
+dialog.sheet p { margin: 0 0 4px; }
+.btn-danger { color: #fff; background: linear-gradient(180deg, #d0555b, #a5202a); border: 0; }

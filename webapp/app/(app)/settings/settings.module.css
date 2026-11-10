@@ -52,3 +52,5 @@
 .skyText { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .radio { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--text-3); flex: none; }
 .skyCard[aria-checked="true"] .radio { border: 0; background: var(--primary); box-shadow: inset 0 0 0 4px rgb(var(--primary-rgb) / 0.4); }
+.progress { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.progress i { display: block; height: 100%; background: var(--primary); transition: width 0.3s; }

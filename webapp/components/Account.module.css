@@ -1,6 +1,8 @@
 .box { display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 16px; background: var(--raised); border: 1px solid var(--border); }
 .row { display: flex; align-items: center; gap: 8px; }
-.who { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.who { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; color: var(--text); }
+.who > svg { flex: none; color: var(--text-2); }
+.whoText { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .coins { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--canvas); font: 500 13px/20px var(--sans); }
 .coins svg { color: var(--gold); }
 .logout { background: none; border: 0; padding: 0; cursor: pointer; font: 400 12px/18px var(--sans); color: var(--text-3); }

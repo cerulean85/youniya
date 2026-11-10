@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Search, Shield, Star, User, ChevronRight, Doc, Info, Lock, LogOut, Moon, Nebula, Phone, Trash, Upload, Close } from "@/components/icons";
+import { Search, Shield, Star, User, ChevronRight, Doc, Info, Lock, LogOut, Moon, Nebula, Phone, Trash, Close } from "@/components/icons";
 import { PageHeader } from "@/components/Page";
 import { api } from "@/lib/api";
 import { SITE_URL } from "@/lib/config";
 import { dateTime, fullDate } from "@/lib/format";
 import { SKIES, type Me, type MyShare } from "@/lib/types";
+import { LogoutButton } from "@/components/LogoutButton";
+import { ExportDialog } from "./ExportDialog";
 import { DangerZone, MarketingToggle, MotionToggle } from "./SettingsControls";
 import styles from "./settings.module.css";
 
@@ -30,10 +32,11 @@ export default function SettingsPage() {
 }
 
 async function Settings() {
-  const [me, shares, blocks] = await Promise.all([
+  const [me, shares, blocks, summary] = await Promise.all([
     api<MeFull>("/v1/me"),
     api<{ stars: MyShare[] }>("/v1/me/shares"),
     api<{ items: unknown[] }>("/v1/blocks"),
+    api<{ total: number }>("/v1/stars/summary"),
   ]);
   const marketing = me.marketing ?? { opt_in: Boolean((me as { marketing_opt_in?: boolean }).marketing_opt_in), consented_at: null, revoked_at: null };
   const sky = SKIES.find((s) => s.key === (me.settings?.sky ?? "violet")) ?? SKIES[0];
@@ -61,15 +64,14 @@ async function Settings() {
         <DangerZone part="unshare" shared={shares.stars.length} icon={<Lock size={18} />} />
       </Group>
       <Group title="데이터">
-        <a href="/settings/export" className={styles.row} download><Upload size={18} /><span>데이터 내보내기 · 텍스트</span><span className={styles.value}><ChevronRight size={16} /></span></a>
-        <a href="/settings/export?format=pdf" className={styles.row} download><Upload size={18} /><span>데이터 내보내기 · PDF</span><span className={styles.value}><ChevronRight size={16} /></span></a>
+        <ExportDialog stars={summary.total} />
         <DangerZone part="delete" shared={shares.stars.length} icon={<Trash size={18} />} />
       </Group>
       <Group title="도움">
         <a href="tel:109" className={styles.row}><Phone size={18} /><span>24시간 위기 상담</span><span className={styles.value}>109<ChevronRight size={16} /></span></a>
         <a href={`${SITE_URL}/terms`} className={styles.row} target="_blank" rel="noreferrer"><Doc size={18} /><span>약관 및 정책</span><span className={styles.value}><ChevronRight size={16} /></span></a>
         <a href="/contact" className={styles.row}><Info size={18} /><span>문의하기</span><span className={styles.value}><ChevronRight size={16} /></span></a>
-        <form action="/auth/logout" method="post"><button className={styles.row}><LogOut size={18} /><span>로그아웃</span><span className={styles.value}><ChevronRight size={16} /></span></button></form>
+        <LogoutButton className={styles.row}><LogOut size={18} /><span>로그아웃</span><span className={styles.value}><ChevronRight size={16} /></span></LogoutButton>
       </Group>
     </>
   );
