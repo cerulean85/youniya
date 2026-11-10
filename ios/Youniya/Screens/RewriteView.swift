@@ -131,7 +131,7 @@ struct RematchCompareView: View {
 
                 Spacer(minLength: 0)
 
-                Button("나의 성운 보기", action: onShowNebula)
+                Button("나의 별자리 보기", action: onShowNebula)
                     .buttonStyle(.primary)
             }
             .padding(.horizontal, Space.xl)

@@ -51,6 +51,8 @@ struct ZoomControls: View {
 struct NebulaStoryView: View {
     @Environment(AppModel.self) private var model
     var onBack: () -> Void
+    /// A sentence → its star (12), 2026-11-10.
+    var onOpenStar: (StarItem) -> Void = { _ in }
     /// 83 별자리 이야기 (16장): the month whose stars it weaves.
     var month: String = MonthConstellation.monthKey(.now)
 
@@ -142,16 +144,30 @@ struct NebulaStoryView: View {
                         .accessibilityHidden(true)
                         .frame(maxWidth: .infinity)
                 }
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("\(line.star.shortDateText) · \(line.star.title)")
-                        .textStyle(.caption)
-                        .foregroundStyle(Color.textTertiary)
-                    Text("“\(line.sentence)”")
-                        .textStyle(.bodyM)
-                        .foregroundStyle(Color.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
+                let star = model.stars.first { $0.id == line.star.id }
+                Button { if let star { onOpenStar(star) } } label: {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 2) {
+                            Text("\(line.star.shortDateText) · \(line.star.title)")
+                                .textStyle(.caption)
+                                .foregroundStyle(Color.textTertiary)
+                            if star != nil {
+                                Image(.iconChevronRight).renderingMode(.template).resizable()
+                                    .frame(width: 12, height: 12).foregroundStyle(Color.textTertiary)
+                            }
+                        }
+                        Text("“\(line.sentence)”")
+                            .textStyle(.bodyM)
+                            .foregroundStyle(Color.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(.rect)
                 }
+                .buttonStyle(.plain)
+                .disabled(star == nil)
                 .accessibilityElement(children: .combine)
+                .accessibilityHint(star != nil ? "이 별 보기" : "")
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

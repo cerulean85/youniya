@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - 89 / 90 Stars of my nebula
 
-/// 89 나의 성운의 별 (and 90, its empty state): stars filtered by kind.
+/// 89 나의 별 (and 90, its empty state): stars filtered by kind.
 struct NebulaStarsView: View {
     enum Kind: CaseIterable {
         case floated, deep, supernova
@@ -17,7 +17,7 @@ struct NebulaStarsView: View {
 
         var note: String {
             switch self {
-            case .floated: "지금 성운에 떠 있는 별이에요. 누르면 그날의 기록이 열려요."
+            case .floated: "지금 하늘에 떠 있는 별이에요. 누르면 그날의 기록이 열려요."
             case .deep: "마음을 깊이 들여다본 별이에요. 누르면 그날의 기록이 열려요."
             case .supernova: "별빛이 900을 넘어 크게 빛난 별이에요."
             }
@@ -60,7 +60,7 @@ struct NebulaStarsView: View {
     var body: some View {
         let stars = model.stars.filter(current.includes)
         VStack(spacing: 0) {
-            TopAppBar(title: "나의 성운의 별", onBack: onBack)
+            TopAppBar(title: "나의 별", onBack: onBack)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
@@ -95,10 +95,15 @@ struct NebulaStarsView: View {
                         .padding(.top, 96)
                         .accessibilityElement(children: .combine)
                     } else {
-                        LazyVStack(spacing: Space.md) {
-                            ForEach(stars) { star in
-                                Button { onOpenStar(star) } label: { StarRow(star: star) }
-                                    .buttonStyle(.plain)
+                        // A divider with the month between months (2026-11-10).
+                        LazyVStack(alignment: .leading, spacing: Space.md) {
+                            ForEach(Self.byMonth(stars), id: \.month) { group in
+                                MonthDivider(title: group.title)
+                                    .padding(.top, group.month == Self.byMonth(stars).first?.month ? 0 : Space.sm)
+                                ForEach(group.stars) { star in
+                                    Button { onOpenStar(star) } label: { StarRow(star: star) }
+                                        .buttonStyle(.plain)
+                                }
                             }
                         }
                     }
@@ -110,6 +115,40 @@ struct NebulaStarsView: View {
             .scrollIndicators(.hidden)
         }
         .background { StarField() }
+    }
+
+    /// Stars newest first, in runs by month: "2026년 11월".
+    static func byMonth(_ stars: [StarItem]) -> [(month: String, title: String, stars: [StarItem])] {
+        let sorted = stars.sorted { ($0.date ?? .distantPast) > ($1.date ?? .distantPast) }
+        var groups: [(month: String, title: String, stars: [StarItem])] = []
+        for star in sorted {
+            let key = star.date.map(MonthConstellation.monthKey) ?? "?"
+            if groups.last?.month == key {
+                groups[groups.count - 1].stars.append(star)
+            } else {
+                let parts = key.split(separator: "-")
+                let title = parts.count == 2 ? "\(parts[0])년 \(Int(parts[1]) ?? 0)월" : "날짜 없음"
+                groups.append((key, title, [star]))
+            }
+        }
+        return groups
+    }
+}
+
+/// "2026년 11월 ———": a month's start in a star list.
+struct MonthDivider: View {
+    var title: String
+
+    var body: some View {
+        HStack(spacing: Space.md) {
+            Text(title)
+                .textStyle(.labelS)
+                .foregroundStyle(Color.textTertiary)
+                .fixedSize()
+            Rectangle().fill(Color.borderDefault).frame(height: 1)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
     }
 }
 

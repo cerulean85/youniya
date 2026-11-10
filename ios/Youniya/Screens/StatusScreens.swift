@@ -148,7 +148,7 @@ struct AppNoticeView: View {
                        actions: [.init(title: "닫기", style: .ghost) { model.appNotice = nil }])
         case .accountDeleted:
             StatusView(icon: .iconMoon, title: "계정을 삭제했어요",
-                       message: "그동안 띄운 별과 성운이 모두 사라졌어요.\n언제든 다시 첫 별을 띄울 수 있어요.",
+                       message: "그동안 띄운 별과 별자리가 모두 사라졌어요.\n언제든 다시 첫 별을 띄울 수 있어요.",
                        actions: [.init(title: "처음 화면으로", style: .primary) { model.appNotice = nil }])
         case .rateLimited:
             // 120 / 120-1: with the server's retry_after, counts down in minutes (rounded up)

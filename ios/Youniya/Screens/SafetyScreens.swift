@@ -17,7 +17,7 @@ struct BlockedKeeper: Identifiable, Codable, Hashable {
         var label: String {
             switch self {
             case .star: "별"
-            case .nebula: "성운"
+            case .nebula: "별"
             case .line: "별빛 한 줄"
             }
         }
@@ -50,12 +50,12 @@ struct BlockedKeeper: Identifiable, Codable, Hashable {
 /// What the "···" menu acts on (75, 73, 78).
 enum PlazaReportTarget: Equatable {
     case star, nebula
-    var reportTitle: String { self == .star ? "이 별 신고하기" : "이 성운 신고하기" }
-    var sheetTitle: String { self == .star ? "이 별을 신고할까요?" : "이 성운을 신고할까요?" }
+    var reportTitle: String { self == .star ? "이 별 신고하기" : "이 별 신고하기" }
+    var sheetTitle: String { self == .star ? "이 별을 신고할까요?" : "이 별을 신고할까요?" }
     var sheetBody: String {
         self == .star
             ? "신고한 별은 운영팀이 살펴봐요. 누가 신고했는지는 알리지 않아요."
-            : "신고한 성운은 운영팀이 살펴봐요. 누가 신고했는지는 알리지 않아요."
+            : "신고한 별은 운영팀이 살펴봐요. 누가 신고했는지는 알리지 않아요."
     }
 }
 

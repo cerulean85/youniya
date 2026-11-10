@@ -337,7 +337,7 @@ struct MainView: View {
                 .edgeSwipeBack(onBack: pop)
                 .edgeSwipeBack(onBack: pop)
         case .constellationStory(let month):
-            NebulaStoryView(onBack: pop, month: month)
+            NebulaStoryView(onBack: pop, onOpenStar: openStar, month: month)
                 .edgeSwipeBack(onBack: pop)
         case .plazaStar(let name):
             if let p = plazaStar(named: name) {

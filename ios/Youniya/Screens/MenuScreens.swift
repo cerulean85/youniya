@@ -236,7 +236,7 @@ struct SettingsView: View {
         case .deleteAccount: // 91
             ActionSheetContent(
                 title: "계정을 영구 삭제할까요?",
-                message: "별과 성운, 은하수, 계정 정보가 모두 흔적 없이 사라지고 되돌릴 수 없어요. 먼저 내 데이터를 내보내 둘 수 있어요."
+                message: "별과 별자리, 은하수, 계정 정보가 모두 흔적 없이 사라지고 되돌릴 수 없어요. 먼저 내 데이터를 내보내 둘 수 있어요."
                     + (model.signInProvider == "apple"
                        ? "\n\nApple로 로그인한 계정은 본인 확인을 위해 Apple 로그인을 한 번 더 거쳐요. 삭제하면 Apple ID와의 연결도 끊어져요." : ""),
                 primary: ("영구 삭제", { close { model.deleteAccount() } }),
@@ -246,7 +246,7 @@ struct SettingsView: View {
             )
         case .withdrawShares: // 92
             ActionSheetContent(
-                title: "나눈 별과 성운을 모두 거둘까요?",
+                title: "나눈 별을 모두 거둘까요?",
                 message: withdrawMessage,
                 primary: ("모두 거두기", { close { model.withdrawAllShares() } }),
                 secondary: ("그대로 두기", { close() }),
@@ -255,7 +255,7 @@ struct SettingsView: View {
         case .export: // 93
             ActionSheetContent(
                 title: "어떤 형식으로 내보낼까요?",
-                message: "쓴 별과 성운 이야기를 모두 파일로 내려받아요. 파일은 내 기기에만 저장돼요.",
+                message: "쓴 별을 모두 파일로 내려받아요. 파일은 내 기기에만 저장돼요.",
                 primary: ("텍스트 파일로", { close { sheet = .exporting(.text) } }),
                 secondary: ("PDF로", { close { sheet = .exporting(.pdf) } }),
                 ghost: ("닫기", { close() })
