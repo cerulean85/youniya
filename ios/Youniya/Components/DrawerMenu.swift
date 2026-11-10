@@ -126,6 +126,18 @@ struct DrawerMenu: View {
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("YOUNIYA, 텍스트로 시각화한 우리 모두의 우주")
 
+            // 67-1 profile: the keeper's name and how they sign in → 설정's 계정.
+            if let provider = model.signInProviderName {
+                Button { onSelect("설정") } label: {
+                    row(Item(title: model.nickname ?? "별지기 이름을 정해 주세요",
+                             subtitle: provider == "초대 계정" ? "초대 계정으로 로그인 · 계정 보기"
+                                                             : "\(provider)로 로그인 · 계정 보기",
+                             icon: .iconUser))
+                }
+                .buttonStyle(.plain)
+                .padding(.top, Space.md)
+            }
+
             Rectangle()
                 .fill(Color.borderDefault)
                 .frame(height: 1)

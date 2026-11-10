@@ -551,6 +551,21 @@ final class AppModel {
     /// Live 08-3: month constellations by "YYYY-MM".
     /// Live: the server's account id (/v1/me), used as StoreKit's appAccountToken.
     var accountID: String?
+    /// How this account signs in (/v1/me `provider`): apple · google · invite.
+    var signInProvider: String? = UserDefaults.standard.string(forKey: "signInProvider") {
+        didSet { UserDefaults.standard.set(signInProvider, forKey: "signInProvider") }
+    }
+    /// 87 가입한 날 (/v1/me `joined_at`).
+    var joinedAt: Date?
+    /// 87 로그인 계정.
+    var signInProviderName: String? {
+        switch signInProvider {
+        case "apple": "Apple"
+        case "google": "Google"
+        case "invite": "초대 계정"
+        default: nil
+        }
+    }
     var tonightCount: Int?
     /// Of tonight's stars, how many are mine (`/v1/plaza/tonight` mine).
     var tonightMine: Int?
@@ -691,6 +706,8 @@ final class AppModel {
         do {
             let me: MeResponse = try await APIClient.shared.get("/v1/me")
             accountID = me.id
+            signInProvider = me.provider
+            joinedAt = me.joinedAt
             hasConsented = !me.needsConsent
             marketingOptIn = me.marketingOptIn
             coins = me.coins
@@ -890,6 +907,7 @@ final class AppModel {
             // The server keeps the journal; drop this device's copy.
             stars = []
             blockedKeepers = []
+            signInProvider = nil
             Task {
                 await PushRegistration.unregister()
                 await APIClient.shared.signOut()
@@ -924,7 +942,19 @@ final class AppModel {
         guard useLiveAPI else { clearLocalAccount(); return }
         Task { @MainActor in
             do {
-                try await APIClient.shared.delete("/v1/me")
+                // 5.1.1(v): an Apple account confirms with Apple once more, and the
+                // server revokes the Apple token with that code before deleting.
+                if signInProvider == "apple" {
+                    let code: String
+                    do {
+                        code = try await AppleSignIn().authorizationCode()
+                    } catch is AppleSignIn.Cancelled {
+                        return  // closed the Apple sheet: nothing is deleted
+                    }
+                    try await APIClient.shared.delete("/v1/me", body: DeleteAccountBody(appleAuthorizationCode: code))
+                } else {
+                    try await APIClient.shared.delete("/v1/me")
+                }
                 await APIClient.shared.forget()
                 clearLocalAccount()
             } catch {
@@ -951,6 +981,8 @@ final class AppModel {
         nicknameRenameRequired = false
         plazaRestrictedUntil = nil
         inbox = []
+        signInProvider = nil
+        joinedAt = nil
         isSignedIn = false
         appNotice = .accountDeleted
     }
@@ -1104,6 +1136,11 @@ private struct ConsentBody: Encodable {
     var marketing: Bool
 }
 
+/// DELETE /v1/me for an Apple account (the server revokes the Apple token).
+private struct DeleteAccountBody: Encodable {
+    var appleAuthorizationCode: String
+}
+
 private struct ConsentResult: Decodable {
     var needsConsent: Bool
     var marketingOptIn: Bool
@@ -1113,6 +1150,8 @@ private struct ConsentResult: Decodable {
 struct MeResponse: Decodable {
     var id: String
     var provider: String
+    /// Newer servers: when the account was made (UTC).
+    var joinedAt: Date?
     var needsConsent: Bool
     var marketingOptIn: Bool
     var coins: Int

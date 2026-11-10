@@ -57,6 +57,9 @@ enum DebugScreen {
         UserDefaults.standard.set(false, forKey: "useLiveAPI")
         model.useLiveAPI = false
         model.isSignedIn = s != "2" && s != "2-1"
+        // 87 · 91: a sample sign-in, `-debugProvider google|invite` for the others.
+        model.signInProvider = UserDefaults.standard.string(forKey: "debugProvider") ?? "apple"
+        model.joinedAt = ISO8601DateFormatter().date(from: "2026-10-01T16:30:00Z")
         model.hasConsented = s != "11"
         model.hasSeenPlazaIntro = s != "21"
         // 03 shows the empty sky alone; 03-1 opens the welcome over it.

@@ -52,6 +52,15 @@ struct CoinHistoryView: View {
 
 /// 87 Settings (설정): motion, sound, notifications, plaza, data, help.
 struct SettingsView: View {
+    /// 87 가입한 날: "2026년 10월 2일", the date in Korea.
+    static func joinedText(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "ko_KR")
+        f.timeZone = TimeZone(identifier: "Asia/Seoul")
+        f.dateFormat = "yyyy년 M월 d일"
+        return f.string(from: date)
+    }
+
     @Environment(AppModel.self) private var model
     @Environment(\.openURL) private var openURL
     var onBack: () -> Void
@@ -108,9 +117,22 @@ struct SettingsView: View {
 
                     // 87-6 계정: 별지기 이름 (15장)
                     SettingsSection("계정") {
-                        SettingsRow(icon: .iconStar, title: "별지기 이름", value: model.nickname ?? "정하기") { onOpen("별지기 이름") }
+                        // 87 로그인 계정 · 가입한 날: shown, not tappable.
+                        if let provider = model.signInProviderName {
+                            SettingsRowLayout(icon: .iconShield, title: "로그인 계정") {
+                                Text(provider).textStyle(.bodyS).foregroundStyle(Color.textSecondary)
+                            }
+                            .accessibilityElement(children: .combine)
+                        }
+                        if let joined = model.joinedAt {
+                            SettingsRowLayout(icon: .iconStar, title: "가입한 날") {
+                                Text(Self.joinedText(joined)).textStyle(.bodyS).foregroundStyle(Color.textSecondary)
+                            }
+                            .accessibilityElement(children: .combine)
+                        }
+                        SettingsRow(icon: .iconUser, title: "별지기 이름", value: model.nickname ?? "정하기") { onOpen("별지기 이름") }
                         if model.nickname != nil {
-                            SettingsRow(icon: .iconNebula, title: "내 별지기 페이지 미리 보기") { onOpen("내 별지기 페이지 미리 보기") }
+                            SettingsRow(icon: .iconSearch, title: "내 별지기 페이지 미리 보기") { onOpen("내 별지기 페이지 미리 보기") }
                         }
                     }
 
@@ -220,7 +242,9 @@ struct SettingsView: View {
         case .deleteAccount: // 91
             ActionSheetContent(
                 title: "계정을 영구 삭제할까요?",
-                message: "별과 성운, 은하수, 계정 정보가 모두 흔적 없이 사라지고 되돌릴 수 없어요. 먼저 내 데이터를 내보내 둘 수 있어요.",
+                message: "별과 성운, 은하수, 계정 정보가 모두 흔적 없이 사라지고 되돌릴 수 없어요. 먼저 내 데이터를 내보내 둘 수 있어요."
+                    + (model.signInProvider == "apple"
+                       ? "\n\nApple로 로그인한 계정은 본인 확인을 위해 Apple 로그인을 한 번 더 거쳐요. 삭제하면 Apple ID와의 연결도 끊어져요." : ""),
                 primary: ("영구 삭제", { close { model.deleteAccount() } }),
                 secondary: ("먼저 내보내기", { close { sheet = .export } }),
                 ghost: ("취소", { close() }),

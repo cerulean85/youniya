@@ -157,8 +157,8 @@ actor APIClient {
     }
 
     /// For 204 responses.
-    func delete(_ path: String) async throws {
-        _ = try await sendRaw("DELETE", path)
+    func delete(_ path: String, body: (any Encodable)? = nil) async throws {
+        _ = try await sendRaw("DELETE", path, body: body)
     }
 
     func send<T: Decodable>(_ method: String, _ path: String, query: [String: String?] = [:],
