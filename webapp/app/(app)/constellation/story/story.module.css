@@ -5,3 +5,4 @@
 .sep { align-self: center; color: var(--gold); font-size: 14px; }
 .entry { display: flex; flex-direction: column; gap: 4px; padding: 8px 0; }
 .entry:hover .journal { color: var(--text); }
+.chev { color: var(--text-3); margin-left: 2px; }

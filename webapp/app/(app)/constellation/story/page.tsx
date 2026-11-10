@@ -35,12 +35,20 @@ async function Story({ searchParams }: Pick<PageProps<"/constellation/story">, "
         {entries.length === 0 ? <p className="body-m muted">이 달에는 아직 띄운 별이 없어요.</p> : (
           <ol className={styles.entries}>
             {entries.map((e, i) => (
-              <li key={e.star_id}>
+              <li key={e.star_id ?? `gone-${i}`}>
                 {i > 0 && <span className={styles.sep} aria-hidden="true">✦</span>}
-                <Link href={`/stars/${e.star_id}`} className={styles.entry} prefetch={false}>
-                  <span className="caption faint">{dateTime(e.date)} · {e.title || "제목 없는 별"}</span>
-                  <span className="journal">{e.sentence}</span>
-                </Link>
+                {/* Mobile 83 (2026-11-10): an entry opens its star; one whose star is gone is plain text, no ›. */}
+                {e.star_id ? (
+                  <Link href={`/stars/${e.star_id}`} className={styles.entry} prefetch={false}>
+                    <span className="caption faint">{dateTime(e.date)} · {e.title || "제목 없는 별"} <span className={styles.chev} aria-hidden="true">›</span></span>
+                    <span className="journal">{e.sentence}</span>
+                  </Link>
+                ) : (
+                  <div className={styles.entry}>
+                    <span className="caption faint">{dateTime(e.date)} · {e.title || "제목 없는 별"}</span>
+                    <span className="journal">{e.sentence}</span>
+                  </div>
+                )}
               </li>
             ))}
           </ol>

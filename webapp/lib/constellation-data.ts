@@ -5,7 +5,7 @@ import type { Star, StarSummary } from "./types";
 
 export type MonthItem = { month: string; key: string; name: string; filled: number; total: number; complete: boolean };
 export type MonthView = { c: Constellation | null; count: number; lit: number; unlit: number; deep: number };
-export type StoryEntry = { star_id: string; date: string; title: string; sentence: string; has_starlight?: boolean };
+export type StoryEntry = { star_id: string | null; date: string; title: string; sentence: string; has_starlight?: boolean };
 
 /** A server without the constellation API answers with a bare 404 or 405; a closed month is a 404 `not_found`. */
 const missing = (e: unknown) => e instanceof ApiError && (e.status === 405 || (e.status === 404 && e.code !== "not_found"));
