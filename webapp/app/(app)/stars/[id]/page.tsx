@@ -69,7 +69,7 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
         <h1 className="display">{title}</h1>
         <div className={styles.meta}>
           <span className={styles.mood} style={{ ["--c" as string]: mood.color }}>{mood.label}</span>
-          {!floated && <span className="label-s muted">{star.analysis_failed ? "별빛을 읽지 못한 별 · 다시 받을 수 있어요" : star.starlight_cancelled ? "별빛 받기를 그만둔 별 · 다시 받을 수 있어요" : "별빛 없는 별"}</span>}
+          {!floated && <span className="label-s muted">{star.analysis_failed ? "별빛을 읽지 못한 별 · 다시 받을 수 있어요" : "별빛 없는 별"}</span>}
         </div>
         {care && <CrisisCare />}
         {care && (
@@ -93,7 +93,6 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
           <div className={styles.kept}>
             <p className="body-s muted">
               {star.analysis_failed ? "별빛을 읽지 못했어요. 코인은 차감되지 않았어요. 다시 받으면 별빛 프리즘이 한 번 더 읽어요."
-                : star.starlight_cancelled ? "별빛 받기를 그만둔 별이에요. 무료와 코인은 쓰지 않았어요. 언제든 다시 받을 수 있어요."
                 : "별빛 없이 띄운 별이에요. 별빛을 받으면 별빛 풀이를 볼 수 있어요."}
             </p>
             {!care && (star.body.trim().length >= MIN_FLOAT_LENGTH
