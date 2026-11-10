@@ -5,12 +5,13 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { ConstellationPick } from "@/components/ConstellationPick";
 import { ShareCard } from "@/components/ShareCard";
-import { ChevronRight, Nebula } from "@/components/icons";
-import { MONTH_NAMES, type CStar } from "@/lib/constellation";
+import { ChevronRight, Nebula, Upload } from "@/components/icons";
+import { MONTH_NAMES } from "@/lib/constellation";
 import { api } from "@/lib/api";
-import type { Mood, StarSummary } from "@/lib/types";
+import type { StarSummary } from "@/lib/types";
 import { getConstellation, listMonths } from "@/lib/constellation-data";
-import { kst, monthOnly, moodOf, shiftMonth } from "@/lib/format";
+import { kst, monthOnly, shiftMonth } from "@/lib/format";
+import { constellationCard } from "@/lib/constellation-card";
 import styles from "./constellation.module.css";
 
 export const metadata: Metadata = { title: "나의 별자리" };
@@ -36,7 +37,7 @@ async function Month({ searchParams }: Pick<PageProps<"/constellation">, "search
   const view = await getConstellation(month);
   // The constellation card draws each star's shape. Servers from 21866a6 send it with the constellation;
   // before that, the month's star list has it.
-  const old = view?.c?.slots.some((x) => x.star && !("shape" in x.star));
+  const old = view?.c?.complete && view.c.slots.some((x) => x.star && !("shape" in x.star));
   const list = old ? await api<{ items: StarSummary[] }>(`/v1/stars?month=${month}&limit=200`).catch(() => null) : null;
   const shapeOf = new Map((list?.items ?? []).map((s) => [s.id, s.shape ?? null]));
   const c = view?.c ?? null, count = view?.count ?? 0;
@@ -51,6 +52,9 @@ async function Month({ searchParams }: Pick<PageProps<"/constellation">, "search
       </header>
       <div className={styles.body}>
         <section className={`card ${styles.figureCard}`} aria-label="별자리">
+          {/* 기획서 23장: only a completed month can be shared as a card, from a small export icon. */}
+          {c?.complete && <ShareCard kind="constellation" data={constellationCard(c, shapeOf)} label={<Upload size={16} />}
+            ariaLabel="별자리 카드로 나누기" className={styles.shareIcon} />}
           <div className={styles.figure}>
             {c ? <ConstellationPick c={c} /> : <p className="body-m muted">{view ? `${monthOnly(month)} 별자리의 모양을 준비하고 있어요.` : "아직 열리지 않은 달이에요."}</p>}
           </div>
@@ -77,16 +81,6 @@ async function Month({ searchParams }: Pick<PageProps<"/constellation">, "search
             </div>
           )}
           <div className={styles.more}>
-            {/* 기획서 23장: 자세히 보기 (W-68·W-69) gave way to pressing a star here and to the constellation card. */}
-            {c && <ShareCard kind="constellation" label="별자리 카드 공유" className="btn btn-primary btn-block" data={{
-              heading: `${month.slice(0, 4)}년 ${Number(month.slice(5))}월의 별자리`, name: c.name, filled: c.filled, total: c.total, count,
-              lines: c.lines,
-              slots: c.slots.map((x) => ({ x: x.x, y: x.y, color: x.star ? moodOf(x.star.mood).color : null,
-                lit: !!x.star && x.star.has_starlight !== false && x.star.starlight != null, starlight: x.star?.starlight ?? null,
-                shape: x.star ? (x.star.shape !== undefined ? x.star.shape : shapeOf.get(x.star.id) ?? null) : null,
-                date: x.star ? `${kst(x.star.created_at).m}/${kst(x.star.created_at).d}` : null })),
-              moods: moodCounts([...c.slots.flatMap((x) => (x.star ? [x.star] : [])), ...c.extra]),
-            }} />}
             <span className="caption faint">더 둘러보기</span>
             <Link href={`/constellation/story?month=${month}`} className={styles.link}>
               <Nebula size={18} /><span><span className="label-m">별자리 이야기</span><span className="caption faint">그달 별들의 핵심 문장을 시간순으로 엮어요</span></span><ChevronRight size={16} />
@@ -105,13 +99,6 @@ async function Month({ searchParams }: Pick<PageProps<"/constellation">, "search
       </div>
     </>
   );
-}
-
-/** 평온 2 · 슬픔 2 · …: each star's colour (its first mood), only the moods present, most first. */
-function moodCounts(stars: CStar[]) {
-  const n = new Map<string, number>();
-  for (const s of stars) n.set(s.mood, (n.get(s.mood) ?? 0) + 1);
-  return [...n].sort((a, b) => b[1] - a[1]).map(([m, count]) => ({ label: moodOf(m as Mood).label, color: moodOf(m as Mood).color, count }));
 }
 
 function Stat({ label, value }: { label: string; value: number }) {

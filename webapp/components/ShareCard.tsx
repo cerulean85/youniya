@@ -5,9 +5,10 @@ import { drawConstellationCard, drawStarCard, type ConstellationCardData, type S
 import { FlashToast } from "./Offline";
 import styles from "./ShareCard.module.css";
 
+type Trigger = { label?: React.ReactNode; ariaLabel?: string; className?: string; onOpen?: () => void };
 type Props =
-  | { kind: "star"; data: StarCardData; title: string; label?: string; className?: string }
-  | { kind: "constellation"; data: ConstellationCardData; label?: string; className?: string };
+  | ({ kind: "star"; data: StarCardData; title: string } & Trigger)
+  | ({ kind: "constellation"; data: ConstellationCardData } & Trigger);
 
 // 기획서 22장 (Mobile 12-12·12-13) and 23장 (08-9) as a web modal: a preview, 별 제목 넣기 for a star (off at first),
 // 이미지로 저장 (PNG 1080×1920) and 다른 앱으로 공유 where the browser can share files. Made here, never uploaded.
@@ -53,7 +54,7 @@ export function ShareCard(props: Props) {
 
   return (
     <>
-      <button type="button" className={props.className ?? "btn btn-ghost"} onClick={() => { setOpen(true); dialog.current?.showModal(); }}>
+      <button type="button" className={props.className ?? "btn btn-ghost"} aria-label={props.ariaLabel} onClick={() => { props.onOpen?.(); setOpen(true); dialog.current?.showModal(); }}>
         {props.label ?? "카드 공유"}
       </button>
       <dialog ref={dialog} className={`card sheet ${styles.dialog}`} aria-labelledby="card-title" onClose={() => { setOpen(false); setCard(null); }}>

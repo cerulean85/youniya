@@ -8,11 +8,14 @@ import { StarCard } from "@/components/StarCard";
 import { StarlightReading } from "@/components/StarlightReading";
 import { api, ApiError } from "@/lib/api";
 import { kst, longDate, moodOf, dateTime, MIN_FLOAT_LENGTH } from "@/lib/format";
-import type { Me, MyShare, Star } from "@/lib/types";
+import type { Me, MyShare, Star, StarSummary } from "@/lib/types";
 import { LinkStar } from "./LinkStar";
 import { ShareStar } from "./ShareStar";
 import { CrisisCare } from "@/components/CrisisCare";
 import { ShareCard } from "@/components/ShareCard";
+import { CompleteSheet } from "@/components/CompleteSheet";
+import { getConstellation } from "@/lib/constellation-data";
+import { constellationCard } from "@/lib/constellation-card";
 import { MONTH_NAMES } from "@/lib/constellation";
 import { StarBirth } from "@/components/StarBirth";
 import { StatusScreen } from "@/components/Status";
@@ -64,8 +67,10 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
       <Link href={`/stars/${star.id}?kept=1`} className="btn btn-secondary btn-block">별빛 없이 띄우기</Link>
     </StatusScreen>
   );
+  // 기획서 23장: the star that fills its month's last slot is followed by the 완성 sheet (Mobile 08-10).
+  const completed = (justFloated || sp.kept === "1") ? await completedBy(star) : null;
   // W-102: the birth plays once over the new star, lit or not.
-  if (justFloated) return <><StarBirth id={star.id} shape={star.analysis?.shape} color={mood.color} /><Result star={star} /></>;
+  if (justFloated) return <><StarBirth id={star.id} shape={star.analysis?.shape} color={mood.color} /><Result star={star} />{completed}</>;
   return (
     <div className={styles.body}>
       <article className={styles.article}>
@@ -141,9 +146,22 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
         </div>
       </aside>
       {sp.stopped === "1" && <Toast title="별빛 받기를 그만뒀어요" sub="무료와 코인은 그대로예요" />}
-      {sp.kept === "1" && <><StarBirth id={star.id} unlit={mood.color} /><Toast title="별빛 없이 띄웠어요" /></>}
+      {sp.kept === "1" && <><StarBirth id={star.id} unlit={mood.color} /><Toast title="별빛 없이 띄웠어요" />{completed}</>}
     </div>
   );
+}
+
+/** The 완성 sheet when this star took the last slot of its month's constellation. */
+async function completedBy(star: Star) {
+  const month = kst(star.created_at).month;
+  const view = await getConstellation(month).catch(() => null);
+  const c = view?.c;
+  if (!c?.complete || c.slots.at(-1)?.star?.id !== star.id) return null;
+  // Servers before API 21866a6 send no shapes with the constellation; the month's list has them.
+  const old = c.slots.some((x) => x.star && !("shape" in x.star));
+  const list = old ? await api<{ items: StarSummary[] }>(`/v1/stars?month=${month}&limit=200`).catch(() => null) : null;
+  const shapeOf = new Map((list?.items ?? []).map((x) => [x.id, x.shape ?? null]));
+  return <CompleteSheet data={constellationCard(c, shapeOf)} monthLabel={`${Number(month.slice(5))}월`} />;
 }
 
 // Figma W-24 (별이 떠올랐어요) with the 별빛 풀이 open. Sections come in 0.2 s apart, rising over 0.5 s, then

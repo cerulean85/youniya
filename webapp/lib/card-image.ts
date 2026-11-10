@@ -12,8 +12,6 @@ export type ConstellationCardData = {
   heading: string; name: string; filled: number; total: number; count: number;
   slots: { x: number; y: number; color: string | null; lit: boolean; starlight: number | null; shape: { points: number; sharpness: string } | null; date: string | null }[];
   lines: number[][];
-  /** The month's moods with how many stars carry each, most first. */
-  moods: { label: string; color: string; count: number }[];
 };
 
 const W = 1080, H = 1920, S = 3; // drawn on the 360×640 design, three times over
@@ -163,24 +161,10 @@ export async function drawConstellationCard(d: ConstellationCardData) {
   ctx.fillStyle = "#fff"; ctx.font = `400 ${30 * S}px ${serif}`;
   centered(ctx, `${d.name}자리`, 448 * S);
   ctx.fillStyle = "rgba(255,255,255,0.6)"; ctx.font = `400 ${13 * S}px ${sans}`;
-  centered(ctx, `${d.total}자리 중 ${d.filled}자리를 채웠어요 · 별 ${d.count}개`, 482 * S);
+  centered(ctx, d.filled >= d.total ? `${d.total}자리를 모두 채웠어요 · 별 ${d.count}개` : `${d.total}자리 중 ${d.filled}자리를 채웠어요 · 별 ${d.count}개`, 482 * S);
   const pw = 200 * S, px = (W - pw) / 2, py = 497 * S, ph = 4 * S;
   ctx.fillStyle = "rgba(255,255,255,0.14)"; ctx.beginPath(); ctx.roundRect(px, py, pw, ph, ph / 2); ctx.fill();
   ctx.fillStyle = `rgb(${rgb("var(--gold)")})`; ctx.beginPath(); ctx.roundRect(px, py, pw * Math.min(1, d.filled / Math.max(1, d.total)), ph, ph / 2); ctx.fill();
-  // The month's moods, most first.
-  ctx.font = `500 ${11 * S}px ${sans}`;
-  const chips = d.moods.map((m) => ({ ...m, text: `${m.label} ${m.count}`, w: ctx.measureText(`${m.label} ${m.count}`).width + 34 * S }));
-  const gap = 6 * S, total = chips.reduce((n, m) => n + m.w, 0) + gap * Math.max(0, chips.length - 1);
-  let cx = (W - total) / 2;
-  const cy = 516 * S, ch = 28 * S;
-  for (const m of chips) {
-    const col = rgb(m.color);
-    ctx.fillStyle = `rgba(${col}, 0.16)`; ctx.strokeStyle = `rgba(${col}, 0.7)`; ctx.lineWidth = S;
-    ctx.beginPath(); ctx.roundRect(cx, cy, m.w, ch, ch / 2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = `rgb(${col})`; ctx.beginPath(); ctx.arc(cx + 13 * S, cy + ch / 2, 3.5 * S, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#fff"; ctx.fillText(m.text, cx + 22 * S, cy + 18.5 * S);
-    cx += m.w + gap;
-  }
   footer(ctx, serif, sans);
   return blob(c);
 }
