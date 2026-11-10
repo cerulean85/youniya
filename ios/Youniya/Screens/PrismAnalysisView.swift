@@ -4,9 +4,18 @@ import SwiftUI
 /// dashed rings turning, a violet four-point star) and three stage chips
 /// (별의 깊이 → 빛의 선명함 → 마음의 무게), each checked in turn. Plays once and
 /// calls `onFinish`; `.reading` (live) keeps turning until the server answers.
+///
+/// 06-1 (552:14467): live, after 8 s the copy says it is taking a while and
+/// 「그만두기」 appears (when `onStop` is set).
 struct PrismAnalysisView: View {
     var analysis: StarAnalysis
     var onFinish: () -> Void
+    /// 06-1 그만두기: shown while reading, after `slowAfter` seconds.
+    var onStop: (() -> Void)? = nil
+    /// Set while the stop is on its way, so it is pressed once.
+    var stopping = false
+
+    static let slowAfter: Double = 8
 
     @Environment(\.motionReduced) private var reduceMotion
     @State private var start = Date.now
@@ -18,7 +27,7 @@ struct PrismAnalysisView: View {
     var body: some View {
         TimelineView(.animation(paused: reduceMotion)) { context in
             let t = reduceMotion ? 0 : context.date.timeIntervalSince(start)
-            content(t: t)
+            content(t: t, slow: slow)
         }
         .padding(.horizontal, Space.xl)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -30,16 +39,23 @@ struct PrismAnalysisView: View {
         }
         .task {
             start = .now
-            guard analysis != .reading else { return }
+            guard analysis != .reading else {
+                // 06-1: the slow copy and 그만두기 (the clock keeps running with reduced motion too).
+                try? await Task.sleep(for: .seconds(DebugScreen.is("6-1") ? 0 : Self.slowAfter))
+                guard !Task.isCancelled, onStop != nil else { return }
+                withAnimation(.easeInOut(duration: 0.4)) { slow = true }
+                UIAccessibility.post(notification: .announcement, argument: "조금 오래 걸리고 있어요")
+                return
+            }
             try? await Task.sleep(for: .seconds(reduceMotion ? 1.5 : Self.duration))
             guard !Task.isCancelled else { return }
             onFinish()
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("별빛 프리즘이 마음의 결을 비추고 있어요")
     }
 
-    private func content(t: Double) -> some View {
+    @State private var slow = false
+
+    private func content(t: Double, slow: Bool) -> some View {
         // Which stage is being read: one every 1.3 s (live: keeps cycling).
         let step = analysis == .reading ? Int(t / 1.3) % 3 : min(2, Int(t / 1.3))
         return VStack(spacing: Space.xl) {
@@ -48,20 +64,32 @@ struct PrismAnalysisView: View {
                 .accessibilityHidden(true)
 
             VStack(spacing: Space.md) {
-                Text("별빛 프리즘이 마음의 결을 비추고 있어요")
+                Text(slow ? "조금 오래 걸리고 있어요" : "별빛 프리즘이 마음의 결을 비추고 있어요")
                     .textStyle(.h3)
                     .foregroundStyle(Color.textPrimary)
-                Text("별의 깊이 · 빛의 선명함 · 마음의 무게를\n부드럽게 살펴보는 중이에요.")
+                    .contentTransition(.opacity)
+                Text(slow ? "기다리지 않아도 괜찮아요. 그만두면 별빛 없이\n띄워 두고, 오늘 무료와 코인은 쓰지 않아요."
+                          : "별의 깊이 · 빛의 선명함 · 마음의 무게를\n부드럽게 살펴보는 중이에요.")
                     .textStyle(.bodyM)
                     .foregroundStyle(Color.textSecondary)
+                    .contentTransition(.opacity)
             }
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
+            .accessibilityElement(children: .combine)
 
             HStack(spacing: Space.sm) {
                 ForEach(Self.stages.indices, id: \.self) { i in
                     stageChip(Self.stages[i], done: i < step, current: i == step)
                 }
+            }
+            .accessibilityHidden(true)
+
+            if slow, let onStop {
+                Button("그만두기", action: onStop)
+                    .buttonStyle(.ghost)
+                    .disabled(stopping)
+                    .transition(.opacity)
             }
         }
     }

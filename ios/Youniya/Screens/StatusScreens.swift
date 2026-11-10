@@ -174,13 +174,13 @@ struct AppNoticeView: View {
 /// 122 별을 찾을 수 없어요: deleted, or tidied
 /// away on another device.
 struct NotFoundView: View {
-    /// 122 "밤하늘로 돌아가기"
+    /// 122 "오늘로 돌아가기"
     var onBack: () -> Void
 
     var body: some View {
         StatusView(icon: .iconStar, title: "별을 찾을 수 없어요",
                    message: "이미 지웠거나 다른 기기에서 정리한 별이에요.",
-                   actions: [.init(title: "밤하늘로 돌아가기", style: .primary, run: onBack)])
+                   actions: [.init(title: "오늘로 돌아가기", style: .primary, run: onBack)])
     }
 }
 

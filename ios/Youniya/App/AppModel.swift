@@ -53,6 +53,9 @@ struct StarAnalysis: Hashable, Codable {
     var rewriteQuestion: String? = nil
     /// 17.6: how it was read, e.g. "별빛 프리즘 v1 · 2026년 11월 방식으로 읽었어요".
     var prismVersion: String? = nil
+    /// 20장 별 모양: points and sharpness from the server. Nil for older stars
+    /// and older servers; the birth then ends on a plain light.
+    var shape: StarShapeSpec? = nil
 
     var isDeep: Bool { depth >= 0.7 }
     /// 17.3: the three scores that add up to the starlight (깊이 0–400,
@@ -98,8 +101,16 @@ struct StarAnalysis: Hashable, Codable {
             weightReason: sampleReasons.weight,
             interpretation: sampleReasons.interpretation,
             rewriteQuestion: "느린 하루 속에서 쉬고 싶었던 마음은 지금 어떤 모습인가요?",
-            prismVersion: "별빛 프리즘 v1"
+            prismVersion: "별빛 프리즘 v1",
+            shape: mockShape(depth: 0.3 + 0.6 * max(length, unit(2)), clarity: 0.3 + 0.6 * unit(3))
         )
+    }
+
+    /// Mock only, mirroring Figma 61-1: deeper → more points (4–7); clearer →
+    /// sharper (under 0.4 soft, 0.7 and up sharp). Live, the server decides.
+    static func mockShape(depth: Double, clarity: Double) -> StarShapeSpec {
+        StarShapeSpec(points: 4 + min(3, Int(depth * 4)),
+                      sharpness: clarity < 0.4 ? .soft : clarity < 0.7 ? .normal : .sharp)
     }
 
     /// Figma 07-1 / 12-5 sample 별빛 풀이 (mock).
@@ -289,7 +300,9 @@ struct StarItem: Identifiable, Hashable, Codable {
                                         clarityReason: StarAnalysis.sampleReasons.clarity,
                                         weightReason: StarAnalysis.sampleReasons.weight,
                                         interpretation: StarAnalysis.sampleReasons.interpretation,
-                                        prismVersion: "별빛 프리즘 v1")),
+                                        prismVersion: "별빛 프리즘 v1",
+                                        // Figma 61: 평온 · 깊이 높음 · 선명함 보통.
+                                        shape: StarShapeSpec(points: 6, sharpness: .normal))),
         StarItem(title: "말하지 못한 이야기", dateText: "11월 2일 · 23:10", state: .kept,
                  body: Self.keptSampleBody),
         StarItem(title: "비 오는 날의 안도", dateText: "11월 1일 · 22:04", state: .floated(starlight: 742)),
@@ -1041,6 +1054,10 @@ final class AppModel {
     var deepCount: Int { stars.filter { $0.analysis?.isDeep == true }.count }
     var supernovaCount: Int { stars.filter { $0.analysis?.isSupernova == true }.count }
     /// 104/105: a star can be floated (analyzed) from 50 characters; keeping has no minimum.
+    /// 별빛 받기 requests wait longer than the server (AI 45 s, 55 s in all).
+    /// Past this, or when the connection drops, the app sends 그만두기 so
+    /// nothing is used (the server can't tell the app went away).
+    static let starlightTimeout: TimeInterval = 60
     static let minFloatLength = 50
     func saveDraft(_ d: StarDraft) {
         if d != draft { syncDraft(d) }

@@ -1,13 +1,13 @@
 import SwiftUI
 
-/// 04 Home: today's prompt, this month's constellation card, and recent stars.
+/// 04 오늘: today's prompt, recent stars, and a line for this month's constellation.
 struct HomeView: View {
     @Environment(AppModel.self) private var model
     var onCompose: () -> Void
     var onOpenStar: (StarItem) -> Void = { _ in }
     /// "전체 보기 ›" → the records tab
     var onSeeAll: () -> Void = {}
-    /// 04 이번 달 별자리 카드 → the 별자리 tab
+    /// 이번 달 별자리 한 줄 → the 별자리 tab
     var onConstellation: () -> Void = {}
     /// 04-1 → 87-8
     var onRename: () -> Void = {}
@@ -26,8 +26,6 @@ struct HomeView: View {
 
                 Button("오늘의 별 만들기", action: onCompose)
                     .buttonStyle(.primary)
-
-                MonthConstellationCard(onOpen: onConstellation)
 
                 HStack {
                     Text("최근 별")
@@ -53,6 +51,9 @@ struct HomeView: View {
                             .buttonStyle(.plain)
                     }
                 }
+
+                // 554:14661: one line at the very end → the 별자리 tab
+                MonthConstellationLink(onOpen: onConstellation)
             }
             .padding(.horizontal, Space.xl)
             .padding(.vertical, Space.lg)

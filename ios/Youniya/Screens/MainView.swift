@@ -444,7 +444,7 @@ struct MainView: View {
         case "115", "116", "117", "49": tab = .records
         case "118", "119": recordsFilter = .kept; tab = .records
         case "67-1": drawerOpen = true
-        case "5", "6", "7", "7-1", "13", "35", "36", "37", "61", "62", "34":
+        case "5", "6", "6-1", "7", "7-1", "13", "35", "36", "37", "61", "62", "63", "64", "34":
             if screen == "34" { model.saveDraft(StarDraft(mood: .calm, title: "쓰던 글", body: "오늘은 마음이 조금 느리게 흘렀어요.")) }
             push(.compose())
         case "104":
@@ -640,7 +640,7 @@ struct SkyHeader: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.xs) {
-            Text("나의 밤하늘")
+            Text("오늘")
                 .textStyle(.h1)
                 .foregroundStyle(Color.textPrimary)
             Text(subtitle)

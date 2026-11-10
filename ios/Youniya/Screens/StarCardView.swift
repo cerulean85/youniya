@@ -99,6 +99,20 @@ struct ComposeFlowView: View {
     /// Live: waiting for the server to save (and analyse) the star.
     @State private var sending = false
 
+    /// 06-1 그만두기: the request being read, the star when it is known (12 별빛
+    /// 받기 on a kept star), and whether the stop went through.
+    @State private var readingTask: Task<Void, Never>?
+    @State private var readingStarID: StarItem.ID?
+    /// Names this 별빛 받기 for `POST /v1/starlight/attempts/{id}/cancel`.
+    @State private var attemptID: String?
+    @State private var stopping = false
+    @State private var stopped = false
+    /// The stopped star's page is open (06-2).
+    @State private var stopShown = false
+    /// 06-1: set the moment 그만두기 is pressed; true once the server stopped it.
+    /// The reading's own answer waits on it, so a late success can't show 61.
+    @State private var stopTask: Task<Bool, Never>?
+
     @State private var toast: ToastCardMessage?
 
     @State private var step: Step = .writing
@@ -154,7 +168,7 @@ struct ComposeFlowView: View {
                 }
                 .transition(.opacity)
             case .birth(let star):
-                StarBirthView(unlitColor: star.isFloated ? nil : star.mood.color) {
+                StarBirthView(shape: star.analysis?.shape, color: star.mood.color, unlit: !star.isFloated) {
                     withAnimation(.easeInOut(duration: 0.6)) {
                         // 별빛 없이 띄운 별: its page (12-1), where starlight can come later.
                         if !star.isFloated {
@@ -183,7 +197,9 @@ struct ComposeFlowView: View {
                 }
                 .transition(.opacity)
             case .reading:
-                PrismAnalysisView(analysis: .reading) {}
+                PrismAnalysisView(analysis: .reading, onFinish: {},
+                                  onStop: model.useLiveAPI || DebugScreen.is("6-1") ? stopReading : nil,
+                                  stopping: stopping)
                     .transition(.opacity)
             case .sendFailed(let draft, let floated):
                 StatusView(icon: .iconWifiOff, title: "연결이 잠시 끊겼어요",
@@ -221,13 +237,14 @@ struct ComposeFlowView: View {
         .onAppear {
             guard let star = DebugScreen.floatedStar(model) else { return }
             if DebugScreen.is("6") { step = .analyzing(star) }
+            if DebugScreen.is("6-1") { step = .reading }
             if DebugScreen.is("7", "7-1") { step = .card(star) }
             if DebugScreen.is("13"), let kept = DebugScreen.keptStar(model) { step = .kept(kept) }
             if DebugScreen.is("16"), let previous = rewriteOf { step = .compare(previous: previous, current: star) }
             if DebugScreen.is("35") { step = .failed(star, .network) }
             if DebugScreen.is("36") { step = .failed(star, .analysis) }
             if DebugScreen.is("37") { step = .crisis(star, floated: true) }
-            if DebugScreen.is("61", "62") { step = .birth(star) }
+            if DebugScreen.is("61", "62", "63", "64") { step = .birth(star) }
         }
         #endif
         .toastCard($toast)
@@ -335,13 +352,26 @@ struct ComposeFlowView: View {
         let link = link ?? revising?.id
         sending = true
         // Floating waits on the model: show 06 instead of a spinner over the editor.
-        if floated { withAnimation(.easeInOut(duration: 0.5)) { step = .reading } }
-        Task { @MainActor in
+        let attempt = floated ? Self.newAttempt() : nil
+        if floated { beginReading(starID: nil, attempt: attempt) }
+        readingTask = Task { @MainActor in
             defer { sending = false }
+            var outcome: Result<(StarItem, crisis: Bool), Error>
             do {
                 // 05-2 sends rewrite_of; 14 별 잇기 · 새 별 쓰기 sends link_to.
-                let (star, crisis) = try await model.publishLive(draft, floated: floated, rewriteOf: link,
-                                                                 linkTo: rewriteOf.map { [$0.id] } ?? [])
+                outcome = .success(try await model.publishLive(draft, floated: floated, rewriteOf: link,
+                                                               linkTo: rewriteOf.map { [$0.id] } ?? [],
+                                                               attemptID: attempt))
+            } catch {
+                outcome = .failure(error)
+            }
+            // 06-1: 그만두기 was pressed; its answer decides, not this one.
+            if await stopDecided() {
+                await finishStopped(starID: (try? outcome.get())?.0.id.apiID ?? outcome.stopStarID)
+                return
+            }
+            do {
+                let (star, crisis) = try outcome.get()
                 onSaved()
                 // The server may have charged 5 coins and used today's free float.
                 if floated { Task { await model.loadCoins() } }
@@ -357,6 +387,8 @@ struct ComposeFlowView: View {
                     }
                 }
             } catch let e as APIError where e.code == "offline" {
+                // Timed out or cut off: the server can't tell, so stop it (nothing is used).
+                if let attempt { Task { _ = await model.stopStarlight(attemptID: attempt) } }
                 withAnimation(.easeInOut(duration: 0.5)) { step = .sendFailed(draft, floated: floated) }
             } catch let e as APIError where e.code == "unlit_daily_limit" {
                 if step == .reading { withAnimation { step = .writing } }
@@ -422,20 +454,35 @@ struct ComposeFlowView: View {
             if let s = model.floatKeptMock(kept.id) { advance(after: s, floated: true) }
             return
         }
-        withAnimation(.easeInOut(duration: 0.5)) { step = .reading }
-        Task { @MainActor in
+        let attempt = Self.newAttempt()
+        beginReading(starID: kept.id, attempt: attempt)
+        readingTask = Task { @MainActor in
+            var outcome: Result<StarItem, Error>
             do {
-                let s = try await model.floatAgain(kept.id)
+                outcome = .success(try await model.floatAgain(kept.id, attemptID: attempt))
+            } catch {
+                outcome = .failure(error)
+            }
+            if await stopDecided() {
+                await finishStopped(starID: kept.id.apiID)
+                return
+            }
+            do {
+                let s = try outcome.get()
                 Task { await model.loadCoins() }
                 withAnimation(.easeInOut(duration: 0.5)) {
                     // A crisis signal: the server keeps it unscored (37, then 13).
                     step = s.isFloated && s.analysis != nil ? .analyzing(s) : .crisis(s, floated: false)
                 }
+            } catch let e as APIError where e.code == "offline" {
+                Task { _ = await model.stopStarlight(attemptID: attempt) }
+                model.handle(e)
+                onClose()
             } catch let e as APIError where e.status == 402 {
                 await model.loadCoins()
                 shortageKeep = { onClose() }
                 showShortage = true
-            } catch let e as APIError where ["too_short", "already_floated"].contains(e.code) {
+            } catch let e as APIError where ["too_short", "already_floated", "already_lit"].contains(e.code) {
                 model.apiMessage = e.message
                 onClose()
             } catch {
@@ -443,6 +490,76 @@ struct ComposeFlowView: View {
                 onClose()
             }
         }
+    }
+
+    /// 06 while the server reads; 06-1 can stop it.
+    private func beginReading(starID: StarItem.ID?, attempt: String?) {
+        readingStarID = starID
+        attemptID = attempt
+        stopping = false
+        stopped = false
+        stopShown = false
+        stopTask = nil
+        withAnimation(.easeInOut(duration: 0.5)) { step = .reading }
+    }
+
+    /// A fresh attempt id for each 별빛 받기 (the server refuses one used twice).
+    private static func newAttempt() -> String { UUID().uuidString.lowercased() }
+
+    /// 06-1 그만두기 → 06-2: the server keeps the star without starlight and
+    /// gives back what it used; its page (12-1) opens with a toast. When the
+    /// stop got there first, the star comes with the request's 409.
+    private func stopReading() {
+        guard !stopping else { return }
+        stopping = true
+        #if DEBUG
+        if DebugScreen.is("6-1"), let star = DebugScreen.keptStar(model) {
+            stopped = true
+            showStopped(star)
+            return
+        }
+        #endif
+        guard let attemptID else { stopping = false; return }
+        stopTask = Task { @MainActor () -> Bool in
+            let r = await model.stopStarlight(attemptID: attemptID)
+            guard r.stopped else {
+                // e.g. cancel_too_late: the reading's own answer stands.
+                stopping = false
+                toast = ToastCardMessage(title: "그만두지 못했어요", detail: "조금만 더 기다려 주세요")
+                return false
+            }
+            stopped = true
+            Task { await model.loadCoins() }
+            if let star = r.star ?? readingStarID.flatMap({ id in model.stars.first { $0.id == id } }) {
+                showStopped(star)
+            }
+            // Otherwise the request's answer (409 starlight_cancelled) names the star.
+            return true
+        }
+    }
+
+    /// Whether 그만두기 went through; waits for its answer if it is on its way.
+    private func stopDecided() async -> Bool {
+        guard let stopTask else { return false }
+        return await stopTask.value
+    }
+
+    /// After a stop: the star kept without starlight (fetched fresh), or back
+    /// out when the request never saved one.
+    private func finishStopped(starID: String?) async {
+        guard !stopShown else { return }
+        if let starID, let kept = await model.starAfterStop(starID) {
+            showStopped(kept)
+        } else {
+            onClose()
+        }
+    }
+
+    private func showStopped(_ star: StarItem) {
+        guard !stopShown else { return }
+        stopShown = true
+        model.apiMessage = "별빛 받기를 그만뒀어요. 무료와 코인은 그대로예요."
+        onOpenStar(star)
     }
 
     private func advance(after star: StarItem, floated: Bool) {
@@ -509,5 +626,13 @@ struct ComposeFlowView: View {
 
     private var isAnalyzing: Bool {
         if case .analyzing = step { true } else { false }
+    }
+}
+
+private extension Result where Failure == Error {
+    /// 409 starlight_cancelled: the star the stopped request saved.
+    var stopStarID: String? {
+        if case .failure(let e) = self { return (e as? APIError)?.starID }
+        return nil
     }
 }

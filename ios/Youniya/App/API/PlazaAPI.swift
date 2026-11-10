@@ -2,8 +2,8 @@ import Foundation
 
 // MARK: - Payloads
 
-/// The plaza's star shape: {"points": 6, "sharpness": "sharp"}.
-private struct ShapeOut: Decodable {
+/// A star shape from the server: {"points": 6, "sharpness": "sharp"}.
+struct ShapeOut: Decodable {
     var points: Int
     var sharpness: String
     var spec: StarShapeSpec {

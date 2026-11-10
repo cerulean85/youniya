@@ -6,7 +6,7 @@ enum SkyTab: CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .sky: "밤하늘"
+        case .sky: "오늘"
         case .nebula: "별자리"
         case .plaza: "우주 광장"
         case .records: "기록"

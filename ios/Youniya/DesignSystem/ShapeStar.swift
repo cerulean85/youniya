@@ -1,9 +1,10 @@
 import SwiftUI
 
-/// The shape a star takes from its writing (Figma `Star Shape`, 76/77):
-/// points and sharpness, plus how it is drawn there.
-struct StarShapeSpec: Hashable {
-    enum Sharpness: Int, CaseIterable {
+/// The shape a star takes from its writing (Figma `Star Shape`, 76/77, rule 61-1):
+/// points and sharpness, plus how it is drawn there. The server decides it
+/// with the starlight; the app draws what it gets.
+struct StarShapeSpec: Hashable, Codable {
+    enum Sharpness: Int, CaseIterable, Codable {
         case soft, normal, sharp
 
         var label: String {
@@ -29,15 +30,6 @@ struct StarShapeSpec: Hashable {
 
     /// "꼭짓점 5개 · 보통 뾰족함"
     var label: String { "꼭짓점 \(points)개 · \(sharpness.label)" }
-
-    /// TODO: The analysis API decides the shape. For now: points from the
-    /// text, sharpness from the analysis clarity.
-    init(star: StarItem) {
-        var rng = SeededRandom(seed: star.title + star.body + star.id.uuidString)
-        points = 4 + Int(rng.next(in: 0...3.999))
-        let clarity = star.analysis?.clarity ?? 0.5
-        sharpness = clarity < 0.4 ? .soft : clarity < 0.7 ? .normal : .sharp
-    }
 
     init(points: Int, sharpness: Sharpness) {
         self.points = points

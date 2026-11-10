@@ -150,43 +150,30 @@ struct ConstellationView: View {
     }
 }
 
-/// 04 이번 달 별자리 카드: the month's figure, "6 / 9 자리 채움" with a bar,
-/// and 「별자리 보기 ›」 (the 별자리 tab).
-struct MonthConstellationCard: View {
+/// 04 이번 달 별자리 한 줄 (Figma 554:14661): "이번 달 별자리 · 6 / 9 자리 채움"
+/// and 「별자리 보기 ›」 (the 별자리 tab), under the recent stars.
+struct MonthConstellationLink: View {
     @Environment(AppModel.self) private var model
     var onOpen: () -> Void
 
     var body: some View {
         let c = model.constellation(MonthConstellation.monthKey(.now))
         Button(action: onOpen) {
-            HStack(spacing: Space.lg) {
-                ConstellationFigureView(constellation: c, compact: true)
-                    .frame(width: 130, height: 114)
-                    .allowsHitTesting(false)
-                VStack(alignment: .leading, spacing: Space.xs) {
-                    Text("이번 달 별자리").textStyle(.caption).foregroundStyle(Color.textSecondary)
-                    Text(c.title).textStyle(.labelM).foregroundStyle(Color.textPrimary)
-                    Text("\(c.filled) / \(c.total) 자리 채움").textStyle(.caption).foregroundStyle(Color.textSecondary)
-                        .padding(.top, Space.xs)
-                    Capsule().fill(Color.borderDefault).frame(height: 4)
-                        .overlay(alignment: .leading) {
-                            GeometryReader { g in
-                                Capsule().fill(Color.brandPrimary)
-                                    .frame(width: g.size.width * CGFloat(c.filled) / CGFloat(max(1, c.total)))
-                            }
-                        }
-                    Text("별자리 보기 ›").textStyle(.labelS).foregroundStyle(Color.brandPrimaryText)
-                        .padding(.top, Space.xs)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+            HStack(spacing: Space.sm) {
+                Text("이번 달 별자리 · \(c.filled) / \(c.total) 자리 채움")
+                    .textStyle(.caption).foregroundStyle(Color.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text("별자리 보기 ›").textStyle(.labelS).foregroundStyle(Color.brandPrimaryText)
+                    .fixedSize()
             }
-            .padding(Space.lg)
+            .padding(.horizontal, Space.lg)
+            .padding(.vertical, 14)
             .itemCard(seed: "home-constellation", minHeight: 0)
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("이번 달 별자리, \(c.title), \(c.total)자리 중 \(c.filled)자리 채움")
+        .accessibilityLabel("이번 달 별자리, \(c.total)자리 중 \(c.filled)자리 채움, 별자리 보기")
         .accessibilityAddTraits(.isButton)
         .task { await model.loadConstellation(c.month) }
     }

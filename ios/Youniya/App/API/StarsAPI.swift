@@ -14,6 +14,10 @@ struct ServerStar: Decodable {
     var createdAt: Date
     var starlight: Int?
     var rewriteOf: String?
+    /// 06-1: 별빛 받기를 그만둔 별 (no starlight).
+    var starlightCancelled: Bool?
+    /// 20장: the same as analysis.shape, also in the list.
+    var shape: ShapeOut?
     var analysisFailed: Bool
     var shared: Bool
     /// 10.1 별빛 한 줄 received (detail only).
@@ -44,9 +48,12 @@ struct ServerAnalysis: Decodable {
     var clarityReason: String?
     var weightReason: String?
     var interpretation: String?
+    /// 20장: the star's shape {points, sharpness "soft"|"normal"|"sharp"},
+    /// decided with the starlight (nil on older servers).
+    var shape: ShapeOut?
 }
 
-/// POST /v1/stars and /v1/stars/{id}/float
+/// POST /v1/stars and /v1/stars/{id}/starlight
 struct StarCreated: Decodable {
     struct Crisis: Decodable {}
     var star: ServerStar
@@ -72,6 +79,20 @@ private struct StarIn: Encodable {
     var body: String
     var mode: String
     var rewriteOf: String?
+    /// 06-1: names this 별빛 받기 so it can be stopped.
+    var attemptId: String? = nil
+}
+
+/// `POST /v1/stars/{id}/starlight` with the attempt to stop.
+private struct FloatIn: Encodable {
+    var attemptId: String
+}
+
+/// `POST /v1/starlight/attempts/{attempt_id}/cancel`
+private struct CancelOut: Decodable {
+    var status: String
+    var star: ServerStar?
+    var coins: Int?
 }
 
 private struct DraftIn: Encodable {
@@ -101,6 +122,7 @@ extension StarItem {
     init?(_ s: ServerStar, keeping local: StarItem? = nil) {
         guard let id = UUID(uuidString: s.id) else { return nil }
         var analysis = s.analysis.map(StarAnalysis.init)
+        if analysis?.shape == nil { analysis?.shape = s.shape?.spec }
         // "prism-v1-2026-11" → "별빛 프리즘 v1" (older stars: none, and no 풀이).
         analysis?.prismVersion = s.prismVersion.map { v in
             let parts = v.split(separator: "-")
@@ -149,7 +171,8 @@ extension StarAnalysis {
             clarityReason: a.clarityReason,
             weightReason: a.weightReason,
             interpretation: a.interpretation,
-            rewriteQuestion: a.rewriteQuestion
+            rewriteQuestion: a.rewriteQuestion,
+            shape: a.shape?.spec
         )
     }
 }
@@ -185,12 +208,14 @@ extension AppModel {
     /// Returns the saved star and whether 37 Crisis Care should show.
     /// The server clears the draft; so does this.
     @MainActor func publishLive(_ d: StarDraft, floated: Bool, rewriteOf: StarItem.ID? = nil,
-                                linkTo: [StarItem.ID] = []) async throws -> (StarItem, crisis: Bool) {
-        // mode stays float/keep until the server ships lit/unlit (same meaning).
+                                linkTo: [StarItem.ID] = [], attemptID: String? = nil) async throws -> (StarItem, crisis: Bool) {
         var body = StarIn(mood: d.mood, moods: d.moods, title: d.title.trimmingCharacters(in: .whitespacesAndNewlines),
-                          body: d.body, mode: floated ? "float" : "keep", rewriteOf: rewriteOf?.apiID)
+                          body: d.body, mode: floated ? "lit" : "unlit", rewriteOf: rewriteOf?.apiID)
         body.linkTo = linkTo.isEmpty ? nil : linkTo.map(\.apiID)
-        let r: StarCreated = try await APIClient.shared.post("/v1/stars", body: body)
+        body.attemptId = floated ? attemptID : nil
+        // Floating waits on the model: longer than the server's own wait (06-1 그만두기 ends it sooner).
+        let r: StarCreated = try await APIClient.shared.post("/v1/stars", body: body,
+                                                             timeout: floated ? AppModel.starlightTimeout : APIClient.defaultTimeout)
         guard let star = StarItem(r.star) else { throw APIError.badResponse }
         stars.insert(star, at: 0)
         if rewriteOf == nil { saveDraft(StarDraft()) }
@@ -198,10 +223,42 @@ extension AppModel {
     }
 
     /// Live 36 "다시 시도": analyses a star that the server kept after a failed analysis.
-    @MainActor func floatAgain(_ id: StarItem.ID) async throws -> StarItem {
-        let r: StarCreated = try await APIClient.shared.post("/v1/stars/\(id.apiID)/float", body: [String: String]())
+    @MainActor func floatAgain(_ id: StarItem.ID, attemptID: String = UUID().uuidString.lowercased()) async throws -> StarItem {
+        let r: StarCreated = try await APIClient.shared.post("/v1/stars/\(id.apiID)/starlight", body: FloatIn(attemptId: attemptID),
+                                                             timeout: AppModel.starlightTimeout)
         guard let star = StarItem(r.star, keeping: stars.first { $0.id == id }) else { throw APIError.badResponse }
         if let i = stars.firstIndex(where: { $0.id == id }) { stars[i] = star }
+        return star
+    }
+
+    /// 06-1 그만두기: `POST /v1/starlight/attempts/{attempt_id}/cancel`. The
+    /// server drops the reading (or takes the starlight back within 10 minutes),
+    /// keeps the star without starlight and gives back the free use or coins.
+    /// Safe to send twice, and before the request itself arrives.
+    /// Returns whether it stopped, and the star when the server has it.
+    @MainActor func stopStarlight(attemptID: String) async -> (stopped: Bool, star: StarItem?) {
+        do {
+            let r: CancelOut = try await APIClient.shared.send("POST", "/v1/starlight/attempts/\(attemptID)/cancel")
+            if let c = r.coins { coins = c }
+            guard let s = r.star else { return (true, nil) }
+            let local = UUID(uuidString: s.id).flatMap { id in stars.first { $0.id == id } }
+            guard let star = StarItem(s, keeping: local) else { return (true, nil) }
+            if let i = stars.firstIndex(where: { $0.id == star.id }) { stars[i] = star } else { stars.insert(star, at: 0) }
+            return (true, star)
+        } catch let e as APIError where e.code == "not_found" {
+            // Nothing reached the server under this attempt: nothing was used.
+            return (true, nil)
+        } catch {
+            return (false, nil)
+        }
+    }
+
+    /// The star a stopped request saved (409 starlight_cancelled names it).
+    @MainActor func starAfterStop(_ id: String) async -> StarItem? {
+        guard let s: ServerStar = try? await APIClient.shared.get("/v1/stars/\(id)") else { return nil }
+        let local = UUID(uuidString: s.id).flatMap { id in stars.first { $0.id == id } }
+        guard let star = StarItem(s, keeping: local) else { return nil }
+        if let i = stars.firstIndex(where: { $0.id == star.id }) { stars[i] = star } else { stars.insert(star, at: 0) }
         return star
     }
 

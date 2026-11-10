@@ -50,6 +50,8 @@ struct APIError: Error, LocalizedError, Equatable {
     var until: Date?
     /// 429 rate_limited: seconds until it can be tried again.
     var retryAfter: Int? = nil
+    /// 409 starlight_cancelled: the star the stopped request saved.
+    var starID: String? = nil
 
     var errorDescription: String? { message }
 
@@ -64,8 +66,10 @@ private struct ErrorEnvelope: Decodable {
         var message: String
         var until: String?
         var retryAfter: Int?
+        var starId: String?
     }
     var error: Body
+    var starId: String?
 }
 
 // MARK: - Auth payloads
@@ -144,9 +148,12 @@ actor APIClient {
         try await send("GET", path, query: query)
     }
 
-    func post<T: Decodable>(_ path: String, body: some Encodable) async throws -> T {
-        try await send("POST", path, body: body)
+    func post<T: Decodable>(_ path: String, body: some Encodable, timeout: TimeInterval = APIClient.defaultTimeout) async throws -> T {
+        try await send("POST", path, body: body, timeout: timeout)
     }
+
+    /// Most requests give up after 20 s. 별빛 받기 waits longer (`AppModel.starlightTimeout`).
+    static let defaultTimeout: TimeInterval = 20
 
     func put<T: Decodable>(_ path: String, body: some Encodable) async throws -> T {
         try await send("PUT", path, body: body)
@@ -162,8 +169,9 @@ actor APIClient {
     }
 
     func send<T: Decodable>(_ method: String, _ path: String, query: [String: String?] = [:],
-                            body: (any Encodable)? = nil, authorized: Bool = true) async throws -> T {
-        let data = try await sendRaw(method, path, query: query, body: body, authorized: authorized)
+                            body: (any Encodable)? = nil, authorized: Bool = true,
+                            timeout: TimeInterval = APIClient.defaultTimeout) async throws -> T {
+        let data = try await sendRaw(method, path, query: query, body: body, authorized: authorized, timeout: timeout)
         do {
             return try JSONCoding.decoder.decode(T.self, from: data)
         } catch {
@@ -177,8 +185,9 @@ actor APIClient {
     /// Sends a request; on 401 `token_expired` refreshes once and retries.
     @discardableResult
     func sendRaw(_ method: String, _ path: String, query: [String: String?] = [:],
-                 body: (any Encodable)? = nil, authorized: Bool = true) async throws -> Data {
-        let request = try makeRequest(method, path, query: query, body: body, authorized: authorized)
+                 body: (any Encodable)? = nil, authorized: Bool = true,
+                 timeout: TimeInterval = APIClient.defaultTimeout) async throws -> Data {
+        let request = try makeRequest(method, path, query: query, body: body, authorized: authorized, timeout: timeout)
         let (data, status) = try await perform(request)
         if (200..<300).contains(status) { return data }
 
@@ -187,7 +196,7 @@ actor APIClient {
 
         // Access token expired: refresh, then try once more.
         _ = try await refreshTokens()
-        let retry = try makeRequest(method, path, query: query, body: body, authorized: authorized)
+        let retry = try makeRequest(method, path, query: query, body: body, authorized: authorized, timeout: timeout)
         let (data2, status2) = try await perform(retry)
         if (200..<300).contains(status2) { return data2 }
         throw decodeError(data2, status: status2)
@@ -218,13 +227,14 @@ actor APIClient {
     }
 
     private func makeRequest(_ method: String, _ path: String, query: [String: String?],
-                             body: (any Encodable)?, authorized: Bool) throws -> URLRequest {
+                             body: (any Encodable)?, authorized: Bool,
+                             timeout: TimeInterval = APIClient.defaultTimeout) throws -> URLRequest {
         var components = URLComponents(url: APIConfig.baseURL.appending(path: path), resolvingAgainstBaseURL: false)!
         let items = query.compactMap { k, v in v.map { URLQueryItem(name: k, value: $0) } }
         if !items.isEmpty { components.queryItems = items.sorted { $0.name < $1.name } }
         var request = URLRequest(url: components.url!)
         request.httpMethod = method
-        request.timeoutInterval = 20
+        request.timeoutInterval = timeout
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue(APIConfig.appVersion, forHTTPHeaderField: "X-App-Version")
         // 18장 A-07: the operator sees which app an inquiry came from.
@@ -261,7 +271,7 @@ actor APIClient {
         }
         return APIError(status: status, code: env.error.code, message: env.error.message,
                         until: env.error.until.flatMap(JSONCoding.date(from:)),
-                        retryAfter: env.error.retryAfter)
+                        retryAfter: env.error.retryAfter, starID: env.error.starId ?? env.starId)
     }
 }
 
