@@ -124,26 +124,15 @@ def test_notifications_keep_the_subscription_current(make_app):
     assert coins.json() == {"handled": False}  # the coin path is untouched
 
 
-def test_monthly_report(make_app):
+def test_monthly_report_is_gone(make_app):
+    """월간 마음 리포트 was removed (기획서 13.5): 410 for members too, nothing made."""
     apple, client = _app(make_app)
     h = sign_in(client)
-    month = this_month()
-    assert client.post("/v1/reports/monthly", json={"month": month}, headers=h).status_code == 403
     _join(apple, client, h)
-    for _ in range(4):
-        float_star(client, h)
-    r = client.post("/v1/reports/monthly", json={"month": month}, headers=h)
-    assert r.status_code == 422 and r.json()["error"]["needed"] == 5
-    float_star(client, h, title="가장 밝은 별")
-    report = client.post("/v1/reports/monthly", json={"month": month}, headers=h).json()
-    assert report["month"] == month and report["star_count"] == 5 and report["title"].endswith("달")
-    assert [lens["key"] for lens in report["lenses"]] == ["depth", "clarity", "weight"]
-    assert report["brightest"]["sentence"] in DEEP_BODY and report["question"]
-    # Asking again returns the same one; it is listed and can be opened.
-    assert client.post("/v1/reports/monthly", json={"month": month}, headers=h).json()["id"] == report["id"]
-    assert [i["month"] for i in client.get("/v1/reports/monthly", headers=h).json()["items"]] == [month]
-    assert client.get(f"/v1/reports/monthly/{month}", headers=h).json()["id"] == report["id"]
-    assert client.get("/v1/reports/monthly/2000-01", headers=h).status_code == 404
+    for method, path in (("POST", "/v1/reports/monthly"), ("GET", "/v1/reports/monthly"),
+                         ("GET", f"/v1/reports/monthly/{this_month()}")):
+        r = client.request(method, path, json={} if method == "POST" else None, headers=h)
+        assert r.status_code == 410 and r.json()["error"]["code"] == "feature_removed", path
 
 
 def test_season_silhouettes_are_for_members_and_stay(make_app):

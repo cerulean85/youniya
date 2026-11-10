@@ -154,10 +154,12 @@ def test_telescope_is_gone_and_charges_nothing(client):
     star = float_star(client, h)
     client.post("/v1/coins/purchases", json={"product_id": "coin_110", "transaction_id": "t1"}, headers=h)
     for method, path in (("GET", "/v1/telescope/offer"), ("POST", "/v1/telescope/reports"),
-                         ("GET", "/v1/telescope/reports"), ("GET", "/v1/telescope/reports/x"),
+                         ("GET", "/v1/telescope/reports/x"),
                          ("POST", "/v1/telescope/reports/x/save")):
         r = client.request(method, path, json={"star_ids": [star["id"]]} if method == "POST" else None, headers=h)
         assert r.status_code == 410 and r.json()["error"]["code"] == "feature_removed", path
+    # Older iOS builds load the list when they open: empty, not an error.
+    assert client.get("/v1/telescope/reports", headers=h).json() == {"items": []}
     me = client.get("/v1/me", headers=h).json()
     assert me["coins"] == 110 and me["free_telescope"] == 0 and me["free_telescope_available"] is False
     assert "telescope" not in client.get(f"/v1/stars/{star['id']}", headers=h).json()

@@ -1,7 +1,7 @@
 """별지기 멤버십 (기획서 13장, v1.1). Off unless MEMBERSHIP=1: then nobody is a member.
 
 A member has MEMBER_DAILY_LIMIT floats a Korean day (the telescope benefit was removed 20261110),
-used before the free ones everybody has; after both, coins. Also a 월간 마음 리포트 and every sky."""
+used before the free ones everybody has; after both, coins. Also every sky (the 월간 마음 리포트 went 20261109)."""
 
 from datetime import datetime, timezone
 

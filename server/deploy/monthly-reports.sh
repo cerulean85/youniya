@@ -1,5 +1,5 @@
 #!/bin/sh
-# 월간 마음 리포트 for production, run daily by youniya-monthly.timer. Does nothing unless MEMBERSHIP=1.
+# 월간 마음 리포트 was removed (2026-11-09); tools/monthly_reports.py now does nothing. Don't install the timer.
 set -e
 cd "$(dirname "$0")/.."
 set -a

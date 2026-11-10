@@ -9,6 +9,12 @@ from ..deps import ApiError
 router = APIRouter(prefix="/v1/telescope", tags=["telescope"])
 
 
+@router.get("/reports", include_in_schema=False)
+def old_list():
+    """iOS builds up to 1.0.0 (10) load this list when they open: an empty one, not an error toast."""
+    return {"items": []}
+
+
 @router.api_route("/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"], include_in_schema=False)
 def removed(path: str):
     raise ApiError(410, "feature_removed", "마음 망원경은 이제 없어요. 코인과 무료 횟수는 그대로예요.")
