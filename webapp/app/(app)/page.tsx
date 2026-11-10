@@ -66,7 +66,7 @@ async function Sky() {
           <p className="caption faint">{me.free_star_today > 0 ? `오늘 무료 별빛 ${me.free_star_today}번 남았어요` : "오늘 무료 별빛을 썼어요"} · 별빛 없이 띄우기는 언제나 무료예요</p>
         </section>
         <Link href="/constellation" className={`card ${styles.monthLink}`}>
-          <span className="body-s muted">이번 달 별자리{c ? ` · ${monthOnly(now.month)} ${c.name}자리 · ${c.filled} / ${c.total} 자리 채움` : ""}</span>
+          <span className="body-s muted">{c ? `${monthOnly(now.month)} ${c.name}자리 · ${c.filled} / ${c.total} 자리 채움` : "이번 달 별자리"}</span>
           <span className={styles.all}>별자리 보기<ChevronRight size={14} /></span>
         </Link>
       </div>
