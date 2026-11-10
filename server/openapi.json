@@ -1242,7 +1242,7 @@
           "stars"
         ],
         "summary": "Cancel Starlight",
-        "description": "20장 별빛 받기 그만두기 (and the app's own timeout or lost connection). Safe to send more than once,\nand before the 별빛 받기 itself reaches the server.\n- Still reading: the reading is dropped when it comes; nothing is used.\n- Already done (within CANCEL_WINDOW): the starlight is taken off and what it used comes back\n  (`refunded.used`: member | free | coins, `refunded.coins`).\nThe star stays without starlight with `starlight_cancelled` true; 별빛 받기 on it again starts afresh.\nA new star (별빛 받고 띄우기) stopped this way counts toward today's 별빛 없이 띄우기.\n`star` is null when the 별빛 받기 has not reached the server yet; it will stop when it does.",
+        "description": "20장 별빛 받기 그만두기 (and the app's own timeout or lost connection). Safe to send more than once,\nand before the 별빛 받기 itself reaches the server.\n- Still reading: the reading is dropped when it comes; nothing is used.\n- Already done (within CANCEL_WINDOW, 60 s from the start): the starlight is taken off and what it used comes back\n  (`refunded.used`: member | free | coins, `refunded.coins`).\nThe star stays without starlight with `starlight_cancelled` true; 별빛 받기 on it again starts afresh.\nA new star (별빛 받고 띄우기) stopped this way counts toward today's 별빛 없이 띄우기.\n`star` is null when the 별빛 받기 has not reached the server yet; it will stop when it does.",
         "operationId": "cancel_starlight_v1_starlight_attempts__attempt_id__cancel_post",
         "security": [
           {
