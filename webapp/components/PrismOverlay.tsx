@@ -31,44 +31,24 @@ export function PrismOverlay({ mode, title, body, draft }: { mode?: string; titl
   return <Reading title={title} body={body} draft={draft} stop={typeof attempt === "string" && attempt ? attempt : undefined} />;
 }
 
-const FIND_MS = 2000, FIND_FOR_MS = 20_000;
-
 function Reading({ title, body, stop, draft }: { title?: string; body?: React.ReactNode; stop?: string; draft?: string }) {
   const [long, setLong] = useState(false);
   const [stopping, setStopping] = useState(false);
-  const [failed, setFailed] = useState(false);
-  const alive = useRef(true); // the request may end on its own (an error, or its redirect) while this keeps asking
-  const quit = async () => {
+  // 그만두기 leaves at once: a reading that finishes meanwhile must not show its result (W-105 always ends on the
+  // star without starlight). The stopping page cancels on the server and finds the star; a full load drops this request.
+  const quit = () => {
     if (!stop) return;
-    setStopping(true); setFailed(false);
-    // A cancel that beats the request answers star: null, but the request still saves the star when it lands.
-    // So it always ends on that star (W-105): the pending request redirects there itself (409 starlight_cancelled),
-    // and meanwhile the cancel is asked again until it names the star. Nothing after 20 s: the request never arrived.
-    const url = `/starlight/${encodeURIComponent(stop)}/cancel${draft ? "?draft=1" : ""}`;
-    for (const until = Date.now() + FIND_FOR_MS; ;) {
-      const res = await fetch(url, { method: "POST" }).catch(() => null);
-      if (!alive.current) return;
-      if (res && !res.ok && res.status !== 404) { setStopping(false); setFailed(true); return; }
-      const r = res?.ok ? await res.json().catch(() => null) as { star_id?: string | null } | null : null;
-      if (r?.star_id) {
-        if (draft) try { localStorage.removeItem(draft); } catch { /* private mode */ }
-        // A full load also drops the request still waiting for the prism.
-        // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- see above
-        window.location.assign(`/stars/${r.star_id}?stopped=1`);
-        return;
-      }
-      if (Date.now() > until) { window.location.assign(draft ? "/write?stopped=1" : window.location.pathname); return; }
-      await new Promise((ok) => setTimeout(ok, FIND_MS));
-      if (!alive.current) return;
-    }
+    setStopping(true);
+    if (draft) try { localStorage.removeItem(draft); } catch { /* private mode */ }
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- the full load is the point
+    window.location.assign(`/starlight/${encodeURIComponent(stop)}/stopping${draft ? "?draft=1" : ""}`);
   };
   const quitRef = useRef(quit);
   useEffect(() => { quitRef.current = quit; });
   useEffect(() => {
-    alive.current = true;
     const long = setTimeout(() => setLong(true), LONG_MS);
     const giveUp = setTimeout(() => { void quitRef.current(); }, GIVE_UP_MS);
-    return () => { alive.current = false; clearTimeout(long); clearTimeout(giveUp); };
+    return () => { clearTimeout(long); clearTimeout(giveUp); };
   }, []);
 
   const offer = long && stop;
@@ -82,7 +62,6 @@ function Reading({ title, body, stop, draft }: { title?: string; body?: React.Re
       <p className="body-l muted">{offer ? <>기다리지 않아도 괜찮아요. 그만두면 별빛 없이 띄워 두고,<br />오늘 무료와 코인은 쓰지 않아요.</>
         : body ?? <>별의 깊이 · 빛의 선명함 · 마음의 무게를<br />부드럽게 살펴보는 중이에요.</>}</p>
       {offer && <button type="button" className={`btn btn-ghost ${styles.stop}`} onClick={quit} disabled={stopping}>{stopping ? "그만두는 중…" : "그만두기"}</button>}
-      {failed && <p className="caption" role="alert" style={{ color: "var(--anger)" }}>지금은 그만둘 수 없어요. 조금만 더 기다려 주세요.</p>}
       <p className={`caption faint ${styles.note}`}><Lock size={14} /> 쓴 글은 암호화되어 안전하게 보관돼요</p>
     </div>
   );
