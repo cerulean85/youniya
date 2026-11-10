@@ -91,7 +91,12 @@ def _price(coins: int) -> int:
     return _BY_COINS.get(coins, 0)
 
 
+OPERATOR_TITLES = ("운영자 환불", "운영자 회수")
+
+
 def _kind(e: CoinEntry) -> str:
+    if e.title == "운영자 회수":
+        return "revoke"
     if e.transaction_id and e.delta > 0:
         return "purchase"
     if e.transaction_id and e.delta < 0:
@@ -117,7 +122,8 @@ def coins_ledger(month: str | None = Query(None, pattern=r"^\d{4}-\d{2}$"), limi
         t["coins"] += r.delta
         t["krw_estimate"] += _price(r.delta) if _kind(r) == "purchase" else 0
     return {"month": m, "totals": totals,
-            "items": [{"id": r.id, "at": iso(r.created_at), "kind": _kind(r), "source": coin_source(r), "keeper_no": nos.get(r.user_id), "title": r.title, "coins": r.delta,
+            "items": [{"id": r.id, "at": iso(r.created_at), "kind": _kind(r), "source": "operator" if r.title in OPERATOR_TITLES else coin_source(r),
+                       "payment": coin_source(r) if r.transaction_id else None, "keeper_no": nos.get(r.user_id), "title": r.title, "coins": r.delta,
                        "transaction_id": r.transaction_id,
                        "krw_estimate": _price(r.delta) if _kind(r) == "purchase" else None} for r in rows[:limit]]}
 

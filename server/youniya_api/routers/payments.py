@@ -202,6 +202,68 @@ class CancelIn(BaseModel):
     reason: str = Field("고객 요청", min_length=1, max_length=200)
 
 
+def refund_block(order: TossOrder, balance: int) -> str | None:
+    """Why this order can't be refunded under 46 결제·환불 정책, or None when it can."""
+    if order.status != "done":
+        return "not_done"
+    if _now() - aware(order.approved_at) > timedelta(days=REFUND_WINDOW_DAYS):
+        return "window_passed"
+    if balance < order.coins:
+        return "coins_spent"
+    return None
+
+
+def refund(db: Session, toss: TossClient, order: TossOrder, reason: str, title: str = "환불",
+           force: bool = False) -> int:
+    """Cancels the whole payment with Toss and takes its coins back; the caller commits. Returns the coins taken.
+    By the policy: within 7 days, while all of the order's coins are unspent (409 otherwise). `force`
+    (operators, for an outage and the like) cancels anyway and takes what is left, up to the order's coins,
+    the balance stopping at 0. Nothing is kept if Toss refuses or doesn't answer."""
+    if order.status != "done":
+        raise ApiError(409, "order_not_paid", "결제가 끝나지 않은 주문이에요.")
+    user = db.get(User, order.user_id) if order.user_id else None
+    if not force:
+        block = refund_block(order, user.coins if user else 0)
+        if block == "window_passed":
+            raise ApiError(409, "refund_window_passed", f"결제한 지 {REFUND_WINDOW_DAYS}일이 지나 환불할 수 없어요.")
+    refund_id = f"refund:{_entry_id(order)}"
+    taken = 0
+    if user is not None and force:
+        taken = coins.take_back(db, user, order.coins, title, transaction_id=refund_id)
+    elif user is not None:
+        # Taken first (in this transaction): a spend racing this one can't use the coins while Toss cancels.
+        if not db.execute(update(User).where(User.id == user.id, User.coins >= order.coins)
+                          .values(coins=User.coins - order.coins)).rowcount:
+            db.rollback()
+            raise ApiError(409, "coins_spent", "이미 쓴 코인이 있어 환불할 수 없어요.")
+        db.add(CoinEntry(user_id=user.id, title=title, delta=-order.coins, transaction_id=refund_id))
+        taken = order.coins
+    elif not force:
+        raise ApiError(409, "coins_spent", "이미 쓴 코인이 있어 환불할 수 없어요.")
+    try:
+        toss.cancel(order.payment_key, reason, idempotency_key=f"cancel-{order.id}")
+    except TossError as e:
+        db.rollback()
+        raise ApiError(402, "cancel_failed", e.message, toss_code=e.code)
+    except httpx.HTTPError:
+        db.rollback()
+        logger.exception("toss cancel for %s got no answer", order.id)
+        raise ApiError(502, "cancel_unconfirmed", "환불 결과를 받지 못했어요. 잠시 뒤 다시 시도해 주세요.")
+    order.status, order.canceled_at = "canceled", _now()
+    return taken
+
+
+def commit_refund(db: Session, order: TossOrder) -> bool:
+    """Commits a refund. False if the webhook for the same cancel got there first (it took the coins)."""
+    try:
+        db.commit()
+        return True
+    except IntegrityError:
+        db.rollback()
+        db.refresh(order)
+        return False
+
+
 @router.post("/{order_id}/cancel", dependencies=[per_user("toss_cancel", 10, 3600)])
 def cancel(order_id: str, body: CancelIn, request: Request, user: User = Depends(consented_user),
            db: Session = Depends(get_db)):
@@ -212,31 +274,10 @@ def cancel(order_id: str, body: CancelIn, request: Request, user: User = Depends
         raise ApiError(404, "order_not_found", "주문을 찾지 못했어요.")
     if order.status == "canceled":
         return {"coins": user.coins, "taken": 0, "order_id": order.id, "already_processed": True}
-    if order.status != "done":
-        raise ApiError(409, "order_not_paid", "결제가 끝나지 않은 주문이에요.")
-    if _now() - aware(order.approved_at) > timedelta(days=REFUND_WINDOW_DAYS):
-        raise ApiError(409, "refund_window_passed", f"결제한 지 {REFUND_WINDOW_DAYS}일이 지나 환불할 수 없어요.")
-    # Take the coins first (in this transaction): if any were spent the refund is refused, and a spend
-    # racing this one can't use them while Toss cancels.
-    taken = db.execute(update(User).where(User.id == user.id, User.coins >= order.coins)
-                       .values(coins=User.coins - order.coins)).rowcount
-    if not taken:
-        db.rollback()
-        raise ApiError(409, "coins_spent", "이미 쓴 코인이 있어 환불할 수 없어요.")
-    try:
-        toss.cancel(order.payment_key, body.reason, idempotency_key=f"cancel-{order.id}")
-    except TossError as e:
-        db.rollback()
-        raise ApiError(402, "cancel_failed", e.message, toss_code=e.code)
-    except httpx.HTTPError:
-        db.rollback()
-        logger.exception("toss cancel for %s got no answer", order.id)
-        raise ApiError(502, "cancel_unconfirmed", "환불 결과를 받지 못했어요. 잠시 뒤 다시 시도해 주세요.")
-    db.add(CoinEntry(user_id=user.id, title="환불", delta=-order.coins, transaction_id=f"refund:{_entry_id(order)}"))
-    order.status, order.canceled_at = "canceled", _now()
-    db.commit()
+    taken = refund(db, toss, order, body.reason)
+    first = commit_refund(db, order)
     db.refresh(user)
-    return {"coins": user.coins, "taken": order.coins, "order_id": order.id, "already_processed": False}
+    return {"coins": user.coins, "taken": taken if first else 0, "order_id": order.id, "already_processed": not first}
 
 
 class WebhookIn(BaseModel):

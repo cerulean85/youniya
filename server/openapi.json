@@ -5641,6 +5641,162 @@
         }
       }
     },
+    "/v1/admin/keepers/{user_id}/orders": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Keeper Orders",
+        "description": "The keeper's web (Toss) orders, newest first. `refund_block`: why the policy refund can't be done\n(not_done · window_passed · coins_spent), or null.",
+        "operationId": "keeper_orders_v1_admin_keepers__user_id__orders_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-admin-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/orders/{order_id}/refund": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Refund Order",
+        "description": "A 문의 refund request. By the policy (7 days, coins unspent: 409 refund_window_passed · coins_spent);\n`force` cancels the whole payment anyway and takes back what is left of its coins (min(order, balance)).",
+        "operationId": "refund_order_v1_admin_orders__order_id__refund_post",
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Order Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-admin-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefundIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/inquiries": {
       "get": {
         "tags": [
@@ -7628,6 +7784,7 @@
               "extend_restriction",
               "request_rename",
               "grant_coins",
+              "revoke_coins",
               "process_deletion"
             ],
             "title": "Action"
@@ -8214,6 +8371,26 @@
           "refresh_token"
         ],
         "title": "Refresh"
+      },
+      "RefundIn": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason"
+          },
+          "force": {
+            "type": "boolean",
+            "title": "Force",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "RefundIn"
       },
       "ReplyIn": {
         "properties": {

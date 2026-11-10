@@ -84,6 +84,7 @@ def me(request: Request, user: User = Depends(current_user), db: Session = Depen
     return {
         "id": user.id,
         "provider": user.provider,
+        "joined_at": iso(user.created_at),  # 87-6 가입한 날
         "needs_consent": user.consented_at is None,
         "marketing_opt_in": user.marketing_opt_in,
         "marketing": marketing.view(user),  # 14.3: {opt_in, consented_at, revoked_at, reconfirm_due}

@@ -323,3 +323,9 @@ def test_dev_login_only_when_enabled(make_app):
     first = client.post("/v1/auth/dev", json={"name": "zhkim"}).json()
     again = client.post("/v1/auth/dev", json={"name": "zhkim"}).json()
     assert first["user_id"] == again["user_id"] and first["needs_consent"] is True
+
+
+def test_me_has_joined_at(client):
+    h = sign_in(client)
+    me = client.get("/v1/me", headers=h).json()
+    assert me["provider"] == "apple" and me["joined_at"].startswith("20") and "email" not in me
