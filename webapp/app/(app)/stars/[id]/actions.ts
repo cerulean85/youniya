@@ -79,17 +79,6 @@ export async function unshareStar(id: string) {
   refresh();
 }
 
-/** W-54 마음 망원경 켜기 for this one star: free while free ones are left, then coins. */
-export async function openTelescope(id: string, _prev: ActionState): Promise<ActionState> { void _prev;
-  try {
-    await api(`/v1/telescope/reports`, { method: "POST", body: JSON.stringify({ star_ids: [id] }) });
-  } catch (e) {
-    if (e instanceof ApiError) return { error: e.message, code: e.code };
-    throw e;
-  }
-  refresh();
-  return null;
-}
 
 const LINKS_SOON = "별 잇기는 곧 열려요. 서버 준비가 끝나면 바로 쓸 수 있어요.";
 

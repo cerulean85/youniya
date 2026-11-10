@@ -37,7 +37,6 @@ export type Analysis = {
   depth_level: number;
   moods: { mood: Mood; share: number }[];
   observation: string;
-  telescope_teaser: string | null;
   rewrite_question: string | null;
   impact_quote: string | null;
   shape: { points: number; sharpness: string } | null;
@@ -49,25 +48,9 @@ export type LinkedStar = { id: string; title: string; mood: Mood; moods?: Mood[]
 /** `linked_stars` comes with the 별 잇기 API (dev server 2026-11-09); absent on older servers. */
 export type Star = StarSummary & {
   body: string; analysis: Analysis | null; linked_stars?: LinkedStar[]; line_count?: number;
-  /** The latest 마음 망원경 result of this star alone (API 5단계); null if none. */
-  telescope?: { id: string; created_at: string; report: TelescopeResult } | null;
 };
 
-/** 마음 망원경 result. For one star (`Star.telescope`) each lens carries the prism's score and reason. */
-export type FogKind = "step_back" | "unnamed" | "blaming" | "self_blame" | "overgeneral";
-export type TelescopeResult = {
-  star_name: string;
-  lenses: { key: string; label: string; value: number; note: string; score?: number | null; reason?: string | null }[];
-  emotions: { mood: Mood; label: string; percent: number }[];
-  evidence: string | null;
-  question: string | null;
-  signals: { star_id: string; sentence: string }[];
-  fog_items?: { kind: FogKind; label: string; sentence: string; note: string }[];
-  mood_flow?: { start: Mood; middle: Mood; end: Mood } | null;
-  mood_interpretation?: string;
-};
-export type TelescopeReport = { id: string; title: string; created_at: string; saved: boolean; star_ids: string[]; report: TelescopeResult };
-export type TelescopeOffer = { free: boolean; free_left: number; cost: number; coins: number; enough: boolean };
+// 마음 망원경 was removed on 2026-11-10 (사용자 결정); past results are no longer shown.
 
 export type Me = {
   id: string;
@@ -88,7 +71,6 @@ export type Me = {
   joined_at?: string | null;
   coins: number;
   free_star_today: number;
-  free_telescope: number;
 };
 
 export type Summary = {
@@ -107,7 +89,7 @@ export type CreateResult = { star: Star; crisis: unknown; charged: number; coins
 
 export type PlazaStar = {
   id: string; // the share id
-  /** The writer's own title (기획서 15.2); AI names ending in 별 show only in the telescope. */
+  /** The writer's own title (기획서 15.2). AI-given names ending in 별 are not shown (2026-11-10). */
   name: string;
   /** 별지기 이름 (기획서 15장). */
   nickname: string | null;
@@ -155,8 +137,8 @@ export type Notice = { id: string; title: string; body: string; published_at: st
 
 /** GET /v1/coins: the balance, what's free today, and the packages on sale (the same as iOS). */
 export type CoinsInfo = {
-  coins: number; free_star_today: number; free_telescope: number; free_telescope_available?: boolean;
-  prices: { star: number; telescope: number };
+  coins: number; free_star_today: number; 
+  prices: { star: number };
   packages: { product_id: string; coins: number; price: number; bonus: number }[];
 };
 export type CoinEntryRow = { id: string; kind: "purchase" | "spend" | "refund" | "grant" | string; title: string; delta: number; created_at: string; source?: string | null };

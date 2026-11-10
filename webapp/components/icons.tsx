@@ -17,7 +17,6 @@ export const StarFilled = (p: IconProps) => <svg {...base(p)} fill="currentColor
 export const Moon = (p: IconProps) => <svg {...base(p)}><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z" /></svg>;
 export const Nebula = (p: IconProps) => <svg {...base(p)}><path d="M7 18h10a4 4 0 0 0 .5-8A6 6 0 0 0 6 9.5 4.3 4.3 0 0 0 7 18Z" /></svg>;
 export const Archive = (p: IconProps) => <svg {...base(p)}><rect x="3.5" y="4.5" width="17" height="5" rx="1.5" /><path d="M5 9.5V18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9.5M10 13h4" /></svg>;
-export const Telescope = (p: IconProps) => <svg {...base(p)}><path d="m3 13 3 3 12-7-2-4L4 11Z" /><path d="m11 13 2 7M13 12l3 8" /></svg>;
 export const Coin = (p: IconProps) => <svg {...base(p)}><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="4.5" /></svg>;
 export const Settings = (p: IconProps) => <svg {...base(p)}><path d="M4 7h10M18 7h2M4 17h2M10 17h10" /><circle cx="16" cy="7" r="2" /><circle cx="8" cy="17" r="2" /></svg>;
 export const Mail = (p: IconProps) => <svg {...base(p)}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m4 7 8 6 8-6" /></svg>;

@@ -45,7 +45,6 @@ async function Coins({ searchParams }: Pick<PageProps<"/coins">, "searchParams">
             <h2 id="free-title" className="label-m">무료로 남은 횟수</h2>
             <div className={styles.freeGrid}>
               <div><span className="caption muted">오늘 별빛 받기</span><b>{info.free_star_today}번</b><span className="caption faint">이후 {info.prices.star}코인</span></div>
-              <div><span className="caption muted">이번 달 마음 망원경</span><b>{info.free_telescope}번</b><span className="caption faint">이후 {info.prices.telescope}코인</span></div>
             </div>
           </section>
           <section className={`card ${styles.history}`} aria-labelledby="history-title">

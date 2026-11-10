@@ -90,6 +90,7 @@ export default async function KeeperPage({ params }: PageProps<"/keepers/[id]">)
                 </tbody>
               </table>
             )}
+            {ready("payments") && orders != null && <p className="faint table-note">결제 후 7일 안에, 그 결제로 받은 코인을 쓰지 않았을 때 환불해요. 예외 환불은 서비스 장애처럼 규칙 밖에서 돌려드려야 할 때만 써요. App Store 결제는 애플에서 환불돼요.</p>}
           </section>
           <section className="card table-card">
             <table className="table">

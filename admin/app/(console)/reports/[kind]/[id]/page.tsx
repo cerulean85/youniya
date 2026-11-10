@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: "신고 상세" };
 
 const KINDS: ReportKind[] = ["star", "nebula", "star_line", "line", "nickname"];
 
-// Figma A-04 (18.1): only what the plaza shows; never unshared writing, starlight numbers or telescope results.
+// Figma A-04 (18.1): only what the plaza shows; never unshared writing, starlight numbers or 별빛 풀이.
 export default async function ReportPage({ params }: PageProps<"/reports/[kind]/[id]">) {
   await requireOperator();
   const wait = notConnected("reports", "신고 상세");
@@ -53,7 +53,7 @@ export default async function ReportPage({ params }: PageProps<"/reports/[kind]/
               {r.content.line && <><dt>별빛 한 줄</dt><dd>“{r.content.line}”</dd></>}
               {r.content.nickname && r.kind === "nickname" && <><dt>별지기 이름</dt><dd>{r.content.nickname}</dd></>}
             </dl>
-            <p className="faint">운영자는 우주 광장에 공개된 내용만 볼 수 있어요. 나누지 않은 글, 별빛 수치, 망원경 결과는 볼 수 없어요.</p>
+            <p className="faint">운영자는 우주 광장에 공개된 내용만 볼 수 있어요. 나누지 않은 글, 별빛 수치, 별빛 풀이는 볼 수 없어요.</p>
           </section>
           <section className="card table-card">
             <table className="table">

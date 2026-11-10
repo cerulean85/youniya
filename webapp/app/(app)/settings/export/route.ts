@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { API_URL } from "@/lib/config";
 import { ACCESS } from "@/lib/session";
 
-// 93 데이터 내보내기: every star (with its 별빛 풀이, telescope result and links) as text or PDF, passed through.
+// 93 데이터 내보내기: every star (with its 별빛 풀이 and links) as text or PDF, passed through.
 export async function GET(request: Request) {
   const token = (await cookies()).get(ACCESS)?.value;
   if (!token) return NextResponse.redirect(new URL("/login", request.url));

@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "충전이 끝났어요" };
 
 const safe = (v: unknown) => (typeof v === "string" && v.startsWith("/") && !v.startsWith("//") && !v.startsWith("/coins") ? v : null);
 
-// Figma W-84 (Mobile 102): back to the writing or the telescope that needed the coins.
+// Figma W-84 (Mobile 102): back to the writing that needed the coins.
 export default function DonePage({ searchParams }: PageProps<"/coins/done">) {
   return <Suspense fallback={null}><Done searchParams={searchParams} /></Suspense>;
 }

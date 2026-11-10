@@ -7,10 +7,9 @@ import { useActionState, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Close } from "@/components/icons";
 import { PrismOverlay } from "@/components/PrismOverlay";
-import { TelescopeObserve } from "@/components/TelescopeObserve";
 import { moodOf, monthDay } from "@/lib/format";
 import type { LinkedStar } from "@/lib/types";
-import { deleteStar, floatStar, openTelescope, unlinkStar } from "./actions";
+import { deleteStar, floatStar, unlinkStar } from "./actions";
 import styles from "./star.module.css";
 
 // Figma W-56: 별빛 받기 asks first, since the writing locks; W-23 shows while the prism reads it.
@@ -83,30 +82,6 @@ function DeleteSubmit() {
   return <button className={`btn ${styles.danger}`} disabled={pending}>{pending ? "지우는 중…" : "영구 삭제"}</button>;
 }
 
-// W-54 with iOS 24 (확인), then W-74 (관측 연출): what it costs first, then the telescope at work.
-export function OpenTelescope({ id, label, cost, body }: { id: string; label: string; cost: string; body: string }) {
-  const [state, action] = useActionState(openTelescope.bind(null, id), null);
-  const dialog = useRef<HTMLDialogElement>(null);
-  return (
-    <>
-      <button type="button" className="btn btn-secondary btn-block" onClick={() => dialog.current?.showModal()}>{label}</button>
-      <dialog ref={dialog} className={`card ${styles.dialog}`} aria-labelledby="scope-title">
-        <form action={action}>
-          <h2 id="scope-title" className="h2">이 별을 더 들여다볼까요?</h2>
-          <p className="body-m muted">망원경 빛이 이 별의 문장을 하나씩 비추며 숨은 마음의 결을 보여줘요. {cost}</p>
-          {state?.error && (
-            <p className="body-s" role="alert">
-              {state.error} {state.code === "insufficient_coins" && <CoinsLink className={styles.link}>코인 충전하기</CoinsLink>}
-            </p>
-          )}
-          <Pending label="들여다보기" busy="들여다보는 중…" />
-          <button type="button" className="btn btn-ghost" onClick={() => dialog.current?.close()}>다음에</button>
-          <TelescopeObserve body={body} onAway={() => dialog.current?.close()} />
-        </form>
-      </dialog>
-    </>
-  );
-}
 
 // 내보내기: the writing as a text file, made in the browser.
 export function ExportButton({ title, date, body }: { title: string; date: string; body: string }) {

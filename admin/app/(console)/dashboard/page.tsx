@@ -32,7 +32,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
         <Stat label="새 별지기" value={num(d.new_keepers.count)} sub={d.new_keepers.delta != null ? `어제보다 ${d.new_keepers.delta >= 0 ? "+" : ""}${d.new_keepers.delta}` : undefined} />
         <Stat label="신고 대기" value={d.reports_pending.count} tone={d.reports_pending.count ? "amber" : undefined} sub={d.reports_pending.overdue != null ? `24시간 넘은 것 ${d.reports_pending.overdue}건` : undefined} />
         <Stat label="새 문의" value={d.inquiries_new.count} sub={d.inquiries_new.avg_first_reply_hours != null ? `평균 첫 답장 ${d.inquiries_new.avg_first_reply_hours}시간` : undefined} />
-        <Stat label="이번 달 AI 원가" value={won(d.ai_cost_month.krw)} sub={d.ai_cost_month.starlight_share != null ? `별빛 받기 ${d.ai_cost_month.starlight_share}% · 망원경 ${d.ai_cost_month.telescope_share}%` : d.crisis_stars != null ? `위기 신호 감지 ${d.crisis_stars}건` : undefined} />
+        <Stat label="이번 달 AI 원가" value={won(d.ai_cost_month.krw)} sub={d.ai_cost_month.starlight_share != null ? `별빛 받기 ${d.ai_cost_month.starlight_share}%` : d.crisis_stars != null ? `위기 신호 감지 ${d.crisis_stars}건` : undefined} />
       </div>
       <div className="split">
         <div className="card table-card">
@@ -46,7 +46,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
           <dl className="kv">
             <dt>충전</dt><dd>{won(d.payments_today.charge_krw)} · {num(d.payments_today.charge_count)}건</dd>
             {d.payments_today.refund_krw != null && <><dt>환불 회수</dt><dd>{won(d.payments_today.refund_krw)} · {d.payments_today.refund_count ?? 0}건</dd></>}
-            {d.payments_today.used ? <><dt>코인 사용</dt><dd>별빛 받기 {num(d.payments_today.used.starlight)} · 망원경 {num(d.payments_today.used.telescope)}</dd></>
+            {d.payments_today.used ? <><dt>코인 사용</dt><dd>별빛 받기 {num(d.payments_today.used.starlight)}</dd></>
               : d.payments_today.coins != null && <><dt>충전 코인</dt><dd>{num(d.payments_today.coins)}코인</dd></>}
             <dt>멤버십</dt><dd>v1.1 이후 열려요</dd>
           </dl>

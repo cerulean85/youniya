@@ -5,11 +5,11 @@ import { getAi } from "@/lib/api";
 import { monthLabel, num, thisMonth, won } from "@/lib/format";
 import { requireOperator } from "@/lib/session";
 
-const FEATURE: Record<string, string> = { prism: "별빛 받기 · 점수", prism_score: "별빛 받기 · 점수", prism_reading: "별빛 받기 · 풀이 (별도 호출)", telescope: "마음 망원경", monthly_report: "월간 리포트", crisis: "위기 신호 감지" };
+const FEATURE: Record<string, string> = { prism: "별빛 받기 · 점수", prism_score: "별빛 받기 · 점수", prism_reading: "별빛 받기 · 풀이 (별도 호출)", monthly_report: "월간 리포트", crisis: "위기 신호 감지" };
 
 export const metadata: Metadata = { title: "AI 사용량·원가" };
 
-// Figma A-09 (owners): what the starlight prism and the telescope cost, and members over the monthly line.
+// Figma A-09 (owners): what the starlight prism costs (마음 망원경 removed 2026-11-10), and members over the monthly line.
 export default async function AiPage() {
   await requireOperator(["owner"]);
   const wait = notConnected("owner", "AI 사용량·원가");
@@ -23,18 +23,17 @@ export default async function AiPage() {
         <div><h1>AI 사용량·원가</h1><p className="muted">{a.model ? `모델 ${a.model}${a.thinking ? ` · 생각 설정 ${a.thinking}` : ""}${a.krw_per_usd ? ` · 1달러 = ${num(a.krw_per_usd)}원으로 계산` : ""}` : "2026년 11월 9일부터 집계해요."}</p></div>
         <span className="btn">기간: {monthLabel(month)}</span>
       </div>
-      <div className="stats five">
+      <div className="stats">
         <Stat label="이번 달 원가" value={won(s.cost_krw)} sub={s.change_pct != null ? `지난달 같은 날보다 ${s.change_pct >= 0 ? "+" : ""}${s.change_pct}%` : undefined} />
         <Stat label="호출" value={num(s.calls)} sub={`실패 ${s.failure_rate}% · 코인·무료 몫 차감 안 함`} />
         <Stat label="별빛 받기 1회" value={won(s.per_starlight_krw)} sub={`점수 + 풀이 두 번 호출${s.cache_hit != null ? ` · 직접 캐시 적중 ${s.cache_hit}%` : ""}`} />
-        <Stat label="마음 망원경 1회" value={won(s.per_telescope_krw)} />
         <Stat label="멤버 원가 경보" value={`${s.member_alerts}명`} tone={s.member_alerts ? "red" : undefined} sub={`월 ${won(s.member_limit_krw)} 넘음`} />
       </div>
       <div className="split">
         <div className="card table-card">
           <table className="table">
             <thead><tr><th>기능</th><th>호출</th><th>실패율</th><th>평균 입력</th><th>평균 출력</th><th>원가</th></tr></thead>
-            <tbody>{a.features.map((f) => {
+            <tbody>{a.features.filter((f) => (f.feature ?? f.key) !== "telescope").map((f) => {
               const rate = f.attempts ? ((f.failures ?? 0) / f.attempts) * 100 : null;
               return (
                 <tr key={f.feature ?? f.key}>
