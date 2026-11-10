@@ -11,6 +11,7 @@ import { longDate, moodOf, dateTime, MIN_FLOAT_LENGTH } from "@/lib/format";
 import type { Me, Star } from "@/lib/types";
 import { LinkStar } from "./LinkStar";
 import { ShareStar } from "./ShareStar";
+import { StarBirth } from "@/components/StarBirth";
 import { DeleteButton, ExportButton, FloatButton, LinkedChip, Toast } from "./StarActions";
 import { ReceivedLines } from "./ReceivedLines";
 import { Telescope } from "./Telescope";
@@ -47,7 +48,8 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
   const justFloated = sp.new === "1" && floated;
   const care = sp.care === "1";
   const mood = moodOf(star.mood);
-  if (justFloated) return <Result star={star} />;
+  // W-102: the birth plays once over the new star, lit or not.
+  if (justFloated) return <><StarBirth id={star.id} /><Result star={star} /></>;
   return (
     <div className={styles.body}>
       <article className={styles.article}>
@@ -115,7 +117,7 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
           <DeleteButton id={star.id} title={title} />
         </div>
       </aside>
-      {sp.kept === "1" && <Toast message="별빛 없이 띄웠어요" />}
+      {sp.kept === "1" && <><StarBirth id={star.id} unlit={mood.color} /><Toast message="별빛 없이 띄웠어요" /></>}
     </div>
   );
 }
