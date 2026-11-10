@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Search, Shield, Star, User, ChevronRight, Doc, Info, Lock, LogOut, Moon, Nebula, Phone, Trash, Close } from "@/components/icons";
+import { Search, Shield, Star, User, ChevronRight, Doc, Info, Lock, LogOut, Moon, Phone, Trash, Close } from "@/components/icons";
 import { PageHeader } from "@/components/Page";
 import { api } from "@/lib/api";
 import { SITE_URL } from "@/lib/config";
@@ -18,7 +18,7 @@ const PROVIDERS: Record<string, string> = { apple: "Apple", google: "Google", de
 
 type MeFull = Me & { marketing?: { opt_in: boolean; consented_at: string | null; revoked_at: string | null } };
 
-// Figma W-79 (iOS 87, 87-6): one column of rows; 나눈 별, 차단한 별지기, 별지기 이름 and 우주의 색 open their own pages
+// Figma W-79 (iOS 87, 87-6): one column of rows (나눈 별 moved to the plaza, 2026-11-10); 차단한 별지기, 별지기 이름 and 우주의 색 open their own pages
 // (W-77, W-82, W-80, W-90). 진동, 별 만들기 알림 and 알림 시각 belong to the phone and stay in the app.
 export default function SettingsPage({ searchParams }: PageProps<"/settings">) {
   return (
@@ -68,7 +68,6 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
         <MarketingToggle on={marketing.opt_in} />
       </Group>
       <Group title="우주 광장">
-        <Link href="/settings/shares" className={styles.row}><Nebula size={18} /><span>나눈 별</span><span className={styles.value}>{shares.stars.length}개<ChevronRight size={16} /></span></Link>
         <Link href="/settings/blocks" className={styles.row}><Close size={18} /><span>차단한 별지기</span><span className={styles.value}>{blocks.items.length}명<ChevronRight size={16} /></span></Link>
         <DangerZone part="unshare" shared={shares.stars.length} icon={<Lock size={18} />} />
       </Group>

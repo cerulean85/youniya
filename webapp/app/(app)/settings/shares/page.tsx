@@ -15,7 +15,8 @@ export const metadata: Metadata = { title: "나눈 별" };
 export default function SharesPage() {
   return (
     <div className={styles.page}>
-      <Back />
+      {/* 나눈 별 lives in the plaza now (W-44 내 별 · 내가 나눈 별). */}
+      <Back href="/plaza" label="우주 광장" />
       <Suspense fallback={<div className={styles.loading} aria-busy="true" />}><Shares /></Suspense>
     </div>
   );

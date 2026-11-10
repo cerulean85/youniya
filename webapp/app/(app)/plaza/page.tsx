@@ -112,7 +112,7 @@ async function Plaza({ searchParams }: Pick<PageProps<"/plaza">, "searchParams">
         <aside className={styles.side}>
           <div className={`card ${styles.mine}`}>
             <span className="label-m">내 별</span>
-            <Link href={`/plaza/keepers/${encodeURIComponent(me.nickname!)}`}><span>내가 나눈 별</span><span>{mine.stars.length}개<ChevronRight size={14} /></span></Link>
+            <Link href="/settings/shares"><span>내가 나눈 별</span><span>{mine.stars.length}개<ChevronRight size={14} /></span></Link>
             <Link href="/plaza?filter=beside"><span>곁에 둔 별</span><span>{besideCount}개<ChevronRight size={14} /></span></Link>
             <span className={styles.mineRow}><span>받은 별빛 한 줄</span><span>{lines}개</span></span>
           </div>
