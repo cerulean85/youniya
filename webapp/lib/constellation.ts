@@ -2,7 +2,7 @@
 // planned it; until that ships, `fromStars` builds the same shape from the month's stars and the shapes below.
 import type { Mood, StarSummary } from "./types";
 
-export type CStar = { id: string; title: string; mood: Mood; moods?: Mood[]; has_starlight?: boolean; starlight: number | null; created_at: string };
+export type CStar = { id: string; title: string; mood: Mood; moods?: Mood[]; has_starlight?: boolean; starlight: number | null; created_at: string; shape?: { points: number; sharpness: string } | null };
 export type Constellation = {
   month: string; key: string; name: string;
   slots: { index: number; x: number; y: number; star: CStar | null }[];

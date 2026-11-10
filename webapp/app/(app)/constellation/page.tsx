@@ -33,11 +33,11 @@ async function Month({ searchParams }: Pick<PageProps<"/constellation">, "search
   const months = await listMonths();
   const first = months?.at(-1)?.month;
   const month = asked > current ? current : first && asked < first ? first : asked;
-  const [view, list] = await Promise.all([
-    getConstellation(month),
-    // The constellation card draws each star's shape; the month's list carries it (the constellation doesn't).
-    api<{ items: StarSummary[] }>(`/v1/stars?month=${month}&limit=200`).catch(() => null),
-  ]);
+  const view = await getConstellation(month);
+  // The constellation card draws each star's shape. Servers from 21866a6 send it with the constellation;
+  // before that, the month's star list has it.
+  const old = view?.c?.slots.some((x) => x.star && !("shape" in x.star));
+  const list = old ? await api<{ items: StarSummary[] }>(`/v1/stars?month=${month}&limit=200`).catch(() => null) : null;
   const shapeOf = new Map((list?.items ?? []).map((s) => [s.id, s.shape ?? null]));
   const c = view?.c ?? null, count = view?.count ?? 0;
   const prev = shiftMonth(month, -1), next = shiftMonth(month, 1);
@@ -83,7 +83,7 @@ async function Month({ searchParams }: Pick<PageProps<"/constellation">, "search
               lines: c.lines,
               slots: c.slots.map((x) => ({ x: x.x, y: x.y, color: x.star ? moodOf(x.star.mood).color : null,
                 lit: !!x.star && x.star.has_starlight !== false && x.star.starlight != null, starlight: x.star?.starlight ?? null,
-                shape: x.star ? shapeOf.get(x.star.id) ?? null : null,
+                shape: x.star ? (x.star.shape !== undefined ? x.star.shape : shapeOf.get(x.star.id) ?? null) : null,
                 date: x.star ? `${kst(x.star.created_at).m}/${kst(x.star.created_at).d}` : null })),
               moods: moodCounts([...c.slots.flatMap((x) => (x.star ? [x.star] : [])), ...c.extra]),
             }} />}
