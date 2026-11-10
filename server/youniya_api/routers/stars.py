@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from ..deps import ApiError, consented_user, get_cipher, get_db
 from ..blocks import hidden_users
-from ..models import Draft, Nebula, Star, StarLine, StarLineReport, StarLink, StarShare, TelescopeReport, User, now
+from ..models import Draft, Nebula, Star, StarLine, StarLineReport, StarLink, StarShare, User, now
 from ..prism.filters import CRISIS_GUIDANCE, has_crisis_signal
 from .. import ai_cost, allowance, coins, membership, privacy
 from .blocks import block
@@ -274,17 +274,7 @@ def get_star(star_id: str, user: User = Depends(consented_user), db: Session = D
     star = owned_star(db, user, star_id)
     return star_view(star, cipher, shared=star.id in shared_star_ids(db, user.id)) | {
         "linked_stars": _linked(db, star, cipher),
-        "telescope": _telescope(db, star, cipher),
         "line_count": db.scalar(select(func.count()).select_from(_lines_query(db, user, star).subquery()))}
-
-
-def _telescope(db: Session, star: Star, cipher: Cipher) -> dict | None:
-    """11.5: the latest 마음 망원경 result of this star alone, shown inside its detail."""
-    for r in db.scalars(select(TelescopeReport).where(TelescopeReport.user_id == star.user_id)
-                        .order_by(TelescopeReport.created_at.desc())):
-        if r.star_ids == [star.id]:
-            return {"id": r.id, "created_at": iso(r.created_at), "report": cipher.dec_json(r.report_enc)}
-    return None
 
 
 def _link(db: Session, user: User, a: str, b: str) -> bool:

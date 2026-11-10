@@ -28,7 +28,9 @@ def stars_left(user: User, per_day: int) -> int:
 
 
 def telescopes_left(user: User) -> int:
-    return int(user.free_telescope_month != this_month()) + int(not user.free_telescope_used)
+    """마음 망원경 was removed (20261110): always 0. /v1/me, /v1/coins and 별지기 멤버십 keep their telescope
+    fields at 0/false until the apps stop reading them."""
+    return 0
 
 
 def summary(user: User, per_day: int) -> dict:

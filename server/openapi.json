@@ -1812,215 +1812,6 @@
         ]
       }
     },
-    "/v1/telescope/offer": {
-      "get": {
-        "tags": [
-          "telescope"
-        ],
-        "summary": "Offer",
-        "description": "`free_left`: a member's monthly ones, this month's free one and the sign-up one, if still unused.",
-        "operationId": "offer_v1_telescope_offer_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/v1/telescope/reports": {
-      "post": {
-        "tags": [
-          "telescope"
-        ],
-        "summary": "Create Report",
-        "operationId": "create_report_v1_telescope_reports_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/youniya_api__routers__telescope__ReportIn"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "telescope"
-        ],
-        "summary": "List Reports",
-        "description": "26 리포트 목록, 27 정렬",
-        "operationId": "list_reports_v1_telescope_reports_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "order",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "enum": [
-                "newest",
-                "oldest"
-              ],
-              "type": "string",
-              "default": "newest",
-              "title": "Order"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/telescope/reports/{report_id}": {
-      "get": {
-        "tags": [
-          "telescope"
-        ],
-        "summary": "Get Report",
-        "operationId": "get_report_v1_telescope_reports__report_id__get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "report_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Report Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/telescope/reports/{report_id}/save": {
-      "post": {
-        "tags": [
-          "telescope"
-        ],
-        "summary": "Save Report",
-        "description": "10 리포트 보관하기",
-        "operationId": "save_report_v1_telescope_reports__report_id__save_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "report_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Report Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/coins": {
       "get": {
         "tags": [
@@ -3203,7 +2994,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/youniya_api__routers__plaza__ReportIn"
+                "$ref": "#/components/schemas/ReportIn"
               }
             }
           }
@@ -3272,7 +3063,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/youniya_api__routers__plaza__ReportIn"
+                "$ref": "#/components/schemas/ReportIn"
               }
             }
           }
@@ -8518,6 +8309,36 @@
         ],
         "title": "ReportAction"
       },
+      "ReportIn": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "hurtful",
+              "personal_info",
+              "spam",
+              "other",
+              "self_harm",
+              "harassment",
+              "hate",
+              "impersonation",
+              "advertising",
+              "nickname"
+            ],
+            "title": "Reason"
+          },
+          "block": {
+            "type": "boolean",
+            "title": "Block",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "ReportIn"
+      },
       "ScanIn": {
         "properties": {
           "text": {
@@ -9082,58 +8903,6 @@
           "reason"
         ],
         "title": "InviteIn"
-      },
-      "youniya_api__routers__plaza__ReportIn": {
-        "properties": {
-          "reason": {
-            "type": "string",
-            "enum": [
-              "hurtful",
-              "personal_info",
-              "spam",
-              "other",
-              "self_harm",
-              "harassment",
-              "hate",
-              "impersonation",
-              "advertising",
-              "nickname"
-            ],
-            "title": "Reason"
-          },
-          "block": {
-            "type": "boolean",
-            "title": "Block",
-            "default": false
-          }
-        },
-        "type": "object",
-        "required": [
-          "reason"
-        ],
-        "title": "ReportIn"
-      },
-      "youniya_api__routers__telescope__ReportIn": {
-        "properties": {
-          "star_ids": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array",
-                "maxItems": 30,
-                "minItems": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Star Ids"
-          }
-        },
-        "type": "object",
-        "title": "ReportIn"
       }
     },
     "securitySchemes": {

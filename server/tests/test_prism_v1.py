@@ -15,16 +15,10 @@ def test_reading_has_reasons_and_a_version(client):
     assert unlit["prism_version"] is None
 
 
-def test_telescope_result_sits_on_the_star(client):
+def test_star_detail_has_no_telescope(client):
     h = sign_in(client)
     star = float_star(client, h)
-    assert client.get(f"/v1/stars/{star['id']}", headers=h).json()["telescope"] is None
-    client.post("/v1/telescope/reports", json={"star_ids": [star["id"]]}, headers=h)
-    t = client.get(f"/v1/stars/{star['id']}", headers=h).json()["telescope"]["report"]
-    depth = next(lens for lens in t["lenses"] if lens["key"] == "depth")
-    assert depth["score"] == star["analysis"]["scores"]["depth"] and depth["reason"] == star["analysis"]["depth_reason"]
-    assert set(t["mood_flow"]) == {"start", "middle", "end"} and t["fog_items"] == []
-    assert t["mood_interpretation"]
+    assert "telescope" not in client.get(f"/v1/stars/{star['id']}", headers=h).json()
 
 
 def test_a_lost_reading_is_counted_and_the_star_kept(client, monkeypatch):
