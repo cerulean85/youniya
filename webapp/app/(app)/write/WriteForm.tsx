@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Info, Lock } from "@/components/icons";
+import { FlashToast, OfflineBanner, useOnline } from "@/components/Offline";
 import { PrismOverlay } from "@/components/PrismOverlay";
 import { MIN_FLOAT_LENGTH, MOODS } from "@/lib/format";
 import type { Draft, Mood } from "@/lib/types";
@@ -30,19 +31,52 @@ export function WriteForm({ draft, source, freeStarToday, coins }: { draft: Draf
   // Only save once something changes (a first-render save would also wipe a draft when opening an empty page).
   const last = useRef(JSON.stringify([moods, title, body]));
 
-  // Autosave a moment after typing stops.
+  // W-103: offline, the draft stays in this browser and a banner says so; back online, it saves again.
+  const online = useOnline();
+  const [lost, setLost] = useState(false);
+  const [flash, setFlash] = useState<{ text: string; n: number } | null>(null);
+  const offline = lost || !online;
+  const localKey = `yn_draft_${rewrite?.id ?? "new"}`;
+
+  // Autosave a moment after typing stops: to the account, and to this browser in case the connection drops.
   useEffect(() => {
     const now = JSON.stringify([moods, title, body]);
     if (now === last.current) return;
     const t = setTimeout(async () => {
+      try { localStorage.setItem(localKey, JSON.stringify({ moods, title, body })); } catch { /* private mode */ }
+      if (!navigator.onLine) { setLost(true); setSaved("이 기기에 임시 저장됨"); return; }
       try {
         await saveDraft({ mood: moods[0], moods, title, body, source_star_id: rewrite?.id ?? null });
         last.current = now;
+        setLost(false);
         setSaved(`임시 저장됨 · ${new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date())}`);
-      } catch { setSaved("임시 저장하지 못했어요"); }
+      } catch { setLost(true); setSaved("이 기기에 임시 저장됨"); }
     }, 1200);
     return () => clearTimeout(t);
-  }, [moods, title, body, rewrite?.id]);
+  }, [moods, title, body, rewrite?.id, localKey, online]);
+
+  const retry = async () => {
+    if (!navigator.onLine) { setFlash((f) => ({ text: "연결을 확인해 주세요", n: (f?.n ?? 0) + 1 })); return; }
+    try {
+      await saveDraft({ mood: moods[0], moods, title, body, source_star_id: rewrite?.id ?? null });
+      last.current = JSON.stringify([moods, title, body]);
+      setLost(false);
+      setSaved("임시 저장됨");
+      setFlash((f) => ({ text: "다시 연결됐어요", n: (f?.n ?? 0) + 1 }));
+    } catch { setFlash((f) => ({ text: "연결을 확인해 주세요", n: (f?.n ?? 0) + 1 })); }
+  };
+  // Back online after a drop: save at once, hide the banner and say so.
+  const wasOffline = useRef(false);
+  useEffect(() => {
+    if (!online) { wasOffline.current = true; return; }
+    if (!wasOffline.current) return;
+    wasOffline.current = false;
+    const t = setTimeout(retry, 0);
+    return () => clearTimeout(t);
+  });
+  // Floating needs the server; offline it waits instead of failing.
+  const guard = (e: React.FormEvent) => { if (!navigator.onLine) { e.preventDefault(); setLost(true); confirm.current?.close(); } };
+  const offlineUi = <>{offline && <OfflineBanner onRetry={retry} />}{flash && !offline && <FlashToast key={flash.n} message={flash.text} />}{flash && offline && flash.text !== "다시 연결됐어요" && <FlashToast key={flash.n} message={flash.text} />}</>;
 
   const length = body.trim().length;
   const canFloat = length >= MIN_FLOAT_LENGTH;
@@ -79,7 +113,7 @@ export function WriteForm({ draft, source, freeStarToday, coins }: { draft: Draf
   // Figma W-73: 고쳐 쓰기 is one quiet column; the old star stays, the new one is linked to it.
   if (rewrite) {
     return (
-      <form action={action} className={styles.rewrite}>
+      <form action={action} className={styles.rewrite} onSubmit={guard}>
         <input type="hidden" name="moods" value={moods.join(",")} />
         <input type="hidden" name="rewrite_of" value={rewrite.id} />
         <div className={styles.rewriteTop}>
@@ -111,12 +145,13 @@ export function WriteForm({ draft, source, freeStarToday, coins }: { draft: Draf
         <button type="button" className="btn btn-primary btn-block" disabled={length === 0} onClick={() => confirm.current?.showModal()}>새 별로 띄우기</button>
         <PrismOverlay mode="float" />
         {confirmDialog}
+        {offlineUi}
       </form>
     );
   }
 
   return (
-    <form action={action} className={styles.body}>
+    <form action={action} className={styles.body} onSubmit={guard}>
       <input type="hidden" name="moods" value={moods.join(",")} />
       {source && <input type="hidden" name={rewrite ? "rewrite_of" : "link_to"} value={source.id} />}
       <div className={`card ${styles.editor}`}>
@@ -171,6 +206,7 @@ export function WriteForm({ draft, source, freeStarToday, coins }: { draft: Draf
       </aside>
       <PrismOverlay mode="float" />
       {confirmDialog}
+      {offlineUi}
     </form>
   );
 }
