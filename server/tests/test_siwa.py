@@ -11,11 +11,15 @@ from youniya_api.siwa import ReauthRequired, SiwaClient
 from .conftest import sign_in
 
 
+def _id_token(sub):
+    return jwt.encode({"sub": sub, "aud": "com.example.app"}, "x" * 32, algorithm="HS256")
+
+
 class FakeSiwa:
     def __init__(self, fail=None):
         self.codes, self.fail = [], fail
 
-    def revoke_with_code(self, code, client_id=None, redirect_uri=None):
+    def revoke_with_code(self, code, client_id=None, redirect_uri=None, expected_sub=None):
         self.codes.append(code)
         self.calls = getattr(self, "calls", []) + [(client_id, redirect_uri)]
         if self.fail:
@@ -80,13 +84,20 @@ def test_client_secret_and_calls(monkeypatch):
         if url.endswith("/auth/token"):
             if data["code"] == "bad":
                 return httpx.Response(400, json={"error": "invalid_grant"}, request=httpx.Request("POST", url))
-            return httpx.Response(200, json={"access_token": "a", "refresh_token": "r"}, request=httpx.Request("POST", url))
+            return httpx.Response(200, json={"access_token": "a", "refresh_token": "r", "id_token": _id_token("apple-sub")},
+                                  request=httpx.Request("POST", url))
         return httpx.Response(200, request=httpx.Request("POST", url))
     monkeypatch.setattr(httpx, "post", post)
-    c.revoke_with_code("good")
+    c.revoke_with_code("good", expected_sub="apple-sub")
     assert calls[0][1]["grant_type"] == "authorization_code" and calls[0][1]["client_id"] == "com.example.app"
     assert calls[1][0].endswith("/auth/revoke") and calls[1][1]["token"] == "r"
     assert calls[1][1]["token_type_hint"] == "refresh_token"
+    calls.clear()
+    try:  # another Apple ID's code: refused, and nothing revoked
+        c.revoke_with_code("good", expected_sub="someone-else")
+        raise AssertionError("expected ReauthRequired")
+    except ReauthRequired as e:
+        assert str(e) == "sub_mismatch" and not any(u.endswith("/auth/revoke") for u, _ in calls)
     try:
         c.revoke_with_code("bad")
         raise AssertionError("expected ReauthRequired")

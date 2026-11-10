@@ -201,7 +201,7 @@ def delete_account(request: Request, body: DeleteIn | None = None, user: User = 
             log.error("Sign in with Apple key not configured: Apple tokens of %s not revoked", user.id)
         else:
             try:
-                siwa.revoke_with_code(code, client_id, body.apple_redirect_uri)
+                siwa.revoke_with_code(code, client_id, body.apple_redirect_uri, expected_sub=user.provider_sub)
             except ReauthRequired as e:
                 raise ApiError(400, "apple_reauth_required", "Apple 계정 확인이 필요해요. 다시 시도해 주세요.",
                                apple_error=str(e))
