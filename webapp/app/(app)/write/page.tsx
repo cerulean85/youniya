@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { Toast } from "@/components/Flash";
 import { Close } from "@/components/icons";
 import { api } from "@/lib/api";
 import type { Draft, Me, Star } from "@/lib/types";
@@ -8,6 +9,8 @@ import { WriteForm, type Source } from "./WriteForm";
 import styles from "./write.module.css";
 
 export const metadata: Metadata = { title: "별 만들기" };
+// 별빛 받기 waits for the prism: the API answers within 55 s, and the browser gives up at 60 s.
+export const maxDuration = 120;
 
 // Figma W-11 (별 만들기) with W-23 (분석 중) while a star is made; ?rewrite= is 고쳐 쓰기 (W-73, W-46),
 // ?link= is 별 잇기 · 새 별 쓰기 (W-39).
@@ -43,6 +46,7 @@ async function Editor({ searchParams }: Pick<PageProps<"/write">, "searchParams"
       </div>}
       <WriteForm key={source ? `${source.kind}-${source.id}` : "new"} draft={own} source={source}
         freeStarToday={me.free_star_today} coins={me.coins} />
+      {sp.stopped === "1" && <Toast title="별빛 받기를 그만뒀어요" sub="무료와 코인은 그대로예요" />}
     </>
   );
 }

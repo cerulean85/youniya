@@ -18,6 +18,8 @@ export type StarSummary = {
   starlight: number | null;
   rewrite_of: string | null;
   analysis_failed: boolean;
+  /** 그만두기 (W-105): this star's reading was cancelled; it has no starlight and can take a new one. */
+  starlight_cancelled?: boolean;
   shared: boolean;
 };
 

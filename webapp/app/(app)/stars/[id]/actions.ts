@@ -9,15 +9,19 @@ import type { CreateResult, Mood, Star, StarSummary } from "@/lib/types";
 export type ActionState = { error?: string; code?: string } | null;
 
 /** W-56 별빛 받기 for a star without starlight (or a retry after a failed reading): free once a day, then 5 coins. */
-export async function floatStar(id: string, _prev: ActionState): Promise<ActionState> { void _prev;
+// The attempt id lets 그만두기 (W-105) cancel this reading; the late answer to a cancelled one is 409 starlight_cancelled.
+export async function floatStar(id: string, _prev: ActionState, form?: FormData): Promise<ActionState> { void _prev;
+  const attempt = String(form?.get("attempt_id") ?? "");
+  const body = attempt ? JSON.stringify({ attempt_id: attempt }) : undefined;
   let r: CreateResult;
   try {
     // `/starlight` is the 2026-11 name; servers without it still have `/float`.
-    r = await api<CreateResult>(`/v1/stars/${id}/starlight`, { method: "POST" }).catch((e) => {
-      if (e instanceof ApiError && (e.status === 404 || e.status === 405)) return api<CreateResult>(`/v1/stars/${id}/float`, { method: "POST" });
+    r = await api<CreateResult>(`/v1/stars/${id}/starlight`, { method: "POST", body }).catch((e) => {
+      if (e instanceof ApiError && (e.status === 404 || e.status === 405)) return api<CreateResult>(`/v1/stars/${id}/float`, { method: "POST", body });
       throw e;
     });
   } catch (e) {
+    if (e instanceof ApiError && e.code === "starlight_cancelled") return null; // the page has already moved on
     if (e instanceof ApiError) return { error: e.message, code: e.code };
     throw e;
   }

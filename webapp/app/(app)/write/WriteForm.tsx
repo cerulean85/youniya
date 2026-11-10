@@ -7,7 +7,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Info, Lock } from "@/components/icons";
 import { FlashToast, OfflineBanner, useOnline } from "@/components/Offline";
-import { PrismOverlay } from "@/components/PrismOverlay";
+import { AttemptField, freshAttempt, PrismOverlay } from "@/components/PrismOverlay";
 import { MIN_FLOAT_LENGTH, MOODS } from "@/lib/format";
 import type { Draft, Mood } from "@/lib/types";
 import { createStar, saveDraft } from "./actions";
@@ -169,6 +169,7 @@ export function WriteForm({ draft, source, freeStarToday, coins }: { draft: Draf
       <form action={action} className={styles.rewrite} onSubmit={guard}>
         <input type="hidden" name="moods" value={moods.join(",")} />
         <input type="hidden" name="rewrite_of" value={rewrite.id} />
+        <AttemptField />
         <div className={styles.rewriteTop}>
           <Link href={`/stars/${rewrite.id}`} className={styles.close} data-leave>닫기</Link>
           <span className="label-m">고쳐 쓰기</span>
@@ -207,6 +208,7 @@ export function WriteForm({ draft, source, freeStarToday, coins }: { draft: Draf
   return (
     <form action={action} className={styles.body} onSubmit={guard}>
       <input type="hidden" name="moods" value={moods.join(",")} />
+      <AttemptField />
       {source && <input type="hidden" name={rewrite ? "rewrite_of" : "link_to"} value={source.id} />}
       <div className={`card ${styles.editor}`}>
         <div className={styles.moods} role="group" aria-label="오늘의 기분">
@@ -269,7 +271,7 @@ export function WriteForm({ draft, source, freeStarToday, coins }: { draft: Draf
 // Submits the surrounding form with mode=float (the dialog sits inside the form).
 function ConfirmFloat({ label, onDone }: { label: string; onDone: () => void }) {
   const { pending } = useFormStatus();
-  return <button name="mode" value="float" className="btn btn-primary btn-block" disabled={pending} onClick={() => setTimeout(onDone, 0)}>{label}</button>;
+  return <button name="mode" value="float" className="btn btn-primary btn-block" disabled={pending} onClick={(e) => { freshAttempt(e); setTimeout(onDone, 0); }}>{label}</button>;
 }
 
 function ConfirmKeep({ label, onDone }: { label: string; onDone: () => void }) {

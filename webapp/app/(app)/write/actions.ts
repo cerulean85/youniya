@@ -25,12 +25,16 @@ export async function createStar(_: CreateState, form: FormData): Promise<Create
   // 고쳐 쓰기 (W-46) makes a new star from an old one; 별 잇기 (W-39) joins the new star to one already written.
   const rewriteOf = String(form.get("rewrite_of") ?? "") || null;
   const linkTo = String(form.get("link_to") ?? "") || null;
+  // 그만두기 (W-105): with an attempt id the server saves the star before the prism reads it.
+  const attempt = mode === "float" ? String(form.get("attempt_id") ?? "") : "";
   const input = { mood, moods, title: String(form.get("title") ?? ""), body: String(form.get("body") ?? ""), mode,
+    ...(attempt && { attempt_id: attempt }),
     ...(rewriteOf && { rewrite_of: rewriteOf }), ...(linkTo && { link_to: [linkTo] }) };
   let result: CreateResult;
   try {
     result = await api<CreateResult>("/v1/stars", { method: "POST", body: JSON.stringify(input) });
   } catch (e) {
+    if (e instanceof ApiError && e.code === "starlight_cancelled") return null; // the page has already moved on
     if (e instanceof ApiError) return { error: e.message, code: e.code, cost: e.data.cost as number, coins: e.data.coins as number };
     throw e;
   }

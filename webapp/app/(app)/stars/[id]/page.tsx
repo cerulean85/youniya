@@ -20,6 +20,8 @@ import { ReceivedLines } from "./ReceivedLines";
 import styles from "./star.module.css";
 
 export const metadata: Metadata = { title: "별 상세" };
+// 별빛 받기 waits for the prism: the API answers within 55 s, and the browser gives up at 60 s.
+export const maxDuration = 120;
 
 // Figma W-54 (별빛 받은 별: 별빛 풀이, 이어진 별; 2026-11-10 마음 망원경은 없앴어요), W-32 (별빛 없는 별) with W-56 (별빛 받기 확인),
 // W-24 (별이 떠올랐어요, ?new=1), W-36 (마음 돌봄, ?care=1); ?kept=1 says 별빛 없이 띄웠어요.
@@ -67,7 +69,7 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
         <h1 className="display">{title}</h1>
         <div className={styles.meta}>
           <span className={styles.mood} style={{ ["--c" as string]: mood.color }}>{mood.label}</span>
-          {!floated && <span className="label-s muted">{star.analysis_failed ? "별빛을 읽지 못한 별 · 다시 받을 수 있어요" : "별빛 없는 별"}</span>}
+          {!floated && <span className="label-s muted">{star.analysis_failed ? "별빛을 읽지 못한 별 · 다시 받을 수 있어요" : star.starlight_cancelled ? "별빛 받기를 그만둔 별 · 다시 받을 수 있어요" : "별빛 없는 별"}</span>}
         </div>
         {care && <CrisisCare />}
         {care && (
@@ -91,6 +93,7 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
           <div className={styles.kept}>
             <p className="body-s muted">
               {star.analysis_failed ? "별빛을 읽지 못했어요. 코인은 차감되지 않았어요. 다시 받으면 별빛 프리즘이 한 번 더 읽어요."
+                : star.starlight_cancelled ? "별빛 받기를 그만둔 별이에요. 무료와 코인은 쓰지 않았어요. 언제든 다시 받을 수 있어요."
                 : "별빛 없이 띄운 별이에요. 별빛을 받으면 별빛 풀이를 볼 수 있어요."}
             </p>
             {!care && (star.body.trim().length >= MIN_FLOAT_LENGTH
