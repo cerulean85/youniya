@@ -10,8 +10,10 @@ export type StarCardData = {
 };
 export type ConstellationCardData = {
   heading: string; name: string; filled: number; total: number; count: number;
-  slots: { x: number; y: number; color: string | null; lit: boolean; starlight: number | null }[];
+  slots: { x: number; y: number; color: string | null; lit: boolean; starlight: number | null; shape: { points: number; sharpness: string } | null; date: string | null }[];
   lines: number[][];
+  /** The month's moods with how many stars carry each, most first. */
+  moods: { label: string; color: string; count: number }[];
 };
 
 const W = 1080, H = 1920, S = 3; // drawn on the 360×640 design, three times over
@@ -67,6 +69,23 @@ function footer(ctx: CanvasRenderingContext2D, serif: string, sans: string) {
   centered(ctx, "쓴 마음이 별이 되는 밤하늘 일기", 604 * S);
 }
 
+/** A star of `shape` at (cx, cy), tips at `size`, glowing in `mood` ("r, g, b"). */
+function paintStar(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number, shape: { points: number; sharpness: string }, mood: string, blur: number) {
+  const k = size / 46; // starPoints draws in a 100 box with tips at radius 46
+  const pts = starPoints(shape.points, shape.sharpness).split(" ").map((p) => p.split(",").map(Number));
+  ctx.save();
+  ctx.shadowColor = `rgba(${mood}, 0.9)`; ctx.shadowBlur = blur;
+  ctx.beginPath();
+  pts.forEach(([x, y], i) => (i ? ctx.lineTo : ctx.moveTo).call(ctx, cx + (x - 50) * k, cy + (y - 50) * k));
+  ctx.closePath();
+  const fill = ctx.createRadialGradient(cx, cy, 0, cx, cy, size);
+  fill.addColorStop(0, "rgba(255,255,255,0.95)"); fill.addColorStop(0.35, `rgba(${mood}, 0.95)`); fill.addColorStop(1, `rgba(${mood}, 0.75)`);
+  ctx.fillStyle = fill; ctx.fill();
+  ctx.shadowBlur = 0; ctx.lineJoin = "round"; ctx.lineWidth = Math.max(1, size / 40); ctx.strokeStyle = "rgba(255,255,255,0.55)"; ctx.stroke();
+  ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(cx, cy, size * 0.14, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
 const blob = (c: HTMLCanvasElement) => new Promise<Blob | null>((r) => c.toBlob(r, "image/png"));
 
 export async function drawStarCard(d: StarCardData) {
@@ -79,19 +98,7 @@ export async function drawStarCard(d: StarCardData) {
   const cx = W / 2, cy = 300 * S;
   glow(cx, cy, 150 * S, mood, 0.22);
   if (d.shape) {
-    const r = 64 * S / 46; // starPoints draws in a 100 box with tips at radius 46
-    const pts = starPoints(d.shape.points, d.shape.sharpness).split(" ").map((p) => p.split(",").map(Number));
-    ctx.save();
-    ctx.shadowColor = `rgba(${mood}, 0.9)`; ctx.shadowBlur = 40 * S;
-    ctx.beginPath();
-    pts.forEach(([x, y], i) => (i ? ctx.lineTo : ctx.moveTo).call(ctx, cx + (x - 50) * r, cy + (y - 50) * r));
-    ctx.closePath();
-    const fill = ctx.createRadialGradient(cx, cy, 0, cx, cy, 64 * S);
-    fill.addColorStop(0, "rgba(255,255,255,0.95)"); fill.addColorStop(0.35, `rgba(${mood}, 0.95)`); fill.addColorStop(1, `rgba(${mood}, 0.75)`);
-    ctx.fillStyle = fill; ctx.fill();
-    ctx.shadowBlur = 0; ctx.lineJoin = "round"; ctx.lineWidth = 1.5 * S; ctx.strokeStyle = "rgba(255,255,255,0.55)"; ctx.stroke();
-    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(cx, cy, 9 * S, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
+    paintStar(ctx, cx, cy, 64 * S, d.shape, mood, 40 * S);
   } else {
     ctx.save(); ctx.shadowColor = `rgba(${mood}, 0.6)`; ctx.shadowBlur = 24 * S;
     ctx.fillStyle = `rgba(${mood}, 0.75)`; ctx.beginPath(); ctx.arc(cx, cy, 14 * S, 0, Math.PI * 2); ctx.fill(); ctx.restore();
@@ -126,14 +133,13 @@ export async function drawConstellationCard(d: ConstellationCardData) {
   const { c, ctx, sans, serif, glow } = await canvas();
   ctx.fillStyle = "rgba(255,255,255,0.55)"; ctx.font = `400 ${12 * S}px ${sans}`;
   centered(ctx, d.heading, 78 * S);
-  // The figure in a 300-wide box, as on W-16.
-  const bw = 300 * S, bh = bw * (CANVAS.height / CANVAS.width), x0 = (W - bw) / 2, y0 = 120 * S;
-  glow(W / 2, y0 + bh / 2, 150 * S, "52, 211, 153", 0.1);
+  // Mobile 08-9 (2026-11-10): the figure nearly card-wide, each filled slot drawn as that star's shape with its date.
+  const bw = 320 * S, bh = bw * (CANVAS.height / CANVAS.width), x0 = (W - bw) / 2, y0 = 100 * S;
   const at = (i: number) => [x0 + d.slots[i].x * bw, y0 + d.slots[i].y * bh] as const;
   for (const [a, b] of d.lines) {
     const lit = !!(d.slots[a]?.color && d.slots[b]?.color);
     const [x1, y1] = at(a), [x2, y2] = at(b);
-    ctx.strokeStyle = lit ? "rgba(251,191,36,0.5)" : "rgba(255,255,255,0.18)"; ctx.lineWidth = 1.2 * S;
+    ctx.strokeStyle = lit ? "rgba(251,191,36,0.55)" : "rgba(255,255,255,0.18)"; ctx.lineWidth = 1.2 * S;
     ctx.setLineDash(lit ? [] : [3 * S, 6 * S]);
     ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
   }
@@ -145,9 +151,14 @@ export async function drawConstellationCard(d: ConstellationCardData) {
       ctx.beginPath(); ctx.arc(x, y, 5 * S, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
       return;
     }
-    const col = rgb(s.color), r = (s.lit ? 6 + ((s.starlight ?? 300) / 1000) * 4 : 4) * S;
-    ctx.save(); if (s.lit) { ctx.shadowColor = `rgba(${col}, 0.9)`; ctx.shadowBlur = 14 * S; }
-    ctx.fillStyle = `rgba(${col}, ${s.lit ? 1 : 0.55})`; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    const col = rgb(s.color);
+    glow(x, y, 46 * S, col, 0.16);
+    if (s.lit && s.shape) paintStar(ctx, x, y, (17 + ((s.starlight ?? 300) / 1000) * 6) * S, s.shape, col, 16 * S);
+    else {
+      ctx.save(); if (s.lit) { ctx.shadowColor = `rgba(${col}, 0.9)`; ctx.shadowBlur = 14 * S; }
+      ctx.fillStyle = `rgba(${col}, ${s.lit ? 1 : 0.6})`; ctx.beginPath(); ctx.arc(x, y, (s.lit ? 9 : 6) * S, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    }
+    if (s.date) { ctx.fillStyle = "rgba(255,255,255,0.45)"; ctx.font = `400 ${11 * S}px ${sans}`; ctx.fillText(s.date, x - ctx.measureText(s.date).width / 2, y + 36 * S); }
   });
   ctx.fillStyle = "#fff"; ctx.font = `400 ${30 * S}px ${serif}`;
   centered(ctx, `${d.name}자리`, 448 * S);
@@ -156,6 +167,20 @@ export async function drawConstellationCard(d: ConstellationCardData) {
   const pw = 200 * S, px = (W - pw) / 2, py = 497 * S, ph = 4 * S;
   ctx.fillStyle = "rgba(255,255,255,0.14)"; ctx.beginPath(); ctx.roundRect(px, py, pw, ph, ph / 2); ctx.fill();
   ctx.fillStyle = `rgb(${rgb("var(--gold)")})`; ctx.beginPath(); ctx.roundRect(px, py, pw * Math.min(1, d.filled / Math.max(1, d.total)), ph, ph / 2); ctx.fill();
+  // The month's moods, most first.
+  ctx.font = `500 ${11 * S}px ${sans}`;
+  const chips = d.moods.map((m) => ({ ...m, text: `${m.label} ${m.count}`, w: ctx.measureText(`${m.label} ${m.count}`).width + 34 * S }));
+  const gap = 6 * S, total = chips.reduce((n, m) => n + m.w, 0) + gap * Math.max(0, chips.length - 1);
+  let cx = (W - total) / 2;
+  const cy = 516 * S, ch = 28 * S;
+  for (const m of chips) {
+    const col = rgb(m.color);
+    ctx.fillStyle = `rgba(${col}, 0.16)`; ctx.strokeStyle = `rgba(${col}, 0.7)`; ctx.lineWidth = S;
+    ctx.beginPath(); ctx.roundRect(cx, cy, m.w, ch, ch / 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = `rgb(${col})`; ctx.beginPath(); ctx.arc(cx + 13 * S, cy + ch / 2, 3.5 * S, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.fillText(m.text, cx + 22 * S, cy + 18.5 * S);
+    cx += m.w + gap;
+  }
   footer(ctx, serif, sans);
   return blob(c);
 }

@@ -6,7 +6,9 @@ import { Suspense } from "react";
 import { ConstellationPick } from "@/components/ConstellationPick";
 import { ShareCard } from "@/components/ShareCard";
 import { ChevronRight, Nebula } from "@/components/icons";
-import { MONTH_NAMES } from "@/lib/constellation";
+import { MONTH_NAMES, type CStar } from "@/lib/constellation";
+import { api } from "@/lib/api";
+import type { Mood, StarSummary } from "@/lib/types";
 import { getConstellation, listMonths } from "@/lib/constellation-data";
 import { kst, monthOnly, moodOf, shiftMonth } from "@/lib/format";
 import styles from "./constellation.module.css";
@@ -31,7 +33,12 @@ async function Month({ searchParams }: Pick<PageProps<"/constellation">, "search
   const months = await listMonths();
   const first = months?.at(-1)?.month;
   const month = asked > current ? current : first && asked < first ? first : asked;
-  const view = await getConstellation(month);
+  const [view, list] = await Promise.all([
+    getConstellation(month),
+    // The constellation card draws each star's shape; the month's list carries it (the constellation doesn't).
+    api<{ items: StarSummary[] }>(`/v1/stars?month=${month}&limit=200`).catch(() => null),
+  ]);
+  const shapeOf = new Map((list?.items ?? []).map((s) => [s.id, s.shape ?? null]));
   const c = view?.c ?? null, count = view?.count ?? 0;
   const prev = shiftMonth(month, -1), next = shiftMonth(month, 1);
   const hasPrev = !first || prev >= first;
@@ -75,7 +82,10 @@ async function Month({ searchParams }: Pick<PageProps<"/constellation">, "search
               heading: `${month.slice(0, 4)}년 ${Number(month.slice(5))}월의 별자리`, name: c.name, filled: c.filled, total: c.total, count,
               lines: c.lines,
               slots: c.slots.map((x) => ({ x: x.x, y: x.y, color: x.star ? moodOf(x.star.mood).color : null,
-                lit: !!x.star && x.star.has_starlight !== false && x.star.starlight != null, starlight: x.star?.starlight ?? null })),
+                lit: !!x.star && x.star.has_starlight !== false && x.star.starlight != null, starlight: x.star?.starlight ?? null,
+                shape: x.star ? shapeOf.get(x.star.id) ?? null : null,
+                date: x.star ? `${kst(x.star.created_at).m}/${kst(x.star.created_at).d}` : null })),
+              moods: moodCounts([...c.slots.flatMap((x) => (x.star ? [x.star] : [])), ...c.extra]),
             }} />}
             <span className="caption faint">더 둘러보기</span>
             <Link href={`/constellation/story?month=${month}`} className={styles.link}>
@@ -95,6 +105,13 @@ async function Month({ searchParams }: Pick<PageProps<"/constellation">, "search
       </div>
     </>
   );
+}
+
+/** 평온 2 · 슬픔 2 · …: each star's colour (its first mood), only the moods present, most first. */
+function moodCounts(stars: CStar[]) {
+  const n = new Map<string, number>();
+  for (const s of stars) n.set(s.mood, (n.get(s.mood) ?? 0) + 1);
+  return [...n].sort((a, b) => b[1] - a[1]).map(([m, count]) => ({ label: moodOf(m as Mood).label, color: moodOf(m as Mood).color, count }));
 }
 
 function Stat({ label, value }: { label: string; value: number }) {
