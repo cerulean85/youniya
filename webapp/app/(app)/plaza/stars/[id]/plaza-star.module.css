@@ -55,3 +55,4 @@ a.tag:hover { color: var(--text); background: var(--tint); }
 /* The title keeps clear of the ··· button. */
 .head { padding-right: 44px; }
 .card [data-paused] { opacity: 0.45; }
+.sentLine { display: flex; flex-direction: column; gap: 4px; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border); background: rgb(255 255 255 / 0.03); }

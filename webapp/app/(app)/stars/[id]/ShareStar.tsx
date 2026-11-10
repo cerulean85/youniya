@@ -24,13 +24,65 @@ function sentencesOf(body: string) {
 
 // Figma W-26 (기획서 15장): the writer picks a 대표 문장; it goes to the plaza with the whole writing and their
 // 별지기 이름, contacts masked. A star without starlight can be shared too (17.2).
-export function ShareStar({ id, title, body, shared, lit, nickname }: { id: string; title: string; body: string; shared: boolean; lit: boolean; nickname: string | null }) {
+// quoteMissing (Mobile StarDetail): an edit took the shared 대표 문장 out of the writing, so another is picked.
+export function ShareStar({ id, title, body, shared, lit, nickname, quoteMissing = false }: { id: string; title: string; body: string; shared: boolean; lit: boolean; nickname: string | null; quoteMissing?: boolean }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [options, setOptions] = useState<Option[] | null>(null);
   const [check, setCheck] = useState<number | null>(null);
+  const [whole, setWhole] = useState<string | null>(null);
   const [step, setStep] = useState<"check" | "pick">("check");
   const [loading, start] = useTransition();
 
+  const load = () => {
+    if (!options) start(async () => {
+      const list = sentencesOf(body);
+      const [w, scans] = await Promise.all([scanBody(`${title}\n${body}`), scanSentences(list)]);
+      setCheck(w.total);
+      setWhole(w.masked);
+      setOptions(list.map((text, i) => ({ text, masked: scans[i].masked, total: scans[i].total })));
+    });
+  };
+  function picker(submit: string, heading = "어떤 문장을 나눌까요?") {
+    return (
+        <form action={async (f) => { await shareStar(id, f); dialog.current?.close(); }}>
+          <p className="caption faint">{title}</p>
+          <h2 id="share-title" className="h2">{heading}</h2>
+          <p className="body-s muted">고른 대표 문장과 글 전체가 별지기 이름({nickname})과 함께 올라가요. 전화번호·이메일은 ●●●로 가려져요.</p>
+          {!lit && <p className="caption" style={{ color: "var(--gold)" }}>별빛 없는 별은 목록 아래쪽에 놓여요. 별빛을 받으면 더 많은 사람에게 닿아요.</p>}
+          <div className={styles.options} role="radiogroup">
+            {loading || !options ? <p className="body-s faint">문장을 살펴보는 중…</p> : options.length === 0 ? (
+              <p className="body-s faint">나눌 만한 문장을 찾지 못했어요.</p>
+            ) : options.map((o, i) => (
+              <label key={i} className={styles.option}>
+                <input type="radio" name="quote" value={o.text} defaultChecked={i === 0} />
+                <span>
+                  <span className="observation">“{o.masked}”</span>
+                  {o.total > 0 && <span className={styles.masked}><Lock size={14} />{o.total}곳을 가린 채로 올라가요</span>}
+                </span>
+              </label>
+            ))}
+          </div>
+          <label className={styles.receive}><input type="checkbox" name="receive_lines" defaultChecked />별빛 한 줄 받기 · 나만 읽을 수 있어요</label>
+          <div className={styles.dialogActions}>
+            <button type="button" className="btn btn-ghost" onClick={() => dialog.current?.close()}>취소</button>
+            <Pending label={submit} busy="나누는 중…" style="btn-primary" disabled={!options?.length} />
+          </div>
+        </form>
+    );
+  }
+  if (shared && quoteMissing) {
+    return (
+      <>
+        <div className={styles.quoteMissing} role="note">
+          <span className="body-s">광장에 나눈 이 별의 대표 문장이 고친 글에 없어요. 대표 문장을 다시 골라 주세요.</span>
+          <button type="button" className="btn btn-primary btn-block" onClick={() => { setStep("pick"); dialog.current?.showModal(); load(); }}>대표 문장 고르기</button>
+        </div>
+        <dialog ref={dialog} className={`card ${styles.dialog} ${styles.shareDialog}`} aria-labelledby="share-title">
+          {picker("이 문장으로 바꾸기", "대표 문장 고르기")}
+        </dialog>
+      </>
+    );
+  }
   if (shared) {
     return (
       <form action={unshareStar.bind(null, id)} className={styles.shared}>
@@ -42,12 +94,7 @@ export function ShareStar({ id, title, body, shared, lit, nickname }: { id: stri
   const open = () => {
     setStep("check");
     dialog.current?.showModal();
-    if (!options) start(async () => {
-      const list = sentencesOf(body);
-      const [whole, scans] = await Promise.all([scanBody(`${title}\n${body}`), scanSentences(list)]);
-      setCheck(whole.total);
-      setOptions(list.map((text, i) => ({ text, masked: scans[i].masked, total: scans[i].total })));
-    });
+    load();
   };
   // 15.1: the plaza shows a 별지기 이름, so it's set first.
   if (!nickname) return <Link href={`/nickname?next=${encodeURIComponent(`/stars/${id}`)}`} className="btn btn-secondary btn-block">우주 광장에 나누기</Link>;
@@ -68,34 +115,18 @@ export function ShareStar({ id, title, body, shared, lit, nickname }: { id: stri
                 <><span className="label-m">가려진 항목이 없어요</span><span className="body-s muted">그대로 나눠도 괜찮아 보여요.</span></>
               )}
             </div>
+            {/* Mobile SentencePicker: the whole writing as it will go out (contacts masked). */}
+            {whole != null && (
+              <details className={styles.preview}>
+                <summary className="label-s">글 전체 미리 보기</summary>
+                <div className={`journal ${styles.previewText}`}>{whole}</div>
+              </details>
+            )}
             <button type="button" className="btn btn-primary btn-block" disabled={check == null} onClick={() => setStep("pick")}>확인했어요</button>
             <button type="button" className="btn btn-ghost btn-block" onClick={() => dialog.current?.close()}>취소</button>
           </div>
         ) : (
-        <form action={async (f) => { await shareStar(id, f); dialog.current?.close(); }}>
-          <p className="caption faint">{title}</p>
-          <h2 id="share-title" className="h2">어떤 문장을 나눌까요?</h2>
-          <p className="body-s muted">고른 대표 문장과 글 전체가 별지기 이름({nickname})과 함께 올라가요. 전화번호·이메일은 ●●●로 가려져요.</p>
-          {!lit && <p className="caption" style={{ color: "var(--gold)" }}>별빛 없는 별은 목록 아래쪽에 놓여요. 별빛을 받으면 더 많은 사람에게 닿아요.</p>}
-          <div className={styles.options} role="radiogroup">
-            {loading || !options ? <p className="body-s faint">문장을 살펴보는 중…</p> : options.length === 0 ? (
-              <p className="body-s faint">나눌 만한 문장을 찾지 못했어요.</p>
-            ) : options.map((o, i) => (
-              <label key={i} className={styles.option}>
-                <input type="radio" name="quote" value={o.text} defaultChecked={i === 0} />
-                <span>
-                  <span className="observation">“{o.masked}”</span>
-                  {o.total > 0 && <span className={styles.masked}><Lock size={14} />{o.total}곳을 가린 채로 올라가요</span>}
-                </span>
-              </label>
-            ))}
-          </div>
-          <label className={styles.receive}><input type="checkbox" name="receive_lines" defaultChecked />별빛 한 줄 받기 · 나만 읽을 수 있어요</label>
-          <div className={styles.dialogActions}>
-            <button type="button" className="btn btn-ghost" onClick={() => dialog.current?.close()}>취소</button>
-            <Pending label="이 문장으로 나누기" busy="나누는 중…" style="btn-primary" disabled={!options?.length} />
-          </div>
-        </form>
+        picker("이 문장으로 나누기")
         )}
       </dialog>
     </>

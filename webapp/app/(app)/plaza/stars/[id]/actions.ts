@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
-import type { LineChip } from "@/lib/types";
+import { LINE_CHIPS, type LineChip } from "@/lib/types";
 
 // 18.3: personal_info and self_harm hide a star at the first report.
 const REASON_KEYS = ["hurtful", "personal_info", "self_harm", "harassment", "hate", "impersonation", "advertising", "nickname", "spam", "other"] as const;
@@ -51,7 +51,7 @@ export async function blockOwner(shareId: string) {
   redirect("/plaza?blocked=1");
 }
 
-export type LineState = { error?: string; code?: string; ok?: boolean } | null;
+export type LineState = { error?: string; code?: string; ok?: boolean; sent?: string } | null;
 
 const LINE_ERRORS: Record<string, string> = {
   empty_line: "한 줄을 적거나 공감 칩을 골라 주세요.",
@@ -76,5 +76,5 @@ export async function leaveLine(shareId: string, _prev: LineState, form: FormDat
     throw e;
   }
   refresh();
-  return { ok: true };
+  return { ok: true, sent: chip ? LINE_CHIPS.find((c) => c.key === chip)?.label ?? "" : text };
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useOptimistic, useRef, useState, useTransition } from "react";
+import { useActionState, useEffect, useOptimistic, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { Close, Heart, More, Warn } from "@/components/icons";
 import { LINE_CHIPS } from "@/lib/types";
@@ -44,10 +44,12 @@ export function PlazaActions({ id, resonated, keeper, lines, name = null, mine =
         {keeper ? <Link href={keeper} className="btn btn-primary">이 별지기의 밤하늘 보기</Link> : <span />}
       </div>
       {/* 107: once left, or when the owner doesn't take lines, a dim note instead of the button. */}
+      {/* Mobile StarLine: the line I sent stays on this device, so it can be shown again. */}
+      {lines === "left" && <SentLine id={id} />}
       {lines === "open" ? (
         <button type="button" className={styles.lineButton} data-paused={restricted || undefined} onClick={() => restricted ? paused() : line.current?.showModal()}>✦ 별빛 한 줄 건네기</button>
       ) : (
-        <p className={`caption faint ${styles.lineNote}`}>{lines === "left" ? "이미 별빛 한 줄을 건넸어요" : "이 별은 별빛 한 줄을 받지 않아요"}</p>
+        <p className={`caption faint ${styles.lineNote}`}>{lines === "left" ? "이 별에는 이미 한 줄을 건넸어요" : "이 별은 별빛 한 줄을 받지 않아요"}</p>
       )}
       {!mine && (
         <div className={styles.more}>
@@ -126,9 +128,19 @@ function MoreMenu({ onReport, onBlock }: { onReport: () => void; onBlock: () => 
 }
 
 // Figma W-55: a quick chip, or up to 60 characters; checked for hurtful words, contacts and advice before it goes.
+const sentKey = (id: string) => `yn_line_${id}`;
+const onStorage = (change: () => void) => { window.addEventListener("storage", change); return () => window.removeEventListener("storage", change); };
+
+function SentLine({ id }: { id: string }) {
+  const sent = useSyncExternalStore(onStorage, () => { try { return localStorage.getItem(sentKey(id)); } catch { return null; } }, () => null);
+  if (!sent) return null;
+  return <div className={styles.sentLine}><span className="caption faint">내가 건넨 한 줄</span><p className="body-s">{sent}</p></div>;
+}
+
 function LineForm({ id, onDone }: { id: string; onDone: () => void }) {
   const [state, action] = useActionState(leaveLine.bind(null, id), null);
   const [text, setText] = useState("");
+  useEffect(() => { if (state?.ok && state.sent) try { localStorage.setItem(sentKey(id), state.sent); } catch { /* private mode */ } }, [state, id]);
   if (state?.ok) {
     return (
       <div className={styles.lineDone}>

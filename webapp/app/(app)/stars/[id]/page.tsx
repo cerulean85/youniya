@@ -8,7 +8,7 @@ import { StarCard } from "@/components/StarCard";
 import { StarlightReading } from "@/components/StarlightReading";
 import { api, ApiError } from "@/lib/api";
 import { longDate, moodOf, dateTime, MIN_FLOAT_LENGTH } from "@/lib/format";
-import type { Me, Star } from "@/lib/types";
+import type { Me, MyShare, Star } from "@/lib/types";
 import { LinkStar } from "./LinkStar";
 import { ShareStar } from "./ShareStar";
 import { CrisisCare } from "@/components/CrisisCare";
@@ -45,7 +45,11 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
     if (e instanceof ApiError && e.status === 404) notFound();
     throw e;
   }
-  const me = await api<Me>("/v1/me");
+  const [me, shares] = await Promise.all([
+    api<Me>("/v1/me"),
+    star.shared ? api<{ stars: MyShare[] }>("/v1/me/shares").catch(() => null) : null,
+  ]);
+  const quoteMissing = Boolean(shares?.stars.find((x) => x.star_id === star.id)?.quote_missing);
   const floated = (star.has_starlight ?? star.state === "floated") && star.analysis;
   const linked = star.linked_stars ?? [];
   const title = star.title || "제목 없는 별";
@@ -102,7 +106,7 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
               {me.free_star_today > 0 ? "오늘 무료 별빛 받기가 1번 남았어요. 이후 한 번에 5코인이에요." : "오늘 무료 별빛 받기를 썼어요. 한 번에 5코인이에요."}
             </p>
             <Link href={`/stars/${star.id}/edit`} className="btn btn-secondary btn-block">글 수정</Link>
-            <ShareStar id={star.id} title={title} body={star.body} shared={star.shared} lit={false} nickname={me.nickname ?? null} />
+            <ShareStar id={star.id} title={title} body={star.body} shared={star.shared} lit={false} nickname={me.nickname ?? null} quoteMissing={quoteMissing} />
           </div>
         )}
         {(star.shared || (star.line_count ?? 0) > 0) && (
@@ -117,7 +121,7 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
         {floated && (
           <>
             <LinkStar id={star.id} title={title} linkedIds={linked.map((l) => l.id)} />
-            <ShareStar id={star.id} title={title} body={star.body} shared={star.shared} lit nickname={me.nickname ?? null} />
+            <ShareStar id={star.id} title={title} body={star.body} shared={star.shared} lit nickname={me.nickname ?? null} quoteMissing={quoteMissing} />
           </>
         )}
         <div className={styles.footerLinks}>

@@ -69,3 +69,7 @@
 .checkBanner { display: flex; gap: 8px; align-items: center; margin: 0; padding: 14px 16px; border-radius: 12px; background: var(--tint); font: 400 13px/20px var(--sans); }
 .checkBanner svg { flex: none; color: var(--primary-text); }
 .checkCard { display: flex; flex-direction: column; gap: 4px; padding: 16px; border-radius: 14px; background: var(--raised); border: 1px solid var(--border); margin-bottom: 8px; }
+.quoteMissing { display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 14px; border: 1px solid rgb(251 191 36 / 0.4); background: rgb(251 191 36 / 0.08); }
+.preview { border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; }
+.preview summary { cursor: pointer; color: var(--primary-text); }
+.previewText { margin-top: 10px; max-height: 240px; overflow: auto; white-space: pre-wrap; font-size: 14px; }

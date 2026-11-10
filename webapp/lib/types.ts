@@ -115,7 +115,7 @@ export type PlazaStar = {
 };
 
 export type Keeper = { nickname: string; mine: boolean; items: PlazaStar[] };
-export type MyShare = { id: string; star_id: string; name: string; title: string; starlight: number | null; created_at: string; receive_lines?: boolean; lines?: number };
+export type MyShare = { id: string; star_id: string; name: string; title: string; starlight: number | null; created_at: string; receive_lines?: boolean; lines?: number; quote_missing?: boolean };
 export type ReceivedLine = { id: string; text: string | null; chip: LineChip | null; nickname: string | null; created_at: string };
 export type LineChip = "empathize" | "me_too" | "thanks";
 export const LINE_CHIPS: { key: LineChip; label: string }[] = [
