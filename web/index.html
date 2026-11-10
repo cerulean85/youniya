@@ -37,25 +37,18 @@
 <main>
 <section class="hero"><div class="wrap">
   <div class="hero-copy">
-    <span class="pill"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2c.8 6.5 3.5 9.2 10 10-6.5.8-9.2 3.5-10 10-.8-6.5-3.5-9.2-10-10 6.5-.8 9.2-3.5 10-10Z"/></svg>마음을 적으면, 별이 돼요</span>
-    <h1>오늘의 마음을<br>별 하나로 띄워요</h1>
-    <p class="lead">하루를 적으면 별빛 프리즘이 마음의 결을 읽어 별 하나로 빚어요. 별이 모이면 그달의 별자리가 채워지고, 우주 광장에서 누군가의 별과 조용히 공명할 수 있어요.</p>
+    <span class="pill"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2c.8 6.5 3.5 9.2 10 10-6.5.8-9.2 3.5-10 10-.8-6.5-3.5-9.2-10-10 6.5-.8 9.2-3.5 10-10Z"/></svg>밤하늘 일기 · iPhone과 웹</span>
+    <h1>쓴 마음이<br>별이 돼요</h1>
+    <p class="lead">오늘의 마음을 적으면, 그 마음의 깊이와 선명함이 단 하나뿐인 모양의 별로 떠올라요. 한 달 동안 띄운 별은 그달의 별자리를 채워요.</p>
     <div class="cta-row"><span class="btn btn-primary" aria-disabled="true">App Store 출시 준비 중</span><a class="btn btn-secondary" href="#how">어떻게 쓰는지 보기</a></div>
-    <p class="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>기록 작성과 별빛 없이 띄우기는 언제나 무료예요</p>
+    <p class="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>기록은 언제나 무료 · 글은 암호화되고 AI 학습에 쓰지 않아요</p>
   </div>
-  <div class="hero-visual" aria-hidden="true">
-    <svg viewBox="0 0 580 560"><path d="M40 420 L120 300 L60 150 L190 60 M120 300 L230 330 M470 110 L540 230 L500 420 L420 500" stroke="#E2E8F0" stroke-opacity=".3" stroke-dasharray="3 5" fill="none"/>
-      <circle cx="40" cy="420" r="5" fill="#fbbf24" style="filter:drop-shadow(0 0 8px #fbbf24)"/><circle cx="120" cy="300" r="8" fill="#8b5cf6" style="filter:drop-shadow(0 0 8px #8b5cf6)"/><circle cx="60" cy="150" r="5" fill="#22d3ee" style="filter:drop-shadow(0 0 8px #22d3ee)"/><circle cx="190" cy="60" r="7" fill="#ec4899" style="filter:drop-shadow(0 0 8px #ec4899)"/><circle cx="230" cy="330" r="4" fill="#fbbf24" style="filter:drop-shadow(0 0 8px #fbbf24)"/><circle cx="470" cy="110" r="6" fill="#22d3ee" style="filter:drop-shadow(0 0 8px #22d3ee)"/><circle cx="540" cy="230" r="9" fill="#ec4899" style="filter:drop-shadow(0 0 8px #ec4899)"/><circle cx="500" cy="420" r="5" fill="#fbbf24" style="filter:drop-shadow(0 0 8px #fbbf24)"/><circle cx="420" cy="500" r="7" fill="#8b5cf6" style="filter:drop-shadow(0 0 8px #8b5cf6)"/>
-    </svg>
-    <div class="today">
-      <div class="today-top">오늘의 별 카드<span class="light-badge"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2c.8 6.5 3.5 9.2 10 10-6.5.8-9.2 3.5-10 10-.8-6.5-3.5-9.2-10-10 6.5-.8 9.2-3.5 10-10Z"/></svg>742 별빛</span></div>
-      <div class="today-num"><b>742</b><span>별빛</span></div>
-      <p class="today-line">그런 마음이 머물렀군요.<br>오늘의 별은 조용히 숨을 고르고 있어요.</p>
-      <div class="meter">별의 깊이<i style="--v:88%;--c:#8b5cf6"></i></div>
-      <div class="meter">빛의 선명함<i style="--v:60%;--c:#22d3ee"></i></div>
-      <div class="meter">마음의 무게<i style="--v:60%;--c:#ec4899"></i></div>
-      <div class="chips"><span class="chip" style="--c:#34d399">평온</span><span class="chip" style="--c:#a5b4fc">슬픔</span></div>
-    </div>
+  <!-- Figma W-01-1 (558:27950): the '별이 떴어요' screen on a phone, three sample stars drawn as the app draws them. -->
+  <div class="hero-visual hero-phone">
+    <picture><source srcset="/img/hero-phone.webp" type="image/webp"><img src="/img/hero-phone.png" width="639" height="1200" fetchpriority="high" decoding="async" alt="YOUNIYA 앱의 '별이 떴어요' 화면: 꼭짓점 6개, 보통 뾰족함, 평온의 별"></picture>
+    <figure class="hero-star s1" style="--c:#34d399"><svg viewBox="0 0 100 100"><polygon points="50.0,4.0 65.6,34.4 96.0,50.0 65.6,65.6 50.0,96.0 34.4,65.6 4.0,50.0 34.4,34.4"/><circle cx="50" cy="50" r="7"/></svg><figcaption>평온 · 꼭짓점 4</figcaption></figure>
+    <figure class="hero-star s2" style="--c:#a5b4fc"><svg viewBox="0 0 100 100"><polygon points="50.0,4.0 63.0,32.1 93.7,35.8 71.0,56.8 77.0,87.2 50.0,72.1 23.0,87.2 29.0,56.8 6.3,35.8 37.0,32.1"/><circle cx="50" cy="50" r="7"/></svg><figcaption>슬픔 · 꼭짓점 5</figcaption></figure>
+    <figure class="hero-star s3" style="--c:#bef264"><svg viewBox="0 0 100 100"><polygon points="50.0,4.0 59.6,30.1 86.0,21.3 71.5,45.1 94.8,60.2 67.3,63.8 70.0,91.4 50.0,72.1 30.0,91.4 32.7,63.8 5.2,60.2 28.5,45.1 14.0,21.3 40.4,30.1"/><circle cx="50" cy="50" r="7"/></svg><figcaption>깨달음 · 꼭짓점 7</figcaption></figure>
   </div>
 </div></section>
 

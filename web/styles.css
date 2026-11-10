@@ -137,6 +137,19 @@ p { margin: 0; }
 .hero-visual { position: relative; width: 580px; height: 560px; flex: none; }
 .hero-visual > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .hero-visual .today { position: absolute; left: 140px; top: 78px; }
+/* W-01-1: the phone in the middle (about 520px of screen), sample stars around it. */
+.hero-phone picture { position: absolute; left: 50%; top: 50%; width: 277px; transform: translate(-50%, -50%); }
+.hero-phone img { display: block; width: 100%; height: auto; }
+.hero-star { position: absolute; margin: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.hero-star svg { width: 40px; height: 40px; overflow: visible; filter: drop-shadow(0 0 10px var(--c)); }
+.hero-star polygon { fill: var(--c); stroke: #fff; stroke-opacity: .5; stroke-width: 1.5; stroke-linejoin: round; }
+.hero-star circle { fill: #fff; opacity: .85; }
+.hero-star figcaption { font: 400 11px/14px var(--sans); color: var(--text-3); white-space: nowrap; }
+.hero-star.s1 { left: 0; top: 160px; }
+.hero-star.s2 { right: 0; top: 120px; }
+.hero-star.s2 svg { width: 32px; height: 32px; }
+.hero-star.s3 { right: 6px; top: 410px; }
+.hero-star.s3 svg { width: 34px; height: 34px; }
 
 /* Today star card */
 .today {
@@ -317,6 +330,12 @@ tr + tr td { border-top: 1px solid var(--border); }
   .hero h1 { font-size: 40px; line-height: 52px; }
   .hero-visual { width: 100%; height: auto; }
   .hero-visual > svg { display: none; }
+  .hero-phone { height: 450px; }
+  .hero-phone picture { width: 214px; }
+  .hero-star figcaption { font-size: 10px; }
+  .hero-star.s1 { left: 0; top: 70px; }
+  .hero-star.s2 { right: 0; top: 24px; }
+  .hero-star.s3 { right: 0; top: 330px; }
   .hero-visual .today { position: static; margin: 0 auto; width: 100%; max-width: 360px; }
   .section { padding: 64px 0; }
   .section-head h2 { font-size: 24px; line-height: 34px; }
