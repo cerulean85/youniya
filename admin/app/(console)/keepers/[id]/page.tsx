@@ -32,7 +32,7 @@ export default async function KeeperPage({ params }: PageProps<"/keepers/[id]">)
     { key: "extend_restriction", label: k.status === "restricted" ? "제한 늘리기" : "광장 이용 제한", danger: true, field: "days" },
     ...(k.nickname ? [{ key: "request_rename", label: KEEPER_ACTION_LABEL.request_rename }] : []),
     { key: "grant_coins", label: "코인 지급 (사유 필수)", field: "amount" },
-    ...(k.coins > 0 ? [{ key: "revoke_coins", label: "코인 회수", danger: true, field: "amount", confirm: `남은 코인 ${k.coins.toLocaleString("ko-KR")}개 안에서 회수해요. 결제 환불이 아니라 잘못 지급한 코인을 되돌릴 때 써요.` }] : []),
+    ...(k.coins > 0 ? [{ key: "revoke_coins", label: "코인 회수", danger: true, field: "amount", confirm: `남은 코인 ${k.coins.toLocaleString("ko-KR")}개 안에서 회수해요. 결제 환불이 아니라 잘못 지급한 코인을 되돌릴 때 써요. 별지기에게 알림이 가요.` }] : []),
     ...(k.deletion_requested_at ? [{ key: "process_deletion", label: KEEPER_ACTION_LABEL.process_deletion, danger: true, confirm: "별, 나눈 별, 받은 별빛 한 줄, 코인이 모두 지워지고 되돌릴 수 없어요. 결제 기록만 5년 보관해요." }] : []),
   ] as ReasonButton[];
   const buttons = operator.role === "owner" ? all : all.filter((b) => MODERATOR_KEEPER_ACTIONS.includes(b.key as never));
@@ -76,14 +76,14 @@ export default async function KeeperPage({ params }: PageProps<"/keepers/[id]">)
                 <tbody>
                   {orders.length === 0 ? <tr><td colSpan={5} className="muted">웹 결제가 없어요. App Store 환불은 애플에서 처리돼요.</td></tr> : orders.map((o) => (
                     <tr key={o.id}>
-                      <td>{dateTime(o.created_at)}</td>
+                      <td>{dateTime(o.approved_at ?? o.created_at)}{o.method ? <span className="faint"> · {o.method}</span> : null}</td>
                       <td>{o.coins.toLocaleString("ko-KR")}</td>
                       <td>{o.amount.toLocaleString("ko-KR")}원</td>
-                      <td>{ORDER_STATUS_LABEL[o.status]}{o.canceled_at ? ` · ${dateTime(o.canceled_at)}` : ""}{o.refund_block && o.status === "done" ? <span className="faint"> · {REFUND_BLOCK_LABEL[o.refund_block]}</span> : null}</td>
+                      <td>{ORDER_STATUS_LABEL[o.status] ?? o.status}{o.canceled_at ? ` · ${dateTime(o.canceled_at)}` : ""}{o.refund_block && o.status === "done" ? <span className="faint"> · {REFUND_BLOCK_LABEL[o.refund_block] ?? o.refund_block}</span> : null}</td>
                       <td>{operator.role === "owner" && o.status === "done" && (
                         <ReasonActions action={refund.bind(null, o.id, !o.refundable)} buttons={[o.refundable
                           ? { key: "refund", label: "환불", danger: true, confirm: `${o.amount.toLocaleString("ko-KR")}원을 토스에서 취소하고 코인 ${o.coins}개를 회수해요. 되돌릴 수 없어요.` }
-                          : { key: "refund", label: "예외 환불", danger: true, confirm: `${REFUND_BLOCK_LABEL[o.refund_block!]} — 규칙상 환불 대상이 아니에요. 서비스 장애 같은 예외일 때만 써요. ${o.amount.toLocaleString("ko-KR")}원 전액을 취소하고, 코인은 남은 만큼(최대 ${o.coins}개)만 회수해요.` }]} />
+                          : { key: "refund", label: "예외 환불", danger: true, confirm: `${REFUND_BLOCK_LABEL[o.refund_block!] ?? "규칙 밖"} — 규칙상 환불 대상이 아니에요. 서비스 장애 같은 예외일 때만 써요. ${o.amount.toLocaleString("ko-KR")}원 전액을 취소하고, 코인은 남은 만큼(최대 ${o.coins}개)만 회수해요.` }]} />
                       )}</td>
                     </tr>
                   ))}

@@ -22,7 +22,7 @@ export async function actOnKeeper(id: string, _prev: ReasonState, form: FormData
     throw e;
   }
   refresh();
-  return { ok: `${KEEPER_ACTION_LABEL[action]}: 처리했어요. ${action === "revoke_coins" ? "" : "별지기에게 앱 알림이 가고 "}운영 기록에 남았어요.` };
+  return { ok: `${KEEPER_ACTION_LABEL[action]}: 처리했어요. 별지기에게 앱 알림이 가고 운영 기록에 남았어요.` };
 }
 
 /** 운영자 환불 (owner): Toss cancels the payment and the coins go back; `force` is for exceptions like an outage. */
@@ -36,7 +36,7 @@ export async function refund(orderId: string, force: boolean, _prev: ReasonState
     refresh();
     return { ok: `환불했어요. 코인 ${r.coins_taken}개를 회수했고, 별지기에게 앱 알림이 가요.` };
   } catch (e) {
-    if (e instanceof ApiError) return { error: e.code === "cancel_unconfirmed" ? "토스에서 결과를 받지 못했어요. 잠시 뒤 다시 시도하고, 토스 가맹점 관리자에서 취소됐는지 확인해 주세요." : e.message };
+    if (e instanceof ApiError) return { error: e.code === "order_canceled" ? "이미 환불된 결제예요." : e.code === "cancel_unconfirmed" ? "토스에서 결과를 받지 못했어요. 잠시 뒤 다시 시도하고, 토스 가맹점 관리자에서 취소됐는지 확인해 주세요." : e.message };
     throw e;
   }
 }

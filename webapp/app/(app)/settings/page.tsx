@@ -5,7 +5,7 @@ import { ChevronRight, Doc, Info, Lock, LogOut, Moon, Nebula, Phone, Sparkle, Tr
 import { PageHeader } from "@/components/Page";
 import { api } from "@/lib/api";
 import { SITE_URL } from "@/lib/config";
-import { dateTime, longDate } from "@/lib/format";
+import { dateTime, fullDate } from "@/lib/format";
 import { SKIES, type Me, type MyShare } from "@/lib/types";
 import { DangerZone, MarketingToggle, MotionToggle } from "./SettingsControls";
 import styles from "./settings.module.css";
@@ -41,7 +41,7 @@ async function Settings() {
     <>
       <Group title="계정">
         <div className={styles.row}><Sparkle size={18} /><span>로그인 계정</span><span className={styles.value}>{PROVIDERS[me.provider] ?? me.provider}</span></div>
-        {me.joined_at && <div className={styles.row}><Moon size={18} /><span>가입한 날</span><span className={styles.value}>{longDate(me.joined_at)}</span></div>}
+        {me.joined_at && <div className={styles.row}><Moon size={18} /><span>가입한 날</span><span className={styles.value}>{fullDate(me.joined_at)}</span></div>}
         <Link href="/settings/nickname" className={styles.row}>
           <Nebula size={18} /><span>별지기 이름</span>
           <span className={styles.value}>{me.nickname_rename_required ? <b className={styles.rename}>바꿔 주세요</b> : me.nickname ?? "정하지 않았어요"}<ChevronRight size={16} /></span>

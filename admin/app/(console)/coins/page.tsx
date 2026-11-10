@@ -45,7 +45,7 @@ export default async function CoinsPage({ searchParams }: PageProps<"/coins">) {
                 <td>{x.keeper.id ? <Link href={`/keepers/${encodeURIComponent(x.keeper.id)}`}>{x.keeper.nickname ?? x.keeper.no}</Link>
                   : x.keeper.no.startsWith("#") ? <Link href={`/keepers?q=${encodeURIComponent(x.keeper.no)}`}>{x.keeper.no}</Link>
                   : <span className="faint">{x.keeper.no}</span>}</td>
-                <td><span className={`badge ${(KIND[x.kind] ?? KIND.use)[0]}`}>{(KIND[x.kind] ?? KIND.use)[1]}</span>{x.channel === "admin" && x.kind === "refund" ? <span className="faint"> · 운영자</span> : null}</td>
+                <td><span className={`badge ${(KIND[x.kind] ?? KIND.use)[0]}`}>{(KIND[x.kind] ?? KIND.use)[1]}</span>{x.source === "operator" ? <span className="faint"> · 운영자</span> : null}</td>
                 <td>{x.detail}</td>
                 <td>{x.coins > 0 ? `+${num(x.coins)}` : `−${num(-x.coins)}`}</td>
                 <td>{(x.amount_krw ?? x.krw_estimate) != null ? won((x.amount_krw ?? x.krw_estimate)!) : "—"}</td>

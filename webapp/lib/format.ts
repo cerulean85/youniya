@@ -23,6 +23,8 @@ export function dateTime(iso: string) {
 }
 /** "11월 3일" */
 export const monthDay = (iso: string) => parts(iso, { month: "long", day: "numeric" });
+/** "2026년 11월 10일" (Korean time) */
+export const fullDate = (iso: string) => parts(iso, { year: "numeric", month: "long", day: "numeric" });
 /** "11월 3일 화요일" */
 export const longDate = (iso: string) => parts(iso, { month: "long", day: "numeric", weekday: "long" });
 /** Year, month and day of a moment, in Korean time. */

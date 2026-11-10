@@ -58,11 +58,11 @@ export const KEEPER_ACTION_LABEL: Record<KeeperAction, string> = {
 /** Moderators may restrict or lift plaza use and ask for a new name; coins and deletion are owners'. */
 export const MODERATOR_KEEPER_ACTIONS: KeeperAction[] = ["lift_restriction", "extend_restriction", "request_rename"];
 /** A keeper's web (Toss) payments, for 운영자 환불 (API asked 2026-11-10). */
-export type OrderStatus = "pending" | "confirming" | "done" | "expired" | "canceled";
-export type RefundBlock = "window_passed" | "coins_spent" | "not_done";
-export type KeeperOrder = { id: string; created_at: string; package_id: string; coins: number; amount: number; status: OrderStatus; canceled_at: string | null; refundable: boolean; refund_block: RefundBlock | null };
-export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = { pending: "결제 대기", confirming: "확인 중", done: "결제 완료", expired: "만료", canceled: "환불됨" };
-export const REFUND_BLOCK_LABEL: Record<RefundBlock, string> = { window_passed: "7일 지남", coins_spent: "코인 사용함", not_done: "결제 전" };
+export type OrderStatus = "pending" | "confirming" | "done" | "expired" | "canceled" | string;
+export type RefundBlock = "window_passed" | "coins_spent" | "not_done" | string;
+export type KeeperOrder = { id: string; created_at: string; approved_at?: string | null; method?: string | null; package_id: string; coins: number; amount: number; status: OrderStatus; canceled_at: string | null; refundable: boolean; refund_block: RefundBlock | null };
+export const ORDER_STATUS_LABEL: Record<string, string> = { pending: "결제 대기", confirming: "확인 중", done: "결제 완료", expired: "만료", canceled: "환불됨" };
+export const REFUND_BLOCK_LABEL: Record<string, string> = { window_passed: "7일 지남", coins_spent: "코인 사용함", not_done: "결제 전", order_not_paid: "결제 전" };
 export const PROVIDER_LABEL: Record<string, string> = { apple: "Apple", google: "Google", invite: "초대", dev: "테스트" };
 
 export type InquiryStatus = "new" | "answered";
@@ -95,7 +95,7 @@ export type Ledger = {
   month: string;
   summary: { charge_krw: number; charge_count: number; refund_krw: number; refund_count: number; usage_share?: { starlight: number; telescope: number } | null; free_used?: { starlight: number; telescope: number } | null; spend_coins?: number; grant_coins?: number };
   /** `krw_estimate`: from the product price (the API's); `source`: app_store | server (toss once the web pays). */
-  items: { at: string; keeper: { id: string | null; no: string; nickname: string | null }; kind: LedgerKind; detail: string; coins: number; amount_krw?: number | null; krw_estimate?: number | null; reference: string | null; channel?: "app_store" | "toss" | "admin" | null; source?: string | null }[];
+  items: { at: string; keeper: { id: string | null; no: string; nickname: string | null }; kind: LedgerKind; detail: string; coins: number; amount_krw?: number | null; krw_estimate?: number | null; reference: string | null; channel?: "app_store" | "toss" | "admin" | null; source?: string | null; payment?: "toss" | "app_store" | null }[];
 };
 export type AiUsage = {
   month: string; model?: string | null; thinking?: string | null; krw_per_usd?: number | null;
