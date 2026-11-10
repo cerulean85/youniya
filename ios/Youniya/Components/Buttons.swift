@@ -60,12 +60,17 @@ struct SecondaryButtonStyle: ButtonStyle {
 
 /// Figma `Button` · Style=Ghost: text only, secondary color.
 struct GhostButtonStyle: ButtonStyle {
+    /// Several in one row (12-12): a little side padding, one line.
+    var compact = false
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .textStyle(.labelM)
+            .lineLimit(1)
+            .minimumScaleFactor(compact ? 0.85 : 1)
             .foregroundStyle(Color.textSecondary)
             .frame(maxWidth: .infinity)
-            .padding(.horizontal, Space.xl)
+            .padding(.horizontal, compact ? Space.xs : Space.xl)
             .padding(.vertical, Space.md)
             // Figma `Button`: 48pt tall
             .frame(minHeight: 48)
@@ -76,6 +81,7 @@ struct GhostButtonStyle: ButtonStyle {
 
 extension ButtonStyle where Self == GhostButtonStyle {
     static var ghost: GhostButtonStyle { .init() }
+    static var ghostCompact: GhostButtonStyle { .init(compact: true) }
 }
 
 /// Top bar used by full-screen flows: "닫기" · centered title · trailing accessory.

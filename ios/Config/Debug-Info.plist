@@ -2,6 +2,13 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- 12-13 / 08-9: Instagram Stories sharing (see Release-Info.plist). -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>instagram-stories</string>
+	</array>
+	<key>InstagramAppID</key>
+	<string>$(INSTAGRAM_APP_ID)</string>
 	<!-- Debug only: the dev API server is plain HTTP on a Tailscale IP (100.x), which
 	     ATS doesn't treat as local, and ATS exceptions can't name an IP. Release keeps ATS.
 	     TODO: Remove once the API has an HTTPS host. -->

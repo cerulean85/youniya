@@ -37,6 +37,10 @@ struct StarDetailView: View {
     @State private var wantsPick = false
     @State private var pickerHeight: CGFloat = 480
     @State private var screenHeight: CGFloat = 844
+    /// 12-13 별 카드로 나누기
+    @State private var shareCard = DebugScreen.is("12-13")
+    @State private var cardWithTitle = false
+    @State private var toast: ToastCardMessage?
     @State private var sheetHeight: CGFloat = 336
 
     var body: some View {
@@ -150,21 +154,30 @@ struct StarDetailView: View {
                 }
             }
 
-            HStack(spacing: Space.md) {
+            // 12-12: 카드 공유 · 내보내기 · 고쳐 쓰기 · 삭제, the same width each.
+            HStack(spacing: Space.sm) {
+                Button("카드 공유") { shareCard = true }
+                    .buttonStyle(.ghostCompact)
+
                 ShareLink(item: exportText(star)) {
                     Text("내보내기")
                 }
-                .buttonStyle(.ghost)
+                .buttonStyle(.ghostCompact)
 
                 if star.isFloated {
                     Button("고쳐 쓰기", action: onRevise)
-                        .buttonStyle(.ghost)
+                        .buttonStyle(.ghostCompact)
                 }
 
                 Button("삭제") { confirmDelete = true }
-                    .buttonStyle(.ghost)
+                    .buttonStyle(.ghostCompact)
             }
         }
+        // 12-13 별 카드로 나누기
+        .cardShareSheet(isPresented: $shareCard, title: "별 카드로 나누기", withTitle: $cardWithTitle, toast: $toast) {
+            StarShareCard(star: star, withTitle: cardWithTitle)
+        }
+        .toastCard($toast)
         // 15 Delete Confirm
         .sheet(isPresented: $confirmDelete) {
             DeleteStarSheet(

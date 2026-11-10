@@ -35,12 +35,13 @@ enum DebugScreen {
     /// sheet), 52–55/84/85 (later drawing steps), 57–60 (story pages, removed),
     /// 88 (telescope observing), 103 (plaza filter),
     /// 79/80/96/97/110 (collection, removed), 22 (other nebula, removed: plaza
-    /// stars open 75), 51/65/66/71/84-1/86/112 (성운, removed 2026-11-09).
+    /// stars open 75), 51/65/66/71/84-1/86/112 (성운, removed 2026-11-09),
+    /// 70/77/77-2 (별자리 자세히 보기, removed 2026-11-10).
     static let supported: Set<String> = Set("""
  1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 23 24 25 26 27 28 28-1 29 31 32 33 34 35 36 37 38
- 39 40 41 43 44 45 46 47 48 49 50 56 61 62 63 64 6-1 67-1 68 69 70 72 74 75 76 77 81 82 83
+ 39 40 41 43 44 45 46 47 48 49 50 56 61 62 63 64 6-1 67-1 68 69 72 74 75 76 81 82 83
  87 89 90 91 92 93 95 98 99 100 101 102 104 105 106 107 108 109 111 113 114 115 116 117
- 118 119 120 120-1 121 122 122-1 19-1 87-1 87-2 3-1 2-1 75-1 75-2 87-3 M1 28-2 68-1 87-4 123 5-3 5-4 87-5 12-1 12-2 12-3 12-5 12-10 7-1 5-2 5-5 75-3 77-2 12-6 12-7 12-8 21-1 21-2 87-6 87-7 75-4 76-1 9-5 12-4 9-6 9-7 4-1 87-8 130 131
+ 118 119 120 120-1 121 122 122-1 19-1 87-1 87-2 3-1 2-1 75-1 75-2 87-3 M1 28-2 68-1 87-4 123 5-3 5-4 87-5 12-1 12-2 12-3 12-5 12-10 7-1 5-2 5-5 75-3 12-6 12-7 12-8 21-1 21-2 87-6 87-7 75-4 76-1 9-5 12-4 9-6 9-7 4-1 87-8 130 131 8-8 8-9 12-12 12-13 8-5 8-7 8-10
  """.split(whereSeparator: \.isWhitespace).map(String.init))
 
     /// App-wide state for the screen, before the first page shows.
@@ -94,7 +95,7 @@ enum DebugScreen {
             model.appNotice = .rateLimited
         case "99", "106":
             model.sentStarLines[PlazaNebula.samples[0].name] = nil  // not left a line yet
-        case "12-2", "12-6", "12-7", "12-8", "77-2":
+        case "12-2", "12-6", "12-7", "12-8", "8-8":
             // Mock 이어진 별 for the review: the sample star joined to two others.
             if let star = floatedStar(model) {
                 model.linkLocally(star.id, model.stars.filter { $0.id != star.id }.prefix(2).map(\.id))

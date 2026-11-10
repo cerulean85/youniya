@@ -51,7 +51,6 @@ struct ZoomControls: View {
 struct NebulaStoryView: View {
     @Environment(AppModel.self) private var model
     var onBack: () -> Void
-    var onSaved: () -> Void
     /// 83 별자리 이야기 (16장): the month whose stars it weaves.
     var month: String = MonthConstellation.monthKey(.now)
 
@@ -111,10 +110,7 @@ struct NebulaStoryView: View {
                     .accessibilityElement(children: .combine)
                     .accessibilityAddTraits(.isHeader)
 
-                    HStack(spacing: Space.sm) {
-                        tag(since.map { "별 \(floated.count) · \(Self.day($0))부터" } ?? "별 \(floated.count)", gold: true)
-                        tag("문장 엮기", gold: false)
-                    }
+                    tag(since.map { "별 \(floated.count) · \(Self.day($0))부터" } ?? "별 \(floated.count)", gold: true)
 
                     if lines.isEmpty {
                         Text("글이 있는 별을 띄우면 이야기가 엮여요.")
@@ -122,19 +118,13 @@ struct NebulaStoryView: View {
                             .foregroundStyle(Color.textSecondary)
                     } else {
                         storyCard(lines)
-                        Text("✦ 표시는 문장 사이를 잇는 자리예요.")
-                            .textStyle(.caption)
-                            .foregroundStyle(Color.textTertiary)
                     }
                 }
                 .padding(Space.xl)
             }
             .scrollIndicators(.hidden)
-
-            Button("문장만 엮어 두기", action: onSaved)
-                .buttonStyle(.primary)
-                .padding(.horizontal, Space.xl)
-            .padding(.bottom, Space.xl)
+            // 「문장만 엮어 두기」 is gone (2026-11-10): nothing to pick since the AI
+            // retelling left (11-08); the page closes with back only.
         }
         .background { StarField() }
         .task {
@@ -191,5 +181,5 @@ struct NebulaStoryView: View {
 #Preview("83") {
     let model = AppModel()
     model.fillSampleStars()
-    return NebulaStoryView(onBack: {}, onSaved: {}).environment(model)
+    return NebulaStoryView(onBack: {}).environment(model)
 }

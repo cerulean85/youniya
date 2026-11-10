@@ -470,7 +470,7 @@ private struct AlbumCard: View {
 
 /// Figma `Galaxy Canvas` (342×300): a glowing river from the bottom-left (oldest)
 /// to the top-right (now), a dot per star in its mood color, rings at each month.
-private struct GalaxyRiver: View {
+struct GalaxyRiver: View {
     var timeline: [(star: StarItem, date: Date)]
     @Environment(\.skyTheme) private var sky
 

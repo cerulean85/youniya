@@ -54,7 +54,6 @@ struct MainView: View {
         case nebulaStars(NebulaStarsView.Kind) // 89/90
         case brightness // 82
         case milkyWay   // 81
-        case constellation(String) // 70 / 77 / 77-2, "YYYY-MM"
         case constellationStory(String) // 83, "YYYY-MM"
         case plazaStar(String)                        // 75, from a 09-3 row (by name)
         case sharedStars // 87 › 나눈 별
@@ -132,7 +131,7 @@ struct MainView: View {
             case "settings": push(.settings)
             case "plaza", "plazaNebula": tab = .plaza     // 09 / 72
             case "compose": push(.compose())              // 05
-            case "myNebula": push(.constellation(MonthConstellation.monthKey(.now))) // 70
+            case "myNebula": tab = .nebula                // 08-3 (70 was removed)
             case "galaxy": tab = .plaza                  // 69 is now the plaza
             case "story": push(.constellationStory(MonthConstellation.monthKey(.now))) // 83
             // Visual review (mock data):
@@ -198,8 +197,9 @@ struct MainView: View {
                     } placeholder: { HomeSkeleton() }
                 }
             case .nebula:
-                ConstellationView(onOpen: openFromNebula, onDetail: { push(.constellation($0)) },
-                                  onStory: { push(.constellationStory($0)) })
+                ConstellationView(onOpen: openFromNebula,
+                                  onStory: { push(.constellationStory($0)) },
+                                  onOpenStar: openStar)
             case .plaza:
                 LoadingGate {
                     PlazaView(onOpen: { push(.plazaStar($0)) },
@@ -338,16 +338,9 @@ struct MainView: View {
         case .milkyWay:
             MilkyWayView(onBack: pop, onOpenStar: openStar)
                 .edgeSwipeBack(onBack: pop)
-        case .constellation(let month):
-            ConstellationDetailView(month: month, onBack: pop, onOpenStar: openStar, onStory: { push(.constellationStory(month)) })
                 .edgeSwipeBack(onBack: pop)
         case .constellationStory(let month):
-            NebulaStoryView(onBack: pop,
-                            onSaved: {
-                                pop()
-                                toast = ToastCardMessage(title: "별자리 이야기를 엮어 두었어요")
-                            },
-                            month: month)
+            NebulaStoryView(onBack: pop, month: month)
                 .edgeSwipeBack(onBack: pop)
         case .plazaStar(let name):
             if let p = plazaStar(named: name) {
@@ -439,12 +432,12 @@ struct MainView: View {
         switch screen {
         case "3", "4", "47": tab = .sky
         case "3-1": tab = .sky; showWelcome = true
-        case "8", "56": tab = .nebula
+        case "8", "8-5", "8-7", "8-8", "8-9", "56": tab = .nebula
         case "9", "9-5", "21", "50", "72": tab = .plaza
         case "115", "116", "117", "49": tab = .records
         case "118", "119": recordsFilter = .kept; tab = .records
         case "67-1": drawerOpen = true
-        case "5", "6", "6-1", "7", "7-1", "13", "35", "36", "37", "61", "62", "63", "64", "34":
+        case "5", "6", "6-1", "8-10", "7", "7-1", "13", "35", "36", "37", "61", "62", "63", "64", "34":
             if screen == "34" { model.saveDraft(StarDraft(mood: .calm, title: "쓰던 글", body: "오늘은 마음이 조금 느리게 흘렀어요.")) }
             push(.compose())
         case "104":
@@ -479,7 +472,6 @@ struct MainView: View {
         case "32": push(.inquiry)
         case "68": push(.sky)
         case "69", "76": tab = .plaza
-        case "70", "77", "77-2": push(.constellation(MonthConstellation.monthKey(.now)))
         case "81": push(.milkyWay)
         case "82", "109": push(.brightness)
         case "83": push(.constellationStory(MonthConstellation.monthKey(.now)))
@@ -510,7 +502,7 @@ struct MainView: View {
             if let s = DebugScreen.keptStar(model) { push(.detail(s.id)) }
         case "12-10":
             if let s = DebugScreen.keptStar(model) { push(.floatKept(s.id)) }
-        case "12-3":
+        case "12-3", "12-12", "12-13":
             if let s = model.stars.first(where: \.isFloated) { push(.detail(s.id)) }
         case "75-3", "75-4": push(.plazaStar(PlazaNebula.samples[0].name))
         case "76-1": push(.keeper(PlazaNebula.samples[0].nickname ?? ""))

@@ -12,6 +12,9 @@ struct ConstellationFigureView: View {
     /// 77-2: the picked star's 별 잇기 within this month, as silver dotted lines.
     var silverLinks: [UUID] = []
     var onTap: ((MonthConstellation.Star) -> Void)? = nil
+    /// 08-9 별자리 카드: each lit star drawn as its own shape (server shape,
+    /// mood color) with its date underneath. nil keeps the plain dots.
+    var shapes: [UUID: StarShapeSpec]? = nil
 
     var body: some View {
         GeometryReader { geo in
@@ -65,6 +68,42 @@ struct ConstellationFigureView: View {
     }
 
     @ViewBuilder private func dot(_ s: MonthConstellation.Star, k: CGFloat, faint: Bool = false) -> some View {
+        if let shapes, !faint {
+            shapeDot(s, spec: shapes[s.id])
+        } else {
+            plainDot(s, k: k, faint: faint)
+        }
+    }
+
+    /// 08-9: the star's shape (or a small light without starlight) and "11/3".
+    private func shapeDot(_ s: MonthConstellation.Star, spec: StarShapeSpec?) -> some View {
+        ZStack {
+            if s.hasStarlight {
+                ShapeStar(spec: spec ?? StarShapeSpec(points: 5, sharpness: .normal), color: s.mood.color, size: 38, halo: true)
+            } else {
+                Circle().fill(s.mood.color.opacity(0.7)).frame(width: 9, height: 9)
+                    .shadow(color: s.mood.color.opacity(0.6), radius: 5)
+            }
+        }
+        .frame(width: 38, height: 38)
+        .overlay(alignment: .bottom) {
+            if let d = s.createdAt {
+                Text(Self.shortDay(d))
+                    .font(.custom("Pretendard-Regular", size: 12))
+                    .foregroundStyle(Color.textTertiary)
+                    .fixedSize()
+                    .offset(y: 22)
+            }
+        }
+    }
+
+    /// "11/3"
+    static func shortDay(_ d: Date) -> String {
+        let c = Calendar.current.dateComponents([.month, .day], from: d)
+        return "\(c.month ?? 0)/\(c.day ?? 0)"
+    }
+
+    @ViewBuilder private func plainDot(_ s: MonthConstellation.Star, k: CGFloat, faint: Bool) -> some View {
         // Lit stars grow with their starlight; unlit ones stay small and dim.
         let size: CGFloat = s.hasStarlight ? (9 + 6 * min(1, CGFloat(s.starlight ?? 500) / 999)) * k : 7 * k
         let color = s.mood.color

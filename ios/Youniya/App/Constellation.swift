@@ -59,6 +59,8 @@ struct MonthConstellation: Equatable {
         var createdAt: Date?
         /// 16.1: a 깊은 별 is lit with depth 280+.
         var isDeep = false
+        /// The star's shape (server: nil without starlight), for 08-9.
+        var shape: StarShapeSpec? = nil
     }
     struct Slot: Equatable {
         var point: CGPoint
@@ -112,7 +114,7 @@ struct MonthConstellation: Equatable {
             .map { s in
                 Star(id: s.id, title: s.title, mood: s.mood, hasStarlight: s.isFloated,
                      starlight: s.analysis?.starlight, createdAt: s.date,
-                     isDeep: (s.analysis?.depthScore ?? 0) >= 280)
+                     isDeep: (s.analysis?.depthScore ?? 0) >= 280, shape: s.analysis?.shape)
             }
         let slots = template.slots.enumerated().map { i, p in Slot(point: p, star: i < mine.count ? mine[i] : nil) }
         return MonthConstellation(month: key, name: template.name, slots: slots, lines: template.lines,
@@ -136,6 +138,7 @@ private struct ServerConstellation: Decodable {
         var hasStarlight: Bool
         var starlight: Int?
         var createdAt: Date?
+        var shape: ShapeOut?
     }
     var month: String
     var name: String
@@ -149,7 +152,7 @@ private extension MonthConstellation.Star {
     init?(_ s: ServerConstellation.StarOut) {
         guard let id = UUID(uuidString: s.id) else { return nil }
         self.init(id: id, title: s.title, mood: s.mood, hasStarlight: s.hasStarlight, starlight: s.starlight,
-                  createdAt: s.createdAt)
+                  createdAt: s.createdAt, shape: s.shape?.spec)
     }
 }
 

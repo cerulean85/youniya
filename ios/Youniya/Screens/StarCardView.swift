@@ -94,7 +94,16 @@ struct ComposeFlowView: View {
         /// Live: the server is reading a floated star (6–12 s with the real model);
         /// 06 plays meanwhile, then again with the real values.
         case reading
+        /// 08-10 {별자리}를 완성했어요: after the card, once a month, when this
+        /// star filled the last place.
+        /// `then`: a star floated without starlight, whose page (12-1) comes after.
+        case completed(String, then: StarItem? = nil)
     }
+
+    /// 08-10: the month this star completed (checked when the card shows).
+    @State private var completedMonth: String?
+    /// 08-10 「닫기」: where the card was leaving to (닫기 or 나의 별자리 보기).
+    @State private var afterCompleted: (() -> Void)?
 
     /// Live: waiting for the server to save (and analyse) the star.
     @State private var sending = false
@@ -172,7 +181,17 @@ struct ComposeFlowView: View {
                     withAnimation(.easeInOut(duration: 0.6)) {
                         // 별빛 없이 띄운 별: its page (12-1), where starlight can come later.
                         if !star.isFloated {
-                            onOpenStar(star)
+                            // 08-10 first when this star filled the month's last place (17.1).
+                            Task {
+                                await checkCompleted(star)
+                                if let month = completedMonth {
+                                    completedMonth = nil
+                                    ConstellationCompleteView.markShown(month)
+                                    withAnimation(.easeInOut(duration: 0.5)) { step = .completed(month, then: star) }
+                                } else {
+                                    onOpenStar(star)
+                                }
+                            }
                         } else {
                             step = .card(star)
                         }
@@ -180,8 +199,16 @@ struct ComposeFlowView: View {
                 }
                 .transition(.opacity)
             case .card(let star):
-                StarCardView(star: star, onClose: onClose, onShowNebula: onShowNebula)
+                StarCardView(star: star, onClose: { afterCard(onClose) }, onShowNebula: { afterCard(onShowNebula) })
                     .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                    .task { await checkCompleted(star) }
+            case .completed(let month, let then):
+                ConstellationCompleteView(month: month,
+                                          onClose: {
+                                              if let then { onOpenStar(then) } else { (afterCompleted ?? onClose)() }
+                                          },
+                                          onShowNebula: onShowNebula)
+                    .transition(.opacity)
             case .compare(let previous, let current):
                 RematchCompareView(previous: previous, current: current, onBack: onClose, onShowNebula: onShowNebula)
                     .transition(.opacity.combined(with: .scale(scale: 0.98)))
@@ -245,6 +272,7 @@ struct ComposeFlowView: View {
             if DebugScreen.is("36") { step = .failed(star, .analysis) }
             if DebugScreen.is("37") { step = .crisis(star, floated: true) }
             if DebugScreen.is("61", "62", "63", "64") { step = .birth(star) }
+            if DebugScreen.is("8-10") { step = .completed(MonthConstellation.monthKey(.now)) }
         }
         #endif
         .toastCard($toast)
@@ -626,6 +654,29 @@ struct ComposeFlowView: View {
 
     private var isAnalyzing: Bool {
         if case .analyzing = step { true } else { false }
+    }
+}
+
+extension ComposeFlowView {
+    /// 08-10 comes between the card and wherever the card was leaving to.
+    fileprivate func afterCard(_ next: @escaping () -> Void) {
+        if let month = completedMonth {
+            completedMonth = nil
+            afterCompleted = next
+            ConstellationCompleteView.markShown(month)
+            withAnimation(.easeInOut(duration: 0.5)) { step = .completed(month) }
+        } else {
+            next()
+        }
+    }
+
+    /// Did this star fill the month's last place? Once a month (on this device).
+    @MainActor fileprivate func checkCompleted(_ star: StarItem) async {
+        let month = MonthConstellation.monthKey(star.date ?? .now)
+        guard !ConstellationCompleteView.wasShown(month) else { return }
+        await model.loadConstellation(month)
+        let c = model.constellation(month)
+        if c.isComplete, c.slots.last?.star?.id == star.id { completedMonth = month }
     }
 }
 
