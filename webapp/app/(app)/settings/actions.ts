@@ -12,6 +12,18 @@ export async function setMarketing(on: boolean) {
   refresh();
 }
 
+/** 애니메이션 줄이기 (iOS 87): kept with the account, so the app and the web follow the same choice. */
+export async function setReduceMotion(on: boolean) {
+  await api("/v1/me/settings", { method: "PATCH", body: JSON.stringify({ reduce_animations: on }) });
+  refresh();
+}
+
+/** W-77: one shared star leaves the plaza; lines and resonance already given stay. */
+export async function unshareOne(starId: string) {
+  await api(`/v1/stars/${starId}/share`, { method: "DELETE" });
+  refresh();
+}
+
 export async function unblock(id: string) {
   await api(`/v1/blocks/${id}`, { method: "DELETE" });
   refresh();

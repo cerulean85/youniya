@@ -127,3 +127,6 @@ h1, h2, h3, p { margin: 0; }
 .btn:disabled, .btn[aria-disabled="true"] { opacity: 0.45; cursor: default; box-shadow: none; }
 .btn-block { width: 100%; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* 설정 › 애니메이션 줄이기 (iOS 87): the same as the OS setting, chosen in the account. */
+:root[data-motion="reduce"] *, :root[data-motion="reduce"] *::before, :root[data-motion="reduce"] *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }

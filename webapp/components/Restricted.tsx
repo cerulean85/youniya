@@ -36,7 +36,7 @@ export function RestrictedBanner({ until, open }: { until: string; open?: boolea
 /** Mobile 04-1 (web: top of W-10): an operator asked for a new 별지기 이름. */
 export function RenameBanner() {
   return (
-    <Link href="/settings?rename=1" className={styles.banner}>
+    <Link href="/settings/nickname" className={styles.banner}>
       <div>
         <b>별지기 이름을 바꿔 주세요</b>
         <p>운영자 요청이 있어요. 이름을 바꾸기 전까지는 우주 광장에 새로 별을 나눌 수 없어요. 30일 제한 없이 바로 바꿀 수 있어요.</p>

@@ -52,7 +52,7 @@ export async function shareStar(id: string, form: FormData) {
   } catch (e) {
     // Operator actions: a paused plaza, or a name that has to change before sharing again.
     if (e instanceof ApiError && e.code === "plaza_restricted") redirect("/plaza?restricted=1");
-    if (e instanceof ApiError && e.code === "nickname_rename_required") redirect("/settings?rename=1");
+    if (e instanceof ApiError && e.code === "nickname_rename_required") redirect("/settings/nickname");
     throw e;
   }
   refresh();

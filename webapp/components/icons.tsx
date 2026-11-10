@@ -30,3 +30,9 @@ export const Check = (p: IconProps) => <svg {...base(p)} strokeWidth={2}><path d
 export const Info = (p: IconProps) => <svg {...base(p)}><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg>;
 export const Bell = (p: IconProps) => <svg {...base(p)}><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15L6 16Z" /><path d="M10 20a2 2 0 0 0 4 0" /></svg>;
 export const Heart = (p: IconProps) => <svg {...base(p)}><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z" /></svg>;
+export const Upload = (p: IconProps) => <svg {...base(p)}><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" /></svg>;
+export const Trash = (p: IconProps) => <svg {...base(p)}><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 12.5a1.5 1.5 0 0 0 1.5 1.5h6a1.5 1.5 0 0 0 1.5-1.5L17.5 7" /></svg>;
+export const Phone = (p: IconProps) => <svg {...base(p)}><path d="M5 4h3.5l1.5 4-2 1.5a10 10 0 0 0 6.5 6.5l1.5-2 4 1.5V19a1.5 1.5 0 0 1-1.5 1.5A15.5 15.5 0 0 1 3.5 5.5 1.5 1.5 0 0 1 5 4Z" /></svg>;
+export const Doc = (p: IconProps) => <svg {...base(p)}><path d="M6 3.5h8l4 4V20a.5.5 0 0 1-.5.5h-11A.5.5 0 0 1 6 20V3.5Z" /><path d="M14 3.5V8h4M9 12.5h6M9 16h6" /></svg>;
+export const LogOut = (p: IconProps) => <svg {...base(p)}><path d="M10 4.5H6a1.5 1.5 0 0 0-1.5 1.5v12A1.5 1.5 0 0 0 6 19.5h4M15 8l4 4-4 4M19 12H9.5" /></svg>;
+export const Sparkle = (p: IconProps) => <svg {...base(p)}><path d={STAR} transform="translate(3 3) scale(.75)" /></svg>;

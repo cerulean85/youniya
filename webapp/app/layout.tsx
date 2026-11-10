@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const SKY_SCRIPT = `try{var s=localStorage.getItem("yn_sky");if(s&&s!=="violet")document.documentElement.dataset.sky=s}catch(e){}`;
+const SKY_SCRIPT = `try{var s=localStorage.getItem("yn_sky");if(s&&s!=="violet")document.documentElement.dataset.sky=s;if(localStorage.getItem("yn_motion")==="reduce")document.documentElement.dataset.motion="reduce"}catch(e){}`;
 
 export const viewport: Viewport = { themeColor: "#0b0f19", colorScheme: "dark" };
 

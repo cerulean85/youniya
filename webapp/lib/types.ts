@@ -81,7 +81,11 @@ export type Me = {
   plaza_restricted_until?: string | null;
   /** App settings; the web follows `sky` (우주의 색, 기획서 14.7). */
   settings?: { sky?: Sky; reduce_animations?: boolean };
+  /** With MEMBERSHIP=1 on the server. */
+  membership?: { active?: boolean } | null;
   nickname_rename_required?: boolean;
+  /** When the account was made (API adding it 2026-11-10); the 가입한 날 row hides without it. */
+  joined_at?: string | null;
   coins: number;
   free_star_today: number;
   free_telescope: number;
@@ -157,12 +161,13 @@ export type CoinsInfo = {
 };
 export type CoinEntryRow = { id: string; kind: "purchase" | "spend" | "refund" | "grant" | string; title: string; delta: number; created_at: string; source?: string | null };
 
-/** 우주의 색 (기획서 14.7): violet and ocean for everyone; aurora, ember and rose for 별지기 멤버십. */
+/** 우주의 색 (기획서 14.7): violet and ocean for everyone; aurora, ember and rose for 별지기 멤버십.
+ *  Names, lines and the three glows follow iOS SkyTheme. */
 export type Sky = "violet" | "aurora" | "ember" | "ocean" | "rose";
-export const SKIES: { key: Sky; label: string; color: string; member: boolean }[] = [
-  { key: "violet", label: "보랏빛 밤", color: "#8555ef", member: false },
-  { key: "ocean", label: "깊은 바다", color: "#2970e3", member: false },
-  { key: "aurora", label: "오로라", color: "#008475", member: true },
-  { key: "ember", label: "잔불", color: "#ca4b29", member: true },
-  { key: "rose", label: "장미", color: "#d13584", member: true },
+export const SKIES: { key: Sky; label: string; detail: string; color: string; glows: [string, string, string]; member: boolean }[] = [
+  { key: "violet", label: "보랏빛 별밤", detail: "차분하고 깊은 기본 밤하늘", color: "#8555ef", glows: ["#8b5cf6", "#ec4899", "#33b5d9"], member: false },
+  { key: "ocean", label: "깊은 바다", detail: "고요하게 가라앉는 푸른 밤", color: "#2970e3", glows: ["#3b82f6", "#6366f1", "#22d3ee"], member: false },
+  { key: "aurora", label: "오로라 숲", detail: "맑고 서늘한 초록빛 하늘", color: "#008475", glows: ["#10b981", "#2dd4bf", "#3b82f6"], member: true },
+  { key: "ember", label: "잔불 노을", detail: "따뜻하게 식어가는 저녁빛", color: "#ca4b29", glows: ["#f97316", "#f43f5e", "#fbbf24"], member: true },
+  { key: "rose", label: "장미빛 새벽", detail: "부드럽게 밝아오는 분홍빛", color: "#d13584", glows: ["#ec4899", "#a855f7", "#fb923c"], member: true },
 ];

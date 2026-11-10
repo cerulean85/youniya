@@ -5,7 +5,7 @@ export function targetHref(t: NotificationTarget | null): string | null {
   if (!t) return null;
   switch (t.screen) {
     case "star": return t.star_id ? `/stars/${t.star_id}` : null;
-    case "nickname": return "/settings?rename=1";
+    case "nickname": return "/settings/nickname";
     case "plaza_restricted": return "/plaza?restricted=1";
     case "plaza": return "/plaza";
     case "coin_history": return "/coins";

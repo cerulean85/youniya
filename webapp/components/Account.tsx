@@ -13,7 +13,7 @@ export async function Account() {
   if (me.needs_consent) redirect("/welcome");
   return (
     <div className={styles.box}>
-      <ApplySky sky={me.settings?.sky ?? "violet"} />
+      <ApplySky sky={me.settings?.sky ?? "violet"} still={Boolean(me.settings?.reduce_animations)} />
       <div className={styles.row}>
         <div className={styles.who}>
           <span className="label-m">{me.nickname || "별지기"}</span>
