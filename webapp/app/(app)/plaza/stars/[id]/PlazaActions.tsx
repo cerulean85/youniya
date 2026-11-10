@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useOptimistic, useRef, useState, useTransition } from "react";
+import { useActionState, useEffect, useOptimistic, useRef, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
-import { Heart } from "@/components/icons";
+import { Close, Heart, More, Warn } from "@/components/icons";
 import { LINE_CHIPS } from "@/lib/types";
 import { blockOwner, leaveLine, reportShare, toggleResonance } from "./actions";
 import styles from "./plaza-star.module.css";
@@ -22,7 +22,7 @@ export const REASONS = [
 
 type Lines = "open" | "left" | "closed";
 
-export function PlazaActions({ id, resonated, keeper, lines, name = null }: { id: string; resonated: boolean; beside: boolean; keeper: string | null; lines: Lines; name?: string | null }) {
+export function PlazaActions({ id, resonated, keeper, lines, name = null, mine = false }: { id: string; resonated: boolean; beside: boolean; keeper: string | null; lines: Lines; name?: string | null; mine?: boolean }) {
   const [on, setOn] = useOptimistic(resonated);
   const [, start] = useTransition();
   const report = useRef<HTMLDialogElement>(null);
@@ -31,6 +31,7 @@ export function PlazaActions({ id, resonated, keeper, lines, name = null }: { id
 
   return (
     <>
+      {!mine && <MoreMenu onReport={() => report.current?.showModal()} onBlock={() => block.current?.showModal()} />}
       <div className={styles.actions}>
         <button type="button" className={`btn ${on ? styles.on : "btn-secondary"}`} aria-pressed={on}
           onClick={() => start(async () => { setOn(!on); await toggleResonance(id, !on); })}>
@@ -44,10 +45,12 @@ export function PlazaActions({ id, resonated, keeper, lines, name = null }: { id
       ) : (
         <p className={`caption faint ${styles.lineNote}`}>{lines === "left" ? "이미 별빛 한 줄을 건넸어요" : "이 별은 별빛 한 줄을 받지 않아요"}</p>
       )}
-      <div className={styles.more}>
-        <button type="button" onClick={() => report.current?.showModal()}>신고하기</button>
-        <button type="button" onClick={() => block.current?.showModal()}>이 별지기 차단</button>
-      </div>
+      {!mine && (
+        <div className={styles.more}>
+          <button type="button" onClick={() => report.current?.showModal()}>신고하기</button>
+          <button type="button" onClick={() => block.current?.showModal()}>이 별지기 차단</button>
+        </div>
+      )}
 
       <dialog ref={line} className={`card ${styles.dialog}`} aria-labelledby="line-title">
         <LineForm id={id} onDone={() => line.current?.close()} />
@@ -81,6 +84,40 @@ export function PlazaActions({ id, resonated, keeper, lines, name = null }: { id
         </form>
       </dialog>
     </>
+  );
+}
+
+// Figma W-94 (Mobile 75 ··· , 14.4): the top-right ··· opens 신고 and 차단; not on my own star.
+function MoreMenu({ onReport, onBlock }: { onReport: () => void; onBlock: () => void }) {
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => { if (!wrap.current?.contains(e.target as Node)) setOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("pointerdown", away);
+    document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("pointerdown", away); document.removeEventListener("keydown", esc); };
+  }, [open]);
+  const pick = (run: () => void) => () => { setOpen(false); run(); };
+  return (
+    <div ref={wrap} className={styles.menuWrap}>
+      <button type="button" className={styles.menuButton} aria-label="더 보기" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <More size={18} />
+      </button>
+      {open && (
+        <div role="menu" className={styles.menu}>
+          <button type="button" role="menuitem" onClick={pick(onReport)}>
+            <span className={styles.menuIcon}><Warn size={16} /></span>
+            <span><b>이 별 신고하기</b><small>운영팀이 살펴봐요</small></span>
+          </button>
+          <button type="button" role="menuitem" className={styles.menuDanger} onClick={pick(onBlock)}>
+            <span className={styles.menuIcon}><Close size={16} /></span>
+            <span><b>이 별지기 차단하기</b><small>이 사람의 글이 더 보이지 않아요</small></span>
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 

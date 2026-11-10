@@ -28,7 +28,7 @@ export default function PlazaStarPage({ params }: PageProps<"/plaza/stars/[id]">
 
 async function Detail({ params }: Pick<PageProps<"/plaza/stars/[id]">, "params">) {
   const { id } = await params;
-  await requireNickname(`/plaza/stars/${id}`);
+  const me = await requireNickname(`/plaza/stars/${id}`);
   let star: PlazaStar;
   try {
     star = await api<PlazaStar>(`/v1/plaza/stars/${id}`);
@@ -59,7 +59,7 @@ async function Detail({ params }: Pick<PageProps<"/plaza/stars/[id]">, "params">
         <p className="caption faint">{star.full_text ? "대표 문장과 글 전체가 별지기 이름과 함께 공개된 별이에요." : "별지기가 골라 나눈 한 문장이에요."}</p>
       </blockquote>
       {star.full_text && star.body_masked && <div className={`journal ${styles.full}`}>{star.body_masked}</div>}
-      <PlazaActions id={star.id} resonated={star.resonated} beside={star.beside} keeper={keeper} name={star.nickname}
+      <PlazaActions id={star.id} resonated={star.resonated} beside={star.beside} keeper={keeper} name={star.nickname} mine={!!star.nickname && star.nickname === me.nickname}
         lines={star.receive_lines ? (star.line_left ? "left" : "open") : "closed"} />
     </article>
   );
