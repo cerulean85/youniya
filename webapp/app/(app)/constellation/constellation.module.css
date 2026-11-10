@@ -23,5 +23,6 @@
 /* The whole figure fits the window: its width follows the height left after the heading, card padding and month row. */
 .figure { aspect-ratio: 342 / 300; width: min(100%, max(320px, (100dvh - 290px) * 342 / 300)); margin-inline: auto; }
 .figureCard { position: relative; }
-.shareIcon { position: absolute; top: 18px; right: 18px; z-index: 2; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: rgb(255 255 255 / 0.06); border: 1px solid var(--border); color: var(--text-2); cursor: pointer; }
-.shareIcon:hover { color: var(--text); border-color: rgb(var(--primary-rgb) / 0.5); }
+.completeCard { position: absolute; top: 18px; right: 18px; z-index: 2; padding: 6px 10px; border-radius: 14px; background: rgb(251 191 36 / 0.14); border: 1px solid rgb(251 191 36 / 0.45);
+  color: #fbbf24; font: 500 12px/16px var(--sans); cursor: pointer; }
+.completeCard:hover { background: rgb(251 191 36 / 0.22); }

@@ -5,7 +5,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { ConstellationPick } from "@/components/ConstellationPick";
 import { ShareCard } from "@/components/ShareCard";
-import { ChevronRight, Nebula, Upload } from "@/components/icons";
+import { ChevronRight, Nebula } from "@/components/icons";
 import { MONTH_NAMES } from "@/lib/constellation";
 import { api } from "@/lib/api";
 import type { StarSummary } from "@/lib/types";
@@ -52,9 +52,9 @@ async function Month({ searchParams }: Pick<PageProps<"/constellation">, "search
       </header>
       <div className={styles.body}>
         <section className={`card ${styles.figureCard}`} aria-label="별자리">
-          {/* 기획서 23장: only a completed month can be shared as a card, from a small export icon. */}
-          {c?.complete && <ShareCard kind="constellation" data={constellationCard(c, shapeOf)} label={<Upload size={16} />}
-            ariaLabel="별자리 카드로 나누기" className={styles.shareIcon} />}
+          {/* 기획서 23장 (Mobile 08-5·08-7 Complete Card Button): only a completed month has a card, and says so. */}
+          {c?.complete && <ShareCard kind="constellation" data={constellationCard(c, shapeOf)} label="완성 카드 ›"
+            className={styles.completeCard} />}
           <div className={styles.figure}>
             {c ? <ConstellationPick c={c} /> : <p className="body-m muted">{view ? `${monthOnly(month)} 별자리의 모양을 준비하고 있어요.` : "아직 열리지 않은 달이에요."}</p>}
           </div>
