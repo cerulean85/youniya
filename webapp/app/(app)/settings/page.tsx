@@ -33,7 +33,7 @@ export default function SettingsPage({ searchParams }: PageProps<"/settings">) {
 
 const DELETE_NOTE: Record<string, string> = {
   cancel: "Apple 확인을 닫아서 아무것도 지우지 않았어요.",
-  retry: "Apple 확인이 끝나지 않았어요. 계정은 그대로예요. 다시 시도해 주세요.",
+  retry: "Apple 확인이 끝나지 않았어요. 계정은 그대로예요. 가입할 때 쓴 Apple ID로 다시 시도해 주세요.",
   failed: "계정을 지우지 못했어요. 계정은 그대로예요. 잠시 뒤 다시 시도해 주세요.",
 };
 
