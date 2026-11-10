@@ -37,7 +37,7 @@ async function Editor({ searchParams }: Pick<PageProps<"/write">, "searchParams"
   return (
     <>
       {source?.kind !== "rewrite" && <div className={styles.top}>
-        <Link href={back} className={styles.close}><Close size={18} />닫기</Link>
+        <Link href={back} className={styles.close} data-leave><Close size={18} />닫기</Link>
         <span className="label-m">{source ? "별 잇기 · 새 별 쓰기" : "별 만들기"}</span>
         <span className={styles.spacer} />
       </div>}

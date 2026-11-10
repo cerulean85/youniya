@@ -2,6 +2,7 @@
 
 import { CoinsLink } from "@/components/CoinsLink";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Info, Lock } from "@/components/icons";
@@ -25,6 +26,10 @@ export function WriteForm({ draft, source, freeStarToday, coins }: { draft: Draf
   const [moods, setMoods] = useState<Mood[]>(start?.moods?.length ? start.moods : [start?.mood ?? "calm"]);
   const toggleMood = (m: Mood) => setMoods((list) => (list.includes(m) ? (list.length > 1 ? list.filter((x) => x !== m) : list) : [...list, m]));
   const confirm = useRef<HTMLDialogElement>(null);
+  const shortage = useRef<HTMLDialogElement>(null);
+  const leave = useRef<HTMLDialogElement>(null);
+  const [leaveTo, setLeaveTo] = useState("/");
+  const router = useRouter();
   const [title, setTitle] = useState(start?.title ?? "");
   const [body, setBody] = useState(start?.body ?? "");
   const [saved, setSaved] = useState<string | null>(draft ? "이전에 쓰던 글을 불러왔어요" : null);
@@ -75,6 +80,53 @@ export function WriteForm({ draft, source, freeStarToday, coins }: { draft: Draf
     const t = setTimeout(retry, 0);
     return () => clearTimeout(t);
   });
+  // W-93: no free reading left and too few coins: say so before the confirm (and when the server says so).
+  const short = freeStarToday <= 0 && coins < STAR_COST;
+  const openFloat = () => (short ? shortage : confirm).current?.showModal();
+  useEffect(() => { if (state?.code === "insufficient_coins") { confirm.current?.close(); shortage.current?.showModal(); } }, [state]);
+
+  // W-92 쓰던 글을 어떻게 할까요?: 닫기 (links marked data-leave) asks once something is written.
+  const changed = (title.trim() || body.trim()) && JSON.stringify([title, body]) !== JSON.stringify([start?.title ?? "", start?.body ?? ""]);
+  useEffect(() => {
+    if (!changed) return;
+    const onClick = (e: MouseEvent) => {
+      const a = (e.target as Element | null)?.closest?.("a[data-leave]") as HTMLAnchorElement | null;
+      if (!a) return;
+      e.preventDefault();
+      setLeaveTo(a.getAttribute("href") ?? "/");
+      leave.current?.showModal();
+    };
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
+  }, [changed]);
+  const keepAndGo = async () => {
+    try { await saveDraft({ mood: moods[0], moods, title, body, source_star_id: rewrite?.id ?? null }); } catch { /* kept in this browser */ }
+    router.push(leaveTo as never);
+  };
+  const discardAndGo = async () => {
+    try { localStorage.removeItem(localKey); } catch { /* private mode */ }
+    try { await saveDraft({ mood: moods[0], moods, title: "", body: "", source_star_id: rewrite?.id ?? null }); } catch { /* offline */ }
+    last.current = JSON.stringify([moods, "", ""]);
+    router.push(leaveTo as never);
+  };
+  const extraDialogs = (
+    <>
+      <dialog ref={leave} className="card sheet" aria-labelledby="leave-title">
+        <h2 id="leave-title" className="h3">쓰던 글을 어떻게 할까요?</h2>
+        <p className="body-s muted">글은 사라지지 않게 임시로 저장해 둘 수 있어요.</p>
+        <button type="button" className="btn btn-primary btn-block" onClick={keepAndGo}>임시 저장하고 나가기</button>
+        <button type="button" className="btn btn-secondary btn-block" onClick={() => leave.current?.close()}>계속 쓰기</button>
+        <button type="button" className="btn btn-danger btn-block" onClick={discardAndGo}>버리기</button>
+      </dialog>
+      <dialog ref={shortage} className="card sheet" aria-labelledby="short-title">
+        <h2 id="short-title" className="h3">코인이 조금 부족해요</h2>
+        <p className="body-s muted">오늘 무료 별빛 받기는 이미 썼어요. 별빛을 받으려면 코인 {STAR_COST}개가 필요해요. 지금 코인 {coins}개예요. 별빛 없이 띄우는 건 무료예요.</p>
+        <CoinsLink className="btn btn-primary btn-block">코인 충전</CoinsLink>
+        <ConfirmKeep label="별빛 없이 띄우기" onDone={() => shortage.current?.close()} />
+        <button type="button" className="btn btn-ghost btn-block" onClick={() => shortage.current?.close()}>계속 쓰기</button>
+      </dialog>
+    </>
+  );
   // Floating needs the server; offline it waits instead of failing.
   const guard = (e: React.FormEvent) => { if (!navigator.onLine) { e.preventDefault(); setLost(true); confirm.current?.close(); } };
   const offlineUi = <>{offline && <OfflineBanner onRetry={retry} />}{flash && !offline && <FlashToast key={flash.n} message={flash.text} />}{flash && offline && flash.text !== "다시 연결됐어요" && <FlashToast key={flash.n} message={flash.text} />}</>;
@@ -118,7 +170,7 @@ export function WriteForm({ draft, source, freeStarToday, coins }: { draft: Draf
         <input type="hidden" name="moods" value={moods.join(",")} />
         <input type="hidden" name="rewrite_of" value={rewrite.id} />
         <div className={styles.rewriteTop}>
-          <Link href={`/stars/${rewrite.id}`} className={styles.close}>닫기</Link>
+          <Link href={`/stars/${rewrite.id}`} className={styles.close} data-leave>닫기</Link>
           <span className="label-m">고쳐 쓰기</span>
           <span className={`caption faint ${styles.saved}`}>{saved ?? ""}</span>
         </div>
@@ -146,6 +198,7 @@ export function WriteForm({ draft, source, freeStarToday, coins }: { draft: Draf
         <button type="button" className="btn btn-primary btn-block" disabled={length === 0} onClick={() => confirm.current?.showModal()}>새 별로 띄우기</button>
         <PrismOverlay mode="float" />
         {confirmDialog}
+        {extraDialogs}
         {offlineUi}
       </form>
     );
@@ -174,7 +227,7 @@ export function WriteForm({ draft, source, freeStarToday, coins }: { draft: Draf
           {rewrite ? (
             <button type="button" className="btn btn-secondary" disabled={length === 0} onClick={() => confirm.current?.showModal()}>별빛 없이 띄우기</button>
           ) : <Submit mode="keep" label="별빛 없이 띄우기" style="btn-secondary" disabled={length === 0} />}
-          <button type="button" className="btn btn-primary" disabled={!canFloat} onClick={() => confirm.current?.showModal()}>별빛 받고 띄우기</button>
+          <button type="button" className="btn btn-primary" disabled={!canFloat} onClick={openFloat}>별빛 받고 띄우기</button>
         </div>
       </div>
       <aside className={styles.side}>
@@ -207,6 +260,7 @@ export function WriteForm({ draft, source, freeStarToday, coins }: { draft: Draf
       </aside>
       <PrismOverlay mode="float" />
       {confirmDialog}
+      {extraDialogs}
       {offlineUi}
     </form>
   );
