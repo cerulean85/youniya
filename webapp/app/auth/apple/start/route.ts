@@ -18,7 +18,10 @@ export async function GET(request: NextRequest) {
   }).toString();
   const res = NextResponse.redirect(url);
   const next = request.nextUrl.searchParams.get("next") ?? "";
-  res.cookies.set("yn_apple", JSON.stringify({ state, nonce, next }), {
+  // purpose=delete: 계정 영구 삭제 asks Apple once more (App Review 5.1.1(v)); the code revokes the Apple tokens.
+  // The settings form sends confirm=삭제, so a stray link can't start it.
+  const purpose = request.nextUrl.searchParams.get("purpose") === "delete" && request.nextUrl.searchParams.get("confirm") === "삭제" ? "delete" : "signin";
+  res.cookies.set("yn_apple", JSON.stringify({ state, nonce, next, purpose }), {
     httpOnly: true, secure: true, sameSite: "none", path: "/auth/apple", maxAge: 600,
   });
   return res;

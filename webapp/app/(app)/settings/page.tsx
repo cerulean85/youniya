@@ -20,18 +20,26 @@ type MeFull = Me & { marketing?: { opt_in: boolean; consented_at: string | null;
 
 // Figma W-79 (iOS 87, 87-6): one column of rows; 나눈 별, 차단한 별지기, 별지기 이름 and 우주의 색 open their own pages
 // (W-77, W-82, W-80, W-90). 진동, 별 만들기 알림 and 알림 시각 belong to the phone and stay in the app.
-export default function SettingsPage() {
+export default function SettingsPage({ searchParams }: PageProps<"/settings">) {
   return (
     <div className={styles.page}>
       <PageHeader title="나에게 맞는 밤하늘" sub="필요한 것만 켜 두세요. 언제든 바꿀 수 있어요." />
       <Suspense fallback={<div className={styles.loading} aria-busy="true" />}>
-        <Settings />
+        <Settings searchParams={searchParams} />
       </Suspense>
     </div>
   );
 }
 
-async function Settings() {
+const DELETE_NOTE: Record<string, string> = {
+  cancel: "Apple 확인을 닫아서 아무것도 지우지 않았어요.",
+  retry: "Apple 확인이 끝나지 않았어요. 계정은 그대로예요. 다시 시도해 주세요.",
+  failed: "계정을 지우지 못했어요. 계정은 그대로예요. 잠시 뒤 다시 시도해 주세요.",
+};
+
+async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchParams">) {
+  const sp = await searchParams;
+  const note = typeof sp.delete === "string" ? DELETE_NOTE[sp.delete] : undefined;
   const [me, shares, blocks, summary] = await Promise.all([
     api<MeFull>("/v1/me"),
     api<{ stars: MyShare[] }>("/v1/me/shares"),
@@ -42,6 +50,7 @@ async function Settings() {
   const sky = SKIES.find((s) => s.key === (me.settings?.sky ?? "violet")) ?? SKIES[0];
   return (
     <>
+      {note && <p className={styles.notice} role="status">{note}</p>}
       <Group title="계정">
         <div className={styles.row}><Shield size={18} /><span>로그인 계정</span><span className={styles.value}>{PROVIDERS[me.provider] ?? me.provider}</span></div>
         {me.joined_at && <div className={styles.row}><Star size={18} /><span>가입한 날</span><span className={styles.value}>{fullDate(me.joined_at)}</span></div>}
@@ -65,7 +74,7 @@ async function Settings() {
       </Group>
       <Group title="데이터">
         <ExportDialog stars={summary.total} />
-        <DangerZone part="delete" shared={shares.stars.length} icon={<Trash size={18} />} />
+        <DangerZone part="delete" shared={shares.stars.length} icon={<Trash size={18} />} apple={me.provider === "apple"} />
       </Group>
       <Group title="도움">
         <a href="tel:109" className={styles.row}><Phone size={18} /><span>24시간 위기 상담</span><span className={styles.value}>109<ChevronRight size={16} /></span></a>

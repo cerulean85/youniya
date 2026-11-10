@@ -42,7 +42,7 @@ export function UnshareButton({ starId }: { starId: string }) {
   return <form action={unshareOne.bind(null, starId)} className={styles.under}><Pending label="광장에서 거두기" busy="거두는 중…" style={styles.textButton} /></form>;
 }
 
-export function DangerZone({ part, shared, icon }: { part: "unshare" | "delete"; shared: number; icon: React.ReactNode }) {
+export function DangerZone({ part, shared, icon, apple = false }: { part: "unshare" | "delete"; shared: number; icon: React.ReactNode; apple?: boolean }) {
   const dialog = useRef<HTMLDialogElement>(null);
   if (part === "unshare") return (
     <>
@@ -67,16 +67,19 @@ export function DangerZone({ part, shared, icon }: { part: "unshare" | "delete";
         {icon}<span>계정 영구 삭제</span><span className={styles.value}><ChevronRight size={16} /></span>
       </button>
       <dialog ref={dialog} className={`card ${styles.dialog}`} aria-labelledby="delete-title">
-        <form action={deleteAccount}>
+        {/* An Apple account goes through Sign in with Apple once more (/auth/apple/start?purpose=delete). */}
+        <form {...(apple ? { action: "/auth/apple/start", method: "get" } : { action: deleteAccount })}>
+          {apple && <input type="hidden" name="purpose" value="delete" />}
           <h2 id="delete-title" className="h2">계정을 영구 삭제할까요?</h2>
           <p className="body-s muted">모든 별과 별빛, 별자리, 나눈 별과 받은 별빛 한 줄, 남은 코인이 사라지고 되살릴 수 없어요. 결제 기록만 법에 따라 5년 동안 보관해요.</p>
+          {apple && <p className="body-s muted">Apple로 로그인한 계정은 본인 확인을 위해 Apple 로그인을 한 번 더 거쳐요. 삭제하면 Apple ID와의 연결도 끊어져요.</p>}
           <label className={styles.confirm}>
             <span className="caption muted">확인을 위해 &lsquo;삭제&rsquo;라고 적어 주세요</span>
             <input name="confirm" autoComplete="off" required pattern="삭제" />
           </label>
           <div className={styles.dialogActions}>
             <button type="button" className="btn btn-ghost" onClick={() => dialog.current?.close()}>취소</button>
-            <Pending label="영구 삭제" busy="삭제하는 중…" style={`btn ${styles.dangerButton}`} />
+            <Pending label={apple ? "Apple로 확인하고 삭제" : "영구 삭제"} busy={apple ? "Apple로 가는 중…" : "삭제하는 중…"} style={`btn ${styles.dangerButton}`} />
           </div>
         </form>
       </dialog>
