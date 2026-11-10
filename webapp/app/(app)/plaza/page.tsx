@@ -26,9 +26,12 @@ type Filter = (typeof FILTERS)[number]["key"];
 // sit below. No resonance counts for anyone else's star.
 export default function PlazaPage({ searchParams }: PageProps<"/plaza">) {
   return (
-    <Suspense fallback={<><Header /><PlazaSkeleton /></>}>
-      <Gate searchParams={searchParams} />
-    </Suspense>
+    // The list and its side card as one block in the middle of wide screens (2026-11-10).
+    <div className="page-column" style={{ ["--column" as string]: "1092px" }}>
+      <Suspense fallback={<><Header /><PlazaSkeleton /></>}>
+        <Gate searchParams={searchParams} />
+      </Suspense>
+    </div>
   );
 }
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
-import { Archive, Bell, Coin, Mail, Moon, Nebula, Settings, Star } from "./icons";
+import { Archive, Bell, Mail, Moon, Nebula, Settings, Star } from "./icons";
 import { UnreadDot } from "./UnreadDot";
 import { NavLinks } from "./NavLinks";
 import styles from "./Sidebar.module.css";
@@ -14,10 +14,8 @@ export const MAIN_NAV = [
 ];
 export const MORE_NAV = [
   // The unread dot reads the session, so it streams in on its own.
-  // Mobile drawer order (C-11): 별빛 없는 별 first, as a shortcut to the records filtered to them.
-  { href: "/records?state=kept", label: "별빛 없는 별", icon: <Archive /> },
+  // 2026-11-10: 별빛 없는 별 (the records filter does it) and 코인 (the balance in the account card opens it) are gone.
   { href: "/notifications", label: "알림", icon: <Bell />, badge: <Suspense fallback={null}><UnreadDot /></Suspense> },
-  { href: "/coins", label: "코인", icon: <Coin /> },
   { href: "/settings", label: "설정", icon: <Settings /> },
   { href: "/contact", label: "문의하기", icon: <Mail /> },
 ];

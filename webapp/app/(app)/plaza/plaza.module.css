@@ -8,7 +8,7 @@
 .sorts a::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--primary); }
 .sorts a[aria-current="true"] { color: var(--text); border-color: var(--primary); background: var(--tint); }
 .body { display: flex; gap: 32px; align-items: flex-start; }
-.records { flex: 1; min-width: 0; max-width: 720px; }
+.records { flex: 1; min-width: 0; }
 .list { list-style: none; margin: 0; padding: 0; }
 .list li + li { border-top: 1px solid var(--border); }
 .listEmpty { padding: 48px 4px; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
