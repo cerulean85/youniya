@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Search, Shield, Star, User, ChevronRight, Doc, Info, Lock, LogOut, Moon, Phone, Trash, Close } from "@/components/icons";
+import { Shield, Star, User, ChevronRight, Doc, Info, Lock, LogOut, Moon, Phone, Trash, Close } from "@/components/icons";
 import { PageHeader } from "@/components/Page";
 import { api } from "@/lib/api";
 import { SITE_URL } from "@/lib/config";
@@ -58,7 +58,6 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
           <User size={18} /><span>별지기 이름</span>
           <span className={styles.value}>{me.nickname_rename_required ? <b className={styles.rename}>바꿔 주세요</b> : me.nickname ?? "정하지 않았어요"}<ChevronRight size={16} /></span>
         </Link>
-        {me.nickname && <Link href={`/plaza/keepers/${encodeURIComponent(me.nickname)}`} className={styles.row}><Search size={18} /><span>내 별지기 페이지 미리 보기</span><span className={styles.value}><ChevronRight size={16} /></span></Link>}
       </Group>
       <Group title="화면과 움직임">
         <Link href="/settings/sky" className={styles.row}><Moon size={18} /><span>우주의 색</span><span className={styles.value}>{sky.label}<ChevronRight size={16} /></span></Link>
