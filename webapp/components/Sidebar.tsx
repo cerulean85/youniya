@@ -7,7 +7,7 @@ import styles from "./Sidebar.module.css";
 
 // Figma: Web/Sidebar. The main tabs of the iOS tab bar plus its drawer menu (2026-11-09: 별자리, no 마음 망원경).
 export const MAIN_NAV = [
-  { href: "/", label: "나의 밤하늘", icon: <Moon /> },
+  { href: "/", label: "오늘", icon: <Moon /> },
   { href: "/constellation", label: "별자리", icon: <Nebula /> },
   { href: "/plaza", label: "우주 광장", icon: <Star /> },
   { href: "/records", label: "기록", icon: <Archive /> },

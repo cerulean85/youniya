@@ -16,16 +16,14 @@ const Lines = ({ n, h = 10, gap = 14 }: { n: number; h?: number; gap?: number })
   <div className={styles.col} style={{ gap }}>{Array.from({ length: n }, (_, i) => <Bar key={i} h={h} w={i === n - 1 ? "60%" : "100%"} />)}</div>
 );
 
-/** W-63 나의 밤하늘: the sky card, three numbers, recent stars. */
+/** W-63 오늘: the writing card, the month's link, recent stars. */
 export function HomeSkeleton() {
   return (
-    <Wrap label="밤하늘을 불러오는 중">
+    <Wrap label="오늘을 불러오는 중">
       <div className={styles.split} style={{ gridTemplateColumns: "1fr 400px" }}>
-        <div className={styles.col} style={{ gap: 16 }}>
-          <div className={`card ${styles.card}`} style={{ height: 520 }}><div className={styles.row}><Bar w="70%" /><Bar w="12%" /></div></div>
-          <div className={styles.grid3}>
-            {[0, 1, 2].map((i) => <div key={i} className={`card ${styles.card}`} style={{ borderRadius: 18 }}><Bar w="40%" h={8} /><Bar w={i === 1 ? 20 : 40} h={14} /></div>)}
-          </div>
+        <div className={styles.col} style={{ gap: 24 }}>
+          <div className={`card ${styles.card}`} style={{ height: 230, borderRadius: 24 }}><div className={styles.row}><Bar w="45%" h={14} /><Bar w="16%" h={8} /></div><Bar w="85%" h={8} /><Bar w={240} h={40} /><Bar w="55%" h={8} /></div>
+          <div className={`card ${styles.card}`} style={{ height: 56, borderRadius: 16 }}><div className={styles.row}><Bar w="55%" h={8} /><Bar w="14%" h={8} /></div></div>
         </div>
         <div className={styles.col}>
           <div className={styles.row}><Bar w="80%" h={8} /><Bar w="10%" h={8} /></div>

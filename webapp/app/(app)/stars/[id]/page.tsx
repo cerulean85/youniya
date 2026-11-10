@@ -28,7 +28,7 @@ export const maxDuration = 120;
 export default function StarPage({ params, searchParams }: PageProps<"/stars/[id]">) {
   return (
     <>
-      <Link href="/" className={styles.back}><ChevronLeft size={18} />나의 밤하늘</Link>
+      <Link href="/" className={styles.back}><ChevronLeft size={18} />오늘</Link>
       <Suspense fallback={<StarSkeleton />}>
         <StarView params={params} searchParams={searchParams} />
       </Suspense>

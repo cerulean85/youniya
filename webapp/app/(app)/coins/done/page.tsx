@@ -22,7 +22,7 @@ async function Done({ searchParams }: Pick<PageProps<"/coins/done">, "searchPara
   return (
     <StatusScreen icon={<Check size={22} />} title="충전이 끝났어요"
       body={`${added ? `코인 ${added.toLocaleString("ko-KR")}개가 들어왔어요. ` : ""}지금 코인은 ${coins.coins.toLocaleString("ko-KR")}개예요.`}>
-      <Link href={from ?? "/"} className="btn btn-primary btn-block">{from ? "하던 곳으로 돌아가기" : "나의 밤하늘로"}</Link>
+      <Link href={from ?? "/"} className="btn btn-primary btn-block">{from ? "하던 곳으로 돌아가기" : "오늘로 돌아가기"}</Link>
       <Link href="/coins#history" className="btn btn-ghost btn-block">코인 사용 내역 보기</Link>
     </StatusScreen>
   );

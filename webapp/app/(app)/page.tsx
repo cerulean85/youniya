@@ -3,7 +3,6 @@ import Link from "next/link";
 import { HomeSkeleton } from "@/components/Skeleton";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { ConstellationFigure } from "@/components/ConstellationFigure";
 import { Archive, ChevronRight, Nebula, Pen, Star } from "@/components/icons";
 import { StarRow } from "@/components/StarRow";
 import { api } from "@/lib/api";
@@ -13,12 +12,12 @@ import type { Me, StarSummary, Summary } from "@/lib/types";
 import { RenameBanner } from "@/components/Restricted";
 import styles from "./home.module.css";
 
-// Figma W-10 (나의 밤하늘) and W-22 (첫 밤하늘 · 비어 있음).
+// Figma W-10 (오늘, 기획서 21장), W-62 (with the rename banner), W-63 (skeleton) and W-22 (첫 밤하늘 · 비어 있음).
 export default function HomePage() {
   return (
     <>
       <header className={styles.header}>
-        <h1 className="h1">나의 밤하늘</h1>
+        <h1 className="h1">오늘</h1>
         <Suspense fallback={<p className="body-m muted">&nbsp;</p>}><Today /></Suspense>
       </header>
       <Suspense fallback={null}><OperatorBanners /></Suspense>
@@ -42,32 +41,34 @@ async function OperatorBanners() {
 
 async function Sky() {
   await connection();
-  const month = kst(new Date()).month;
-  const [list, summary, view] = await Promise.all([
-    api<{ items: StarSummary[] }>("/v1/stars?limit=6"),
+  const now = kst(new Date());
+  const [list, summary, view, me] = await Promise.all([
+    api<{ items: StarSummary[] }>("/v1/stars?limit=30"),
     api<Summary>("/v1/stars/summary"),
-    getConstellation(month),
+    getConstellation(now.month),
+    api<Me>("/v1/me"),
   ]);
   // W-91: the welcome sheet opens once, over the first empty sky.
-  if (summary.total === 0) return <><EmptySky /><WelcomeSheet account={(await api<Me>("/v1/me")).id} /></>;
+  if (summary.total === 0) return <><EmptySky /><WelcomeSheet account={me.id} /></>;
   const c = view?.c ?? null;
+  const today = list.items.filter((s) => { const d = kst(s.created_at); return d.y === now.y && d.m === now.m && d.d === now.d; }).length;
   return (
     <div className={styles.body}>
       <div className={styles.left}>
-        <Link href="/constellation" className={`card ${styles.sky}`} aria-label="나의 별자리 보기">
-          <div className={styles.skyHead}>
-            <h2 className="h3">이번 달 별자리{c ? ` · ${monthOnly(month)} ${c.name}자리` : ""}</h2>
-            {c && <span className="caption faint">{c.filled} / {c.total} 자리 채움</span>}
+        {/* Figma W-10 (기획서 21장): writing first; the month's figures live on 별자리 (W-16). */}
+        <section className={`card ${styles.write}`} aria-labelledby="write-title">
+          <div className={styles.writeHead}>
+            <h2 id="write-title" className="h3">오늘의 마음은 어떤가요?</h2>
+            <span className="caption faint">오늘 띄운 별 {today}개</span>
           </div>
-          <div className={styles.canvas}>
-            {c ? <ConstellationFigure c={c} links={false} /> : <p className="body-m muted">이번 달 별자리의 모양을 준비하고 있어요.</p>}
-          </div>
+          <p className="body-s muted">하루의 이야기를 편하게 적어 보세요. 다 쓰면 별빛을 받고 띄우거나, 별빛 없이 띄울 수 있어요.</p>
+          <Link href="/write" className={`btn btn-primary ${styles.writeButton}`}>오늘의 별 만들기</Link>
+          <p className="caption faint">{me.free_star_today > 0 ? `오늘 무료 별빛 ${me.free_star_today}번 남았어요` : "오늘 무료 별빛을 썼어요"} · 별빛 없이 띄우기는 언제나 무료예요</p>
+        </section>
+        <Link href="/constellation" className={`card ${styles.monthLink}`}>
+          <span className="body-s muted">이번 달 별자리{c ? ` · ${monthOnly(now.month)} ${c.name}자리 · ${c.filled} / ${c.total} 자리 채움` : ""}</span>
+          <span className={styles.all}>별자리 보기<ChevronRight size={14} /></span>
         </Link>
-        <div className={styles.stats}>
-          <Stat label="이번 달 띄운 별" value={String(view?.count ?? 0)} color="var(--gold)" />
-          <Stat label="별빛 없는 별" value={String(view?.unlit ?? 0)} color="var(--text)" />
-          <Stat label="채운 자리" value={c ? `${c.filled}/${c.total}` : "–"} color="var(--primary-text)" />
-        </div>
       </div>
       <section className={styles.recent} aria-labelledby="recent">
         <div className={styles.recentHead}>
@@ -76,15 +77,6 @@ async function Sky() {
         </div>
         {list.items.slice(0, 5).map((s) => <StarRow key={s.id} star={s} />)}
       </section>
-    </div>
-  );
-}
-
-function Stat({ label, value, color }: { label: string; value: string; color: string }) {
-  return (
-    <div className={`card ${styles.stat}`}>
-      <span className="caption muted">{label}</span>
-      <span className="h1" style={{ color }}>{value}</span>
     </div>
   );
 }
