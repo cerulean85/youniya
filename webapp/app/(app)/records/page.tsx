@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { ChevronLeft, ChevronRight } from "@/components/icons";
 import { StarRow } from "@/components/StarRow";
 import { api } from "@/lib/api";
-import { kst, monthLabel, MOODS, shiftMonth } from "@/lib/format";
+import { kst, monthLabel, MOODS, shiftMonth, subject } from "@/lib/format";
 import type { StarSummary, Summary } from "@/lib/types";
 import styles from "./records.module.css";
 
@@ -35,7 +35,7 @@ function Header({ total }: { total: number | null }) {
     <header className={styles.header}>
       <h1 className="h1">기록</h1>
       <p className="body-m muted">{total == null ? " " : `지금까지 띄운 별 ${total}개`}</p>
-      <Link href="/records/flow" className={styles.flowLink}>나의 별빛 흐름 ›</Link>
+      <Link href="/records/flow" className={styles.flowLink}>밝기 흐름 보기 ›</Link>
     </header>
   );
 }
@@ -102,6 +102,8 @@ async function ListView({ p }: { p: Params }) {
         </div>
       ) : (
         <div className={styles.list}>
+          {/* W-70: a search shows how many stars hold the words, in titles and writing. */}
+          {p.q && <div className={styles.groupHead}><span className="label-m">&lsquo;{p.q}&rsquo;{subject(p.q).slice(p.q.length)} 담긴 별 {list.items.length}{list.next_before ? "개 이상" : "개"}</span><span className="caption faint">제목 · 본문</span></div>}
           {[...groups].map(([month, stars]) => (
             <section key={month} className={styles.group} aria-label={monthLabel(month)}>
               <div className={styles.groupHead}><span className="label-m">{monthLabel(month)}</span><span className="caption faint">별 {stars.length}개</span></div>

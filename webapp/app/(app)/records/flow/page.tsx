@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { ChevronLeft } from "@/components/icons";
+import { ChevronLeft, StarFilled } from "@/components/icons";
 import { api } from "@/lib/api";
 import type { StarSummary } from "@/lib/types";
 import styles from "./flow.module.css";
@@ -25,7 +25,7 @@ export default function FlowPage({ searchParams }: PageProps<"/records/flow">) {
       <Suspense fallback={<div className={styles.loading} aria-busy="true" />}>
         <Flow searchParams={searchParams} />
       </Suspense>
-      <p className="caption faint">숫자는 평가가 아니에요. 빛이 머물렀던 자리를 보여줄 뿐이에요.</p>
+      <p className={`caption faint ${styles.note}`}>숫자는 평가가 아니에요. 빛이 머물렀던 자리를 보여줄 뿐이에요.</p>
     </>
   );
 }
@@ -53,9 +53,10 @@ async function Flow({ searchParams }: Pick<PageProps<"/records/flow">, "searchPa
         {RANGES.map(([k, l]) => <Link key={k} href={k === "recent" ? "/records/flow" : `/records/flow?range=${k}`} aria-current={k === range ? "true" : undefined}>{l}</Link>)}
       </nav>
       {!trend.enough && count < 3 ? (
-        <div className={`card ${styles.empty}`}>
+        <div className={styles.empty}>
+          <StarFilled size={28} className={styles.emptyMark} />
           <h2 className="h3">흐름을 그리기엔 별이 조금 적어요</h2>
-          <p className="body-m muted">지금은 별빛 받은 별이 {count}개예요. 별이 더 모이면 흐름을 선으로 이어 보여 드릴게요.</p>
+          <p className="body-m muted">지금은 별이 {count}개예요. 별이 더 모이면<br />흐름을 선으로 이어 보여 드릴게요.</p>
         </div>
       ) : (
         <>
@@ -68,7 +69,7 @@ async function Flow({ searchParams }: Pick<PageProps<"/records/flow">, "searchPa
               <span className="label-m">월평균 별빛</span>
               <ul className={styles.months}>
                 {trend.monthly.slice(-6).map((m) => (
-                  <li key={m.month}><span className="caption muted">{Number(m.month.slice(5))}월{m.in_progress ? " (진행 중)" : ""}</span><i style={{ ["--v" as string]: `${Math.min(100, m.average / 10)}%` }} /><b>{m.average}</b></li>
+                  <li key={m.month} data-now={m.in_progress || undefined}><span className="caption muted">{Number(m.month.slice(5))}월</span><i style={{ ["--v" as string]: `${Math.min(100, m.average / 10)}%` }} /><b>{m.average}{m.in_progress ? " · 진행 중" : ""}</b></li>
                 ))}
               </ul>
             </section>
@@ -79,21 +80,30 @@ async function Flow({ searchParams }: Pick<PageProps<"/records/flow">, "searchPa
   );
 }
 
-/** A soft line with dots, scaled to its own range (starlight 0–1000). */
+/** W-71: grid lines with values, a soft area under the line, and the latest star in gold with its number. */
 function Chart({ values, labels }: { values: number[]; labels: string[] }) {
-  const W = 640, H = 180, pad = 16;
-  const lo = Math.max(0, Math.min(...values) - 60), hi = Math.min(1000, Math.max(...values) + 60);
-  const x = (i: number) => pad + (i * (W - pad * 2)) / Math.max(1, values.length - 1);
-  const y = (v: number) => H - pad - ((v - lo) / Math.max(1, hi - lo)) * (H - pad * 2);
-  const d = values.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(" ");
-  const step = Math.ceil(labels.length / 8);
+  const W = 640, H = 200, left = 40, right = 24, top = 24, bottom = 16;
+  const lo = Math.max(0, Math.floor((Math.min(...values) - 80) / 100) * 100), hi = Math.min(1000, Math.ceil((Math.max(...values) + 80) / 100) * 100);
+  const x = (i: number) => left + (i * (W - left - right)) / Math.max(1, values.length - 1);
+  const y = (v: number) => H - bottom - ((v - lo) / Math.max(1, hi - lo)) * (H - top - bottom);
+  const pts = values.map((v, i) => [x(i), y(v)] as const);
+  const d = pts.map(([px, py], i) => `${i ? "L" : "M"}${px.toFixed(1)} ${py.toFixed(1)}`).join(" ");
+  const area = `${d} L${pts.at(-1)![0].toFixed(1)} ${H - bottom} L${pts[0][0].toFixed(1)} ${H - bottom} Z`;
+  const grid = [hi, Math.round((hi + lo) / 2 / 100) * 100, lo];
+  const step = Math.ceil(labels.length / 6);
+  const [lx, ly] = pts.at(-1)!;
   return (
     <figure className={styles.chart}>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`마지막 ${values.at(-1)}`}>
+        <defs><linearGradient id="flowFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="var(--primary)" stopOpacity="0.35" /><stop offset="1" stopColor="var(--primary)" stopOpacity="0.02" /></linearGradient></defs>
+        {grid.map((g) => <g key={g}><line x1={left} x2={W - right} y1={y(g)} y2={y(g)} stroke="#fff" strokeOpacity={0.08} /><text x={0} y={y(g) + 4} fontSize={11} fill="var(--text-3)">{g}</text></g>)}
+        <path d={area} fill="url(#flowFill)" />
         <path d={d} fill="none" stroke="var(--primary)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-        {values.map((v, i) => <circle key={i} cx={x(i)} cy={y(v)} r={i === values.length - 1 ? 5 : 3.5} fill={i === values.length - 1 ? "var(--gold)" : "var(--primary-text)"}><title>{`${labels[i]} · ${v}`}</title></circle>)}
+        {pts.map(([px, py], i) => i < pts.length - 1 && <circle key={i} cx={px} cy={py} r={3} fill="var(--primary-text)"><title>{`${labels[i]} · ${values[i]}`}</title></circle>)}
+        <circle cx={lx} cy={ly} r={5} fill="var(--gold)" />
+        <text x={lx} y={ly - 10} fontSize={12} textAnchor="end" fill="var(--gold)">{values.at(-1)}</text>
       </svg>
-      <figcaption className={styles.labels}>{labels.map((l, i) => <span key={i} style={{ visibility: i % step === 0 || i === labels.length - 1 ? "visible" : "hidden" }}>{l}</span>)}</figcaption>
+      <figcaption className={styles.labels} style={{ paddingLeft: left - 8 }}>{labels.map((l, i) => <span key={i} style={{ visibility: i % step === 0 || i === labels.length - 1 ? "visible" : "hidden" }}>{l}</span>)}</figcaption>
     </figure>
   );
 }
