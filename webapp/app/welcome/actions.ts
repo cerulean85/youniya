@@ -10,5 +10,5 @@ export async function agree(formData: FormData) {
     method: "POST",
     body: JSON.stringify({ terms: true, privacy: true, sensitive: true, marketing: formData.get("marketing") === "on" }),
   });
-  redirect("/nickname"); // 기획서 15.1: the name comes right after consent
+  redirect("/nickname?signup=1"); // 기획서 15.1: the name comes right after consent (and can wait, 21-1)
 }

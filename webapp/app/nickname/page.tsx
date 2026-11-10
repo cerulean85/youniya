@@ -29,7 +29,6 @@ export default function NicknamePage({ searchParams }: PageProps<"/nickname">) {
       <section className={styles.pane}>
         <div className={`card ${styles.card}`} style={{ alignItems: "stretch", textAlign: "left" }}>
           <h2 className="h1">별지기 이름을 정해 주세요</h2>
-          <p className="body-s muted">우주 광장에 별을 나누면 이 이름이 함께 보여요. 내가 건넨 별빛 한 줄에도 이 이름이 보여요.</p>
           <Suspense><Form searchParams={searchParams} /></Suspense>
         </div>
       </section>
@@ -40,5 +39,14 @@ export default function NicknamePage({ searchParams }: PageProps<"/nickname">) {
 async function Form({ searchParams }: Pick<PageProps<"/nickname">, "searchParams">) {
   const sp = await searchParams;
   const next = typeof sp.next === "string" && sp.next.startsWith("/") && !sp.next.startsWith("//") ? sp.next : "/";
-  return <NicknameForm next={next} />;
+  // iOS NicknameView: at sign-up it can wait (21-1, asked again at the plaza); from the plaza it says why.
+  const signup = sp.signup === "1", plaza = next.startsWith("/plaza");
+  return (
+    <>
+      <p className="body-s muted">{plaza ? "우주 광장을 쓰려면 별지기 이름이 필요해요. 나눈 별과 건넨 별빛 한 줄에 이 이름이 보여요." : "우주 광장에 별을 나누면 이 이름이 함께 보여요. 내가 건넨 별빛 한 줄에도 이 이름이 보여요."}</p>
+      <NicknameForm next={next} />
+      {signup && <Link href="/" className="btn btn-ghost btn-block">나중에 정할게요</Link>}
+      {plaza && <p className="caption faint">기록 쓰기와 별 띄우기는 이름 없이도 그대로예요.</p>}
+    </>
+  );
 }
