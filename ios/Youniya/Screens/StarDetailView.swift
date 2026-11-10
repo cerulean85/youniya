@@ -23,8 +23,6 @@ struct StarDetailView: View {
     var onOpenLinked: (StarItem) -> Void = { _ in }
     /// 12-4 「받은 별빛 한 줄 N개 ›」
     var onLines: () -> Void = {}
-    /// 12 「마음 망원경 켜기」 (24/25) or 12-2 「망원경 리포트 보기 ›」 (10).
-    var onTelescope: () -> Void = {}
 
     @State private var confirmDelete = DebugScreen.is("15")
     @State private var confirmShare = DebugScreen.is("19")
@@ -35,8 +33,6 @@ struct StarDetailView: View {
     @State private var showBreakdown = DebugScreen.is("12-5")
     /// 12-6 이 별과 무엇을 이을까요?
     @State private var askLink = DebugScreen.is("12-6")
-    /// 12-2: the telescope's result, open at first.
-    @State private var showTelescope = true
     @State private var askLinkHeight: CGFloat = 300
     @State private var wantsPick = false
     @State private var pickerHeight: CGFloat = 480
@@ -112,14 +108,6 @@ struct StarDetailView: View {
                         .transition(.opacity)
                 }
                 BreakdownToggle(isOpen: $showBreakdown)
-            }
-
-            // 12 / 12-2: the telescope lives here now; its result folds open.
-            if let report = model.report(for: star.id) {
-                TelescopeSection(report: report, isOpen: $showTelescope)
-            } else if star.isFloated {
-                Button("마음 망원경 켜기", action: onTelescope)
-                    .buttonStyle(.secondary)
             }
 
             if !star.isFloated {

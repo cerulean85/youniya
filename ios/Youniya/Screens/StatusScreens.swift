@@ -171,25 +171,16 @@ struct AppNoticeView: View {
 
 // MARK: - 122 Not found
 
-/// 122 별을 찾을 수 없어요 / 122-1 리포트를 찾을 수 없어요: deleted, or tidied
+/// 122 별을 찾을 수 없어요: deleted, or tidied
 /// away on another device.
 struct NotFoundView: View {
-    enum Kind { case star, report }
-    var kind: Kind = .star
-    /// 122 "밤하늘로 돌아가기" / 122-1 "리포트 목록으로"
+    /// 122 "밤하늘로 돌아가기"
     var onBack: () -> Void
 
     var body: some View {
-        switch kind {
-        case .star:
-            StatusView(icon: .iconStar, title: "별을 찾을 수 없어요",
-                       message: "이미 지웠거나 다른 기기에서 정리한 별이에요.",
-                       actions: [.init(title: "밤하늘로 돌아가기", style: .primary, run: onBack)])
-        case .report:
-            StatusView(icon: .iconTelescope, title: "리포트를 찾을 수 없어요",
-                       message: "이미 지웠거나 다른 기기에서 정리한 리포트예요.",
-                       actions: [.init(title: "리포트 목록으로", style: .primary, run: onBack)])
-        }
+        StatusView(icon: .iconStar, title: "별을 찾을 수 없어요",
+                   message: "이미 지웠거나 다른 기기에서 정리한 별이에요.",
+                   actions: [.init(title: "밤하늘로 돌아가기", style: .primary, run: onBack)])
     }
 }
 

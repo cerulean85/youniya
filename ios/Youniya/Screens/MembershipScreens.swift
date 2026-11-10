@@ -98,7 +98,6 @@ struct MembershipSheet: View {
 
     private static let benefits: [(ImageResource, String)] = [
         (.iconStar, "별빛 받기 하루 10번"),
-        (.iconTelescope, "마음 망원경 하루 10번 · 띄운 별마다"),
         (.iconSun, "우주의 색 장면 3가지 · 앱 아이콘"),
     ]
 
@@ -231,7 +230,7 @@ struct MembershipCard: View {
                     if model.isMember {
                         Text(model.memberStatusText).textStyle(.bodyS).foregroundStyle(Color.textPrimary)
                     } else {
-                        Text("별 띄우기·마음 망원경 하루 10번").textStyle(.bodyS).foregroundStyle(Color.textPrimary)
+                        Text("별빛 받기 하루 10번").textStyle(.bodyS).foregroundStyle(Color.textPrimary)
                         Text("월 2,900원부터 · 7일 무료 체험").textStyle(.caption).foregroundStyle(Color.textSecondary)
                     }
                 }

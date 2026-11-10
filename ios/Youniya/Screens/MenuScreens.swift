@@ -18,7 +18,7 @@ struct CoinHistoryView: View {
                     if model.coinHistory.isEmpty {
                         // 108
                         EmptyStateView(title: "아직 쓴 코인이 없어요",
-                                       message: "마음 망원경 등에 쓴 코인이\n여기에 차례로 쌓여요.")
+                                       message: "별빛 받기에 쓴 코인이\n여기에 차례로 쌓여요.")
                             .padding(.top, Space.md)
                     } else {
                         LazyVStack(spacing: Space.md) {

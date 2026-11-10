@@ -1,10 +1,11 @@
 import SwiftUI
 
-/// 14 Rewrite: write again on a previous star's question.
+/// 14 Rewrite: write again on a previous star's question (별빛 풀이's rewrite_question).
 struct RewriteView: View {
     @Environment(AppModel.self) private var model
     var previous: StarItem
-    var question: String
+    /// 별빛 풀이's rewrite_question; nil hides the card.
+    var question: String?
     var onBack: () -> Void
     var onPublish: (_ body: String, _ floated: Bool) -> Void
 
@@ -19,6 +20,7 @@ struct RewriteView: View {
 
             VStack(spacing: Space.lg) {
                 // Previous question
+                if let question {
                 VStack(alignment: .leading, spacing: Space.sm) {
                     Text("이어 쓰는 글 · \(previous.title)")
                         .textStyle(.caption)
@@ -32,6 +34,7 @@ struct RewriteView: View {
                 .padding(Space.lg)
                 .focusCard(angle: .init(x: 0.38, y: 0), end: .init(x: 0.62, y: 1))
                 .accessibilityElement(children: .combine)
+                }
 
                 // Editor
                 TextEditor(text: $text)
@@ -184,7 +187,7 @@ struct DeleteStarSheet: View {
                 Text("이 별을 어떻게 할까요?")
                     .textStyle(.h3)
                     .foregroundStyle(Color.textPrimary)
-                Text("영구 삭제하면 쓴 글과 분석이 모두 사라지고 되돌릴 수 없어요. 먼저 내보내 둘 수 있어요.")
+                Text("영구 삭제하면 쓴 글과 별빛 풀이가 모두 사라지고 되돌릴 수 없어요. 먼저 내보내 둘 수 있어요.")
                     .textStyle(.bodyM)
                     .foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)

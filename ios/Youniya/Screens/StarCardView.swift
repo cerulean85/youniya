@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// 07-1 오늘의 별 카드 · 별빛 풀이 (442:14104): the card, the 별빛 풀이 (open
-/// here), the telescope teaser, then 「나의 별자리 보기」 / 「마음 망원경 켜기」.
+/// here), then 「나의 별자리 보기」.
 /// 17.4: the blocks appear top to bottom, 0.2 s apart (0.5 s each), and the
 /// breakdown's rows follow 0.18 s apart; at once with reduced motion.
 struct StarCardView: View {
@@ -11,7 +11,6 @@ struct StarCardView: View {
     var title: String = "별이 떠올랐어요"
     var onClose: () -> Void
     var onShowNebula: () -> Void
-    var onTelescope: () -> Void
 
     @State private var showBreakdown = true
 
@@ -31,17 +30,11 @@ struct StarCardView: View {
                     }
                     BreakdownToggle(isOpen: $showBreakdown)
                         .appear(true, delay: 0.4, reduceMotion: reduceMotion)
-                    telescopeTeaser(analysis)
-                        .appear(true, delay: 0.6, reduceMotion: reduceMotion)
                 }
 
-                Group {
-                    Button("나의 별자리 보기", action: onShowNebula)
-                        .buttonStyle(.primary)
-                    Button("마음 망원경 켜기", action: onTelescope)
-                        .buttonStyle(.ghost)
-                }
-                .appear(true, delay: 0.8, reduceMotion: reduceMotion)
+                Button("나의 별자리 보기", action: onShowNebula)
+                    .buttonStyle(.primary)
+                    .appear(true, delay: 0.6, reduceMotion: reduceMotion)
             }
             .padding(.horizontal, Space.xl)
             .padding(.top, Space.sm)
@@ -49,36 +42,6 @@ struct StarCardView: View {
         }
         .scrollIndicators(.hidden)
         .background { StarField() }
-    }
-
-    /// Figma `Telescope Teaser`
-    private func telescopeTeaser(_ analysis: StarAnalysis) -> some View {
-        VStack(alignment: .leading, spacing: Space.sm) {
-            HStack(alignment: .top) {
-                Text("마음 망원경")
-                    .textStyle(.labelS)
-                    .foregroundStyle(Color.brandPrimaryText)
-                Spacer()
-                // Only while a free telescope is left (first one, or this month's).
-                if model.isTelescopeFree {
-                    Text("이번 달 1회 무료")
-                        .textStyle(.caption)
-                        .foregroundStyle(Color.starBright)
-                }
-            }
-            Text(analysis.telescopeTeaser)
-                .textStyle(.observation)
-                .foregroundStyle(Color.textPrimary)
-            Text("숨은 마음의 결을 더 들여다볼 수 있어요.")
-                .textStyle(.bodyS)
-                .foregroundStyle(Color.textSecondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(Space.lg)
-        .cosmos("teaser", in: RoundedRectangle(cornerRadius: Radius.lg))
-        .background(Color.bgSurfaceRaised, in: .rect(cornerRadius: Radius.lg))
-        .overlay(RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(Color.borderDefault, lineWidth: 1))
-        .accessibilityElement(children: .combine)
     }
 }
 
@@ -91,7 +54,6 @@ struct ComposeFlowView: View {
     var rewriteOf: StarItem? = nil
     var onClose: () -> Void
     var onShowNebula: () -> Void
-    var onTelescope: (StarItem) -> Void
     /// "이 별 보기" on 13 → 12 Star Detail.
     var onOpenStar: (StarItem) -> Void
     /// 29 "코인 충전" → 28.
@@ -154,7 +116,7 @@ struct ComposeFlowView: View {
                                    onRevise: { confirmRevise = $0 }, revisePublished: revisePublished)
                         .transition(.opacity)
                 } else if let previous = rewriteOf {
-                    RewriteView(previous: previous, question: model.rewriteQuestion(for: previous), onBack: onClose) { body, floated in
+                    RewriteView(previous: previous, question: previous.analysis?.rewriteQuestion, onBack: onClose) { body, floated in
                         let publish = { (floated: Bool) in
                             if model.useLiveAPI {
                                 send(StarDraft(mood: previous.mood, title: previous.title, body: body), floated: floated)
@@ -204,7 +166,7 @@ struct ComposeFlowView: View {
                 }
                 .transition(.opacity)
             case .card(let star):
-                StarCardView(star: star, onClose: onClose, onShowNebula: onShowNebula, onTelescope: { onTelescope(star) })
+                StarCardView(star: star, onClose: onClose, onShowNebula: onShowNebula)
                     .transition(.opacity.combined(with: .scale(scale: 0.98)))
             case .compare(let previous, let current):
                 RematchCompareView(previous: previous, current: current, onBack: onClose, onShowNebula: onShowNebula)

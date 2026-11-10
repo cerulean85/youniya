@@ -37,7 +37,7 @@ struct ServerAnalysis: Decodable {
     var depthLevel: Int?
     var moods: [Share]
     var observation: String
-    var telescopeTeaser: String
+    var telescopeTeaser: String?
     var rewriteQuestion: String?
     /// 17.3 별빛 풀이 (newer servers; nil until then).
     var depthReason: String?
@@ -143,12 +143,13 @@ extension StarAnalysis {
             clarity: a.clarity,
             weight: a.weight,
             observation: a.observation,
-            telescopeTeaser: a.telescopeTeaser,
+            telescopeTeaser: a.telescopeTeaser ?? "",
             tones: a.moods.sorted { $0.share > $1.share }.map(\.mood),
             depthReason: a.depthReason,
             clarityReason: a.clarityReason,
             weightReason: a.weightReason,
-            interpretation: a.interpretation
+            interpretation: a.interpretation,
+            rewriteQuestion: a.rewriteQuestion
         )
     }
 }

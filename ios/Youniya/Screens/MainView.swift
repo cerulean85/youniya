@@ -45,8 +45,6 @@ struct MainView: View {
         case kept      // 18
         case privacy(StarItem.ID)  // 20
         case starlightLine(String) // 23
-        case telescopeConfirm(StarItem.ID) // 24
-        case scanning(StarItem.ID)  // 25
         case coins     // 28
         case coinHistory // 33
         case settings  // 87
@@ -261,7 +259,6 @@ struct MainView: View {
                     tab = .nebula
                     pop()
                 },
-                onTelescope: { openReport($0, replacing: true) },
                 onOpenStar: { star in
                     replace(with: .detail(star.id))
                     // 별빛 없이 띄운 직후 (42 토스트).
@@ -284,8 +281,7 @@ struct MainView: View {
                 onRevise: { push(.revise(id)) },
                 onLinkExisting: { push(.linkStars(id)) },
                 onOpenLinked: { push(.detail($0.id)) },
-                onLines: { push(.receivedLines(id)) },
-                onTelescope: { if let s = model.stars.first(where: { $0.id == id }) { openReport(s) } }
+                onLines: { push(.receivedLines(id)) }
             )
             .edgeSwipeBack(onBack: pop)
         case .records:
@@ -306,16 +302,6 @@ struct MainView: View {
         case .starlightLine(let line):
             StarlightLineView(line: line, onClose: pop)
                 .edgeSwipeBack(onBack: pop)
-        case .telescopeConfirm(let id):
-            TelescopeConfirmView(
-                starID: id,
-                onStart: { replace(with: .scanning(id)) },
-                onCharge: { replace(with: .coins) },
-                onLater: pop
-            )
-            .edgeSwipeBack(onBack: pop)
-        case .scanning(let id):
-            TelescopeScanView(starID: id, onDone: { finishTelescope(id) }, onBackground: pop)
         case .coins:
             CoinChargeView(onBack: pop, onPolicy: { push(.policy(.payment)) },
                            onHistory: { push(.coinHistory) })
@@ -410,7 +396,6 @@ struct MainView: View {
             ComposeFlowView(
                 onClose: pop,
                 onShowNebula: { tab = .nebula; stack.removeAll() },
-                onTelescope: { openReport($0, replacing: true) },
                 onOpenStar: { star in
                     replace(with: .detail(star.id))
                     if !star.isFloated { toast = ToastCardMessage(title: "별빛 없이 띄웠어요") }
@@ -422,7 +407,6 @@ struct MainView: View {
             ComposeFlowView(
                 onClose: pop,
                 onShowNebula: { tab = .nebula; pop() },
-                onTelescope: { openReport($0, replacing: true) },
                 onOpenStar: { replace(with: .detail($0.id)) },
                 onCharge: { push(.coins) },
                 floatingKept: model.stars.first { $0.id == id }
@@ -469,8 +453,8 @@ struct MainView: View {
         case "14", "16", "105": if let floated { push(.compose(rewriteOf: floated.id)) }
         case "10": if let floated { push(.detail(floated.id)) }
         case "12":
-            // 12: a floated star without a report (「마음 망원경 켜기」); 12-2 has one.
-            if let i = model.stars.firstIndex(where: { $0.isFloated && model.report(for: $0.id) == nil }) {
+            // 12: a floated star with its card.
+            if let i = model.stars.firstIndex(where: \.isFloated) {
                 // The sample has no writing or card yet: give it both, like a real star.
                 if model.stars[i].analysis == nil {
                     let body = StarItem.samples[0].body
@@ -483,8 +467,6 @@ struct MainView: View {
             }
         case "15", "19", "19-1", "48": if let floated { push(.detail(floated.id)) }
         case "20": if let floated { push(.privacy(floated.id)) }
-        case "24", "29": if let s = fresh ?? floated { push(.telescopeConfirm(s.id)) }
-        case "25": if let s = fresh ?? floated { push(.scanning(s.id)) }
         case "17", "18": push(.sharedStars)
         case "23": push(.starlightLine("그런 마음이 어둠 속에서도 조용히 빛나고 있어요."))
         case "28", "28-1", "38", "102": push(.coins)
@@ -534,8 +516,6 @@ struct MainView: View {
         case "76-1": push(.keeper(PlazaNebula.samples[0].nickname ?? ""))
         case "12-5":
             if let s = model.stars.first(where: { $0.analysis?.interpretation != nil }) ?? model.stars.first(where: \.isFloated) { push(.detail(s.id)) }
-        case "12-2":
-            if let s = model.stars.first(where: { $0.isFloated && model.report(for: $0.id) != nil }) { push(.detail(s.id)) }
         case "M1", "28-2": push(.coins)
         case "68-1": push(.sky)
         case "87-4": push(.settings)
@@ -587,36 +567,6 @@ struct MainView: View {
     private func replace(with r: Route) {
         _ = stack.popLast()
         DispatchQueue.main.async { push(r) }
-    }
-
-    /// 10 Mind Telescope Report for a floated star. A star without a report
-    /// goes through 24 (spend coins) and 25 (scanning); the very first one
-    /// is free and goes straight to 25.
-    private func openReport(_ star: StarItem, replacing: Bool = false) {
-        // 07 may hold the star as it was before floating: use the model's copy.
-        let star = model.stars.first { $0.id == star.id } ?? star
-        guard star.isFloated else {
-            toast = ToastCardMessage(title: "아직 망원경을 켤 수 없어요", detail: "별을 띄운 뒤에 다시 시도해 주세요")
-            return
-        }
-        let route: Route
-        if model.report(for: star.id) != nil {
-            // 12-2: the result lives in the star page.
-            route = .detail(star.id)
-        } else if model.isTelescopeFree {
-            // "처음 한 번은 무료": skip the coin sheet.
-            model.useFreeTelescope()
-            route = .scanning(star.id)
-        } else {
-            route = .telescopeConfirm(star.id)
-        }
-        if replacing { replace(with: route) } else { push(route) }
-    }
-
-    /// 88 done: back to the star page (12-2), where the result folds open.
-    private func finishTelescope(_ id: StarItem.ID) {
-        let before = stack.dropLast().last?.route
-        if before == .detail(id) { pop() } else { replace(with: .detail(id)) }
     }
 
     /// 130 / push: where a notification leads.

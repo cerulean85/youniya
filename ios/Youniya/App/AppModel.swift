@@ -49,6 +49,8 @@ struct StarAnalysis: Hashable, Codable {
     var clarityReason: String? = nil
     var weightReason: String? = nil
     var interpretation: String? = nil
+    /// 14 별 잇기 · 새 별 쓰기: the question to write on (별빛 풀이's rewrite_question).
+    var rewriteQuestion: String? = nil
     /// 17.6: how it was read, e.g. "별빛 프리즘 v1 · 2026년 11월 방식으로 읽었어요".
     var prismVersion: String? = nil
 
@@ -95,6 +97,7 @@ struct StarAnalysis: Hashable, Codable {
             clarityReason: sampleReasons.clarity,
             weightReason: sampleReasons.weight,
             interpretation: sampleReasons.interpretation,
+            rewriteQuestion: "느린 하루 속에서 쉬고 싶었던 마음은 지금 어떤 모습인가요?",
             prismVersion: "별빛 프리즘 v1"
         )
     }
@@ -104,7 +107,7 @@ struct StarAnalysis: Hashable, Codable {
         depth: "사건을 늘어놓는 데서 멈추지 않고 '쉬고 싶었는지도 몰라요'처럼 그때 느낀 마음까지 내려갔어요.",
         clarity: "'느리게', '싫지만은 않았어요'처럼 마음을 꽤 구체적으로 불렀지만, 서운함과 안도가 함께 섞여 있어 조금 흐릿한 곳도 있어요.",
         weight: "기다림을 남 탓으로 돌리지 않고 '나는 쉬고 싶었다'고 내 마음으로 받아 안았어요.",
-        interpretation: "오늘의 글은 바쁜 하루 속에서 멈춰 선 자신을 알아차린 기록이에요. 기다림이 길었다는 사실보다, 그 느림 속에서 '쉬고 싶었다'는 마음을 스스로 찾아낸 점이 별빛을 밝혔어요. 서운함과 안도가 함께 있는 마음은 아직 이름이 섞여 있어서, 망원경으로 보면 그 결이 더 또렷해질 수 있어요."
+        interpretation: "오늘의 글은 바쁜 하루 속에서 멈춰 선 자신을 알아차린 기록이에요. 기다림이 길었다는 사실보다, 그 느림 속에서 '쉬고 싶었다'는 마음을 스스로 찾아낸 점이 별빛을 밝혔어요."
     )
 }
 
@@ -715,14 +718,12 @@ final class AppModel {
             nicknameNextChange = me.nicknameNextChange
             nicknameRenameRequired = me.nicknameRenameRequired ?? false
             plazaRestrictedUntil = me.plazaRestrictedUntil
-            applyFreeUses(telescopeAvailable: me.freeTelescopeAvailable, star: me.freeStarToday,
-                          telescope: me.freeTelescope)
+            applyFreeUses(star: me.freeStarToday)
         } catch {
             handle(error)
             return
         }
         await loadStars()
-        await loadReports()
         await loadDraft()
         await loadCoins()
         await loadBlocks()
@@ -859,7 +860,7 @@ final class AppModel {
     }
 
     /// Takes coins if the balance allows it, and records it in 33.
-    func spendCoins(_ amount: Int, for title: String = "마음 망원경") -> Bool {
+    func spendCoins(_ amount: Int, for title: String = "별빛 받기") -> Bool {
         guard coins >= amount else { return false }
         coins -= amount
         coinHistory.insert(CoinEntry(title: title, delta: -amount), at: 0)
@@ -873,8 +874,7 @@ final class AppModel {
     }
 
     /// Live: free uses left, from /v1/me and /v1/coins.
-    func applyFreeUses(telescopeAvailable: Bool, star: Int?, telescope: Int?) {
-        usedFreeTelescope = !(telescope.map { $0 > 0 } ?? telescopeAvailable)
+    func applyFreeUses(star: Int?) {
         serverFreeFloat = star.map { $0 > 0 }
     }
 
@@ -1007,38 +1007,7 @@ final class AppModel {
 
     func fillSampleStars() {
         var samples = StarItem.samples
-        samples[0].report = .sample
         stars = samples
-    }
-
-    /// Creates the star's telescope report the first time it is opened.
-    /// Returns false for stars without one (kept stars).
-    @discardableResult
-    func prepareReport(for id: StarItem.ID) -> Bool {
-        guard let i = stars.firstIndex(where: { $0.id == id }), stars[i].isFloated else { return false }
-        if stars[i].report == nil {
-            if useLiveAPI {
-                Task { @MainActor in requestReportLive(for: id) }
-            } else {
-                stars[i].report = TelescopeReport.mock(for: stars[i])
-            }
-        }
-        return true
-    }
-
-    func report(for id: StarItem.ID) -> TelescopeReport? {
-        stars.first(where: { $0.id == id })?.report
-    }
-
-    func saveReport(for id: StarItem.ID) {
-        guard let i = stars.firstIndex(where: { $0.id == id }) else { return }
-        stars[i].report?.isSaved = true
-        if useLiveAPI, let serverID = stars[i].report?.serverID { saveReportLive(serverID) }
-    }
-
-    /// The question shown on 14 Rewrite: the report's question if there is one.
-    func rewriteQuestion(for star: StarItem) -> String {
-        star.report?.question ?? TelescopeReport.mock(for: star).question
     }
 
     /// 05-2 고쳐 쓰기: the working copy per original star (memory only; the
@@ -1155,9 +1124,7 @@ struct MeResponse: Decodable {
     var needsConsent: Bool
     var marketingOptIn: Bool
     var coins: Int
-    var freeTelescopeAvailable: Bool
     var freeStarToday: Int?
-    var freeTelescope: Int?
     /// 15장 (newer servers).
     var nickname: String?
     var nicknameNextChange: Date?
