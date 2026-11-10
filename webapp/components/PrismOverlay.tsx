@@ -23,25 +23,41 @@ export function AttemptField() {
 // `mode` limits it to submissions with that mode (writing has a keep button that doesn't read anything).
 // With an attempt id in the form (AttemptField) it adds W-104/W-105: after 8 s, 그만두기 leaves the star without
 // starlight and charges nothing (POST /v1/starlight/attempts/{id}/cancel, through /starlight/{attempt}/cancel).
-export function PrismOverlay({ mode, title, body }: { mode?: string; title?: string; body?: React.ReactNode }) {
+// `draft` (writing a new star) is this browser's draft key: once the star exists, the draft goes with it.
+export function PrismOverlay({ mode, title, body, draft }: { mode?: string; title?: string; body?: React.ReactNode; draft?: string }) {
   const { pending, data } = useFormStatus();
   if (!pending || (mode && data?.get("mode") !== mode)) return null;
   const attempt = data?.get("attempt_id");
-  return <Reading title={title} body={body} stop={typeof attempt === "string" && attempt ? attempt : undefined} />;
+  return <Reading title={title} body={body} draft={draft} stop={typeof attempt === "string" && attempt ? attempt : undefined} />;
 }
 
-function Reading({ title, body, stop }: { title?: string; body?: React.ReactNode; stop?: string }) {
+const FIND_MS = 2000, FIND_FOR_MS = 20_000;
+
+function Reading({ title, body, stop, draft }: { title?: string; body?: React.ReactNode; stop?: string; draft?: string }) {
   const [long, setLong] = useState(false);
   const [stopping, setStopping] = useState(false);
   const [failed, setFailed] = useState(false);
   const quit = async () => {
     if (!stop) return;
     setStopping(true); setFailed(false);
-    const res = await fetch(`/starlight/${encodeURIComponent(stop)}/cancel`, { method: "POST" }).catch(() => null);
-    const r = res?.ok ? await res.json().catch(() => null) as { to?: string } | null : null;
-    // A full load also drops the request still waiting for the prism (its late answer is 409 starlight_cancelled).
-    if (r?.to) { window.location.assign(r.to); return; }
-    setStopping(false); setFailed(true);
+    // A cancel that beats the request answers star: null, but the request still saves the star when it lands.
+    // So it always ends on that star (W-105): the pending request redirects there itself (409 starlight_cancelled),
+    // and meanwhile the cancel is asked again until it names the star. Nothing after 20 s: the request never arrived.
+    const url = `/starlight/${encodeURIComponent(stop)}/cancel${draft ? "?draft=1" : ""}`;
+    for (const until = Date.now() + FIND_FOR_MS; ;) {
+      const res = await fetch(url, { method: "POST" }).catch(() => null);
+      if (res && !res.ok && res.status !== 404) { setStopping(false); setFailed(true); return; }
+      const r = res?.ok ? await res.json().catch(() => null) as { star_id?: string | null } | null : null;
+      if (r?.star_id) {
+        if (draft) try { localStorage.removeItem(draft); } catch { /* private mode */ }
+        // A full load also drops the request still waiting for the prism.
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- see above
+        window.location.assign(`/stars/${r.star_id}?stopped=1`);
+        return;
+      }
+      if (Date.now() > until) { window.location.assign(draft ? "/write?stopped=1" : window.location.pathname); return; }
+      await new Promise((ok) => setTimeout(ok, FIND_MS));
+    }
   };
   const quitRef = useRef(quit);
   useEffect(() => { quitRef.current = quit; });

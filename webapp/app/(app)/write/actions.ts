@@ -34,7 +34,11 @@ export async function createStar(_: CreateState, form: FormData): Promise<Create
   try {
     result = await api<CreateResult>("/v1/stars", { method: "POST", body: JSON.stringify(input) });
   } catch (e) {
-    if (e instanceof ApiError && e.code === "starlight_cancelled") return null; // the page has already moved on
+    // 그만두기 came first: the star was saved and left without starlight; the writing is that star now.
+    if (e instanceof ApiError && e.code === "starlight_cancelled" && typeof e.data.star_id === "string") {
+      await api("/v1/drafts/current", { method: "DELETE" }).catch(() => null);
+      redirect(`/stars/${e.data.star_id}?stopped=1`);
+    }
     if (e instanceof ApiError) return { error: e.message, code: e.code, cost: e.data.cost as number, coins: e.data.coins as number };
     throw e;
   }

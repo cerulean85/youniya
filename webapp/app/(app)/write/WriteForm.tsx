@@ -197,7 +197,7 @@ export function WriteForm({ draft, source, freeStarToday, coins }: { draft: Draf
           </div>
         )}
         <button type="button" className="btn btn-primary btn-block" disabled={length === 0} onClick={() => confirm.current?.showModal()}>새 별로 띄우기</button>
-        <PrismOverlay mode="float" />
+        <PrismOverlay mode="float" draft={localKey} />
         {confirmDialog}
         {extraDialogs}
         {offlineUi}
@@ -260,7 +260,7 @@ export function WriteForm({ draft, source, freeStarToday, coins }: { draft: Draf
         </div>
         <p className={`caption faint ${styles.privacy}`}><Lock size={16} />글은 나에게만 보여요. 우주 광장에는 내가 고른 한 줄만 나가요.</p>
       </aside>
-      <PrismOverlay mode="float" />
+      <PrismOverlay mode="float" draft={localKey} />
       {confirmDialog}
       {extraDialogs}
       {offlineUi}

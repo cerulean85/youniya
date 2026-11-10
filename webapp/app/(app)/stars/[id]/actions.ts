@@ -21,7 +21,7 @@ export async function floatStar(id: string, _prev: ActionState, form?: FormData)
       throw e;
     });
   } catch (e) {
-    if (e instanceof ApiError && e.code === "starlight_cancelled") return null; // the page has already moved on
+    if (e instanceof ApiError && e.code === "starlight_cancelled") redirect(`/stars/${id}?stopped=1`); // 그만두기 came first
     if (e instanceof ApiError) return { error: e.message, code: e.code };
     throw e;
   }
