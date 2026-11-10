@@ -1,8 +1,9 @@
 "use client";
 
 import { CoinsLink } from "@/components/CoinsLink";
+import { Toast } from "@/components/Flash";
 import Link from "next/link";
-import { useActionState, useRef } from "react";
+import { useActionState, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Close } from "@/components/icons";
 import { PrismOverlay } from "@/components/PrismOverlay";
@@ -50,9 +51,7 @@ export function RetryFloat({ id }: { id: string }) {
   );
 }
 
-export function Toast({ message }: { message: string }) {
-  return <div className={styles.toast} role="status">{message}</div>;
-}
+export { Toast } from "@/components/Flash";
 
 function Pending({ label, busy, secondary }: { label: string; busy: string; secondary?: boolean }) {
   const { pending } = useFormStatus();
@@ -111,6 +110,7 @@ export function OpenTelescope({ id, label, cost, body }: { id: string; label: st
 
 // 내보내기: the writing as a text file, made in the browser.
 export function ExportButton({ title, date, body }: { title: string; date: string; body: string }) {
+  const [done, setDone] = useState(0);
   const save = () => {
     const url = URL.createObjectURL(new Blob([`${title}\n${date}\n\n${body}\n`], { type: "text/plain;charset=utf-8" }));
     const a = document.createElement("a");
@@ -118,8 +118,9 @@ export function ExportButton({ title, date, body }: { title: string; date: strin
     a.download = `${title.replace(/[\\/:*?"<>|]/g, "").trim() || "별"}.txt`;
     a.click();
     URL.revokeObjectURL(url);
+    setDone((n) => n + 1);
   };
-  return <button type="button" className="btn btn-ghost" onClick={save}>내보내기</button>;
+  return <><button type="button" className="btn btn-ghost" onClick={save}>내보내기</button>{done > 0 && <Toast key={done} title="파일로 내보냈어요" />}</>;
 }
 
 // 이어진 별 chips: open the star, or cut the link (W-47 "언제든 끊을 수 있어요").

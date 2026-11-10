@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
+import { flash } from "@/lib/flash";
 import { clearTokens } from "@/lib/session";
 
 /** 14.3 새 기능·혜택 알림: its own consent, recorded with when it was given or taken back. */
@@ -21,17 +22,20 @@ export async function setReduceMotion(on: boolean) {
 /** W-77: one shared star leaves the plaza; lines and resonance already given stay. */
 export async function unshareOne(starId: string) {
   await api(`/v1/stars/${starId}/share`, { method: "DELETE" });
+  await flash("광장에서 거뒀어요", "언제든 다시 나눌 수 있어요");
   refresh();
 }
 
 export async function unblock(id: string) {
   await api(`/v1/blocks/${id}`, { method: "DELETE" });
+  await flash("차단을 풀었어요", "이 사람의 글이 다시 보여요");
   refresh();
 }
 
 /** 92 모든 공유 거두기: every shared star leaves the plaza; lines and resonance already given stay. */
 export async function unshareAll() {
   await api("/v1/me/shares", { method: "DELETE" });
+  await flash("나눈 별을 모두 거뒀어요", "받은 공명과 별빛 한 줄은 그대로 남아요");
   refresh();
 }
 

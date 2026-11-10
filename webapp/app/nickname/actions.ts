@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
+import { flash } from "@/lib/flash";
 
 export type NameCheck = { available: boolean; reason: string | null; message: string | null };
 export type NameState = { error?: string } | null;
@@ -21,7 +22,9 @@ const safeNext = (v: FormDataEntryValue | null) => {
 export async function saveNickname(_prev: NameState, form: FormData): Promise<NameState> { void _prev;
   const name = String(form.get("name") ?? "").trim();
   try {
+    const had = Boolean((await api<{ nickname?: string | null }>("/v1/me")).nickname);
     await api("/v1/me/nickname", { method: "PUT", body: JSON.stringify({ name }) });
+    await flash(had ? "별지기 이름을 바꿨어요" : "별지기 이름을 정했어요");
   } catch (e) {
     if (e instanceof ApiError) return { error: e.message };
     throw e;

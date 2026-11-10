@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { Account, AccountSkeleton } from "@/components/Account";
+import { FlashServer } from "@/components/FlashServer";
 import { Sidebar } from "@/components/Sidebar";
 import styles from "./shell.module.css";
 
@@ -10,6 +11,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
     <div className={styles.shell}>
       <Sidebar account={<Suspense fallback={<AccountSkeleton />}><Account /></Suspense>} />
       <main className={styles.main}>{children}</main>
+      <Suspense fallback={null}><FlashServer /></Suspense>
     </div>
   );
 }

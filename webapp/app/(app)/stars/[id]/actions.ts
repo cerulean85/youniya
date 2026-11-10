@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
+import { flash } from "@/lib/flash";
 import type { CreateResult, Mood, Star, StarSummary } from "@/lib/types";
 
 export type ActionState = { error?: string; code?: string } | null;
@@ -27,6 +28,7 @@ export async function floatStar(id: string, _prev: ActionState): Promise<ActionS
 /** 15 영구 삭제: the writing, its analysis and its plaza share go. */
 export async function deleteStar(id: string) {
   await api(`/v1/stars/${id}`, { method: "DELETE" });
+  await flash("삭제되었어요", "되돌릴 수 없어요");
   refresh();
   redirect("/records");
 }
@@ -71,6 +73,7 @@ export async function reportLine(id: string, lineId: string, form: FormData) {
 
 export async function unshareStar(id: string) {
   await api(`/v1/stars/${id}/share`, { method: "DELETE" });
+  await flash("광장에서 거뒀어요", "언제든 다시 나눌 수 있어요");
   refresh();
 }
 
@@ -96,6 +99,7 @@ export async function linkStars(id: string, starIds: string[]): Promise<ActionSt
     if (e instanceof ApiError) return { error: e.status === 404 || e.status === 405 ? LINKS_SOON : e.message, code: e.code };
     throw e;
   }
+  await flash(`별 ${starIds.length}개를 이었어요`, "서로의 별 상세에서 볼 수 있어요");
   refresh();
   return null;
 }

@@ -133,7 +133,7 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
           <DeleteButton id={star.id} title={title} />
         </div>
       </aside>
-      {sp.kept === "1" && <><StarBirth id={star.id} unlit={mood.color} /><Toast message="별빛 없이 띄웠어요" /></>}
+      {sp.kept === "1" && <><StarBirth id={star.id} unlit={mood.color} /><Toast title="별빛 없이 띄웠어요" /></>}
     </div>
   );
 }
