@@ -18,7 +18,6 @@ struct DrawerMenu: View {
 
     private let items: [Item] = [
         Item(title: "별빛 기록", subtitle: "지나온 별들", icon: .iconStar),
-        Item(title: "별빛 없는 별", subtitle: "별빛 없이 띄운 별", icon: .iconArchive),
         // 130: operator actions and notices.
         Item(title: "알림", subtitle: "운영자 조치 · 공지", icon: .iconBell),
         Item(title: "코인", subtitle: "충전 · 사용 내역", icon: .iconCoin),
@@ -38,6 +37,8 @@ struct DrawerMenu: View {
             .scrollIndicators(.hidden)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        // Fresh balance each time the menu opens (live: the server's).
+        .task { await model.loadCoins() }
         .background {
             UnevenRoundedRectangle(topLeadingRadius: Radius.xl, bottomLeadingRadius: Radius.xl)
                 .fill(Color.bgSurfaceRaised)
@@ -166,6 +167,14 @@ struct DrawerMenu: View {
                     .foregroundStyle(Color.textTertiary)
             }
             Spacer(minLength: 0)
+            // The balance at a glance (2026-11-10, user request).
+            if item.title == "코인" {
+                Text("\(model.coins.formatted())코인")
+                    .textStyle(.labelM)
+                    .foregroundStyle(Color.starBright)
+                    .monospacedDigit()
+                    .accessibilityLabel("보유 \(model.coins)코인")
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)

@@ -131,9 +131,6 @@ struct SettingsView: View {
                             .accessibilityElement(children: .combine)
                         }
                         SettingsRow(icon: .iconUser, title: "별지기 이름", value: model.nickname ?? "정하기") { onOpen("별지기 이름") }
-                        if model.nickname != nil {
-                            SettingsRow(icon: .iconSearch, title: "내 별지기 페이지 미리 보기") { onOpen("내 별지기 페이지 미리 보기") }
-                        }
                     }
 
                     SettingsSection("화면과 움직임") {
@@ -161,8 +158,7 @@ struct SettingsView: View {
                     }
 
                     SettingsSection("우주 광장") {
-                        SettingsRow(icon: .iconNebula, title: "나눈 별",
-                                    value: "\(model.stars.filter(\.isShared).count)개") { onOpen("나눈 별") }
+                        // 나눈 별 moved to the plaza tab (「내가 나눈 별 N개 ›」, 2026-11-10).
                         // 87-3
                         SettingsRow(icon: .iconClose, title: "차단한 별지기",
                                     value: "\(model.blockedKeepers.count)명") { onOpen("차단한 별지기") }

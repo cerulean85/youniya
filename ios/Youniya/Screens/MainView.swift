@@ -80,9 +80,6 @@ struct MainView: View {
                         } else if title == "별빛 기록" {
                             recordsFilter = .all
                             tab = .records
-                        } else if title == "별빛 없는 별" {
-                            recordsFilter = .kept
-                            tab = .records
                         } else {
                             push(.page(title))
                         }
@@ -203,7 +200,8 @@ struct MainView: View {
             case .plaza:
                 LoadingGate {
                     PlazaView(onOpen: { push(.plazaStar($0)) },
-                              onNickname: { push(.nickname(.plaza)) })
+                              onNickname: { push(.nickname(.plaza)) },
+                              onShared: { push(.sharedStars) })
                 } placeholder: { ListSkeleton(titleWidth: 160, rowHeight: 100, rows: 3) }
             case .records:
                 LoadingGate {
@@ -314,8 +312,7 @@ struct MainView: View {
                              switch title {
                              case "차단한 별지기": push(.blockedKeepers)
                              case "별지기 이름": push(.nickname(model.nickname == nil ? .plaza : model.nicknameRenameRequired ? .operatorRequest : .change))
-                             case "내 별지기 페이지 미리 보기": if let n = model.nickname { push(.keeper(n)) }
-                             default: push(.sharedStars)
+                             default: break
                              }
                          },
                          onSky: { push(.sky) }, onPolicy: { push(.policy($0)) })

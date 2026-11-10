@@ -249,7 +249,7 @@ struct ConstellationView: View {
     }
 }
 
-/// 04 이번 달 별자리 한 줄 (Figma 554:14661): "이번 달 별자리 · 6 / 9 자리 채움"
+/// 04 이번 달 별자리 한 줄 (Figma 554:14661): "11월 페가수스자리 · 6 / 9 자리 채움"
 /// and 「별자리 보기 ›」 (the 별자리 tab), under the recent stars.
 struct MonthConstellationLink: View {
     @Environment(AppModel.self) private var model
@@ -259,7 +259,7 @@ struct MonthConstellationLink: View {
         let c = model.constellation(MonthConstellation.monthKey(.now))
         Button(action: onOpen) {
             HStack(spacing: Space.sm) {
-                Text("이번 달 별자리 · \(c.filled) / \(c.total) 자리 채움")
+                Text("\(c.monthLabel) \(c.name) · \(c.filled) / \(c.total) 자리 채움")
                     .textStyle(.caption).foregroundStyle(Color.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Text("별자리 보기 ›").textStyle(.labelS).foregroundStyle(Color.brandPrimaryText)
@@ -272,7 +272,7 @@ struct MonthConstellationLink: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("이번 달 별자리, \(c.total)자리 중 \(c.filled)자리 채움, 별자리 보기")
+        .accessibilityLabel("\(c.monthLabel) \(c.name), \(c.total)자리 중 \(c.filled)자리 채움, 별자리 보기")
         .accessibilityAddTraits(.isButton)
         .task { await model.loadConstellation(c.month) }
     }

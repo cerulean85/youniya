@@ -89,6 +89,8 @@ struct PlazaView: View {
     var onOpen: (_ title: String) -> Void
     /// 21-1 for older accounts.
     var onNickname: () -> Void = {}
+    /// 「내가 나눈 별 N개 ›」 → 17/18 나눈 별 (moved here from 설정, 2026-11-10).
+    var onShared: () -> Void = {}
 
     /// Tonight's hearts and mine (live `/v1/plaza/tonight`; mock: Figma 69's sample,
     /// with my shared floated stars).
@@ -146,6 +148,22 @@ struct PlazaView: View {
                         .padding(.vertical, Space.xs)
                         .background(Color.tintGold, in: .capsule)
                         .fixedSize(horizontal: false, vertical: true)
+                }
+
+                // My shared stars live with the plaza, not in 설정 (2026-11-10).
+                if model.nickname != nil {
+                    Button(action: onShared) {
+                        HStack(spacing: 2) {
+                            Text("내가 나눈 별 \(model.stars.filter(\.isShared).count)개")
+                                .textStyle(.bodyS)
+                            Image(.iconChevronRight).renderingMode(.template).resizable()
+                                .frame(width: 14, height: 14)
+                        }
+                        .foregroundStyle(Color.textSecondary)
+                        .frame(minHeight: 32)
+                        .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
                 }
 
                 if model.nickname == nil {
