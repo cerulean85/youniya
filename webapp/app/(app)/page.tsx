@@ -1,3 +1,4 @@
+import { WelcomeSheet } from "@/components/WelcomeSheet";
 import Link from "next/link";
 import { HomeSkeleton } from "@/components/Skeleton";
 import { connection } from "next/server";
@@ -47,7 +48,8 @@ async function Sky() {
     api<Summary>("/v1/stars/summary"),
     getConstellation(month),
   ]);
-  if (summary.total === 0) return <EmptySky />;
+  // W-91: the welcome sheet opens once, over the first empty sky.
+  if (summary.total === 0) return <><EmptySky /><WelcomeSheet account={(await api<Me>("/v1/me")).id} /></>;
   const c = view?.c ?? null;
   return (
     <div className={styles.body}>
