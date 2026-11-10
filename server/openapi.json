@@ -7596,6 +7596,31 @@
               }
             ],
             "title": "Apple Authorization Code"
+          },
+          "apple_client_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apple Client Id"
+          },
+          "apple_redirect_uri": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500,
+                "pattern": "^https://"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apple Redirect Uri"
           }
         },
         "type": "object",

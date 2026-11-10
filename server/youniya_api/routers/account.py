@@ -175,6 +175,10 @@ def update_settings(body: SettingsPatch, request: Request, user: User = Depends(
 class DeleteIn(BaseModel):
     # Apple accounts: ASAuthorizationAppleIDCredential.authorizationCode, fresh (it lasts 5 minutes, once).
     apple_authorization_code: str | None = Field(None, min_length=1, max_length=2000)
+    # The web (Sign in with Apple JS): its Services ID, one of APPLE_CLIENT_IDS, and the redirect_uri its
+    # sign-in used. The app sends neither (its bundle id is the default).
+    apple_client_id: str | None = Field(None, max_length=200)
+    apple_redirect_uri: str | None = Field(None, max_length=500, pattern=r"^https://")
 
 
 @router.delete("/me", status_code=204)
@@ -189,12 +193,15 @@ def delete_account(request: Request, body: DeleteIn | None = None, user: User = 
     never stops the deletion (logged to Sentry). Without a code (older apps, Google, invite) nothing changes."""
     code = body.apple_authorization_code if body else None
     if code and user.provider == "apple":
-        siwa = request.app.state.siwa
+        siwa, s = request.app.state.siwa, request.app.state.settings
+        client_id = body.apple_client_id
+        if client_id and client_id != s.apple_bundle_id and client_id not in s.apple_client_ids:
+            raise ApiError(422, "unknown_apple_client", "알 수 없는 Apple 로그인 ID예요.")
         if siwa is None:
             log.error("Sign in with Apple key not configured: Apple tokens of %s not revoked", user.id)
         else:
             try:
-                siwa.revoke_with_code(code)
+                siwa.revoke_with_code(code, client_id, body.apple_redirect_uri)
             except ReauthRequired as e:
                 raise ApiError(400, "apple_reauth_required", "Apple 계정 확인이 필요해요. 다시 시도해 주세요.",
                                apple_error=str(e))
