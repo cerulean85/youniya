@@ -5,7 +5,7 @@ import * as mock from "./mock";
 import * as more from "./mock-more";
 import * as own from "./mock-owner";
 import { session } from "./session";
-import type { ActionKind, AiUsage, AuditEntry, Dashboard, InquiryDetail, Invites, Ledger, Notices, OperatorRow, Prism, Range, InquiryRow, InquiryStatus, KeeperAction, KeeperDetail, KeeperRow, Operator, ReportDetail, ReportItem, ReportKind, ReportStatus } from "./types";
+import type { ActionKind, AiUsage, AuditEntry, Dashboard, InquiryDetail, Invites, Ledger, Notices, OperatorRow, Prism, Range, InquiryRow, InquiryStatus, KeeperAction, KeeperDetail, KeeperOrder, KeeperRow, Operator, ReportDetail, ReportItem, ReportKind, ReportStatus } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, public code: string, message: string, public data: Record<string, unknown> = {}) { super(message); }
@@ -118,6 +118,17 @@ export async function keeperAction(id: string, action: KeeperAction, reason: str
   return authed(`/v1/admin/keepers/${encodeURIComponent(id)}/actions`, { method: "POST", body: JSON.stringify({ action, reason, amount, days }) });
 }
 
+/** 운영자 환불: a keeper's Toss orders, and refunding one (owner; `force` skips the 7-day and unspent rules). */
+export async function keeperOrders(id: string): Promise<KeeperOrder[]> {
+  if (!live("payments")) { const t = await token(); return guard(() => more.keeperOrders(t, id)); }
+  return (await authed<{ items: KeeperOrder[] }>(`/v1/admin/keepers/${encodeURIComponent(id)}/orders`)).items;
+}
+
+export async function refundOrder(orderId: string, reason: string, force: boolean): Promise<{ coins_taken: number }> {
+  if (!live("payments")) { const t = await token(); return guard(() => more.refundOrder(t, orderId, reason, force)); }
+  return authed(`/v1/admin/orders/${encodeURIComponent(orderId)}/refund`, { method: "POST", body: JSON.stringify({ reason, force }) });
+}
+
 export async function listInquiries(status: InquiryStatus): Promise<{ items: InquiryRow[]; counts?: Record<InquiryStatus, number> }> {
   if (!live("inquiries")) { const t = await token(); return guard(() => more.listInquiries(t, status)); }
   return authed(`/v1/admin/inquiries?status=${status}`);
@@ -165,7 +176,7 @@ function toDashboard(d: any): Dashboard {
     payments_today: d.payments_today ?? { charge_krw: d.payments?.krw_estimate ?? 0, charge_count: d.payments?.count ?? 0, coins: d.payments?.coins },
   };
 }
-const LEDGER_KIND: Record<string, Ledger["items"][number]["kind"]> = { purchase: "charge", charge: "charge", spend: "use", use: "use", refund: "refund", grant: "grant" };
+const LEDGER_KIND: Record<string, Ledger["items"][number]["kind"]> = { purchase: "charge", charge: "charge", spend: "use", use: "use", refund: "refund", grant: "grant", revoke: "revoke" };
 function toLedger(d: any, month: string): Ledger {
   if (d.summary) return d;
   const t = d.totals ?? {};

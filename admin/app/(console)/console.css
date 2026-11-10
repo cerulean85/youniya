@@ -54,3 +54,6 @@ tr[aria-current="true"] td { background: var(--accent-tint); }
 .split.rev { grid-template-columns: 380px 1fr; }
 .reason { display: flex; flex-direction: column; gap: 6px; }
 .head > .reason { align-items: flex-end; max-width: 420px; text-align: right; }
+.table-title { margin: 0; padding: 16px 20px 4px; font-size: 15px; }
+.table-note { margin: 0; padding: 4px 20px 18px; }
+.table .reason .actions { justify-content: flex-start; }

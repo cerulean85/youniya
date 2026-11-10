@@ -9,7 +9,7 @@ import type { LedgerKind } from "@/lib/types";
 
 export const metadata: Metadata = { title: "코인·결제" };
 
-const KIND: Record<LedgerKind, [string, string]> = { charge: ["badge-done", "충전"], use: ["badge-muted", "사용"], refund: ["badge-hidden", "환불"], grant: ["badge-info", "지급"] };
+const KIND: Record<LedgerKind, [string, string]> = { charge: ["badge-done", "충전"], use: ["badge-muted", "사용"], refund: ["badge-hidden", "환불"], grant: ["badge-info", "지급"], revoke: ["badge-hidden", "회수"] };
 const when = (iso: string) => new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(iso));
 
 // Figma A-08 (owners): App Store and web (Toss) payments in one ledger.
@@ -45,7 +45,7 @@ export default async function CoinsPage({ searchParams }: PageProps<"/coins">) {
                 <td>{x.keeper.id ? <Link href={`/keepers/${encodeURIComponent(x.keeper.id)}`}>{x.keeper.nickname ?? x.keeper.no}</Link>
                   : x.keeper.no.startsWith("#") ? <Link href={`/keepers?q=${encodeURIComponent(x.keeper.no)}`}>{x.keeper.no}</Link>
                   : <span className="faint">{x.keeper.no}</span>}</td>
-                <td><span className={`badge ${KIND[x.kind][0]}`}>{KIND[x.kind][1]}</span></td>
+                <td><span className={`badge ${(KIND[x.kind] ?? KIND.use)[0]}`}>{(KIND[x.kind] ?? KIND.use)[1]}</span>{x.channel === "admin" && x.kind === "refund" ? <span className="faint"> · 운영자</span> : null}</td>
                 <td>{x.detail}</td>
                 <td>{x.coins > 0 ? `+${num(x.coins)}` : `−${num(-x.coins)}`}</td>
                 <td>{(x.amount_krw ?? x.krw_estimate) != null ? won((x.amount_krw ?? x.krw_estimate)!) : "—"}</td>

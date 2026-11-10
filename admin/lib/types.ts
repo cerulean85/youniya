@@ -31,6 +31,7 @@ export const REASON_LABEL: Record<string, string> = {
 export const ACTION_LABEL: Record<string, string> = {
   restore: "숨김 풀기 · 문제 없음", take_down: "광장에서 내리기", request_rename: "별지기 이름 바꾸기 요청",
   restrict_7d: "광장 이용 7일 제한", restrict_30d: "광장 이용 30일 제한", note: "메모",
+  refund: "결제 환불", keeper_refund: "결제 환불", keeper_revoke_coins: "코인 회수", keeper_grant_coins: "코인 지급",
 };
 /** 18.3: personal_info and self_harm hide at the first report; the rest at three. */
 export const INSTANT_REASONS = ["personal_info", "self_harm"];
@@ -49,13 +50,19 @@ export type KeeperDetail = KeeperRow & {
   deletion_requested_at: string | null;
   history: AuditEntry[];
 };
-export type KeeperAction = "lift_restriction" | "extend_restriction" | "request_rename" | "grant_coins" | "process_deletion";
+export type KeeperAction = "lift_restriction" | "extend_restriction" | "request_rename" | "grant_coins" | "revoke_coins" | "process_deletion";
 export const KEEPER_ACTION_LABEL: Record<KeeperAction, string> = {
   lift_restriction: "제한 풀기", extend_restriction: "제한 늘리기", request_rename: "별지기 이름 바꾸기 요청",
-  grant_coins: "코인 지급", process_deletion: "계정 삭제 요청 처리",
+  grant_coins: "코인 지급", revoke_coins: "코인 회수", process_deletion: "계정 삭제 요청 처리",
 };
 /** Moderators may restrict or lift plaza use and ask for a new name; coins and deletion are owners'. */
 export const MODERATOR_KEEPER_ACTIONS: KeeperAction[] = ["lift_restriction", "extend_restriction", "request_rename"];
+/** A keeper's web (Toss) payments, for 운영자 환불 (API asked 2026-11-10). */
+export type OrderStatus = "pending" | "confirming" | "done" | "expired" | "canceled";
+export type RefundBlock = "window_passed" | "coins_spent" | "not_done";
+export type KeeperOrder = { id: string; created_at: string; package_id: string; coins: number; amount: number; status: OrderStatus; canceled_at: string | null; refundable: boolean; refund_block: RefundBlock | null };
+export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = { pending: "결제 대기", confirming: "확인 중", done: "결제 완료", expired: "만료", canceled: "환불됨" };
+export const REFUND_BLOCK_LABEL: Record<RefundBlock, string> = { window_passed: "7일 지남", coins_spent: "코인 사용함", not_done: "결제 전" };
 export const PROVIDER_LABEL: Record<string, string> = { apple: "Apple", google: "Google", invite: "초대", dev: "테스트" };
 
 export type InquiryStatus = "new" | "answered";
@@ -83,7 +90,7 @@ export type Dashboard = {
   events: { at: string; text: string; status: "hidden" | "alert" | "done" | "pending" | "ok"; href?: string }[];
   payments_today: { charge_krw: number; charge_count: number; refund_krw?: number | null; refund_count?: number | null; used?: { starlight: number; telescope: number } | null; coins?: number };
 };
-export type LedgerKind = "charge" | "use" | "refund" | "grant";
+export type LedgerKind = "charge" | "use" | "refund" | "grant" | "revoke";
 export type Ledger = {
   month: string;
   summary: { charge_krw: number; charge_count: number; refund_krw: number; refund_count: number; usage_share?: { starlight: number; telescope: number } | null; free_used?: { starlight: number; telescope: number } | null; spend_coins?: number; grant_coins?: number };

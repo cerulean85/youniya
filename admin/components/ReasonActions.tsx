@@ -27,7 +27,7 @@ export function ReasonActions({ buttons, action }: { buttons: ReasonButton[]; ac
           <h2 id="reason-title">{picked?.label}</h2>
           {picked?.confirm && <p className="notice">{picked.confirm}</p>}
           <input type="hidden" name="action" value={picked?.key ?? ""} />
-          {picked?.field === "amount" && <label className="field"><span>지급할 코인 (1~10,000)</span><input name="amount" type="number" min={1} max={10000} required /></label>}
+          {picked?.field === "amount" && <label className="field"><span>{picked.key === "revoke_coins" ? "회수할 코인" : "지급할 코인"} (1~10,000)</span><input name="amount" type="number" min={1} max={10000} required /></label>}
           {picked?.field === "days" && (
             <label className="field"><span>늘릴 기간</span>
               <select name="days" defaultValue="7"><option value="7">7일</option><option value="30">30일</option></select>

@@ -1,6 +1,6 @@
 import "server-only";
 import { MockError, operatorOf } from "./mock";
-import type { AuditEntry, InquiryDetail, InquiryStatus, KeeperAction, KeeperDetail, KeeperRow } from "./types";
+import type { AuditEntry, InquiryDetail, InquiryStatus, KeeperAction, KeeperDetail, KeeperOrder, KeeperRow } from "./types";
 import { MODERATOR_KEEPER_ACTIONS } from "./types";
 
 // Mock 별지기 and 문의 for A-05~A-07 (in memory, like lib/mock.ts).
@@ -78,8 +78,13 @@ export function keeperAction(token: string, id: string, action: KeeperAction, re
     if (!amount || amount < 1 || amount > 10000) throw new MockError(422, "invalid_amount", "1~10,000 코인 사이로 적어 주세요.");
     k.coins += amount;
   }
+  if (action === "revoke_coins") {
+    if (!amount || amount < 1 || amount > 10000) throw new MockError(422, "invalid_amount", "1~10,000 코인 사이로 적어 주세요.");
+    if (amount > k.coins) throw new MockError(409, "insufficient_balance", `남은 코인(${k.coins})보다 많이 회수할 수 없어요.`);
+    k.coins -= amount;
+  }
   if (action === "process_deletion" && !k.deletion_requested_at) throw new MockError(409, "no_request", "계정 삭제 요청이 없어요.");
-  const extra = action === "grant_coins" ? ` · ${amount}코인` : action === "extend_restriction" ? ` · ${daysN ?? 7}일` : "";
+  const extra = action === "grant_coins" || action === "revoke_coins" ? ` · ${amount}코인` : action === "extend_restriction" ? ` · ${daysN ?? 7}일` : "";
   k.history.unshift({ at: new Date().toISOString(), operator: op.email, action, target: `keeper:${k.no}`, reason: `${reason}${extra}` });
   if (action === "process_deletion") st().keepers.delete(id);
   return { ok: true };
@@ -107,4 +112,47 @@ export function reply(token: string, id: string, body: string) {
   x.replies.push({ at: new Date().toISOString(), operator: op.email, body });
   x.status = "answered";
   return { ok: true };
+}
+
+// Toss orders for 운영자 환불: 느린고래 has one refundable, one past 7 days and one already refunded.
+const orders = (globalThis as unknown as { __mockOrders?: Map<string, KeeperOrder & { keeper: string }> });
+function orderStore() {
+  if (!orders.__mockOrders) {
+    const o = new Map<string, KeeperOrder & { keeper: string }>();
+    const add = (id: string, keeper: string, ago: number, coins: number, amount: number, status: KeeperOrder["status"]) =>
+      o.set(id, { id, keeper, created_at: days(ago), package_id: `coins_${coins}`, coins, amount, status, canceled_at: status === "canceled" ? days(ago - 1) : null, refundable: false, refund_block: null });
+    add("ord_3", "u_48213", 2, 50, 4900, "done");
+    add("ord_2", "u_48213", 12, 120, 9900, "done");
+    add("ord_1", "u_48213", 20, 50, 4900, "canceled");
+    add("ord_4", "u_47002", 1, 300, 22000, "done");
+    orders.__mockOrders = o;
+  }
+  return orders.__mockOrders;
+}
+function view(o: KeeperOrder & { keeper: string }, coins: number): KeeperOrder {
+  const block = o.status !== "done" ? (o.status === "canceled" ? null : "not_done")
+    : Date.now() - new Date(o.created_at).getTime() > 7 * 86400000 ? "window_passed" : coins < o.coins ? "coins_spent" : null;
+  const { keeper: _k, ...rest } = o; void _k;
+  return { ...rest, refundable: o.status === "done" && !block, refund_block: block };
+}
+export function keeperOrders(token: string, id: string): KeeperOrder[] {
+  const k = getKeeper(token, id);
+  return [...orderStore().values()].filter((o) => o.keeper === id).sort((a, b) => b.created_at.localeCompare(a.created_at)).map((o) => view(o, k.coins));
+}
+export function refundOrder(token: string, orderId: string, reason: string, force: boolean) {
+  const op = operatorOf(token);
+  if (op.role !== "owner") throw new MockError(403, "forbidden_role", "권한이 없어요.");
+  if (!reason.trim()) throw new MockError(422, "reason_required", "사유를 적어 주세요.");
+  const o = orderStore().get(orderId);
+  if (!o) throw new MockError(404, "not_found", "주문을 찾지 못했어요.");
+  const k = getKeeper(token, o.keeper);
+  const v = view(o, k.coins);
+  if (o.status !== "done") throw new MockError(409, "order_not_done", "환불할 수 있는 결제가 아니에요.");
+  if (!force && v.refund_block === "window_passed") throw new MockError(409, "refund_window_passed", "결제한 지 7일이 지나 환불할 수 없어요.");
+  if (!force && v.refund_block === "coins_spent") throw new MockError(409, "coins_spent", "이 결제로 받은 코인을 이미 써서 환불할 수 없어요.");
+  const taken = Math.min(o.coins, k.coins);
+  k.coins -= taken;
+  o.status = "canceled"; o.canceled_at = new Date().toISOString();
+  k.history.unshift({ at: o.canceled_at, operator: op.email, action: "refund", target: `order:${o.id}`, reason: `${reason} · ${o.amount.toLocaleString("ko-KR")}원 · 코인 ${taken}개 회수${force ? " · 예외" : ""}` });
+  return { coins_taken: taken };
 }
