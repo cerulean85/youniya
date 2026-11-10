@@ -3,11 +3,12 @@ import { ConstellationSkeleton } from "@/components/Skeleton";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { ConstellationFigure } from "@/components/ConstellationFigure";
+import { ConstellationPick } from "@/components/ConstellationPick";
+import { ShareCard } from "@/components/ShareCard";
 import { ChevronRight, Nebula } from "@/components/icons";
 import { MONTH_NAMES } from "@/lib/constellation";
 import { getConstellation, listMonths } from "@/lib/constellation-data";
-import { kst, monthOnly, shiftMonth } from "@/lib/format";
+import { kst, monthOnly, moodOf, shiftMonth } from "@/lib/format";
 import styles from "./constellation.module.css";
 
 export const metadata: Metadata = { title: "나의 별자리" };
@@ -44,7 +45,7 @@ async function Month({ searchParams }: Pick<PageProps<"/constellation">, "search
       <div className={styles.body}>
         <section className={`card ${styles.figureCard}`} aria-label="별자리">
           <div className={styles.figure}>
-            {c ? <ConstellationFigure c={c} /> : <p className="body-m muted">{view ? `${monthOnly(month)} 별자리의 모양을 준비하고 있어요.` : "아직 열리지 않은 달이에요."}</p>}
+            {c ? <ConstellationPick c={c} /> : <p className="body-m muted">{view ? `${monthOnly(month)} 별자리의 모양을 준비하고 있어요.` : "아직 열리지 않은 달이에요."}</p>}
           </div>
           <nav className={styles.months} aria-label="달 넘기기">
             {hasPrev ? <Link href={`/constellation?month=${prev}`}>‹ {monthOnly(prev)}{MONTH_NAMES[prev.slice(5)] ? ` ${MONTH_NAMES[prev.slice(5)]}` : ""}</Link> : <span />}
@@ -69,9 +70,13 @@ async function Month({ searchParams }: Pick<PageProps<"/constellation">, "search
             </div>
           )}
           <div className={styles.more}>
-            <Link href={`/constellation/detail?month=${month}`} className={styles.link}>
-              <Nebula size={18} /><span><span className="label-m">자세히 보기</span><span className="caption faint">크게 보고, 별을 눌러 이어진 별까지 봐요</span></span><ChevronRight size={16} />
-            </Link>
+            {/* 기획서 23장: 자세히 보기 (W-68·W-69) gave way to pressing a star here and to the constellation card. */}
+            {c && <ShareCard kind="constellation" label="별자리 카드 공유" className="btn btn-primary btn-block" data={{
+              heading: `${month.slice(0, 4)}년 ${Number(month.slice(5))}월의 별자리`, name: c.name, filled: c.filled, total: c.total, count,
+              lines: c.lines,
+              slots: c.slots.map((x) => ({ x: x.x, y: x.y, color: x.star ? moodOf(x.star.mood).color : null,
+                lit: !!x.star && x.star.has_starlight !== false && x.star.starlight != null, starlight: x.star?.starlight ?? null })),
+            }} />}
             <span className="caption faint">더 둘러보기</span>
             <Link href={`/constellation/story?month=${month}`} className={styles.link}>
               <Nebula size={18} /><span><span className="label-m">별자리 이야기</span><span className="caption faint">그달 별들의 핵심 문장을 시간순으로 엮어요</span></span><ChevronRight size={16} />

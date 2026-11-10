@@ -7,12 +7,13 @@ import { ChevronLeft, Heart, StarFilled, Warn } from "@/components/icons";
 import { StarCard } from "@/components/StarCard";
 import { StarlightReading } from "@/components/StarlightReading";
 import { api, ApiError } from "@/lib/api";
-import { longDate, moodOf, dateTime, MIN_FLOAT_LENGTH } from "@/lib/format";
+import { kst, longDate, moodOf, dateTime, MIN_FLOAT_LENGTH } from "@/lib/format";
 import type { Me, MyShare, Star } from "@/lib/types";
 import { LinkStar } from "./LinkStar";
 import { ShareStar } from "./ShareStar";
 import { CrisisCare } from "@/components/CrisisCare";
-import { SaveStarImage } from "@/components/SaveStarImage";
+import { ShareCard } from "@/components/ShareCard";
+import { MONTH_NAMES } from "@/lib/constellation";
 import { StarBirth } from "@/components/StarBirth";
 import { StatusScreen } from "@/components/Status";
 import { DeleteButton, ExportButton, FloatButton, LinkedChip, RetryFloat, Toast } from "./StarActions";
@@ -126,11 +127,15 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
         )}
         <div className={styles.footerLinks}>
           <ExportButton title={title} date={dateTime(star.created_at)} body={star.body} />
-          {floated && star.analysis && <SaveStarImage card={{
-            title, date: longDate(star.created_at), starlight: star.analysis.starlight, observation: star.analysis.observation,
-            meters: [{ label: "별의 깊이", value: star.analysis.depth }, { label: "빛의 선명함", value: star.analysis.clarity }, { label: "마음의 무게", value: star.analysis.weight }],
-            moods: star.analysis.moods.map((m) => ({ label: moodOf(m.mood).label, color: moodOf(m.mood).color })),
-          }} />}
+          {/* 기획서 22장: the star card, never the writing. */}
+          <ShareCard kind="star" title={title} data={{
+            date: `${kst(star.created_at).m}월 ${kst(star.created_at).d}일`,
+            month: `${kst(star.created_at).m}월 ${MONTH_NAMES[kst(star.created_at).month.slice(5)] ?? ""}자리`,
+            title: null, color: mood.color,
+            shape: floated ? star.analysis?.shape ?? null : null,
+            starlight: floated ? star.analysis!.starlight : null,
+            moods: (floated ? star.analysis!.moods.map((m) => m.mood) : star.moods ?? [star.mood]).map((m) => ({ label: moodOf(m).label, color: moodOf(m).color })),
+          }} />
           {floated && <Link href={`/write?rewrite=${star.id}`} className="btn btn-ghost">고쳐 쓰기</Link>}
           <DeleteButton id={star.id} title={title} />
         </div>
