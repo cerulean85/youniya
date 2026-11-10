@@ -18,6 +18,7 @@ from .routers import (account, admin, admin_auth, admin_ops, admin_owner, auth, 
                       telescope)
 from .security import Cipher, IdTokenVerifier
 from .storekit import AppStoreClient, StoreKitVerifier
+from .siwa import SiwaClient
 from .toss import TossClient
 
 
@@ -59,6 +60,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                       if settings.apple_bundle_id and settings.apns_team_id and settings.apns_key_id and apns_key
                       else None)
     app.state.toss = TossClient(settings.toss_secret_key) if settings.toss_secret_key else None
+    siwa_key = settings.siwa_private_key()
+    app.state.siwa = (SiwaClient(settings.apple_team_id, settings.apple_siwa_key_id, siwa_key, settings.apple_bundle_id)
+                      if settings.apple_bundle_id and settings.apple_team_id and settings.apple_siwa_key_id and siwa_key
+                      else None)
     app.state.prism = PrismEngine(settings.gemini_api_key, settings.prism_model, settings.prism_samples,
                                   thinking=settings.prism_thinking)
     app.state.caches = CacheManager(app.state.sessions, settings.gemini_api_key)
