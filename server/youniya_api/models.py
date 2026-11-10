@@ -119,6 +119,8 @@ class Star(Base):
     prism_version: Mapped[str | None] = mapped_column(String(32))
     # 17.5 감정 여러 개, the first is `mood` (the star's colour). Null for stars before 20261109: [mood].
     moods: Mapped[list | None] = mapped_column(JSON)
+    # 20장 별빛 받기 그만두기: the last 별빛 받기 was stopped; the star stays without starlight. A new one clears it.
+    starlight_cancelled: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
 
 
 class StarLink(Base):
@@ -613,6 +615,24 @@ class TossOrder(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     canceled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class StarlightAttempt(Base):
+    """20장 별빛 받기 그만두기. One 별빛 받기, named by the app (`attempt_id`) so it can be stopped while the
+    prism is still reading, or after the app lost the answer. running → done | cancelled; a done one
+    remembers what it used so a cancel can give it back."""
+
+    __tablename__ = "starlight_attempts"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)  # the app's attempt_id
+    user_id: Mapped[str] = user_fk()
+    star_id: Mapped[str | None] = mapped_column(ForeignKey("stars.id", ondelete="CASCADE"), index=True)
+    new_star: Mapped[bool] = mapped_column(Boolean, default=False)  # 별빛 받고 띄우기 (POST /v1/stars)
+    status: Mapped[str] = mapped_column(String(12), default="running")
+    used: Mapped[str | None] = mapped_column(String(8))  # member | free | coins, once done
+    charged: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 @event.listens_for(User, "before_insert")

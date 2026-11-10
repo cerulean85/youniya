@@ -51,6 +51,12 @@ def use_star(db: Session, user: User, per_day: int) -> bool:
                free_star_count=User.free_star_count + 1)
 
 
+def give_back_star(db: Session, user: User) -> bool:
+    """20장 그만두기: today's free float back. One used on an earlier day is not given back."""
+    return _claim(db, user, User.free_star_day == today(), User.free_star_count > 0,
+                  free_star_count=User.free_star_count - 1)
+
+
 def use_unlit(db: Session, user: User, per_day: int) -> bool:
     """One of today's 별빛 없이 띄우기 (17.1)."""
     day = today()

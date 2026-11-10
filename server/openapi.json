@@ -1133,7 +1133,7 @@
           "stars"
         ],
         "summary": "Light Star",
-        "description": "17.1 나중에 별빛 받기, priced like a new lit star; 36 다시 시도 too. The writing is locked after.",
+        "description": "17.1 나중에 별빛 받기, priced like a new lit star; 36 다시 시도 too. The writing is locked after.\n20장: with `attempt_id` it can be stopped (POST /v1/starlight/attempts/{attempt_id}/cancel).",
         "operationId": "light_star_v1_stars__star_id__starlight_post",
         "security": [
           {
@@ -1151,6 +1151,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/LightIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1194,6 +1211,53 @@
             "schema": {
               "type": "string",
               "title": "Star Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/starlight/attempts/{attempt_id}/cancel": {
+      "post": {
+        "tags": [
+          "stars"
+        ],
+        "summary": "Cancel Starlight",
+        "description": "20장 별빛 받기 그만두기 (and the app's own timeout or lost connection). Safe to send more than once,\nand before the 별빛 받기 itself reaches the server.\n- Still reading: the reading is dropped when it comes; nothing is used.\n- Already done (within CANCEL_WINDOW): the starlight is taken off and what it used comes back\n  (`refunded.used`: member | free | coins, `refunded.coins`).\nThe star stays without starlight with `starlight_cancelled` true; 별빛 받기 on it again starts afresh.\nA new star (별빛 받고 띄우기) stopped this way counts toward today's 별빛 없이 띄우기.\n`star` is null when the 별빛 받기 has not reached the server yet; it will stop when it does.",
+        "operationId": "cancel_starlight_v1_starlight_attempts__attempt_id__cancel_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "attempt_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{8,64}$",
+              "title": "Attempt Id"
             }
           }
         ],
@@ -7580,6 +7644,24 @@
         ],
         "title": "KeeperAction"
       },
+      "LightIn": {
+        "properties": {
+          "attempt_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{8,64}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attempt Id"
+          }
+        },
+        "type": "object",
+        "title": "LightIn"
+      },
       "LineIn": {
         "properties": {
           "text": {
@@ -8542,6 +8624,18 @@
             "type": "array",
             "maxItems": 200,
             "title": "Link To"
+          },
+          "attempt_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{8,64}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attempt Id"
           }
         },
         "type": "object",

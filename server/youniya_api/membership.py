@@ -52,6 +52,15 @@ def use_today(db: Session, user: User, feature: str) -> bool:
     return bool(done)
 
 
+def give_back_today(db: Session, user: User, feature: str) -> bool:
+    """20장 그만두기: one of today's member uses back. One used on an earlier day is not given back."""
+    column = getattr(User, COUNTS[feature])
+    done = db.execute(update(User).where(User.id == user.id, User.member_day == allowance.today(), column > 0)
+                      .values({column: column - 1})).rowcount
+    db.refresh(user)
+    return bool(done)
+
+
 def sky_allowed(sky: str, member: bool) -> bool:
     return member or sky in FREE_SKIES
 
