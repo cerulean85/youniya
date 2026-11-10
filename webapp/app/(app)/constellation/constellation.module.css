@@ -20,4 +20,5 @@
 .soon { opacity: 0.55; }
 .soon:hover { border-color: var(--border); }
 @media (max-width: 1100px) { .body { flex-direction: column; } .side { width: 100%; } }
-.figure { aspect-ratio: 342 / 300; }
+/* The whole figure fits the window: its width follows the height left after the heading, card padding and month row. */
+.figure { aspect-ratio: 342 / 300; width: min(100%, max(320px, (100dvh - 290px) * 342 / 300)); margin-inline: auto; }
