@@ -51,12 +51,16 @@ def ensure_key(db, cipher: Cipher) -> None:
     print(f"key ok ({len(sample)} existing stars opened)")
 
 
-def seed_user(db, cipher: Cipher, user: User, rnd: random.Random, ids: dict) -> None:
+def seed_user(db, cipher: Cipher, user: User, rnd: random.Random, ids: dict,
+              start: datetime | None = None, end: datetime | None = None) -> None:
+    """Dates fall between `start` and `end` (default: the last 40 days)."""
     now = datetime.now(timezone.utc)
+    end = end or now - timedelta(days=1)
+    start = start or now - timedelta(days=40)
     picks = rnd.sample(WRITINGS, 10)
     stars = []
     for i, (mood, title, body) in enumerate(picks):
-        at = now - timedelta(days=rnd.randint(1, 40), hours=rnd.randint(0, 23), minutes=rnd.randint(0, 59))
+        at = start + timedelta(seconds=rnd.uniform(0, (end - start).total_seconds()))
         lit = i < 7
         star = Star(user_id=user.id, mood=mood, moods=[mood], title_enc=cipher.enc(title), body_enc=cipher.enc(body),
                     state="kept", created_at=at)
@@ -113,6 +117,8 @@ def main() -> int:
     ap.add_argument("--out")
     ap.add_argument("--go", action="store_true")
     ap.add_argument("--remove")
+    ap.add_argument("--start", help="ISO date-time, e.g. 2026-11-01T00:00:00+09:00")
+    ap.add_argument("--end")
     a = ap.parse_args()
     db = sessionmaker(make_engine(os.environ["DATABASE_URL"]))()
     cipher = Cipher(os.environ["DATA_ENCRYPTION_KEY"])
@@ -129,7 +135,8 @@ def main() -> int:
     ids = {"stars": [], "nebulae": [], "created_at": datetime.now(timezone.utc).isoformat()}
     rnd = random.Random()
     for u in users:
-        seed_user(db, cipher, u, rnd, ids)
+        seed_user(db, cipher, u, rnd, ids, datetime.fromisoformat(a.start) if a.start else None,
+                  datetime.fromisoformat(a.end) if a.end else None)
     db.commit()
     with open(a.out, "w") as f:
         json.dump(ids, f, indent=1)
