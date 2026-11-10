@@ -4,15 +4,19 @@
   --surface: #131a2a;
   --raised: #1a2338;
   --border: #334155;
-  --primary: #8555ef;
+  /* 우주의 색 (기획서 14.7): the accent follows the theme. Channels so alpha works: rgb(var(--tint-rgb) / 0.16). */
+  --primary-rgb: 133 85 239;
+  --tint-rgb: 139 92 246;
+  --glow-a: 139 92 246;
+  --glow-b: 236 72 153;
+  --glow-c: 51 181 217;
+  --primary: rgb(var(--primary-rgb));
   --primary-start: #855ade;
   --primary-end: #6630ce;
-  --primary-hover-start: #7a4dd0;
-  --primary-hover-end: #5c1fc0;
   --primary-text: #9c74f7;
-  --primary-glow: rgba(139, 92, 246, 0.4);
+  --primary-glow: rgb(var(--tint-rgb) / 0.4);
   --focus: #a78bfa;
-  --tint: rgba(139, 92, 246, 0.16);
+  --tint: rgb(var(--tint-rgb) / 0.16);
   --gold: #fbbf24;
   --tint-gold: rgba(251, 191, 36, 0.16);
   --pink: #ec4899;
@@ -46,6 +50,13 @@
 
   --sidebar: 264px;
 }
+
+/* Figma 'Cosmos' variables (Violet above, then Aurora, Ember, Ocean, Rose). Mood colours and gold never change. */
+:root[data-sky="aurora"] { --primary-rgb: 0 132 117; --tint-rgb: 14 159 142; --primary-start: #008473; --primary-end: #005448; --primary-text: #0e9f8e; --focus: #2dd4bf; --glow-a: 16 185 129; --glow-b: 45 212 191; --glow-c: 59 130 246; }
+:root[data-sky="ember"] { --primary-rgb: 202 75 41; --tint-rgb: 224 96 62; --primary-start: #c15336; --primary-end: #b82500; --primary-text: #e16747; --focus: #fb923c; --glow-a: 249 115 22; --glow-b: 244 63 94; --glow-c: 251 191 36; }
+:root[data-sky="ocean"] { --primary-rgb: 41 112 227; --tint-rgb: 59 130 246; --primary-start: #3672d5; --primary-end: #004ed2; --primary-text: #4a8bf7; --focus: #60a5fa; --glow-a: 59 130 246; --glow-b: 99 102 241; --glow-c: 34 211 238; }
+:root[data-sky="rose"] { --primary-rgb: 209 53 132; --tint-rgb: 219 63 140; --primary-start: #c94086; --primary-end: #bd006b; --primary-text: #e15d9e; --focus: #f472b6; --glow-a: 236 72 153; --glow-b: 168 85 247; --glow-c: 251 146 60; }
+
 
 * { box-sizing: border-box; }
 html, body { height: 100%; }
@@ -84,9 +95,9 @@ h1, h2, h3, p { margin: 0; }
 .sky {
   position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden;
   background:
-    radial-gradient(450px 450px at calc(100% - 110px) 190px, rgba(139, 92, 246, 0.28), transparent 70%),
-    radial-gradient(410px 410px at 150px calc(100% - 70px), rgba(236, 72, 153, 0.14), transparent 70%),
-    radial-gradient(260px 260px at calc(100% - 100px) calc(100% - 120px), rgba(51, 181, 217, 0.1), transparent 70%);
+    radial-gradient(450px 450px at calc(100% - 110px) 190px, rgb(var(--glow-a) / 0.28), transparent 70%),
+    radial-gradient(410px 410px at 150px calc(100% - 70px), rgb(var(--glow-b) / 0.14), transparent 70%),
+    radial-gradient(260px 260px at calc(100% - 100px) calc(100% - 120px), rgb(var(--glow-c) / 0.1), transparent 70%);
 }
 .sky::before { content: ""; position: absolute; inset: 0; background: url("/stars.svg") 0 0 / 720px 720px; opacity: 0.9; }
 
@@ -94,8 +105,8 @@ h1, h2, h3, p { margin: 0; }
 .card {
   position: relative;
   background:
-    radial-gradient(60% 60% at 65% 30%, rgba(139, 92, 246, 0.15), transparent 70%),
-    radial-gradient(60% 60% at 20% 90%, rgba(236, 72, 153, 0.06), transparent 70%),
+    radial-gradient(60% 60% at 65% 30%, rgb(var(--glow-a) / 0.15), transparent 70%),
+    radial-gradient(60% 60% at 20% 90%, rgb(var(--glow-b) / 0.06), transparent 70%),
     var(--surface);
   border: 1px solid var(--border);
   border-radius: 20px;
@@ -108,10 +119,11 @@ h1, h2, h3, p { margin: 0; }
   border: 1px solid transparent; background: none;
 }
 .btn-primary { color: var(--on-brand); background: linear-gradient(180deg, var(--primary-start), var(--primary-end)); box-shadow: 0 0 24px var(--primary-glow); }
-.btn-primary:hover { background: linear-gradient(180deg, var(--primary-hover-start), var(--primary-hover-end)); }
+.btn-primary:hover { background: linear-gradient(180deg, var(--primary-start), var(--primary-end)); filter: brightness(0.9); }
 .btn-secondary { color: var(--primary-text); border-color: var(--primary); }
 .btn-secondary:hover { background: var(--tint); }
 .btn-ghost { color: var(--text-2); }
 .btn-ghost:hover { color: var(--text); }
 .btn:disabled, .btn[aria-disabled="true"] { opacity: 0.45; cursor: default; box-shadow: none; }
 .btn-block { width: 100%; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

@@ -17,7 +17,7 @@
   display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: var(--radius-md);
   font: 500 14px/20px var(--sans); color: var(--text-2);
 }
-.item:hover { color: var(--text); background: rgba(139, 92, 246, 0.08); }
+.item:hover { color: var(--text); background: rgb(var(--tint-rgb) / 0.08); }
 .item[aria-current="page"] { background: var(--tint); color: var(--text); }
 .item[aria-current="page"] .icon { color: var(--gold); }
 .icon { display: inline-flex; }

@@ -39,7 +39,12 @@ async function Detail({ params }: Pick<PageProps<"/plaza/stars/[id]">, "params">
   const keeper = star.nickname ? `/plaza/keepers/${encodeURIComponent(star.nickname)}` : null;
   return (
     <article className={`card ${styles.card}`}>
+      {/* W-25 (2026-11-10): a 56×56 thumbnail beside the title instead of the big star picture. */}
       <header className={styles.head}>
+        <span className={styles.thumb}>
+          <StarGlyph points={star.has_starlight ? star.shape?.points : 4} sharpness={star.shape?.sharpness} mood={star.mood} size={star.has_starlight ? 32 : 22} />
+        </span>
+        <div className={styles.headText}>
         <p className="caption faint">{longDate(star.created_at)}</p>
         <h1 className="h2">{star.title_masked ?? star.name}</h1>
         <div className={styles.tags}>
@@ -47,10 +52,8 @@ async function Detail({ params }: Pick<PageProps<"/plaza/stars/[id]">, "params">
           {star.has_starlight ? <span className={`${styles.tag} ${styles.gold}`}>깊이 {star.depth_level}단계</span>
             : <span className={styles.tag}>별빛 없는 별</span>}
         </div>
+        </div>
       </header>
-      <div className={styles.sky}>
-        <StarGlyph points={star.has_starlight ? star.shape?.points : 4} sharpness={star.shape?.sharpness} mood={star.mood} size={star.has_starlight ? 120 : 72} />
-      </div>
       <blockquote className={styles.quote}>
         <p className="observation">“{star.quote}”</p>
         <p className="caption faint">{star.full_text ? "대표 문장과 글 전체가 별지기 이름과 함께 공개된 별이에요." : "별지기가 골라 나눈 한 문장이에요."}</p>

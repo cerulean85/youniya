@@ -24,7 +24,7 @@
 .shareDialog { max-width: 600px; }
 .options { display: flex; flex-direction: column; gap: 10px; max-height: 360px; overflow-y: auto; }
 .option { display: flex; gap: 14px; padding: 16px 18px; border-radius: 14px; background: var(--raised); border: 1px solid var(--border); cursor: pointer; }
-.option:has(input:checked) { background: var(--tint); border-color: rgba(133, 85, 239, 0.8); }
+.option:has(input:checked) { background: var(--tint); border-color: rgb(var(--primary-rgb) / 0.8); }
 .option input { accent-color: var(--primary); width: 18px; height: 18px; flex: none; margin-top: 3px; }
 .option > span { display: flex; flex-direction: column; gap: 6px; }
 .masked { display: inline-flex; gap: 6px; align-items: center; font: 400 12px/18px var(--sans); color: var(--gold); }

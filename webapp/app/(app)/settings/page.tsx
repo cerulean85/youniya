@@ -7,7 +7,7 @@ import { api } from "@/lib/api";
 import { SITE_URL } from "@/lib/config";
 import { dateTime, longDate } from "@/lib/format";
 import type { Me, MyShare } from "@/lib/types";
-import { Blocks, DangerZone, MarketingToggle, NicknameRow } from "./SettingsControls";
+import { Blocks, DangerZone, MarketingToggle, NicknameRow, SkyPicker } from "./SettingsControls";
 import styles from "./settings.module.css";
 
 export const metadata: Metadata = { title: "설정" };
@@ -51,7 +51,10 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
         <Group title="알림" note={marketing.opt_in && marketing.consented_at ? `${dateTime(marketing.consented_at)}에 동의했어요. 연속 기록이나 재촉하는 알림은 보내지 않아요.` : "연속 기록이나 재촉하는 알림은 보내지 않아요."}>
           <MarketingToggle on={marketing.opt_in} />
         </Group>
-        <p className={`caption faint ${styles.appOnly}`}>우주의 색, 진동, 소리, 별 만들기 알림은 앱의 설정에서 바꿀 수 있어요.</p>
+        <Group title="화면">
+          <SkyPicker sky={me.settings?.sky ?? "violet"} />
+        </Group>
+        <p className={`caption faint ${styles.appOnly}`}>진동, 소리, 별 만들기 알림은 앱의 설정에서 바꿀 수 있어요.</p>
       </div>
       <div className={styles.column}>
         <Group title="우주 광장">

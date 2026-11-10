@@ -27,3 +27,7 @@
 .dangerButton { color: #fff; background: linear-gradient(180deg, #bc5457, #a5202a); }
 @media (max-width: 1100px) { .columns { grid-template-columns: 1fr; } }
 .rename { color: var(--gold); font-weight: 500; }
+.skyRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 20px; font: 400 14px/22px var(--sans); }
+.skies { display: flex; gap: 10px; }
+.sky { width: 28px; height: 28px; border-radius: 50%; background: var(--c); border: 2px solid transparent; outline: 2px solid transparent; cursor: pointer; }
+.sky[aria-checked="true"] { border-color: var(--canvas); outline-color: var(--c); }

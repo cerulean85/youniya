@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { clearTokens } from "@/lib/session";
 
 /** 14.3 새 기능·혜택 알림: its own consent, recorded with when it was given or taken back. */
@@ -29,4 +29,17 @@ export async function deleteAccount(form: FormData) {
   await api("/v1/me", { method: "DELETE" });
   clearTokens(await cookies());
   redirect("/login?deleted=1");
+}
+
+/** 우주의 색: violet and ocean for everyone; the rest answer 403 member_only for non-members. */
+export async function setSky(sky: string): Promise<{ error?: string } | null> {
+  try {
+    await api("/v1/me/settings", { method: "PATCH", body: JSON.stringify({ sky }) });
+  } catch (e) {
+    if (e instanceof ApiError && e.code === "member_only") return { error: "이 색은 별지기 멤버십에서 쓸 수 있어요." };
+    if (e instanceof ApiError) return { error: e.message };
+    throw e;
+  }
+  refresh();
+  return null;
 }

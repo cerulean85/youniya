@@ -24,9 +24,9 @@
 .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
 .weekday { padding: 6px 10px; font-size: 12px; color: var(--text-3); }
 .day { min-height: 92px; padding: 8px 10px; border-radius: 12px; background: rgba(19, 26, 42, 0.35); display: flex; flex-direction: column; gap: 6px; overflow: hidden; color: var(--text-2); }
-.day:hover { background: rgba(139, 92, 246, 0.1); }
+.day:hover { background: rgb(var(--tint-rgb) / 0.1); }
 .day[data-today="true"] > :first-child { color: var(--gold); }
-.day[aria-current="date"] { background: var(--tint); outline: 1px solid rgba(133, 85, 239, 0.7); color: var(--text); }
+.day[aria-current="date"] { background: var(--tint); outline: 1px solid rgb(var(--primary-rgb) / 0.7); color: var(--text); }
 .entry { display: flex; align-items: center; gap: 5px; font-size: 12px; line-height: 18px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .entry::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--text-2); }
 .entry[data-floated="true"] { color: var(--text); }

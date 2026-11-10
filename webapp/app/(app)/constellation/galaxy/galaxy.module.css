@@ -8,9 +8,9 @@
 .cards { list-style: none; margin: 0; padding: 0; display: flex; gap: 16px; }
 .cards > li { flex: none; width: 200px; }
 .card { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 16px; background: var(--surface, rgba(19, 26, 42, 0.6)); border: 1px solid var(--border); }
-.card:hover { border-color: rgba(133, 85, 239, 0.6); }
+.card:hover { border-color: rgb(var(--primary-rgb) / 0.6); }
 .card[data-now] { border-color: var(--gold); box-shadow: 0 0 24px rgba(251, 191, 36, 0.12); }
-.figure { aspect-ratio: 342 / 300; border-radius: 12px; background: radial-gradient(60% 60% at 50% 45%, rgba(139, 92, 246, 0.18), rgba(15, 23, 42, 0.6)); overflow: hidden; }
+.figure { aspect-ratio: 342 / 300; border-radius: 12px; background: radial-gradient(60% 60% at 50% 45%, rgb(var(--tint-rgb) / 0.18), rgba(15, 23, 42, 0.6)); overflow: hidden; }
 .figure[data-partial] line { opacity: 0.5; }
 .foot { display: flex; align-items: center; justify-content: space-between; }
 .done, .now, .left { padding: 2px 10px; border-radius: 999px; font: 500 11px/16px var(--sans); }

@@ -13,11 +13,17 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+const SKY_SCRIPT = `try{var s=localStorage.getItem("yn_sky");if(s&&s!=="violet")document.documentElement.dataset.sky=s}catch(e){}`;
+
 export const viewport: Viewport = { themeColor: "#0b0f19", colorScheme: "dark" };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="ko" className={`${sans.variable} ${serif.variable}`}>
+    <html lang="ko" className={`${sans.variable} ${serif.variable}`} suppressHydrationWarning>
+      <head>
+        {/* 우주의 색 before the first paint: the last theme this browser saw (ApplySky keeps it in step with the account). */}
+        <script dangerouslySetInnerHTML={{ __html: SKY_SCRIPT }} />
+      </head>
       <body>
         <div className="sky" aria-hidden="true" />
         {children}

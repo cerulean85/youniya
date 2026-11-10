@@ -5,8 +5,8 @@
 .brandBody { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 24px; }
 .orb {
   width: 140px; height: 140px; border-radius: 50%; display: grid; place-items: center;
-  background: var(--tint); border: 1px dashed rgba(133, 85, 239, 0.45); color: var(--primary);
-  filter: drop-shadow(0 0 24px rgba(139, 92, 246, 0.35));
+  background: var(--tint); border: 1px dashed rgb(var(--primary-rgb) / 0.45); color: var(--primary);
+  filter: drop-shadow(0 0 24px rgb(var(--tint-rgb) / 0.35));
 }
 .links { display: flex; gap: 20px; font-size: 12px; color: var(--text-3); }
 .links a:hover { color: var(--text); }

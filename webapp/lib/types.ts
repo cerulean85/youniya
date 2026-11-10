@@ -79,6 +79,8 @@ export type Me = {
   nickname_next_change?: string | null;
   /** Operator actions (기획서 18장): plaza use paused until then, or a new name asked for (no 30-day wait). */
   plaza_restricted_until?: string | null;
+  /** App settings; the web follows `sky` (우주의 색, 기획서 14.7). */
+  settings?: { sky?: Sky; reduce_animations?: boolean };
   nickname_rename_required?: boolean;
   coins: number;
   free_star_today: number;
@@ -154,3 +156,13 @@ export type CoinsInfo = {
   packages: { product_id: string; coins: number; price: number; bonus: number }[];
 };
 export type CoinEntryRow = { id: string; kind: "purchase" | "spend" | "refund" | "grant" | string; title: string; delta: number; created_at: string; source?: string | null };
+
+/** 우주의 색 (기획서 14.7): violet and ocean for everyone; aurora, ember and rose for 별지기 멤버십. */
+export type Sky = "violet" | "aurora" | "ember" | "ocean" | "rose";
+export const SKIES: { key: Sky; label: string; color: string; member: boolean }[] = [
+  { key: "violet", label: "보랏빛 밤", color: "#8555ef", member: false },
+  { key: "ocean", label: "깊은 바다", color: "#2970e3", member: false },
+  { key: "aurora", label: "오로라", color: "#008475", member: true },
+  { key: "ember", label: "잔불", color: "#ca4b29", member: true },
+  { key: "rose", label: "장미", color: "#d13584", member: true },
+];

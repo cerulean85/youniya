@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { api } from "@/lib/api";
 import type { Me } from "@/lib/types";
+import { ApplySky } from "./ApplySky";
 import { Coin } from "./icons";
 import styles from "./Account.module.css";
 
@@ -12,6 +13,7 @@ export async function Account() {
   if (me.needs_consent) redirect("/welcome");
   return (
     <div className={styles.box}>
+      <ApplySky sky={me.settings?.sky ?? "violet"} />
       <div className={styles.row}>
         <div className={styles.who}>
           <span className="label-m">{me.nickname || "별지기"}</span>

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useOptimistic, useRef, useTransition } from "react";
+import { useEffect, useOptimistic, useRef, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { ChevronRight } from "@/components/icons";
 import { NicknameForm } from "@/components/NicknameForm";
-import { deleteAccount, setMarketing, unblock, unshareAll } from "./actions";
+import { SKIES, type Sky } from "@/lib/types";
+import { deleteAccount, setMarketing, setSky, unblock, unshareAll } from "./actions";
 import styles from "./settings.module.css";
 
 // 15.1: once every 30 days; the change follows every star and line already shared.
@@ -109,4 +110,26 @@ export function DangerZone({ shared }: { shared: number }) {
 function Pending({ label, busy, style }: { label: string; busy: string; style: string }) {
   const { pending } = useFormStatus();
   return <button className={`btn ${style}`} disabled={pending}>{pending ? busy : label}</button>;
+}
+
+// 우주의 색 (iOS 68, 기획서 14.7): the accent of buttons, chips, links and the background glow follows it.
+export function SkyPicker({ sky }: { sky: Sky }) {
+  const [value, setValue] = useOptimistic(sky);
+  const [error, setError] = useState<string | null>(null);
+  const [, start] = useTransition();
+  return (
+    <div className={styles.skyRow}>
+      <span>우주의 색</span>
+      <div className={styles.skies} role="radiogroup" aria-label="우주의 색">
+        {SKIES.map((s) => (
+          <button key={s.key} type="button" role="radio" aria-checked={value === s.key} title={`${s.label}${s.member ? " · 멤버십" : ""}`}
+            className={styles.sky} style={{ ["--c" as string]: s.color }}
+            onClick={() => start(async () => { setError(null); setValue(s.key); const r = await setSky(s.key); if (r?.error) setError(r.error); })}>
+            <span className="sr-only">{s.label}</span>
+          </button>
+        ))}
+      </div>
+      {error && <p className="caption" role="alert" style={{ color: "var(--anger)", width: "100%" }}>{error}</p>}
+    </div>
+  );
 }
