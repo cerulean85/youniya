@@ -12,6 +12,7 @@ import type { Me, Star } from "@/lib/types";
 import { LinkStar } from "./LinkStar";
 import { ShareStar } from "./ShareStar";
 import { CrisisCare } from "@/components/CrisisCare";
+import { SaveStarImage } from "@/components/SaveStarImage";
 import { StarBirth } from "@/components/StarBirth";
 import { DeleteButton, ExportButton, FloatButton, LinkedChip, Toast } from "./StarActions";
 import { ReceivedLines } from "./ReceivedLines";
@@ -115,6 +116,11 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
         )}
         <div className={styles.footerLinks}>
           <ExportButton title={title} date={dateTime(star.created_at)} body={star.body} />
+          {floated && star.analysis && <SaveStarImage card={{
+            title, date: longDate(star.created_at), starlight: star.analysis.starlight, observation: star.analysis.observation,
+            meters: [{ label: "별의 깊이", value: star.analysis.depth }, { label: "빛의 선명함", value: star.analysis.clarity }, { label: "마음의 무게", value: star.analysis.weight }],
+            moods: star.analysis.moods.map((m) => ({ label: moodOf(m.mood).label, color: moodOf(m.mood).color })),
+          }} />}
           {floated && <Link href={`/write?rewrite=${star.id}`} className="btn btn-ghost">고쳐 쓰기</Link>}
           <DeleteButton id={star.id} title={title} />
         </div>
