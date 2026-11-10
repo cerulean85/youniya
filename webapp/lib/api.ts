@@ -25,6 +25,8 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (!res.ok) {
     const err = data?.error ?? {};
     if (err.code === "consent_required") redirect("/welcome");
+    // 41 잠시 점검 중이에요: the server is in maintenance (operators switch it from the console).
+    if (res.status === 503 && err.code === "maintenance") redirect(`/maintenance${err.until ? `?until=${encodeURIComponent(err.until)}` : ""}`);
     throw new ApiError(res.status, err.code ?? "error", err.message ?? "잠시 뒤에 다시 시도해 주세요.", err);
   }
   return data as T;

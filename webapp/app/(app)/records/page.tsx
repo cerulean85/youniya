@@ -35,6 +35,7 @@ function Header({ total }: { total: number | null }) {
     <header className={styles.header}>
       <h1 className="h1">기록</h1>
       <p className="body-m muted">{total == null ? " " : `지금까지 띄운 별 ${total}개`}</p>
+      <Link href="/records/flow" className={styles.flowLink}>나의 별빛 흐름 ›</Link>
     </header>
   );
 }

@@ -70,18 +70,28 @@ function DeleteSubmit() {
   return <button className={`btn ${styles.danger}`} disabled={pending}>{pending ? "지우는 중…" : "영구 삭제"}</button>;
 }
 
-// W-54: turning the telescope on for this star; the report replaces the button once it exists.
-export function OpenTelescope({ id, label }: { id: string; label: string }) {
+// W-54 with iOS 24 (확인) and 25 (들여다보는 중): what it costs first, then the telescope at work.
+export function OpenTelescope({ id, label, cost }: { id: string; label: string; cost: string }) {
   const [state, action] = useActionState(openTelescope.bind(null, id), null);
+  const dialog = useRef<HTMLDialogElement>(null);
   return (
-    <form action={action} className={styles.floatForm}>
-      <Pending label={label} busy="마음 망원경이 들여다보는 중…" secondary />
-      {state?.error && (
-        <p className="body-s" role="alert">
-          {state.error} {state.code === "insufficient_coins" && <Link href="/coins" className={styles.link}>코인 충전하기</Link>}
-        </p>
-      )}
-    </form>
+    <>
+      <button type="button" className="btn btn-secondary btn-block" onClick={() => dialog.current?.showModal()}>{label}</button>
+      <dialog ref={dialog} className={`card ${styles.dialog}`} aria-labelledby="scope-title">
+        <form action={action}>
+          <h2 id="scope-title" className="h2">이 별을 더 들여다볼까요?</h2>
+          <p className="body-m muted">망원경 빛이 이 별의 문장을 하나씩 비추며 숨은 마음의 결을 보여줘요. {cost}</p>
+          {state?.error && (
+            <p className="body-s" role="alert">
+              {state.error} {state.code === "insufficient_coins" && <Link href="/coins" className={styles.link}>코인 충전하기</Link>}
+            </p>
+          )}
+          <Pending label="들여다보기" busy="들여다보는 중…" />
+          <button type="button" className="btn btn-ghost" onClick={() => dialog.current?.close()}>다음에</button>
+          <PrismOverlay title="별을 들여다보는 중이에요" body={<>조금만 기다려 주세요.<br />잠시 나가도 괜찮아요.</>} />
+        </form>
+      </dialog>
+    </>
   );
 }
 

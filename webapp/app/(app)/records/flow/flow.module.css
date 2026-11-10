@@ -1,0 +1,18 @@
+.back { display: inline-flex; align-items: center; gap: 4px; font: 500 13px/20px var(--sans); color: var(--text-2); margin-bottom: -8px; }
+.header { display: flex; flex-direction: column; gap: 8px; }
+.loading { min-height: 320px; }
+.body { display: flex; flex-direction: column; gap: 16px; max-width: 760px; }
+.chips { display: flex; gap: 8px; }
+.chips a { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; font: 500 12px/18px var(--sans); background: var(--raised); border: 1px solid var(--border); color: var(--text-2); }
+.chips a::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--primary); }
+.chips a[aria-current="true"] { color: var(--text); border-color: var(--primary); background: var(--tint); }
+.empty { padding: 40px 32px; border-radius: 20px; display: flex; flex-direction: column; gap: 8px; text-align: center; align-items: center; }
+.card { padding: 22px 24px; border-radius: 20px; display: flex; flex-direction: column; gap: 14px; }
+.cardHead { display: flex; justify-content: space-between; align-items: baseline; }
+.chart { margin: 0; }
+.chart svg { width: 100%; height: auto; display: block; }
+.labels { display: flex; justify-content: space-between; font: 400 11px/16px var(--sans); color: var(--text-3); }
+.months { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.months li { display: grid; grid-template-columns: 110px 1fr 48px; gap: 12px; align-items: center; }
+.months i { height: 6px; border-radius: 999px; background: linear-gradient(90deg, var(--primary) var(--v), var(--raised) var(--v)); }
+.months b { font: 500 14px/20px var(--sans); text-align: right; }

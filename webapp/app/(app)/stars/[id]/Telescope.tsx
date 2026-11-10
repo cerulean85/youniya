@@ -15,7 +15,8 @@ export async function Telescope({ id, analysis, telescope }: { id: string; analy
       <div id="telescope" className={`card ${styles.offer}`}>
         <span className={styles.head}><TelescopeIcon size={16} />마음 망원경</span>
         <p className="body-s">{analysis.telescope_teaser ?? "별빛 풀이보다 한 걸음 더, 글 속에 숨은 마음의 결을 들여다봐요."}</p>
-        <OpenTelescope id={id} label={offer.free ? `마음 망원경 켜기 · 무료 ${offer.free_left}번 남음` : `마음 망원경 켜기 · ${offer.cost}코인`} />
+        <OpenTelescope id={id} label={offer.free ? `마음 망원경 켜기 · 무료 ${offer.free_left}번 남음` : `마음 망원경 켜기 · ${offer.cost}코인`}
+          cost={offer.free ? `무료 몫을 1번 써요(${offer.free_left}번 남음).` : `${offer.cost}코인이 들어요(보유 ${offer.coins}).`} />
       </div>
     );
   }

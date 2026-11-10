@@ -5,7 +5,7 @@ import { NextResponse, type NextRequest } from "next/server";
 const ACCESS = "yn_at";
 const REFRESH = "yn_rt";
 const API_URL = process.env.YOUNIYA_API_URL ?? "https://youniya-api.dycdyp.com";
-const PUBLIC = ["/login", "/auth/"];
+const PUBLIC = ["/login", "/auth/", "/maintenance"];
 
 function expiresSoon(jwt: string | undefined) {
   if (!jwt) return true;

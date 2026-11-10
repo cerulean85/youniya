@@ -13,3 +13,4 @@
 .item[data-unread] .title { font-weight: 600; }
 .action { flex: none; font: 500 13px/20px var(--sans); color: var(--primary-text); }
 .more { align-self: center; }
+.sentinel { min-height: 24px; text-align: center; font: 400 12px/18px var(--sans); color: var(--text-3); }

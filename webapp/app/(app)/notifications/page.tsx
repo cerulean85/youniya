@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/Page";
 import { api } from "@/lib/api";
-import { kindOf, targetHref } from "@/lib/notifications";
 import { withAgoAt } from "@/lib/plaza";
 import type { AppNotification } from "@/lib/types";
 import { readAll } from "./actions";
+import { MoreNotifications } from "./More";
+import { NotificationRow } from "./Row";
 import styles from "./notifications.module.css";
 
 export const metadata: Metadata = { title: "알림" };
@@ -24,10 +24,9 @@ export default function NotificationsPage({ searchParams }: PageProps<"/notifica
 }
 
 async function List({ searchParams }: Pick<PageProps<"/notifications">, "searchParams">) {
-  const sp = await searchParams;
-  const before = typeof sp.before === "string" ? sp.before : "";
+  await searchParams;
   const r = await api<{ items: AppNotification[]; unread: number; next_before: string | null }>(
-    `/v1/me/notifications?limit=30${before ? `&before=${encodeURIComponent(before)}` : ""}`);
+    "/v1/me/notifications?limit=30");
   await connection();
   const rows = withAgoAt(r.items);
   const aside = r.unread > 0 && (
@@ -41,29 +40,9 @@ async function List({ searchParams }: Pick<PageProps<"/notifications">, "searchP
       ) : (
         <div className={styles.wrap}>
           <ul className={styles.list}>
-            {rows.map(({ item: n, ago }) => {
-              const k = kindOf(n), href = targetHref(n.target);
-              // 신고 처리 결과 has no link (W-58); everything else opens its screen and is marked read.
-              const go = href && k.action ? `/notifications/go?id=${encodeURIComponent(n.id)}&to=${encodeURIComponent(href)}` : null;
-              const body = (
-                <>
-                  <span className={styles.dot} style={{ ["--c" as string]: k.color }} aria-hidden="true" />
-                  <span className={styles.text}>
-                    <span className={styles.meta}><span style={{ color: k.color }}>{k.label}</span><span className="faint">{ago}</span></span>
-                    <span className={styles.title}>{n.title}</span>
-                    <span className="body-s muted">{n.body}</span>
-                  </span>
-                  {go && <span className={styles.action}>{k.action} ›</span>}
-                </>
-              );
-              return (
-                <li key={n.id} className={`card ${styles.item}`} data-unread={!n.read || undefined}>
-                  {go ? <Link href={go} prefetch={false} aria-label={`${n.title} · ${k.action}`}>{body}</Link> : <div>{body}</div>}
-                </li>
-              );
-            })}
+            {rows.map(({ item: n, ago }) => <NotificationRow key={n.id} n={n} ago={ago} />)}
           </ul>
-          {r.next_before && <Link href={`/notifications?before=${encodeURIComponent(r.next_before)}`} className={`btn btn-ghost ${styles.more}`}>지난 알림 더 보기</Link>}
+          {r.next_before && <MoreNotifications before={r.next_before} />}
         </div>
       )}
     </>
