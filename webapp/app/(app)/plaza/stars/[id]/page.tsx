@@ -41,8 +41,8 @@ async function Detail({ params }: Pick<PageProps<"/plaza/stars/[id]">, "params">
     <article className={`card ${styles.card}`}>
       {/* W-25 (2026-11-10): a 56×56 thumbnail beside the title instead of the big star picture. */}
       <header className={styles.head}>
-        <span className={styles.thumb}>
-          <StarGlyph points={star.has_starlight ? star.shape?.points : 4} sharpness={star.shape?.sharpness} mood={star.mood} size={star.has_starlight ? 32 : 22} />
+        <span className={styles.thumb} data-unlit={!star.has_starlight || undefined}>
+          <StarGlyph points={star.has_starlight ? star.shape?.points : 4} sharpness={star.shape?.sharpness} mood={star.mood} size={star.has_starlight ? 34 : 22} />
         </span>
         <div className={styles.headText}>
         <p className="caption faint">{longDate(star.created_at)}</p>

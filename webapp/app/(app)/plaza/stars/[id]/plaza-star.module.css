@@ -2,7 +2,9 @@
 .card { align-self: center; width: 100%; max-width: 560px; padding: 32px 36px; border-radius: 28px; display: flex; flex-direction: column; gap: 20px; }
 .head { display: flex; align-items: flex-start; gap: 16px; }
 .headText { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.thumb { flex: none; width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.35); }
+/* The same thumbnail as a W-44 row (components/PlazaRow), at 56×56; a star without starlight is dimmed. */
+.thumb { flex: none; width: 56px; height: 56px; border-radius: 14px; display: grid; place-items: center; background: var(--raised); border: 1px solid var(--border); }
+.thumb[data-unlit] { opacity: 0.6; }
 .tags { display: flex; gap: 8px; }
 .tag { padding: 4px 10px; border-radius: 999px; font: 500 12px/16px var(--sans); background: var(--raised); color: var(--text-2); }
 .gold { background: var(--tint-gold); color: var(--gold); }
