@@ -441,6 +441,8 @@ struct InviteLoginSheet: View {
     @State private var password = ""
     @State private var failed = false
     @State private var working = false
+    /// 비밀번호 보기 (2026-11-10): the typed password can be checked.
+    @State private var showPassword = false
     @FocusState private var focus: Field?
     private enum Field { case username, password }
 
@@ -468,10 +470,33 @@ struct InviteLoginSheet: View {
                         .onSubmit { focus = .password }
                 }
                 field("비밀번호", focused: .password) {
-                    SecureField("", text: $password)
+                    HStack(spacing: Space.sm) {
+                        Group {
+                            if showPassword {
+                                TextField("", text: $password)
+                                    .textInputAutocapitalization(.never)
+                                    .autocorrectionDisabled()
+                            } else {
+                                SecureField("", text: $password)
+                            }
+                        }
                         .textContentType(.password)
                         .submitLabel(.go)
                         .onSubmit(signIn)
+                        .focused($focus, equals: .password)
+                        Button {
+                            showPassword.toggle()
+                        } label: {
+                            Image(systemName: showPassword ? "eye.slash" : "eye")
+                                .font(.body)
+                                .foregroundStyle(Color.textSecondary)
+                                .frame(width: 44, height: 44)
+                                .contentShape(.rect)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(showPassword ? "비밀번호 숨기기" : "비밀번호 보기")
+                        .padding(.trailing, -Space.md)
+                    }
                 }
                 if failed {
                     Text("아이디나 비밀번호가 맞지 않아요.")
