@@ -36,3 +36,6 @@ export const Phone = (p: IconProps) => <svg {...base(p)}><path d="M5 4h3.5l1.5 4
 export const Doc = (p: IconProps) => <svg {...base(p)}><path d="M6 3.5h8l4 4V20a.5.5 0 0 1-.5.5h-11A.5.5 0 0 1 6 20V3.5Z" /><path d="M14 3.5V8h4M9 12.5h6M9 16h6" /></svg>;
 export const LogOut = (p: IconProps) => <svg {...base(p)}><path d="M10 4.5H6a1.5 1.5 0 0 0-1.5 1.5v12A1.5 1.5 0 0 0 6 19.5h4M15 8l4 4-4 4M19 12H9.5" /></svg>;
 export const Sparkle = (p: IconProps) => <svg {...base(p)}><path d={STAR} transform="translate(3 3) scale(.75)" /></svg>;
+export const Shield = (p: IconProps) => <svg {...base(p)}><path d="M12 3.5 5 6v5.5c0 4.2 3 7.6 7 9 4-1.4 7-4.8 7-9V6l-7-2.5Z" /></svg>;
+export const User = (p: IconProps) => <svg {...base(p)}><circle cx="12" cy="8.5" r="3.5" /><path d="M5 20a7 7 0 0 1 14 0" /></svg>;
+export const Search = (p: IconProps) => <svg {...base(p)}><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4.2-4.2" /></svg>;

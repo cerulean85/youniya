@@ -10,7 +10,7 @@ import styles from "../settings.module.css";
 export const metadata: Metadata = { title: "차단한 별지기" };
 
 type Block = { id: string; created_at: string; source: "star" | "line" | "star_line" | "nebula" | string };
-const WHERE: Record<string, string> = { star: "광장의 별", line: "별빛 한 줄", star_line: "별빛 한 줄", nebula: "성운" };
+const WHERE: Record<string, string> = { star: "우주 광장 별", line: "별빛 한 줄", star_line: "별빛 한 줄", nebula: "성운" };
 
 // Figma W-82: the API keeps who it was to itself (설정 › 차단한 별지기: when and where, never who).
 export default function BlocksPage() {
@@ -33,13 +33,13 @@ async function Blocks() {
   );
   return (
     <>
-      <p className="body-s muted">차단한 별지기 {items.length}명이에요. 이 사람들의 별과 별빛 한 줄은 내 화면에 보이지 않아요. 풀면 다시 보여요.</p>
+      <p className="body-s muted">차단한 별지기 {items.length}명이에요. 서로의 별과 별빛 한 줄이 보이지 않아요. 누구인지는 보여 드리지 않아요.</p>
       <ul className={styles.items}>
         {items.map((b) => (
           <li key={b.id}>
             <div className={styles.item}>
               <Star size={16} />
-              <span className={styles.itemText}><span className="label-m">{WHERE[b.source] ?? "광장"}에서 차단한 별지기</span><span className="caption faint">{longDate(b.created_at)} 차단</span></span>
+              <span className={styles.itemText}><span className="label-m">{WHERE[b.source] ?? "우주 광장"}에서 차단한 별지기</span><span className="caption faint">{longDate(b.created_at)} 차단</span></span>
             </div>
             <UnblockButton id={b.id} />
           </li>

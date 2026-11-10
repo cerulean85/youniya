@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { ChevronRight, Doc, Info, Lock, LogOut, Moon, Nebula, Phone, Sparkle, Trash, Upload, Close } from "@/components/icons";
+import { Search, Shield, Star, User, ChevronRight, Doc, Info, Lock, LogOut, Moon, Nebula, Phone, Trash, Upload, Close } from "@/components/icons";
 import { PageHeader } from "@/components/Page";
 import { api } from "@/lib/api";
 import { SITE_URL } from "@/lib/config";
@@ -40,19 +40,19 @@ async function Settings() {
   return (
     <>
       <Group title="계정">
-        <div className={styles.row}><Sparkle size={18} /><span>로그인 계정</span><span className={styles.value}>{PROVIDERS[me.provider] ?? me.provider}</span></div>
-        {me.joined_at && <div className={styles.row}><Moon size={18} /><span>가입한 날</span><span className={styles.value}>{fullDate(me.joined_at)}</span></div>}
+        <div className={styles.row}><Shield size={18} /><span>로그인 계정</span><span className={styles.value}>{PROVIDERS[me.provider] ?? me.provider}</span></div>
+        {me.joined_at && <div className={styles.row}><Star size={18} /><span>가입한 날</span><span className={styles.value}>{fullDate(me.joined_at)}</span></div>}
         <Link href="/settings/nickname" className={styles.row}>
-          <Nebula size={18} /><span>별지기 이름</span>
+          <User size={18} /><span>별지기 이름</span>
           <span className={styles.value}>{me.nickname_rename_required ? <b className={styles.rename}>바꿔 주세요</b> : me.nickname ?? "정하지 않았어요"}<ChevronRight size={16} /></span>
         </Link>
-        {me.nickname && <Link href={`/plaza/keepers/${encodeURIComponent(me.nickname)}`} className={styles.row}><Close size={18} /><span>내 별지기 페이지 미리 보기</span><span className={styles.value}><ChevronRight size={16} /></span></Link>}
+        {me.nickname && <Link href={`/plaza/keepers/${encodeURIComponent(me.nickname)}`} className={styles.row}><Search size={18} /><span>내 별지기 페이지 미리 보기</span><span className={styles.value}><ChevronRight size={16} /></span></Link>}
       </Group>
       <Group title="화면과 움직임">
         <Link href="/settings/sky" className={styles.row}><Moon size={18} /><span>우주의 색</span><span className={styles.value}>{sky.label}<ChevronRight size={16} /></span></Link>
         <MotionToggle on={Boolean(me.settings?.reduce_animations)} />
       </Group>
-      <Group title="알림" note={`${marketing.opt_in && marketing.consented_at ? `${dateTime(marketing.consented_at)}에 동의했어요. ` : ""}연속 기록이나 재촉하는 알림은 보내지 않아요. 별 만들기 알림과 알림 시각은 앱에서 정해요.`}>
+      <Group title="알림" note={`${marketing.opt_in && marketing.consented_at ? `${dateTime(marketing.consented_at)}에 동의했어요. ` : ""}별 만들기 알림과 알림 시각은 앱에서 정해요. 연속 기록이나 재촉하는 알림은 보내지 않아요.`}>
         <MarketingToggle on={marketing.opt_in} />
       </Group>
       <Group title="우주 광장">
