@@ -37,6 +37,7 @@ function Reading({ title, body, stop, draft }: { title?: string; body?: React.Re
   const [long, setLong] = useState(false);
   const [stopping, setStopping] = useState(false);
   const [failed, setFailed] = useState(false);
+  const alive = useRef(true); // the request may end on its own (an error, or its redirect) while this keeps asking
   const quit = async () => {
     if (!stop) return;
     setStopping(true); setFailed(false);
@@ -46,6 +47,7 @@ function Reading({ title, body, stop, draft }: { title?: string; body?: React.Re
     const url = `/starlight/${encodeURIComponent(stop)}/cancel${draft ? "?draft=1" : ""}`;
     for (const until = Date.now() + FIND_FOR_MS; ;) {
       const res = await fetch(url, { method: "POST" }).catch(() => null);
+      if (!alive.current) return;
       if (res && !res.ok && res.status !== 404) { setStopping(false); setFailed(true); return; }
       const r = res?.ok ? await res.json().catch(() => null) as { star_id?: string | null } | null : null;
       if (r?.star_id) {
@@ -57,14 +59,16 @@ function Reading({ title, body, stop, draft }: { title?: string; body?: React.Re
       }
       if (Date.now() > until) { window.location.assign(draft ? "/write?stopped=1" : window.location.pathname); return; }
       await new Promise((ok) => setTimeout(ok, FIND_MS));
+      if (!alive.current) return;
     }
   };
   const quitRef = useRef(quit);
   useEffect(() => { quitRef.current = quit; });
   useEffect(() => {
+    alive.current = true;
     const long = setTimeout(() => setLong(true), LONG_MS);
     const giveUp = setTimeout(() => { void quitRef.current(); }, GIVE_UP_MS);
-    return () => { clearTimeout(long); clearTimeout(giveUp); };
+    return () => { alive.current = false; clearTimeout(long); clearTimeout(giveUp); };
   }, []);
 
   const offer = long && stop;
