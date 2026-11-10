@@ -27,8 +27,8 @@ export const KIND: Record<string, { label: string; color: string; action?: strin
   report_result: { label: "신고 처리 결과", color: "var(--calm)" },
   coins: { label: "코인", color: "var(--cyan)", action: "코인 사용 내역" },
   coin_grant: { label: "코인", color: "var(--cyan)", action: "코인 사용 내역" },
-  consent_result: { label: "알림 동의", color: "var(--text-3)", action: "알림 설정" },
+  consent_result: { label: "알림 동의", color: "var(--text-3)", action: "설정 › 알림" },
 };
 /** Unknown kinds still link, named by where they lead. */
-const BY_SCREEN: Record<string, string> = { star: "별 보기", nickname: "이름 바꾸기", plaza_restricted: "자세히", plaza: "광장 보기", coin_history: "코인 사용 내역", notice: "공지 보기", notification_settings: "알림 설정", notifications: "알림 보기" };
+const BY_SCREEN: Record<string, string> = { star: "별 보기", nickname: "이름 바꾸기", plaza_restricted: "자세히", plaza: "우주 광장", coin_history: "코인 사용 내역", notice: "공지 보기", notification_settings: "설정 › 알림", notifications: "알림 보기" };
 export const kindOf = (n: AppNotification) => KIND[n.kind] ?? { label: "알림", color: "var(--text-3)", action: n.target ? BY_SCREEN[n.target.screen] : undefined };

@@ -54,3 +54,4 @@ a.tag:hover { color: var(--text); background: var(--tint); }
 .menuDanger b { color: var(--anger); }
 /* The title keeps clear of the ··· button. */
 .head { padding-right: 44px; }
+.card [data-paused] { opacity: 0.45; }

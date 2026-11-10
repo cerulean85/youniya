@@ -48,7 +48,7 @@ export function ExportDialog({ stars }: { stars: number }) {
       <button type="button" className={styles.row} onClick={() => dialog.current?.showModal()}>
         <Upload size={18} /><span>데이터 내보내기</span><span className={styles.value}><ChevronRight size={16} /></span>
       </button>
-      <dialog ref={dialog} className="card sheet" aria-labelledby="export-title">
+      <dialog ref={dialog} id="export-dialog" className="card sheet" aria-labelledby="export-title">
         {phase.kind === "choose" ? (
           <>
             <h2 id="export-title" className="h3">어떤 형식으로 내보낼까요?</h2>

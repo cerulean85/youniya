@@ -39,6 +39,7 @@ export async function createStar(_: CreateState, form: FormData): Promise<Create
       await api("/v1/drafts/current", { method: "DELETE" }).catch(() => null);
       redirect(`/stars/${e.data.star_id}?stopped=1`);
     }
+    if (e instanceof ApiError && e.code === "unlit_daily_limit") return { error: "별빛 없이 띄우기는 하루 10개까지예요. 내일 다시 띄울 수 있어요.", code: e.code };
     if (e instanceof ApiError) return { error: e.message, code: e.code, cost: e.data.cost as number, coins: e.data.coins as number };
     throw e;
   }

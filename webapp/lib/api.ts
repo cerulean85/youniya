@@ -28,7 +28,9 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     // 41 잠시 점검 중이에요: the server is in maintenance (operators switch it from the console).
     if (res.status === 503 && err.code === "maintenance") redirect(`/maintenance${err.until ? `?until=${encodeURIComponent(err.until)}` : ""}`);
     // W-88 잠시 숨을 고르고 있어요: too many requests; back to this screen once retry_after has passed.
-    if (res.status === 429) {
+    // Only throttling (rate_limited, or a 429 from in front of the API without our body): unlit_daily_limit and
+    // nickname_too_soon are 429s too, and the screen that asked says those itself.
+    if (res.status === 429 && (!err.code || err.code === "rate_limited")) {
       const after = Number(err.retry_after ?? res.headers.get("Retry-After")) || 60;
       const back = (await headers()).get("x-yn-path") ?? "/";
       redirect(`/busy?${new URLSearchParams({ after: String(after), back })}`);

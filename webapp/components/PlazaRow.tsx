@@ -13,7 +13,7 @@ export function PlazaRow({ star: s, ago, nickname = true }: { star: PlazaStar; a
       <span className={styles.text}>
         <span className="observation">“{s.quote}”</span>
         <span className={styles.meta}>
-          {nickname && s.nickname && <span className={styles.nick}>{s.nickname}</span>}
+          {nickname && <span className={styles.nick}>{s.nickname ?? "익명의 별지기"}</span>}
           <span>「{s.name}」</span>
           <span>· {s.has_starlight ? ago : "별빛 없음"}</span>
         </span>

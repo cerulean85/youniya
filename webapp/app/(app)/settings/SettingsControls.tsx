@@ -2,6 +2,7 @@
 
 import { useOptimistic, useRef, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
+import { Toast } from "@/components/Flash";
 import { Bell, ChevronRight, Sparkle } from "@/components/icons";
 import { SKIES, type Sky } from "@/lib/types";
 import { deleteAccount, setMarketing, setReduceMotion, setSky, unblock, unshareAll, unshareOne } from "./actions";
@@ -10,12 +11,20 @@ import styles from "./settings.module.css";
 function Switch({ icon, label, on, save }: { icon: React.ReactNode; label: string; on: boolean; save: (next: boolean) => Promise<void> }) {
   const [value, setValue] = useOptimistic(on);
   const [, start] = useTransition();
+  const [failed, setFailed] = useState(0);
   return (
-    <label className={styles.row}>
-      {icon}<span>{label}</span>
-      <input type="checkbox" role="switch" className={styles.switch} checked={value}
-        onChange={(e) => { const next = e.target.checked; start(async () => { setValue(next); await save(next); }); }} />
-    </label>
+    <>
+      <label className={styles.row}>
+        {icon}<span>{label}</span>
+        <input type="checkbox" role="switch" className={styles.switch} checked={value}
+          onChange={(e) => {
+            const next = e.target.checked;
+            // A failed save goes back by itself (useOptimistic) and says so, as on iOS.
+            start(async () => { setValue(next); try { await save(next); } catch { setFailed((n) => n + 1); } });
+          }} />
+      </label>
+      {failed > 0 && <Toast key={failed} title="바꾸지 못했어요" sub="서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요." />}
+    </>
   );
 }
 
@@ -71,12 +80,17 @@ export function DangerZone({ part, shared, icon, apple = false }: { part: "unsha
         <form {...(apple ? { action: "/auth/apple/start", method: "get" } : { action: deleteAccount })}>
           {apple && <input type="hidden" name="purpose" value="delete" />}
           <h2 id="delete-title" className="h2">계정을 영구 삭제할까요?</h2>
-          <p className="body-s muted">모든 별과 별빛, 별자리, 나눈 별과 받은 별빛 한 줄, 남은 코인이 사라지고 되살릴 수 없어요. 결제 기록만 법에 따라 5년 동안 보관해요.</p>
+          <p className="body-s muted">모든 별과 별빛, 별자리, 나눈 별과 받은 별빛 한 줄, 남은 코인이 사라지고 되살릴 수 없어요. 결제 기록만 법에 따라 5년 동안 보관해요. 먼저 내 기록을 내보내 둘 수 있어요.</p>
           {apple && <p className="body-s muted">Apple로 로그인한 계정은 본인 확인을 위해 Apple 로그인을 한 번 더 거쳐요. 삭제하면 Apple ID와의 연결도 끊어져요.</p>}
           <label className={styles.confirm}>
             <span className="caption muted">확인을 위해 &lsquo;삭제&rsquo;라고 적어 주세요</span>
             <input name="confirm" autoComplete="off" required pattern="삭제" />
           </label>
+          {/* Mobile: 먼저 내보내기 opens the export sheet instead. */}
+          <button type="button" className="btn btn-secondary btn-block" onClick={() => {
+            dialog.current?.close();
+            (document.getElementById("export-dialog") as HTMLDialogElement | null)?.showModal();
+          }}>먼저 내보내기</button>
           <div className={styles.dialogActions}>
             <button type="button" className="btn btn-ghost" onClick={() => dialog.current?.close()}>취소</button>
             <Pending label={apple ? "Apple로 확인하고 삭제" : "영구 삭제"} busy={apple ? "Apple로 가는 중…" : "삭제하는 중…"} style={`btn ${styles.dangerButton}`} />

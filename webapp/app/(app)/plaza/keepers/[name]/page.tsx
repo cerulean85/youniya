@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { ChevronLeft } from "@/components/icons";
+import { ChevronLeft, Moon } from "@/components/icons";
+import { StatusScreen } from "@/components/Status";
 import { PlazaRow } from "@/components/PlazaRow";
 import { api, ApiError } from "@/lib/api";
 import { requireNickname, withAgo } from "@/lib/plaza";
@@ -34,7 +34,12 @@ async function Sky({ params }: Pick<PageProps<"/plaza/keepers/[name]">, "params"
   try {
     keeper = await api<Keeper>(`/v1/keepers/${encodeURIComponent(nickname)}`);
   } catch (e) {
-    if (e instanceof ApiError && e.status === 404) notFound();
+    // Mobile KeeperPage: a keeper I blocked (or who blocked me, or left) can't be seen.
+    if (e instanceof ApiError && e.status === 404) return (
+      <StatusScreen icon={<Moon size={22} />} title={`${nickname}의 밤하늘`} body="이 별지기의 밤하늘을 볼 수 없어요.">
+        <Link href="/plaza" className="btn btn-primary btn-block">우주 광장으로</Link>
+      </StatusScreen>
+    );
     throw e;
   }
   await connection();

@@ -26,6 +26,12 @@ export async function saveNickname(_prev: NameState, form: FormData): Promise<Na
     await api("/v1/me/nickname", { method: "PUT", body: JSON.stringify({ name }) });
     await flash(had ? "별지기 이름을 바꿨어요" : "별지기 이름을 정했어요");
   } catch (e) {
+    // Mobile Nickname: the two codes people meet most, said the way the app says them.
+    if (e instanceof ApiError && e.code === "nickname_too_soon") {
+      const at = typeof e.data.next_change === "string" ? new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric" }).format(new Date(e.data.next_change)) : null;
+      return { error: `아직 바꿀 수 없어요. 30일에 한 번 바꿀 수 있어요${at ? ` (${at}부터)` : ""}` };
+    }
+    if (e instanceof ApiError && e.code === "nickname_taken") return { error: "이미 다른 별지기가 쓰고 있는 이름이에요" };
     if (e instanceof ApiError) return { error: e.message };
     throw e;
   }

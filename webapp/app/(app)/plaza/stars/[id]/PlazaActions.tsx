@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useOptimistic, useRef, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { Close, Heart, More, Warn } from "@/components/icons";
@@ -22,7 +23,10 @@ export const REASONS = [
 
 type Lines = "open" | "left" | "closed";
 
-export function PlazaActions({ id, resonated, keeper, lines, name = null, mine = false }: { id: string; resonated: boolean; beside: boolean; keeper: string | null; lines: Lines; name?: string | null; mine?: boolean }) {
+export function PlazaActions({ id, resonated, keeper, lines, name = null, mine = false, restricted = false }: { id: string; resonated: boolean; beside: boolean; keeper: string | null; lines: Lines; name?: string | null; mine?: boolean; restricted?: boolean }) {
+  const router = useRouter();
+  // Mobile PlazaStar: while the plaza is paused for me, 공명 and 건네기 dim and open the note about it instead.
+  const paused = () => router.push("/plaza?restricted=1");
   const [on, setOn] = useOptimistic(resonated);
   const [, start] = useTransition();
   const report = useRef<HTMLDialogElement>(null);
@@ -33,15 +37,15 @@ export function PlazaActions({ id, resonated, keeper, lines, name = null, mine =
     <>
       {!mine && <MoreMenu onReport={() => report.current?.showModal()} onBlock={() => block.current?.showModal()} />}
       <div className={styles.actions}>
-        <button type="button" className={`btn ${on ? styles.on : "btn-secondary"}`} aria-pressed={on}
-          onClick={() => start(async () => { setOn(!on); await toggleResonance(id, !on); })}>
+        <button type="button" className={`btn ${on ? styles.on : "btn-secondary"}`} aria-pressed={on} data-paused={restricted || undefined}
+          onClick={() => restricted ? paused() : start(async () => { setOn(!on); await toggleResonance(id, !on); })}>
           <Heart size={16} />{on ? "공명했어요" : "공명 남기기"}
         </button>
         {keeper ? <Link href={keeper} className="btn btn-primary">이 별지기의 밤하늘 보기</Link> : <span />}
       </div>
       {/* 107: once left, or when the owner doesn't take lines, a dim note instead of the button. */}
       {lines === "open" ? (
-        <button type="button" className={styles.lineButton} onClick={() => line.current?.showModal()}>✦ 별빛 한 줄 건네기</button>
+        <button type="button" className={styles.lineButton} data-paused={restricted || undefined} onClick={() => restricted ? paused() : line.current?.showModal()}>✦ 별빛 한 줄 건네기</button>
       ) : (
         <p className={`caption faint ${styles.lineNote}`}>{lines === "left" ? "이미 별빛 한 줄을 건넸어요" : "이 별은 별빛 한 줄을 받지 않아요"}</p>
       )}

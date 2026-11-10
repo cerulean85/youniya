@@ -48,7 +48,7 @@ async function Detail({ params }: Pick<PageProps<"/plaza/stars/[id]">, "params">
         <p className="caption faint">{longDate(star.created_at)}</p>
         <h1 className="h2">{star.title_masked ?? star.name}</h1>
         <div className={styles.tags}>
-          {keeper && <Link href={keeper} className={styles.tag}>{star.nickname}</Link>}
+          {keeper ? <Link href={keeper} className={styles.tag}>{star.nickname}</Link> : <span className={styles.tag}>익명의 별지기</span>}
           {star.has_starlight ? <span className={`${styles.tag} ${styles.gold}`}>깊이 {star.depth_level}단계</span>
             : <span className={styles.tag}>별빛 없는 별</span>}
         </div>
@@ -60,6 +60,7 @@ async function Detail({ params }: Pick<PageProps<"/plaza/stars/[id]">, "params">
       </blockquote>
       {star.full_text && star.body_masked && <div className={`journal ${styles.full}`}>{star.body_masked}</div>}
       <PlazaActions id={star.id} resonated={star.resonated} beside={star.beside} keeper={keeper} name={star.nickname} mine={!!star.nickname && star.nickname === me.nickname}
+        restricted={!!me.plaza_restricted_until && new Date(me.plaza_restricted_until) > new Date()}
         lines={star.receive_lines ? (star.line_left ? "left" : "open") : "closed"} />
     </article>
   );

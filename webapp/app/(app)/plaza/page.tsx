@@ -91,9 +91,15 @@ async function Plaza({ searchParams }: Pick<PageProps<"/plaza">, "searchParams">
       <div className={styles.body}>
         <section className={styles.records} aria-label="나눈 별">
           {rows.length === 0 ? (
-            <p className={`body-m faint ${styles.listEmpty}`}>
-              {filter === "beside" ? "아직 곁에 둔 별이 없어요. 공명하거나 곁에 두면 이곳에 모여요." : filter === "similar" ? "나와 결이 비슷한 별이 아직 없어요." : "아직 광장에 뜬 별이 없어요."}
-            </p>
+            filter === "beside" ? (
+              <div className={styles.listEmpty}>
+                <p className="label-m">곁에 둔 별이 아직 없어요</p>
+                <p className="body-s muted">마음이 닿은 별에 공명을 남기면 여기서 다시 모아 볼 수 있어요.</p>
+                <Link href="/plaza" className="btn btn-secondary">새로 뜬 것 둘러보기</Link>
+              </div>
+            ) : (
+              <p className={`body-m faint ${styles.listEmpty}`}>{filter === "similar" ? "나와 결이 비슷한 별이 아직 없어요." : "아직 광장에 뜬 별이 없어요."}</p>
+            )
           ) : (
             <ul className={styles.list}>
               {rows.map(({ star, ago }) => <li key={star.id}><PlazaRow star={star} ago={ago} /></li>)}
