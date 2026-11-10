@@ -1133,7 +1133,7 @@
           "stars"
         ],
         "summary": "Light Star",
-        "description": "17.1 나중에 별빛 받기, priced like a new lit star; 36 다시 시도 too. The writing is locked after.",
+        "description": "17.1 나중에 별빛 받기, priced like a new lit star; 36 다시 시도 too. The writing is locked after.\n20장: with `attempt_id` it can be stopped (POST /v1/starlight/attempts/{attempt_id}/cancel).",
         "operationId": "light_star_v1_stars__star_id__starlight_post",
         "security": [
           {
@@ -1151,6 +1151,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/LightIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1194,6 +1211,53 @@
             "schema": {
               "type": "string",
               "title": "Star Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/starlight/attempts/{attempt_id}/cancel": {
+      "post": {
+        "tags": [
+          "stars"
+        ],
+        "summary": "Cancel Starlight",
+        "description": "20장 별빛 받기 그만두기 (and the app's own timeout or lost connection). Safe to send more than once,\nand before the 별빛 받기 itself reaches the server.\n- Still reading: the reading is dropped when it comes; nothing is used.\n- Already done (within CANCEL_WINDOW): the starlight is taken off and what it used comes back\n  (`refunded.used`: member | free | coins, `refunded.coins`).\nThe star stays without starlight with `starlight_cancelled` true; 별빛 받기 on it again starts afresh.\nA new star (별빛 받고 띄우기) stopped this way counts toward today's 별빛 없이 띄우기.\n`star` is null when the 별빛 받기 has not reached the server yet; it will stop when it does.",
+        "operationId": "cancel_starlight_v1_starlight_attempts__attempt_id__cancel_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "attempt_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{8,64}$",
+              "title": "Attempt Id"
             }
           }
         ],
@@ -1810,215 +1874,6 @@
             "HTTPBearer": []
           }
         ]
-      }
-    },
-    "/v1/telescope/offer": {
-      "get": {
-        "tags": [
-          "telescope"
-        ],
-        "summary": "Offer",
-        "description": "`free_left`: a member's monthly ones, this month's free one and the sign-up one, if still unused.",
-        "operationId": "offer_v1_telescope_offer_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/v1/telescope/reports": {
-      "post": {
-        "tags": [
-          "telescope"
-        ],
-        "summary": "Create Report",
-        "operationId": "create_report_v1_telescope_reports_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/youniya_api__routers__telescope__ReportIn"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "telescope"
-        ],
-        "summary": "List Reports",
-        "description": "26 리포트 목록, 27 정렬",
-        "operationId": "list_reports_v1_telescope_reports_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "order",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "enum": [
-                "newest",
-                "oldest"
-              ],
-              "type": "string",
-              "default": "newest",
-              "title": "Order"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/telescope/reports/{report_id}": {
-      "get": {
-        "tags": [
-          "telescope"
-        ],
-        "summary": "Get Report",
-        "operationId": "get_report_v1_telescope_reports__report_id__get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "report_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Report Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/telescope/reports/{report_id}/save": {
-      "post": {
-        "tags": [
-          "telescope"
-        ],
-        "summary": "Save Report",
-        "description": "10 리포트 보관하기",
-        "operationId": "save_report_v1_telescope_reports__report_id__save_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "report_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Report Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
       }
     },
     "/v1/coins": {
@@ -3203,7 +3058,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/youniya_api__routers__plaza__ReportIn"
+                "$ref": "#/components/schemas/ReportIn"
               }
             }
           }
@@ -3272,7 +3127,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/youniya_api__routers__plaza__ReportIn"
+                "$ref": "#/components/schemas/ReportIn"
               }
             }
           }
@@ -3601,119 +3456,6 @@
             "HTTPBearer": []
           }
         ]
-      }
-    },
-    "/v1/reports/monthly": {
-      "get": {
-        "tags": [
-          "membership"
-        ],
-        "summary": "List Monthly",
-        "description": "Newest first: month, title and when it was made (open one with GET …/{month}).",
-        "operationId": "list_monthly_v1_reports_monthly_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      },
-      "post": {
-        "tags": [
-          "membership"
-        ],
-        "summary": "Make Monthly",
-        "description": "The button on 123: the same rule as the 1st of the month, for last month by default.\nAn existing report is returned as it is.",
-        "operationId": "make_monthly_v1_reports_monthly_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/MonthlyIn"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/v1/reports/monthly/{month}": {
-      "get": {
-        "tags": [
-          "membership"
-        ],
-        "summary": "Get Monthly",
-        "operationId": "get_monthly_v1_reports_monthly__month__get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "month",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Month"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
       }
     },
     "/v1/admin/status": {
@@ -7596,6 +7338,31 @@
               }
             ],
             "title": "Apple Authorization Code"
+          },
+          "apple_client_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apple Client Id"
+          },
+          "apple_redirect_uri": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500,
+                "pattern": "^https://"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apple Redirect Uri"
           }
         },
         "type": "object",
@@ -7877,6 +7644,24 @@
         ],
         "title": "KeeperAction"
       },
+      "LightIn": {
+        "properties": {
+          "attempt_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{8,64}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attempt Id"
+          }
+        },
+        "type": "object",
+        "title": "LightIn"
+      },
       "LineIn": {
         "properties": {
           "text": {
@@ -8025,25 +7810,6 @@
           "reason"
         ],
         "title": "MinVersionIn"
-      },
-      "MonthlyIn": {
-        "properties": {
-          "month": {
-            "anyOf": [
-              {
-                "type": "string",
-                "pattern": "^\\d{4}-\\d{2}$"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Month",
-            "description": "YYYY-MM; default: last month"
-          }
-        },
-        "type": "object",
-        "title": "MonthlyIn"
       },
       "NebulaEdit": {
         "properties": {
@@ -8493,6 +8259,36 @@
         ],
         "title": "ReportAction"
       },
+      "ReportIn": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "hurtful",
+              "personal_info",
+              "spam",
+              "other",
+              "self_harm",
+              "harassment",
+              "hate",
+              "impersonation",
+              "advertising",
+              "nickname"
+            ],
+            "title": "Reason"
+          },
+          "block": {
+            "type": "boolean",
+            "title": "Block",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "ReportIn"
+      },
       "ScanIn": {
         "properties": {
           "text": {
@@ -8828,6 +8624,18 @@
             "type": "array",
             "maxItems": 200,
             "title": "Link To"
+          },
+          "attempt_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{8,64}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attempt Id"
           }
         },
         "type": "object",
@@ -9057,58 +8865,6 @@
           "reason"
         ],
         "title": "InviteIn"
-      },
-      "youniya_api__routers__plaza__ReportIn": {
-        "properties": {
-          "reason": {
-            "type": "string",
-            "enum": [
-              "hurtful",
-              "personal_info",
-              "spam",
-              "other",
-              "self_harm",
-              "harassment",
-              "hate",
-              "impersonation",
-              "advertising",
-              "nickname"
-            ],
-            "title": "Reason"
-          },
-          "block": {
-            "type": "boolean",
-            "title": "Block",
-            "default": false
-          }
-        },
-        "type": "object",
-        "required": [
-          "reason"
-        ],
-        "title": "ReportIn"
-      },
-      "youniya_api__routers__telescope__ReportIn": {
-        "properties": {
-          "star_ids": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array",
-                "maxItems": 30,
-                "minItems": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Star Ids"
-          }
-        },
-        "type": "object",
-        "title": "ReportIn"
       }
     },
     "securitySchemes": {

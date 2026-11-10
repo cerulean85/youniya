@@ -21,7 +21,7 @@ def _me(client, h):
 def test_one_free_star_a_day_then_five_coins(make_app, monkeypatch):
     client = _client(make_app)
     h = sign_in(client)
-    assert _me(client, h) == (1, 2, 0)
+    assert _me(client, h) == (1, 0, 0)  # no free telescope (removed 20261110)
     assert "free_story" not in client.get("/v1/me", headers=h).json()
 
     first = client.post("/v1/stars", json=STAR, headers=h).json()
@@ -56,19 +56,11 @@ def test_one_free_star_a_day_then_five_coins(make_app, monkeypatch):
     assert _me(client, h)[0] == 1
 
 
-def test_telescope_month_and_sign_up(make_app, monkeypatch):
+def test_no_free_telescope_any_more(make_app, monkeypatch):
     client = _client(make_app)
     h = sign_in(client)
-    float_star(client, h)
-    for _ in range(2):
-        assert client.post("/v1/telescope/reports", json={}, headers=h).json()["charged"] == 0
     assert _me(client, h)[1] == 0
-    assert client.post("/v1/telescope/reports", json={}, headers=h).json()["error"]["cost"] == 20
-    # A new month brings one more; the unused ones never pile up.
     monkeypatch.setattr("youniya_api.allowance.this_month", lambda: "2099-01")
-    assert client.get("/v1/telescope/offer", headers=h).json() | {"coins": None} == {
-        "free": True, "free_left": 1, "cost": 0, "coins": None, "enough": True}
-    assert client.post("/v1/telescope/reports", json={}, headers=h).json()["charged"] == 0
     assert _me(client, h)[1] == 0
 
 

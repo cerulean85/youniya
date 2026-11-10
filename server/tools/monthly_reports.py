@@ -27,6 +27,11 @@ from youniya_api.security import Cipher  # noqa: E402
 
 
 def main() -> int:
+    print("월간 마음 리포트 was removed (기획서 13.5, 2026-11-09): nothing to do.")
+    return 0
+
+
+def _old_main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--month")
     a = ap.parse_args()

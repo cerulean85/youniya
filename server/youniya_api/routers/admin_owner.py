@@ -134,7 +134,9 @@ def coins_ledger(month: str | None = Query(None, pattern=r"^\d{4}-\d{2}$"), limi
 def ai_usage(month: str | None = Query(None, pattern=r"^\d{4}-\d{2}$"), db: Session = Depends(get_db)):
     m, _, _ = _month(month)
     features = []
-    for u in db.scalars(select(AiUsage).where(AiUsage.month == m).order_by(AiUsage.krw.desc())):
+    # 마음 망원경 was removed (20261110): its row is left out; its cost stays in total_krw.
+    for u in db.scalars(select(AiUsage).where(AiUsage.month == m, AiUsage.feature != "telescope")
+                        .order_by(AiUsage.krw.desc())):
         features.append({
             "feature": u.feature, "requests": u.requests, "calls": u.calls, "krw": round(u.krw, 1),
             "krw_per_request": round(u.krw / u.requests, 2) if u.requests else None,

@@ -57,10 +57,10 @@ def test_member_gets_ten_a_day_of_each_then_the_free_ones_then_coins(make_app):
     user_id, joined = _join(apple, client, h)
     assert joined | {"expires_at": None} == {
         "active": True, "product_id": "membership_monthly", "expires_at": None, "auto_renew": True,
-        "status": "active", "stars_left_today": 10, "telescope_left_today": 10}
+        "status": "active", "stars_left_today": 10, "telescope_left_today": 0}
     me = client.get("/v1/me", headers=h).json()
     assert me["membership"]["active"] is True
-    assert (me["free_star_today"], me["free_telescope"]) == (11, 12)  # member + free ones
+    assert (me["free_star_today"], me["free_telescope"]) == (11, 0)  # member + free ones; no telescope
     assert client.patch("/v1/me/settings", json={"sky": "rose"}, headers=h).json()["sky"] == "rose"
 
     star = {"mood": "insight", "title": "t", "body": DEEP_BODY, "mode": "float"}
@@ -74,23 +74,18 @@ def test_member_gets_ten_a_day_of_each_then_the_free_ones_then_coins(make_app):
         from youniya_api.models import User
 
         u = db.get(User, user_id)
-        u.member_star_count = u.member_telescope_count = 10
+        u.member_star_count = 10
         db.commit()
     assert client.post("/v1/stars", json=star, headers=h).json()["charged"] == 0  # the daily free one
     r = client.post("/v1/stars", json=star, headers=h)
     assert r.status_code == 402 and r.json()["error"]["cost"] == 5
-    for _ in range(2):  # this month's free one and the sign-up one
-        assert client.post("/v1/telescope/reports", json={}, headers=h).json()["charged"] == 0
-    assert client.post("/v1/telescope/reports", json={}, headers=h).json()["error"]["cost"] == 20
-
-    # A new Korean day: ten more of each.
+    # A new Korean day: ten more.
     import youniya_api.allowance as allowance
 
     real = allowance.today
     allowance.today = lambda: "2099-01-01"
     try:
-        assert client.get("/v1/membership", headers=h).json()["telescope_left_today"] == 10
-        assert client.post("/v1/telescope/reports", json={}, headers=h).json()["charged"] == 0
+        assert client.get("/v1/membership", headers=h).json()["stars_left_today"] == 10
     finally:
         allowance.today = real
 
@@ -129,26 +124,15 @@ def test_notifications_keep_the_subscription_current(make_app):
     assert coins.json() == {"handled": False}  # the coin path is untouched
 
 
-def test_monthly_report(make_app):
+def test_monthly_report_is_gone(make_app):
+    """월간 마음 리포트 was removed (기획서 13.5): 410 for members too, nothing made."""
     apple, client = _app(make_app)
     h = sign_in(client)
-    month = this_month()
-    assert client.post("/v1/reports/monthly", json={"month": month}, headers=h).status_code == 403
     _join(apple, client, h)
-    for _ in range(4):
-        float_star(client, h)
-    r = client.post("/v1/reports/monthly", json={"month": month}, headers=h)
-    assert r.status_code == 422 and r.json()["error"]["needed"] == 5
-    float_star(client, h, title="가장 밝은 별")
-    report = client.post("/v1/reports/monthly", json={"month": month}, headers=h).json()
-    assert report["month"] == month and report["star_count"] == 5 and report["title"].endswith("달")
-    assert [lens["key"] for lens in report["lenses"]] == ["depth", "clarity", "weight"]
-    assert report["brightest"]["sentence"] in DEEP_BODY and report["question"]
-    # Asking again returns the same one; it is listed and can be opened.
-    assert client.post("/v1/reports/monthly", json={"month": month}, headers=h).json()["id"] == report["id"]
-    assert [i["month"] for i in client.get("/v1/reports/monthly", headers=h).json()["items"]] == [month]
-    assert client.get(f"/v1/reports/monthly/{month}", headers=h).json()["id"] == report["id"]
-    assert client.get("/v1/reports/monthly/2000-01", headers=h).status_code == 404
+    for method, path in (("POST", "/v1/reports/monthly"), ("GET", "/v1/reports/monthly"),
+                         ("GET", f"/v1/reports/monthly/{this_month()}")):
+        r = client.request(method, path, json={} if method == "POST" else None, headers=h)
+        assert r.status_code == 410 and r.json()["error"]["code"] == "feature_removed", path
 
 
 def test_season_silhouettes_are_for_members_and_stay(make_app):

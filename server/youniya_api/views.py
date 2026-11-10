@@ -30,6 +30,12 @@ def shared_star_ids(db: Session, user_id: str) -> set[str]:
     return set(db.scalars(select(StarShare.star_id).where(StarShare.user_id == user_id)))
 
 
+def _shape(star: Star, cipher: Cipher) -> dict | None:
+    if star.state != "floated" or not star.analysis_enc:
+        return None
+    return cipher.dec_json(star.analysis_enc).get("shape")
+
+
 def star_view(star: Star, cipher: Cipher, shared: bool = False, body: bool = True) -> dict:
     out = {
         "id": star.id,
@@ -45,6 +51,10 @@ def star_view(star: Star, cipher: Cipher, shared: bool = False, body: bool = Tru
         "prism_version": star.prism_version,  # 17.6 "2026년 11월 방식으로 읽었어요"; null before it
         "rewrite_of": star.rewrite_of,
         "analysis_failed": star.analysis_failed,
+        # 20장: the last 별빛 받기 was stopped (별빛 받기 취소됨); the star has no starlight.
+        "starlight_cancelled": bool(star.starlight_cancelled),
+        # 76 별 모양 from the reading ({points, sharpness}); null without starlight. Same as analysis.shape.
+        "shape": _shape(star, cipher),
         "shared": shared,
     }
     if body:

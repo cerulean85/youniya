@@ -92,7 +92,7 @@ def test_one_lost_reading_still_scores(monkeypatch):
     r = PrismEngine(api_key="k", model="m", thinking="low").evaluate("t", DEEP_BODY)
     assert r.status == "ok" and r.analysis["starlight"] == 955
     assert {k: seen[0][k] for k in ("thinking", "timeout", "retries", "cache")} == {
-        "thinking": "low", "timeout": 60.0, "retries": 0, "cache": None}
+        "thinking": "low", "timeout": 30.0, "retries": 0, "cache": None}
     assert seen[0]["prefix"].startswith("# Role")  # the fixed part goes first, for the cache
 
     monkeypatch.setattr("youniya_api.prism.engine.generate_json", calls(["ok", "boom", "bad"]))

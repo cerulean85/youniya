@@ -1,7 +1,7 @@
 """별지기 멤버십 (기획서 13장, v1.1). Off unless MEMBERSHIP=1: then nobody is a member.
 
-A member has MEMBER_DAILY_LIMIT floats and telescope reports a Korean day each,
-used before the free ones everybody has; after both, coins. Also a 월간 마음 리포트 and every sky."""
+A member has MEMBER_DAILY_LIMIT floats a Korean day (the telescope benefit was removed 20261110),
+used before the free ones everybody has; after both, coins. Also every sky (the 월간 마음 리포트 went 20261109)."""
 
 from datetime import datetime, timezone
 
@@ -52,6 +52,15 @@ def use_today(db: Session, user: User, feature: str) -> bool:
     return bool(done)
 
 
+def give_back_today(db: Session, user: User, feature: str) -> bool:
+    """20장 그만두기: one of today's member uses back. One used on an earlier day is not given back."""
+    column = getattr(User, COUNTS[feature])
+    done = db.execute(update(User).where(User.id == user.id, User.member_day == allowance.today(), column > 0)
+                      .values({column: column - 1})).rowcount
+    db.refresh(user)
+    return bool(done)
+
+
 def sky_allowed(sky: str, member: bool) -> bool:
     return member or sky in FREE_SKIES
 
@@ -63,7 +72,7 @@ def view(db: Session, settings, user: User) -> dict:
             "expires_at": sub.expires_at.isoformat() if sub else None,
             "auto_renew": sub.auto_renew if sub else False, "status": sub.status if sub else None,
             "stars_left_today": left_today(user, "star") if member else 0,
-            "telescope_left_today": left_today(user, "telescope") if member else 0}
+            "telescope_left_today": 0}  # 마음 망원경 removed (20261110); kept for older apps
 
 
 def current_for(db: Session, tx: dict) -> Subscription | None:
@@ -132,5 +141,5 @@ def free_summary(db: Session, settings, user: User) -> dict:
     out = allowance.summary(user, settings.free_stars_per_day)
     if is_member(db, settings, user):
         out = {"free_star_today": out["free_star_today"] + left_today(user, "star"),
-               "free_telescope": out["free_telescope"] + left_today(user, "telescope")}
+               "free_telescope": 0}
     return out

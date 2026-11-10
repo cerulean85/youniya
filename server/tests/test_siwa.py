@@ -11,18 +11,23 @@ from youniya_api.siwa import ReauthRequired, SiwaClient
 from .conftest import sign_in
 
 
+def _id_token(sub):
+    return jwt.encode({"sub": sub, "aud": "com.example.app"}, "x" * 32, algorithm="HS256")
+
+
 class FakeSiwa:
     def __init__(self, fail=None):
         self.codes, self.fail = [], fail
 
-    def revoke_with_code(self, code):
+    def revoke_with_code(self, code, client_id=None, redirect_uri=None, expected_sub=None):
         self.codes.append(code)
+        self.calls = getattr(self, "calls", []) + [(client_id, redirect_uri)]
         if self.fail:
             raise self.fail
 
 
-def _client(make_app, siwa):
-    app = make_app()
+def _client(make_app, siwa, **kw):
+    app = make_app(**kw)
     app.state.siwa = siwa
     return TestClient(app)
 
@@ -79,15 +84,50 @@ def test_client_secret_and_calls(monkeypatch):
         if url.endswith("/auth/token"):
             if data["code"] == "bad":
                 return httpx.Response(400, json={"error": "invalid_grant"}, request=httpx.Request("POST", url))
-            return httpx.Response(200, json={"access_token": "a", "refresh_token": "r"}, request=httpx.Request("POST", url))
+            return httpx.Response(200, json={"access_token": "a", "refresh_token": "r", "id_token": _id_token("apple-sub")},
+                                  request=httpx.Request("POST", url))
         return httpx.Response(200, request=httpx.Request("POST", url))
     monkeypatch.setattr(httpx, "post", post)
-    c.revoke_with_code("good")
+    c.revoke_with_code("good", expected_sub="apple-sub")
     assert calls[0][1]["grant_type"] == "authorization_code" and calls[0][1]["client_id"] == "com.example.app"
     assert calls[1][0].endswith("/auth/revoke") and calls[1][1]["token"] == "r"
     assert calls[1][1]["token_type_hint"] == "refresh_token"
+    calls.clear()
+    try:  # another Apple ID's code: refused, and nothing revoked
+        c.revoke_with_code("good", expected_sub="someone-else")
+        raise AssertionError("expected ReauthRequired")
+    except ReauthRequired as e:
+        assert str(e) == "sub_mismatch" and not any(u.endswith("/auth/revoke") for u, _ in calls)
     try:
         c.revoke_with_code("bad")
         raise AssertionError("expected ReauthRequired")
     except ReauthRequired as e:
         assert str(e) == "invalid_grant"
+
+
+def test_web_code_uses_its_services_id(make_app):
+    siwa = FakeSiwa()
+    client = _client(make_app, siwa, apple_bundle_id="com.example.app",
+                     apple_client_ids=("com.example.app", "com.example.app.web"))
+    h = sign_in(client)
+    r = client.request("DELETE", "/v1/me", headers=h, json={"apple_authorization_code": "w",
+                       "apple_client_id": "evil.client", "apple_redirect_uri": "https://example.com/cb"})
+    assert r.status_code == 422 and r.json()["error"]["code"] == "unknown_apple_client" and siwa.codes == []
+    r = client.request("DELETE", "/v1/me", headers=h, json={"apple_authorization_code": "w",
+                       "apple_client_id": "com.example.app.web", "apple_redirect_uri": "https://example.com/cb"})
+    assert r.status_code == 204 and siwa.calls == [("com.example.app.web", "https://example.com/cb")]
+
+
+def test_web_client_secret_and_redirect(monkeypatch):
+    key = ec.generate_private_key(ec.SECP256R1())
+    pem = key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8,
+                            serialization.NoEncryption()).decode()
+    c = SiwaClient("TEAM123456", "KEY1234567", pem, "com.example.app")
+    sent = []
+    monkeypatch.setattr(httpx, "post", lambda url, data, timeout: sent.append(data) or httpx.Response(
+        200, json={"access_token": "a"}, request=httpx.Request("POST", url)))
+    c.revoke_with_code("w", "com.example.app.web", "https://example.com/cb")
+    assert sent[0]["client_id"] == "com.example.app.web" and sent[0]["redirect_uri"] == "https://example.com/cb"
+    sub = jwt.decode(sent[0]["client_secret"], key.public_key(), algorithms=["ES256"],
+                     audience="https://appleid.apple.com")["sub"]
+    assert sub == "com.example.app.web" and sent[1]["token"] == "a" and sent[1]["token_type_hint"] == "access_token"

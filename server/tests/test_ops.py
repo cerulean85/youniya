@@ -10,6 +10,16 @@ from .conftest import CALM_BODY, float_star, sign_in
 from .test_storekit import BUNDLE, FakeApple
 
 
+
+def _spend(client, amount):
+    """Coins spent on something (any feature): taken straight from the balance."""
+    from youniya_api import coins
+    from youniya_api.models import User
+    with client.app.state.sessions() as db:
+        u = db.query(User).first()
+        assert coins.spend(db, u, amount, "별 띄우기")
+        db.commit()
+
 def test_rate_limiter_window(make_app):
     limiter = RateLimiter(make_app().state.sessions)
     assert [limiter.hit("k", 2, 60, now=1000) for _ in range(2)] == [None, None]
@@ -121,11 +131,7 @@ def test_refund_never_goes_below_zero(make_app):
     client = TestClient(app)
     h = sign_in(client)
     client.post("/v1/coins/purchases", json={"signed_transaction": apple.jws(transactionId="77")}, headers=h)
-    float_star(client, h)
-    for _ in range(2):
-        client.post("/v1/telescope/reports", json={}, headers=h)  # free: this month's and the sign-up one
-    for _ in range(4):
-        assert client.post("/v1/telescope/reports", json={}, headers=h).status_code == 201  # 80 spent
+    _spend(client, 80)
     assert client.get("/v1/coins", headers=h).json()["coins"] == 40
 
     client.post("/v1/storekit/notifications", json={"signedPayload": _refund_note(apple, "77")})
@@ -158,9 +164,7 @@ def test_empty_refund_row_is_hidden_but_kept(make_app):
     client.post("/v1/coins/purchases", json={"signed_transaction": apple.jws(transactionId="88", productId="coin_50")},
                 headers=h)
     float_star(client, h)
-    client.post("/v1/telescope/reports", json={}, headers=h)  # free
-    client.post("/v1/telescope/reports", json={}, headers=h)  # the sign-up one, free too
-    with app.state.sessions() as db:  # spend the rest some other way
+    with app.state.sessions() as db:  # spend it all
         from sqlalchemy import update
 
         from youniya_api.models import User
@@ -212,8 +216,7 @@ def test_purchase_records_outlive_the_account(make_app):
     h = sign_in(client)
     client.post("/v1/coins/purchases", json={"signed_transaction": apple.jws(transactionId="910")}, headers=h)
     float_star(client, h)
-    for _ in range(3):
-        client.post("/v1/telescope/reports", json={}, headers=h)  # two free, then 20 coins
+    _spend(client, 20)  # a spend row: it goes with the account
     assert client.delete("/v1/me", headers=h).status_code == 204
 
     with app.state.sessions() as db:

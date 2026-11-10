@@ -28,7 +28,9 @@ def stars_left(user: User, per_day: int) -> int:
 
 
 def telescopes_left(user: User) -> int:
-    return int(user.free_telescope_month != this_month()) + int(not user.free_telescope_used)
+    """마음 망원경 was removed (20261110): always 0. /v1/me, /v1/coins and 별지기 멤버십 keep their telescope
+    fields at 0/false until the apps stop reading them."""
+    return 0
 
 
 def summary(user: User, per_day: int) -> dict:
@@ -47,6 +49,12 @@ def use_star(db: Session, user: User, per_day: int) -> bool:
                    free_star_day=day, free_star_count=1) if per_day > 0 else False) or \
         _claim(db, user, User.free_star_day == day, User.free_star_count < per_day,
                free_star_count=User.free_star_count + 1)
+
+
+def give_back_star(db: Session, user: User) -> bool:
+    """20장 그만두기: today's free float back. One used on an earlier day is not given back."""
+    return _claim(db, user, User.free_star_day == today(), User.free_star_count > 0,
+                  free_star_count=User.free_star_count - 1)
 
 
 def use_unlit(db: Session, user: User, per_day: int) -> bool:

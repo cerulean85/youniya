@@ -148,42 +148,25 @@ def test_growth_stages_go_in_order():
 
 # --- telescope and coins -----------------------------------------------------
 
-def test_telescope_free_ones_then_20_coins(client):
+def test_telescope_is_gone_and_charges_nothing(client):
+    """마음 망원경 was removed (20261110): every old path is 410, nothing is charged or used up."""
     h = sign_in(client)
     star = float_star(client, h)
-    assert client.get("/v1/telescope/offer", headers=h).json()["free_left"] == 2  # this month + sign-up
-    first = client.post("/v1/telescope/reports", json={"star_ids": [star["id"]]}, headers=h)
-    assert first.status_code == 201 and first.json()["charged"] == 0
-    assert client.post("/v1/telescope/reports", json={}, headers=h).json()["charged"] == 0
-    report = first.json()["report"]
-    assert [lens["label"] for lens in report["lenses"]] == ["별의 깊이", "빛의 선명함", "마음의 무게"]
-    assert report["evidence"] in DEEP_BODY
-
-    # 29 코인이 조금 부족해요
-    r = client.post("/v1/telescope/reports", json={}, headers=h)
-    assert r.status_code == 402 and r.json()["error"]["cost"] == 20
-
-    buy = client.post("/v1/coins/purchases", json={"product_id": "coin_110", "transaction_id": "t1"}, headers=h)
-    assert buy.json()["coins"] == 110
-    # The same store transaction never pays twice.
-    assert client.post("/v1/coins/purchases", json={"product_id": "coin_110", "transaction_id": "t1"},
-                       headers=h).json()["already_processed"] is True
-
-    paid = client.post("/v1/telescope/reports", json={}, headers=h).json()
-    assert paid["charged"] == 20 and paid["coins"] == 90
-    history = [(e["kind"], e["delta"]) for e in client.get("/v1/coins/history", headers=h).json()["items"]]
-    assert history == [("spend", -20), ("purchase", 110)]
-    titles = [r["title"] for r in client.get("/v1/telescope/reports", headers=h).json()["items"]]
-    assert len(titles) == 3
+    client.post("/v1/coins/purchases", json={"product_id": "coin_110", "transaction_id": "t1"}, headers=h)
+    for method, path in (("GET", "/v1/telescope/offer"), ("POST", "/v1/telescope/reports"),
+                         ("GET", "/v1/telescope/reports/x"),
+                         ("POST", "/v1/telescope/reports/x/save")):
+        r = client.request(method, path, json={"star_ids": [star["id"]]} if method == "POST" else None, headers=h)
+        assert r.status_code == 410 and r.json()["error"]["code"] == "feature_removed", path
+    # Older iOS builds load the list when they open: empty, not an error.
+    assert client.get("/v1/telescope/reports", headers=h).json() == {"items": []}
+    me = client.get("/v1/me", headers=h).json()
+    assert me["coins"] == 110 and me["free_telescope"] == 0 and me["free_telescope_available"] is False
+    assert "telescope" not in client.get(f"/v1/stars/{star['id']}", headers=h).json()
+    assert [e["kind"] for e in client.get("/v1/coins/history", headers=h).json()["items"]] == ["purchase"]
 
 
-def test_failed_report_charges_nothing(client, monkeypatch):
-    h = sign_in(client)
-    float_star(client, h)
-    monkeypatch.setattr("youniya_api.routers.telescope.build_report",
-                        lambda *a: (_ for _ in ()).throw(RuntimeError("down")))
-    assert client.post("/v1/telescope/reports", json={}, headers=h).status_code == 502
-    assert client.get("/v1/telescope/offer", headers=h).json()["free"] is True
+
 
 
 def test_unverified_purchase_adds_nothing(make_app):

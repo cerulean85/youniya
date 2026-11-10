@@ -14,9 +14,15 @@ def test_export_has_the_new_parts(client):
     lit = float_star(client, h, title="빛난 별")
     plain = client.post("/v1/stars", json={"moods": ["calm", "sorrow"], "title": "조용한 별", "body": "첫 문장이에요. 둘째.",
                                            "mode": "unlit", "link_to": [lit["id"]]}, headers=h).json()["star"]
-    client.post("/v1/telescope/reports", json={"star_ids": [lit["id"]]}, headers=h)
+    # Telescope results made before the feature was removed (20261110) stay in the export.
+    from youniya_api.models import TelescopeReport, User
+    with client.app.state.sessions() as db:
+        report = {"star_name": "기다림의 별", "mood_interpretation": "기다림 속에 안도가 있어요.", "question": "q"}
+        db.add(TelescopeReport(user_id=db.query(User).first().id, star_ids=[lit["id"]],
+                               report_enc=client.app.state.cipher.enc_json(report)))
+        db.commit()
     text = client.get("/v1/me/export", headers=h).text
-    assert "별의 깊이:" in text and "별빛 풀이:" in text and "마음 망원경:" in text
+    assert "별의 깊이:" in text and "별빛 풀이:" in text and "마음 망원경: 기다림의 별" in text
     assert "이어진 별: 조용한 별" in text and "이어진 별: 빛난 별" in text
     assert "평온 · 슬픔 · 별빛 없는 별" in text
     assert "별자리 이야기" in text and "첫 문장이에요." in text

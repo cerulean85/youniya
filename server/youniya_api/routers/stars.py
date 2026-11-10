@@ -1,21 +1,23 @@
 """Stars: 05 별 만들기, 07 별 카드, 12 별 상세, 14–16 다시 쓰기, 15 삭제, 34 임시 저장,
 115–119 기록, 82 밝기 흐름, 08/86/66 성장."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Path, Query, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import delete, func, or_, select
+from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..deps import ApiError, consented_user, get_cipher, get_db
 from ..blocks import hidden_users
-from ..models import Draft, Nebula, Star, StarLine, StarLineReport, StarLink, StarShare, TelescopeReport, User, now
-from ..prism.filters import CRISIS_GUIDANCE, has_crisis_signal
+from ..models import (Draft, Nebula, Star, StarLine, StarLineReport, StarLink, StarlightAttempt, StarShare, User,
+                      now)
+from ..prism.filters import CRISIS_GUIDANCE, foul_reason, has_crisis_signal
 from .. import ai_cost, allowance, coins, membership, privacy
 from .blocks import block
-from ..rules import (LINE_REPORT_REASONS, DEEP_DEPTH_SCORE, FIRST_STAGE_STARS, STAGE_NAMES, STAR_FLOAT_COST, SUPERNOVA_STARLIGHT,
+from ..rules import (LINE_REPORT_REASONS, MIN_FLOAT_LENGTH, DEEP_DEPTH_SCORE, FIRST_STAGE_STARS, STAGE_NAMES, STAR_FLOAT_COST, SUPERNOVA_STARLIGHT,
                      PRISM_VERSION, UNLIT_PER_DAY, growth_stage)
 from ..security import Cipher
 from ..views import aware, iso, local, shared_star_ids, star_view
@@ -24,6 +26,10 @@ from ..ratelimit import per_user
 router = APIRouter(prefix="/v1", tags=["stars"])
 
 Mood = Literal["calm", "sorrow", "anger", "insight"]
+# 20장 별빛 받기 그만두기: the app names each 별빛 받기 so it can stop it (a UUID is fine).
+ATTEMPT_ID = r"^[A-Za-z0-9_-]{8,64}$"
+# A 별빛 받기 that already finished can still be stopped this long after it started (the app lost the answer).
+CANCEL_WINDOW = timedelta(minutes=10)
 
 
 class StarIn(BaseModel):
@@ -38,6 +44,12 @@ class StarIn(BaseModel):
     rewrite_of: str | None = None
     # 11.5 새 글을 써서 잇기: my stars to link the new one to (not a rewrite).
     link_to: list[str] = Field(default_factory=list, max_length=200)
+    # 20장: with mode lit, names this 별빛 받기 so POST /v1/starlight/attempts/{id}/cancel can stop it.
+    attempt_id: str | None = Field(None, pattern=ATTEMPT_ID)
+
+
+class LightIn(BaseModel):
+    attempt_id: str | None = Field(None, pattern=ATTEMPT_ID)
 
 
 class StarEdit(BaseModel):
@@ -82,25 +94,41 @@ def _apply(star: Star, analysis: dict, cipher: Cipher) -> None:
     star.depth_score = analysis["scores"]["depth"]
     star.analysis_enc = cipher.enc_json(analysis)
     star.analysis_failed = False
+    star.starlight_cancelled = False
 
 
 def _insufficient(user: User, cost: int) -> ApiError:
     return ApiError(402, "insufficient_coins", "코인이 조금 부족해요.", coins=user.coins, cost=cost)
 
 
-def _float(db: Session, user: User, star: Star, request: Request, cipher: Cipher) -> tuple[str, int]:
+def _float(db: Session, user: User, star: Star, request: Request, cipher: Cipher,
+           attempt_id: str | None = None, new: bool = False) -> tuple[str, int]:
     """Runs the prism on a star. Returns (prism status, coins charged); raises on unscoreable text.
-    The day's free float first, then STAR_FLOAT_COST; charged only when the star is read."""
+    The day's free float first, then STAR_FLOAT_COST; charged only when the star is read.
+    With `attempt_id` (20장) the star is stored before the prism reads it, and a 별빛 받기 stopped meanwhile
+    gives status "cancelled": the reading is dropped and nothing is used."""
     settings = request.app.state.settings
     per_day = settings.free_stars_per_day
     member = membership.is_member(db, settings, user) and membership.left_today(user, "star") > 0
     free = member or allowance.stars_left(user, per_day) > 0
     if not free and user.coins < STAR_FLOAT_COST:
         raise _insufficient(user, STAR_FLOAT_COST)  # 29, before anything is stored
+    title, text = cipher.dec(star.title_enc), cipher.dec(star.body_enc)
+    if foul := foul_reason(text, MIN_FLOAT_LENGTH):
+        raise ApiError(422, foul[0], foul[1])  # before anything is stored, as before
+    if attempt_id is not None:
+        if not _begin(db, user, attempt_id, star, new):  # stopped before it got here
+            return "cancelled", 0
+        # No transaction stays open while the prism reads, so a 그만두기 can be written meanwhile.
+        db.commit()
     with ai_cost.metered(db, user, "prism"):
-        result = request.app.state.prism.evaluate(cipher.dec(star.title_enc), cipher.dec(star.body_enc))
+        result = request.app.state.prism.evaluate(title, text)
     if result.status in ("too_short", "foul"):
         raise ApiError(422, result.status, result.message)
+    if attempt_id is not None and not db.execute(
+            update(StarlightAttempt).where(StarlightAttempt.id == attempt_id, StarlightAttempt.status == "running")
+            .values(status="done", finished_at=now())).rowcount:
+        return "cancelled", 0  # 그만두기 came first: the reading is dropped, nothing is used
     if result.status == "failed":
         star.analysis_failed = True
         return result.status, 0
@@ -108,14 +136,53 @@ def _float(db: Session, user: User, star: Star, request: Request, cipher: Cipher
         return result.status, 0
     charged = 0
     # A member's daily ones first, then the free one everybody has, then coins.
-    used_free = (member and membership.use_today(db, user, "star")) or (free and allowance.use_star(db, user, per_day))
-    if not used_free:
+    used = "member" if member and membership.use_today(db, user, "star") else \
+        "free" if free and allowance.use_star(db, user, per_day) else None
+    if not used:
         if not coins.spend(db, user, STAR_FLOAT_COST, "별 띄우기"):
             db.rollback()
             raise _insufficient(user, STAR_FLOAT_COST)
-        charged = STAR_FLOAT_COST
+        used, charged = "coins", STAR_FLOAT_COST
+    if attempt_id is not None:
+        db.execute(update(StarlightAttempt).where(StarlightAttempt.id == attempt_id)
+                   .values(used=used, charged=charged))
     _apply(star, result.analysis, cipher)
     return result.status, charged
+
+
+def _begin(db: Session, user: User, attempt_id: str, star: Star, new: bool) -> bool:
+    """Stores the star and its running attempt, so a 그만두기 from another request can find them.
+    False when the app already stopped it (the cancel arrived first): the star is then marked stopped."""
+    db.add(star)
+    db.flush()
+    row = db.get(StarlightAttempt, attempt_id)
+    if row is None:
+        db.add(StarlightAttempt(id=attempt_id, user_id=user.id, star_id=star.id, new_star=new))
+        try:
+            db.commit()
+            return True
+        except IntegrityError:  # a cancel with this id raced in
+            db.rollback()
+            db.add(star)
+            db.flush()
+            row = db.get(StarlightAttempt, attempt_id)
+    if row is None or row.user_id != user.id or row.status != "cancelled" or row.star_id not in (None, star.id):
+        raise ApiError(409, "attempt_used", "이미 쓴 attempt_id예요. 새 값으로 다시 시도해 주세요.")
+    row.star_id, row.new_star = star.id, new
+    _stopped(db, user, star, new)
+    return False
+
+
+def _stopped(db: Session, user: User, star: Star, new: bool) -> None:
+    """20장: the star stays, without starlight, marked 별빛 받기 취소됨. A new star stopped this way was floated
+    without starlight after all, so it counts toward today's UNLIT_PER_DAY (never refused: the writing stays)."""
+    star.starlight_cancelled = True
+    if new:
+        allowance.use_unlit(db, user, UNLIT_PER_DAY)
+
+
+def _cancelled_error(star: Star) -> ApiError:
+    return ApiError(409, "starlight_cancelled", "별빛 받기를 그만뒀어요. 별은 별빛 없이 남아 있어요.", star_id=star.id)
 
 
 def _response(db: Session, star: Star, cipher: Cipher, crisis: bool, charged: int = 0) -> dict:
@@ -150,9 +217,10 @@ def create_star(body: StarIn, request: Request, user: User = Depends(consented_u
     # 37 위기 돌봄: the writing is always saved as written, but never scored.
     crisis = has_crisis_signal(f"{title}\n{body.body}")
     star.crisis = crisis
-    charged = 0
+    charged, status = 0, None
     if lit and not crisis:
-        _, charged = _float(db, user, star, request, cipher)  # 402/422 before anything is stored
+        # 402/422 before anything is stored
+        status, charged = _float(db, user, star, request, cipher, body.attempt_id, new=True)
     elif not lit and not allowance.use_unlit(db, user, UNLIT_PER_DAY):
         raise ApiError(429, "unlit_daily_limit", f"별빛 없이 띄우기는 하루 {UNLIT_PER_DAY}개까지예요.",
                        limit=UNLIT_PER_DAY)
@@ -170,17 +238,20 @@ def create_star(body: StarIn, request: Request, user: User = Depends(consented_u
     if draft and draft.source_star_id == (source if source else None):
         db.delete(draft)
     db.commit()
+    if status == "cancelled":
+        raise _cancelled_error(star)
     return _response(db, star, cipher, crisis, charged)
 
 
 @router.post("/stars/{star_id}/starlight", dependencies=[per_user("prism", 30, 3600)])
-def light_star(star_id: str, request: Request, user: User = Depends(consented_user),
+def light_star(star_id: str, request: Request, body: LightIn | None = None, user: User = Depends(consented_user),
                db: Session = Depends(get_db), cipher: Cipher = Depends(get_cipher)):
-    """17.1 나중에 별빛 받기, priced like a new lit star; 36 다시 시도 too. The writing is locked after."""
+    """17.1 나중에 별빛 받기, priced like a new lit star; 36 다시 시도 too. The writing is locked after.
+    20장: with `attempt_id` it can be stopped (POST /v1/starlight/attempts/{attempt_id}/cancel)."""
     star = owned_star(db, user, star_id)
     if star.state == "floated":
         raise ApiError(409, "already_lit", "이미 별빛을 받은 별이에요.")
-    return _light(db, user, star, request, cipher)
+    return _light(db, user, star, request, cipher, body.attempt_id if body else None)
 
 
 @router.post("/stars/{star_id}/float", dependencies=[per_user("prism", 30, 3600)])
@@ -193,18 +264,95 @@ def float_star(star_id: str, request: Request, user: User = Depends(consented_us
     return _light(db, user, star, request, cipher)
 
 
-def _light(db: Session, user: User, star: Star, request: Request, cipher: Cipher) -> dict:
+def _light(db: Session, user: User, star: Star, request: Request, cipher: Cipher,
+           attempt_id: str | None = None) -> dict:
     if star.crisis:
         return _response(db, star, cipher, crisis=True)
-    status, charged = _float(db, user, star, request, cipher)
+    status, charged = _float(db, user, star, request, cipher, attempt_id)
     share = db.scalar(select(StarShare).where(StarShare.star_id == star.id))
     if share is not None and star.state == "floated":  # shared before its starlight: now with its reading
         a = cipher.dec_json(star.analysis_enc)
         share.moods, share.depth_level, share.shape = [m["mood"] for m in a["moods"]], a["depth_level"], a["shape"]
     db.commit()
+    if status == "cancelled":
+        raise _cancelled_error(star)
     if status == "failed":
         raise ApiError(502, "analysis_failed", "별을 읽지 못했어요. 글은 그대로 보관돼요.")
     return _response(db, star, cipher, crisis=False, charged=charged)
+
+
+@router.post("/starlight/attempts/{attempt_id}/cancel", dependencies=[per_user("starlight_cancel", 60, 3600)])
+def cancel_starlight(attempt_id: str = Path(..., pattern=ATTEMPT_ID), user: User = Depends(consented_user),
+                     db: Session = Depends(get_db), cipher: Cipher = Depends(get_cipher)):
+    """20장 별빛 받기 그만두기 (and the app's own timeout or lost connection). Safe to send more than once,
+    and before the 별빛 받기 itself reaches the server.
+    - Still reading: the reading is dropped when it comes; nothing is used.
+    - Already done (within CANCEL_WINDOW): the starlight is taken off and what it used comes back
+      (`refunded.used`: member | free | coins, `refunded.coins`).
+    The star stays without starlight with `starlight_cancelled` true; 별빛 받기 on it again starts afresh.
+    A new star (별빛 받고 띄우기) stopped this way counts toward today's 별빛 없이 띄우기.
+    `star` is null when the 별빛 받기 has not reached the server yet; it will stop when it does."""
+    row = db.get(StarlightAttempt, attempt_id)
+    if row is None:
+        db.add(StarlightAttempt(id=attempt_id, user_id=user.id, status="cancelled", finished_at=now()))
+        try:
+            db.commit()
+            return _cancel_view(db, user, None, cipher)
+        except IntegrityError:  # the 별빛 받기 raced in
+            db.rollback()
+            row = db.get(StarlightAttempt, attempt_id)
+    if row is None or row.user_id != user.id:
+        raise ApiError(404, "not_found", "별빛 받기를 찾지 못했어요.")
+    star = db.get(Star, row.star_id) if row.star_id else None
+    if row.status == "cancelled":
+        return _cancel_view(db, user, star, cipher)
+    refunded = None
+    if not db.execute(update(StarlightAttempt).where(StarlightAttempt.id == row.id, StarlightAttempt.status == "running")
+                      .values(status="cancelled", finished_at=now())).rowcount:
+        db.refresh(row)  # it finished first
+        if row.status == "cancelled":
+            return _cancel_view(db, user, star, cipher)
+        if aware(row.created_at) < datetime.now(timezone.utc) - CANCEL_WINDOW:
+            raise ApiError(409, "cancel_too_late", "이미 별빛을 받은 별이에요.")
+        if not db.execute(update(StarlightAttempt).where(StarlightAttempt.id == row.id,
+                                                         StarlightAttempt.status == "done")
+                          .values(status="cancelled")).rowcount:
+            db.rollback()
+            return _cancel_view(db, user, star, cipher)
+        refunded = _give_back(db, user, row)
+        if star is not None:
+            db.refresh(star)
+            _unlight(db, star)
+    if star is not None:
+        _stopped(db, user, star, row.new_star)
+    db.commit()
+    return _cancel_view(db, user, star, cipher, refunded)
+
+
+def _give_back(db: Session, user: User, row: StarlightAttempt) -> dict | None:
+    if row.used == "member":
+        membership.give_back_today(db, user, "star")
+    elif row.used == "free":
+        allowance.give_back_star(db, user)
+    elif row.used == "coins" and row.charged:
+        coins.add(db, user, row.charged, "별빛 받기 그만두기")
+    return {"used": row.used, "coins": row.charged if row.used == "coins" else 0} if row.used else None
+
+
+def _unlight(db: Session, star: Star) -> None:
+    star.state, star.floated_at, star.starlight, star.depth_score = "kept", None, None, None
+    star.analysis_enc, star.prism_version = None, None
+    share = db.scalar(select(StarShare).where(StarShare.star_id == star.id))
+    if share is not None:  # back to the plain shape a star without starlight is shared with (17.2)
+        share.moods, share.depth_level = star.moods or [star.mood], 0
+        share.shape = {"points": 3, "sharpness": "soft"}
+
+
+def _cancel_view(db: Session, user: User, star: Star | None, cipher: Cipher, refunded: dict | None = None) -> dict:
+    db.refresh(user)
+    return {"status": "cancelled",
+            "star": star_view(star, cipher, shared=star.id in shared_star_ids(db, user.id)) if star else None,
+            "refunded": refunded, "coins": user.coins}
 
 
 @router.get("/stars")
@@ -274,17 +422,7 @@ def get_star(star_id: str, user: User = Depends(consented_user), db: Session = D
     star = owned_star(db, user, star_id)
     return star_view(star, cipher, shared=star.id in shared_star_ids(db, user.id)) | {
         "linked_stars": _linked(db, star, cipher),
-        "telescope": _telescope(db, star, cipher),
         "line_count": db.scalar(select(func.count()).select_from(_lines_query(db, user, star).subquery()))}
-
-
-def _telescope(db: Session, star: Star, cipher: Cipher) -> dict | None:
-    """11.5: the latest 마음 망원경 result of this star alone, shown inside its detail."""
-    for r in db.scalars(select(TelescopeReport).where(TelescopeReport.user_id == star.user_id)
-                        .order_by(TelescopeReport.created_at.desc())):
-        if r.star_ids == [star.id]:
-            return {"id": r.id, "created_at": iso(r.created_at), "report": cipher.dec_json(r.report_enc)}
-    return None
 
 
 def _link(db: Session, user: User, a: str, b: str) -> bool:

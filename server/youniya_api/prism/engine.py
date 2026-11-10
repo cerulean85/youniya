@@ -4,6 +4,7 @@ pre-validation → safety interlock → N independent scoring calls → median �
 import logging
 import math
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
@@ -17,6 +18,12 @@ from .prompt import PREFIX, READING_PROMPT, reading_part, user_part
 from .schemas import MoodShare, PrismSample
 
 log = logging.getLogger(__name__)
+
+# 20장: the longest the prism takes, retries and 별빛 풀이 included. The apps wait longer than this
+# (STARLIGHT_CLIENT_WAIT_SECONDS), so an answer is never lost to their own timeout.
+PRISM_DEADLINE_SECONDS = 45.0
+# 별빛 풀이 is only asked for with at least this much of the deadline left; without it the reasons are left out.
+READING_MIN_SECONDS = 8.0
 
 
 @dataclass
@@ -43,24 +50,29 @@ class PrismEngine:
             return PrismResult(status=foul[0], message=foul[1])
         if has_crisis_signal(f"{title}\n{body}"):
             return PrismResult(status="crisis")
+        deadline = time.monotonic() + PRISM_DEADLINE_SECONDS
         try:
-            samples = self._samples(title, body)
+            samples = self._samples(title, body, deadline)
         except Exception:
             # 36 별을 읽지 못했어요: the writing is kept and nothing is charged.
             return PrismResult(status="failed", message="별을 읽지 못했어요.")
         analysis = to_analysis(samples, body)
         if self.api_key:
-            analysis |= self._reading(title, body, analysis)
+            analysis |= self._reading(title, body, analysis, deadline)
         return PrismResult(status="ok", analysis=analysis)
 
-    def _reading(self, title: str, body: str, analysis: dict) -> dict:
+    def _reading(self, title: str, body: str, analysis: dict, deadline: float | None = None) -> dict:
         """17.3 별빛 풀이 from the settled scores. A lost call leaves the reasons out (the app hides them),
         never the star: the depth reason falls back to the level evidence."""
+        if deadline is not None and deadline - time.monotonic() < READING_MIN_SECONDS:
+            log.warning("prism reading skipped: deadline")
+            note("prism_reading", False)
+            return {}
         try:
             out = generate_json(self.api_key, self.model, reading_part(title, body, analysis["scores"],
                                                                         analysis["level_evidence"]),
                                 prefix=READING_PROMPT + "\n\n", temperature=0.3, thinking=self.thinking,
-                                timeout=25.0, retries=1)
+                                timeout=25.0, retries=1, deadline=deadline)
         except Exception as e:  # noqa: BLE001
             log.warning("prism reading failed: %s", type(e).__name__)
             note("prism_reading", False)
@@ -70,7 +82,7 @@ class PrismEngine:
         note("prism_reading", len(got) == len(keys))
         return got | ({} if got.get("depth_reason") else {"depth_reason": analysis["level_evidence"]})
 
-    def _samples(self, title: str, body: str) -> list[PrismSample]:
+    def _samples(self, title: str, body: str, deadline: float | None = None) -> list[PrismSample]:
         if not self.api_key:
             return [mock_sample(title, body)] * self.sample_count
         prompt = user_part(title, body)
@@ -78,13 +90,13 @@ class PrismEngine:
         # Each reading runs in a copy of this context, so the request's cost meter sees it.
         contexts = [contextvars.copy_context() for _ in range(self.sample_count)]
         with ThreadPoolExecutor(max_workers=self.sample_count) as pool:
-            got = list(pool.map(lambda ctx: ctx.run(self._one, prompt, cache), contexts))
+            got = list(pool.map(lambda ctx: ctx.run(self._one, prompt, cache, deadline), contexts))
         samples = [s for s in got if s is not None]
         if len(samples) < self.min_samples:
             raise RuntimeError(f"only {len(samples)} of {self.sample_count} readings")
         return samples
 
-    def _one(self, prompt: str, cache: str | None = None) -> PrismSample | None:
+    def _one(self, prompt: str, cache: str | None = None, deadline: float | None = None) -> PrismSample | None:
         """One independent reading, or None when the call or its JSON fails."""
         try:
             # With one reading there is no second to fall back on: a slow or dropped call is tried again
@@ -92,7 +104,7 @@ class PrismEngine:
             single = self.sample_count == 1
             return PrismSample.model_validate(generate_json(
                 self.api_key, self.model, prompt, thinking=self.thinking, prefix=PREFIX, cache=cache,
-                timeout=25.0 if single else 60.0, retries=1 if single else 0))
+                timeout=20.0 if single else 30.0, retries=1 if single else 0, deadline=deadline))
         except Exception as e:  # noqa: BLE001 — any lost reading is just one fewer sample
             # Only where it failed: a validation message would quote the reading, and so the writing.
             where = [".".join(map(str, err["loc"])) for err in e.errors()] if hasattr(e, "errors") else []

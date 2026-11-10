@@ -7,6 +7,7 @@ user's part, so Gemini's implicit cache can match the shared prefix; with an exp
 import contextvars
 import json
 import logging
+import time
 from collections.abc import Callable
 
 import httpx
@@ -43,8 +44,18 @@ def _retryable(e: Exception) -> bool:
     return isinstance(e, httpx.HTTPStatusError) and (e.response.status_code == 429 or e.response.status_code >= 500)
 
 
-def _post(api_key: str, model: str, payload: dict, timeout: float, retries: int) -> dict:
+# A try is not started with less than this left before the deadline.
+MIN_TRY_SECONDS = 4.0
+
+
+def _post(api_key: str, model: str, payload: dict, timeout: float, retries: int,
+          deadline: float | None = None) -> dict:
     for attempt in range(retries + 1):
+        if deadline is not None:
+            left = deadline - time.monotonic()
+            if left < MIN_TRY_SECONDS:
+                raise httpx.TimeoutException("no time left before the deadline")
+            timeout = min(timeout, left)
         try:
             with httpx.Client(timeout=timeout) as client:
                 resp = client.post(f"{BASE}/models/{model}:generateContent", json=payload,
@@ -59,10 +70,11 @@ def _post(api_key: str, model: str, payload: dict, timeout: float, retries: int)
 
 def generate_json(api_key: str, model: str, prompt: str, temperature: float = 0.0,
                   thinking: str | None = None, timeout: float = 60.0, retries: int = 0,
-                  prefix: str = "", cache: str | None = None) -> dict:
+                  prefix: str = "", cache: str | None = None, deadline: float | None = None) -> dict:
     """`prefix` is the fixed part, `prompt` the user's. `cache`: an explicit cache holding `prefix`;
     if Gemini refuses it (expired, gone), the call is made again with the prefix in full.
-    `retries`: further tries after a timeout, a dropped connection, 429 or 5xx."""
+    `retries`: further tries after a timeout, a dropped connection, 429 or 5xx.
+    `deadline` (time.monotonic()): no try runs past it, and none starts with under MIN_TRY_SECONDS left."""
     config: dict = {"temperature": temperature, "responseMimeType": "application/json"}
     if tc := thinking_config(model, thinking):
         config["thinkingConfig"] = tc
@@ -71,13 +83,13 @@ def generate_json(api_key: str, model: str, prompt: str, temperature: float = 0.
     if cache:
         try:
             data = _post(api_key, model, {"contents": [{"role": "user", "parts": [{"text": prompt}]}],
-                                          "cachedContent": cache, "generationConfig": config}, timeout, retries)
+                                          "cachedContent": cache, "generationConfig": config}, timeout, retries, deadline)
         except httpx.HTTPStatusError as e:
             if e.response.status_code not in (400, 403, 404):
                 raise
             log.warning("explicit cache %s refused (%s): sending the prompt in full", cache, e.response.status_code)
     if data is None:
-        data = _post(api_key, model, full, timeout, retries)
+        data = _post(api_key, model, full, timeout, retries, deadline)
     usage = data.get("usageMetadata", {})
     for listener in usage_listeners:
         listener(model, usage)

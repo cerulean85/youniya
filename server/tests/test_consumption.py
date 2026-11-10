@@ -25,6 +25,16 @@ class FakeAppStore:
         self.sent.append((transaction_id, environment, body))
 
 
+
+def _spend(client, amount):
+    """Coins spent on something (any feature): taken straight from the balance."""
+    from youniya_api import coins
+    from youniya_api.models import User
+    with client.app.state.sessions() as db:
+        u = db.query(User).first()
+        assert coins.spend(db, u, amount, "별 띄우기")
+        db.commit()
+
 def _setup(make_app, appstore):
     apple = FakeApple()
     app = make_app(trust_purchases=False, apple_bundle_id=BUNDLE)
@@ -50,11 +60,7 @@ def test_spent_coins_ask_apple_to_decline(make_app):
     appstore = FakeAppStore()
     apple, client, h = _setup(make_app, appstore)
     _buy(client, h, apple, "500")
-    float_star(client, h)
-    for _ in range(2):
-        client.post("/v1/telescope/reports", json={}, headers=h)  # free: this month's and the sign-up one
-    for _ in range(3):
-        client.post("/v1/telescope/reports", json={}, headers=h)  # 60 of 120 spent
+    _spend(client, 60)  # 60 of 120 spent
 
     r = client.post("/v1/storekit/notifications", json={"signedPayload": _request(apple, "500")}).json()
     assert r["handled"] is True
