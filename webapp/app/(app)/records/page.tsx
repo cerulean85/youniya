@@ -30,11 +30,11 @@ export default function RecordsPage({ searchParams }: PageProps<"/records">) {
   );
 }
 
-function Header({ total }: { total: number | null }) {
+function Header({ total, kept }: { total: number | null; kept?: boolean }) {
   return (
     <header className={styles.header}>
       <h1 className="h1">기록</h1>
-      <p className="body-m muted">{total == null ? " " : `지금까지 띄운 별 ${total}개`}</p>
+      <p className="body-m muted">{total == null ? " " : kept ? `별빛 없이 띄운 별 ${total}개` : `지금까지 띄운 별 ${total}개`}</p>
       <Link href="/records/flow" className={styles.flowLink}>밝기 흐름 보기 ›</Link>
     </header>
   );
@@ -47,7 +47,7 @@ async function Records({ searchParams }: Pick<PageProps<"/records">, "searchPara
   const summary = await api<Summary>("/v1/stars/summary");
   return (
     <>
-      <Header total={summary.total} />
+      <Header total={p.state === "kept" && !calendar ? summary.kept : summary.total} kept={p.state === "kept" && !calendar} />
       <div className={styles.controls}>
         <nav className={styles.segment} aria-label="보기">
           <Link href={href({ ...p, view: undefined, day: undefined, before: undefined })} aria-current={!calendar ? "page" : undefined}>목록</Link>
@@ -94,10 +94,17 @@ async function ListView({ p }: { p: Params }) {
   return (
     <>
       <Filters p={p} />
-      {list.items.length === 0 ? (
+      {list.items.length === 0 && p.state === "kept" && !p.q && !p.mood ? (
+        // iOS 119: nothing kept without starlight yet.
         <div className={`card ${styles.empty}`}>
-          <p className="h3">{p.q || p.state || p.mood ? "맞는 별이 없어요" : "아직 기록이 없어요"}</p>
-          <p className="body-m muted">{p.q || p.state || p.mood ? "다른 말로 찾거나 거르기를 바꿔 보세요." : "오늘의 마음을 적으면 이곳에 쌓여요."}</p>
+          <p className="h3">아직 별빛 없는 별이 없어요</p>
+          <p className="body-m muted">분석 없이 조용히 두고 싶은 글은<br />여기에 모여요.</p>
+          <Link href="/write" className="btn btn-primary">별 만들기</Link>
+        </div>
+      ) : list.items.length === 0 ? (
+        <div className={`card ${styles.empty}`}>
+          <p className="h3">{p.q ? <>&lsquo;{p.q}&rsquo;{subject(p.q).slice(p.q.length)} 담긴 별이 없어요</> : p.state || p.mood ? "맞는 별이 없어요" : "아직 기록이 없어요"}</p>
+          <p className="body-m muted">{p.q || p.state || p.mood ? "다른 말로 찾아보거나, 필터를 바꿔 보세요." : "오늘의 마음을 적으면 이곳에 쌓여요."}</p>
           {(p.q || p.state || p.mood) ? <Link href="/records" className="btn btn-secondary">전체 보기</Link> : <Link href="/write" className="btn btn-primary">별 만들기</Link>}
         </div>
       ) : (
@@ -164,7 +171,7 @@ async function CalendarView({ p }: { p: Params }) {
       </section>
       <aside className={styles.dayPanel}>
         <h2 className="h3">{m}월 {selected}일 {weekday}요일</h2>
-        <p className="caption faint">{picked.length ? `별 ${picked.length}개` : "이날은 별이 없어요"}</p>
+        <p className="caption faint">{picked.length ? `별 ${picked.length}개` : "이날은 쉬어 간 밤이에요."}</p>
         {picked.map((s) => <StarRow key={s.id} star={s} />)}
         <div className={`card ${styles.monthSum}`}>
           <span className="label-m">{m}월에는</span>

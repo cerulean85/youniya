@@ -134,12 +134,15 @@ export async function previewStar(id: string) {
 export async function editStar(id: string, _prev: ActionState, form: FormData): Promise<ActionState> { void _prev;
   const moods = String(form.get("moods") ?? "").split(",").filter(Boolean) as Mood[];
   const input = { mood: moods[0], moods, title: String(form.get("title") ?? ""), body: String(form.get("body") ?? "") };
+  let crisis = false;
   try {
-    await api(`/v1/stars/${id}`, { method: "PATCH", body: JSON.stringify(input) });
+    const r = await api<{ crisis?: unknown }>(`/v1/stars/${id}`, { method: "PATCH", body: JSON.stringify(input) });
+    crisis = Boolean(r?.crisis);
   } catch (e) {
     if (e instanceof ApiError) return { error: e.message, code: e.code };
     throw e;
   }
   refresh();
-  redirect(`/stars/${id}`);
+  // The server flags an edit the same way as a new star (iOS StarEditView): the 109 guide comes first.
+  redirect(crisis ? `/stars/${id}?care=1` : `/stars/${id}`);
 }

@@ -14,6 +14,8 @@ export const MAIN_NAV = [
 ];
 export const MORE_NAV = [
   // The unread dot reads the session, so it streams in on its own.
+  // Mobile drawer order (C-11): 별빛 없는 별 first, as a shortcut to the records filtered to them.
+  { href: "/records?state=kept", label: "별빛 없는 별", icon: <Archive /> },
   { href: "/notifications", label: "알림", icon: <Bell />, badge: <Suspense fallback={null}><UnreadDot /></Suspense> },
   { href: "/coins", label: "코인", icon: <Coin /> },
   { href: "/settings", label: "설정", icon: <Settings /> },

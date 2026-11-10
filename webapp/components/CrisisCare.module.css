@@ -1,0 +1,8 @@
+.overlay { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; text-align: center; background: rgba(11, 15, 25, 0.96); }
+.hero { position: relative; width: 120px; height: 120px; display: grid; place-items: center; color: var(--primary-text); margin-bottom: 8px; }
+.hero span { position: absolute; border-radius: 50%; border: 1px solid var(--primary); }
+.hero span:nth-child(1) { inset: 0; opacity: 0.3; }
+.hero span:nth-child(2) { inset: 14px; opacity: 0.5; background: rgb(var(--primary-rgb) / 0.18); box-shadow: 0 0 32px rgb(var(--primary-rgb) / 0.4); }
+.hero svg { position: relative; }
+.banner { margin: 4px 0 0; padding: 12px 18px; border-radius: 12px; background: var(--tint-gold); border: 1px solid rgba(251, 191, 36, 0.35); color: var(--gold); font: 500 14px/20px var(--sans); width: 100%; max-width: 360px; }
+.actions { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 360px; margin-top: 8px; }

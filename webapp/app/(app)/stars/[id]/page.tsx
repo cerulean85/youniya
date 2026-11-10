@@ -11,6 +11,7 @@ import { longDate, moodOf, dateTime, MIN_FLOAT_LENGTH } from "@/lib/format";
 import type { Me, Star } from "@/lib/types";
 import { LinkStar } from "./LinkStar";
 import { ShareStar } from "./ShareStar";
+import { CrisisCare } from "@/components/CrisisCare";
 import { StarBirth } from "@/components/StarBirth";
 import { DeleteButton, ExportButton, FloatButton, LinkedChip, Toast } from "./StarActions";
 import { ReceivedLines } from "./ReceivedLines";
@@ -60,6 +61,7 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
           <span className={styles.mood} style={{ ["--c" as string]: mood.color }}>{mood.label}</span>
           {!floated && <span className="label-s muted">{star.analysis_failed ? "별빛을 읽지 못한 별 · 다시 받을 수 있어요" : "별빛 없는 별"}</span>}
         </div>
+        {care && <CrisisCare />}
         {care && (
           <div className={styles.care} role="note">
             <Heart size={20} />
