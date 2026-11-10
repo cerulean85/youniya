@@ -28,8 +28,9 @@ router = APIRouter(prefix="/v1", tags=["stars"])
 Mood = Literal["calm", "sorrow", "anger", "insight"]
 # 20장 별빛 받기 그만두기: the app names each 별빛 받기 so it can stop it (a UUID is fine).
 ATTEMPT_ID = r"^[A-Za-z0-9_-]{8,64}$"
-# A 별빛 받기 that already finished can still be stopped this long after it started (the app lost the answer).
-CANCEL_WINDOW = timedelta(minutes=10)
+# A 별빛 받기 that already finished can still be stopped this long after it started (the app lost the answer):
+# the apps' own wait (decided 2026-11-10). After it, 409 cancel_too_late.
+CANCEL_WINDOW = timedelta(seconds=60)
 
 
 class StarIn(BaseModel):
@@ -287,7 +288,7 @@ def cancel_starlight(attempt_id: str = Path(..., pattern=ATTEMPT_ID), user: User
     """20장 별빛 받기 그만두기 (and the app's own timeout or lost connection). Safe to send more than once,
     and before the 별빛 받기 itself reaches the server.
     - Still reading: the reading is dropped when it comes; nothing is used.
-    - Already done (within CANCEL_WINDOW): the starlight is taken off and what it used comes back
+    - Already done (within CANCEL_WINDOW, 60 s from the start): the starlight is taken off and what it used comes back
       (`refunded.used`: member | free | coins, `refunded.coins`).
     The star stays without starlight with `starlight_cancelled` true; 별빛 받기 on it again starts afresh.
     A new star (별빛 받고 띄우기) stopped this way counts toward today's 별빛 없이 띄우기.

@@ -130,3 +130,18 @@ def test_the_prism_keeps_to_its_deadline(monkeypatch):
     assert PrismEngine(api_key="k", model="m").evaluate("t", DEEP_BODY).status == "failed"
     assert calls and all(d is not None for _, _, d in calls)
     assert engine.PRISM_DEADLINE_SECONDS <= 45
+
+
+def test_too_late_after_sixty_seconds(make_app):
+    from datetime import timedelta
+    from youniya_api.models import StarlightAttempt
+    client = _client(make_app)
+    h = sign_in(client)
+    client.post("/v1/stars", json=STAR | {"attempt_id": "attempt-late"}, headers=h)
+    with client.app.state.sessions() as db:
+        row = db.get(StarlightAttempt, "attempt-late")
+        row.created_at = row.created_at - timedelta(seconds=61)
+        db.commit()
+    r = client.post("/v1/starlight/attempts/attempt-late/cancel", headers=h)
+    assert r.status_code == 409 and r.json()["error"]["code"] == "cancel_too_late"
+    assert _me(client, h)[0] == 0  # the free float stays used
