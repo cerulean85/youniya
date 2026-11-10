@@ -26,7 +26,6 @@ struct PlazaStarView: View {
     private var resonated: Bool { model.resonated.contains(key) }
     private var quote: String { star.line }
     private var depth: Int { star.cardDepth }
-    private var spec: StarShapeSpec { star.cardShape }
     /// 75-3: the whole star (title and body, contacts masked by the server).
     private var fullText: (title: String, body: String)? {
         let p = star
@@ -89,16 +88,12 @@ struct PlazaStarView: View {
                                        serverID: star.serverID, onBlocked: onBlocked))
     }
 
-    /// 75-4 `Star Header`: a 56×56 gold thumbnail of the star beside its
+    /// 75-4 `Star Header`: a 56×56 thumbnail of the star beside its
     /// title, the keeper's name and the depth, so the text comes right after.
     private var header: some View {
         HStack(spacing: 14) {
-            ShapeStar(spec: spec, color: .starBright, size: 38, rays: true)
-                .frame(width: 56, height: 56)
-                .background(Color.starBright.opacity(0.1), in: .rect(cornerRadius: 16))
-                .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Color.starBright.opacity(0.35), lineWidth: 1))
-                .clipShape(.rect(cornerRadius: 16))
-                .accessibilityHidden(true)
+            // The same thumbnail as the 09-5 row that opened it, at 56pt.
+            PlazaStarThumb(item: star, side: 56)
             VStack(alignment: .leading, spacing: Space.sm) {
                 Text(title)
                     .textStyle(.h2).foregroundStyle(Color.textPrimary)

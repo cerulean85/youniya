@@ -59,6 +59,8 @@ struct CoinChargeView: View {
     @State private var charged: Int? = DebugScreen.is("102") ? 120 : nil
     /// 38 결제 미완료
     @State private var paymentFailed = DebugScreen.is("38")
+    /// The App Store gave no coin products (agreement, product setup): no payment sheet opened.
+    @State private var storeUnavailable = false
     /// 28 "(필수) 결제·환불 정책에 동의해요". Asked again for each charge; the server
     /// keeps it with the purchase (`consumption_consent`) for App Store refund requests.
     /// iPhone SE and other short screens.
@@ -180,10 +182,13 @@ struct CoinChargeView: View {
         }
         .overlay {
             if paymentFailed {
-                StatusView(icon: .iconLock, title: "결제가 끝나지 않았어요",
-                           message: "코인은 차감되거나 지급되지 않았어요.",
+                StatusView(icon: .iconLock,
+                           title: storeUnavailable ? "지금은 코인을 충전할 수 없어요" : "결제가 끝나지 않았어요",
+                           message: storeUnavailable
+                               ? "App Store에서 코인 상품을 불러오지 못했어요. 결제는 되지 않았어요. 잠시 후 다시 시도해 주세요."
+                               : "코인은 차감되거나 지급되지 않았어요.",
                            actions: [
-                               .init(title: "다시 결제하기", style: .primary) { charge() },
+                               .init(title: storeUnavailable ? "다시 시도하기" : "다시 결제하기", style: .primary) { charge() },
                                .init(title: "닫기", style: .ghost) {
                                    withAnimation(.easeInOut(duration: 0.3)) { paymentFailed = false }
                                },
@@ -226,6 +231,7 @@ extension CoinChargeView {
                     charged = added
                 }
             } catch let e as APIError where ["purchase_unverified", "purchase_invalid", "offline", "product_unavailable"].contains(e.code) {
+                storeUnavailable = e.code == "product_unavailable"
                 withAnimation(.easeInOut(duration: 0.3)) { paymentFailed = true }
             } catch {
                 model.handle(error)

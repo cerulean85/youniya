@@ -218,6 +218,26 @@ struct PlazaView: View {
     }
 }
 
+/// 09-5 row thumbnail, also the 75 header's (56pt) so the star you tapped
+/// is the one you open: its shape and mood colour on a dark tile.
+struct PlazaStarThumb: View {
+    var item: PlazaNebula
+    var side: CGFloat = 44
+
+    var body: some View {
+        let k = side / 44
+        // 17.2: a star without starlight is the faint default star.
+        ShapeStar(spec: item.hasStarlight ? item.cardShape : StarShapeSpec(points: 4, sharpness: .soft),
+                  color: item.cardMood.color.opacity(item.hasStarlight ? 1 : 0.5),
+                  size: (item.hasStarlight ? 22 : 14) * k, halo: false)
+            .shadow(color: item.cardMood.color.opacity(item.hasStarlight ? 0.75 : 0),
+                    radius: (1 + CGFloat(item.cardDepth) * 1.2) * k)
+            .frame(width: side, height: side)
+            .background(Color.bgSurfaceRaised, in: .rect(cornerRadius: side == 44 ? 12 : 16))
+            .accessibilityHidden(true)
+    }
+}
+
 /// 09-2 star row: the shared star (shape · mood · depth glow), its one line,
 /// "{name} · {when}", and ✦ (filled when I left a resonance). Others' counts
 /// are never shown: only the owner sees them.
@@ -229,14 +249,7 @@ struct PlazaStarRow: View {
     var body: some View {
         Button(action: onOpen) {
             HStack(spacing: 14) {
-                // 17.2: a star without starlight is the faint default star.
-                ShapeStar(spec: item.hasStarlight ? item.cardShape : StarShapeSpec(points: 4, sharpness: .soft),
-                          color: item.cardMood.color.opacity(item.hasStarlight ? 1 : 0.5),
-                          size: item.hasStarlight ? 22 : 14, halo: false)
-                    .shadow(color: item.cardMood.color.opacity(item.hasStarlight ? 0.75 : 0), radius: 1 + CGFloat(item.cardDepth) * 1.2)
-                    .frame(width: 44, height: 44)
-                    .background(Color.bgSurfaceRaised, in: .rect(cornerRadius: 12))
-                    .accessibilityHidden(true)
+                PlazaStarThumb(item: item)
                 VStack(alignment: .leading, spacing: 3) {
                     Text("“\(item.line)”")
                         .textStyle(.observation)
