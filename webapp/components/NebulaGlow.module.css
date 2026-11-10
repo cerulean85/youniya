@@ -1,0 +1,7 @@
+.glow { position: absolute; inset: 0; z-index: 0; pointer-events: none; border-radius: inherit; overflow: hidden;
+  background:
+    radial-gradient(55% 55% at 50% 42%, rgb(var(--glow-a) / 0.38), transparent 100%),
+    radial-gradient(60% 45% at 15% 85%, rgb(var(--glow-b) / 0.16), transparent 100%),
+    radial-gradient(50% 40% at 85% 20%, rgb(var(--glow-c) / 0.1), transparent 100%);
+}
+.glow i { position: absolute; border-radius: 50%; background: var(--text); }

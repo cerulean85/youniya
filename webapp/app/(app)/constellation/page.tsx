@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { ConstellationPick } from "@/components/ConstellationPick";
 import { ShareCard } from "@/components/ShareCard";
+import { NebulaGlow } from "@/components/NebulaGlow";
 import { ChevronRight, Nebula } from "@/components/icons";
 import { MONTH_NAMES } from "@/lib/constellation";
 import { api } from "@/lib/api";
@@ -52,6 +53,8 @@ async function Month({ searchParams }: Pick<PageProps<"/constellation">, "search
       </header>
       <div className={styles.body}>
         <section className={`card ${styles.figureCard}`} aria-label="별자리">
+          {/* Mobile: the canvas sits on the sky's nebula glow. */}
+          <NebulaGlow />
           {/* 기획서 23장 (Mobile 08-5·08-7 Complete Card Button): only a completed month has a card, and says so. */}
           {c?.complete && <ShareCard kind="constellation" data={constellationCard(c, shapeOf)} label="완성 카드 ›"
             className={styles.completeCard} />}
