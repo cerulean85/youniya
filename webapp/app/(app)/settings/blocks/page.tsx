@@ -10,7 +10,7 @@ import styles from "../settings.module.css";
 export const metadata: Metadata = { title: "차단한 별지기" };
 
 type Block = { id: string; created_at: string; source: "star" | "line" | "star_line" | "nebula" | string };
-const WHERE: Record<string, string> = { star: "우주 광장 별", line: "별빛 한 줄", star_line: "별빛 한 줄", nebula: "성운" };
+const WHERE: Record<string, string> = { star: "우주 광장 별", line: "별빛 한 줄", star_line: "별빛 한 줄", nebula: "우주 광장 별" };
 
 // Figma W-82: the API keeps who it was to itself (설정 › 차단한 별지기: when and where, never who).
 export default function BlocksPage() {
