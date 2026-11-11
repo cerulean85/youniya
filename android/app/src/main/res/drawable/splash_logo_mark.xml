@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- AN-01: the Mobile 01 Logo Mark (dashed ring + logoStarLarge 95dp) centered on the 288dp splash icon canvas. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/splash_dash_ring" />
+    <item android:drawable="@drawable/logo_star_large" android:gravity="center"
+        android:width="95dp" android:height="95dp" />
+</layer-list>
