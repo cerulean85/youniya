@@ -104,6 +104,9 @@ sealed interface MainNav {
         val revising: StarItem? = null,
         val floatingKept: StarItem? = null,
     ) : MainNav
+    data class ConstellationStory(val month: String) : MainNav
+    data object MilkyWay : MainNav
+    data class NebulaStars(val kind: NebulaStarKind = NebulaStarKind.Floated) : MainNav
 }
 
 /** The main shell (iOS MainView): four tabs, the write FAB, the menu button and the drawer. */
@@ -138,12 +141,31 @@ fun MainScreen(model: AppModel) {
                         }
                         null -> Unit
                         else -> Home(
+                            model = model,
                             stars = model.stars,
                             onCompose = compose,
                             onSeeAll = { tab = SkyTab.Records },
                             onOpenStar = { star -> navStack = navStack + MainNav.StarDetail(star.id) },
+                            onOpenConstellation = { tab = SkyTab.Nebula },
                         )
                     }
+                    SkyTab.Nebula -> ConstellationView(
+                        model = model,
+                        onOpen = { title ->
+                            when (title) {
+                                "나의 은하수" -> navStack = navStack + MainNav.MilkyWay
+                                "떠 있는 별" -> navStack = navStack + MainNav.NebulaStars(NebulaStarKind.Floated)
+                                "깊은 별" -> navStack = navStack + MainNav.NebulaStars(NebulaStarKind.Deep)
+                                else -> model.message = "$title 화면을 열어요."
+                            }
+                        },
+                        onStory = { month ->
+                            navStack = navStack + MainNav.ConstellationStory(month)
+                        },
+                        onOpenStar = { star ->
+                            navStack = navStack + MainNav.StarDetail(star.id)
+                        },
+                    )
                     else -> ComingSoon(tab.title)
                 }
                 MenuButton(Modifier.align(Alignment.TopEnd).padding(end = 16.dp, top = 2.dp)) { drawerOpen = true }
@@ -213,6 +235,29 @@ fun MainScreen(model: AppModel) {
                     },
                 )
             }
+            is MainNav.ConstellationStory -> {
+                ConstellationStoryView(
+                    model = model,
+                    month = top.month,
+                    onBack = { navStack = navStack.dropLast(1) },
+                    onOpenStar = { star -> navStack = navStack + MainNav.StarDetail(star.id) },
+                )
+            }
+            is MainNav.MilkyWay -> {
+                MilkyWayView(
+                    model = model,
+                    onBack = { navStack = navStack.dropLast(1) },
+                    onOpenStar = { star -> navStack = navStack + MainNav.StarDetail(star.id) },
+                )
+            }
+            is MainNav.NebulaStars -> {
+                NebulaStarsView(
+                    model = model,
+                    initialKind = top.kind,
+                    onBack = { navStack = navStack.dropLast(1) },
+                    onOpenStar = { star -> navStack = navStack + MainNav.StarDetail(star.id) },
+                )
+            }
             null -> Unit
         }
     }
@@ -266,10 +311,12 @@ private fun FirstNightSky(onCompose: () -> Unit) {
 /** 04 홈 · 오늘 */
 @Composable
 private fun Home(
+    model: AppModel,
     stars: List<StarItem>,
     onCompose: () -> Unit,
     onSeeAll: () -> Unit,
     onOpenStar: (StarItem) -> Unit = {},
+    onOpenConstellation: () -> Unit = {},
 ) {
     val a = sky()
     val today = LocalDate.now().format(DateTimeFormatter.ofPattern("M월 d일 EEEE", Locale.KOREAN))
@@ -314,6 +361,12 @@ private fun Home(
                 StarRow(star = star, onClick = { onOpenStar(star) })
             }
         }
+
+        // 04 홈 맨 아래 한 줄 링크: MonthConstellationLink
+        MonthConstellationLink(
+            model = model,
+            onOpen = onOpenConstellation,
+        )
     }
 }
 

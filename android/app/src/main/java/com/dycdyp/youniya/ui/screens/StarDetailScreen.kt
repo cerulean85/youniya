@@ -1,6 +1,8 @@
 package com.dycdyp.youniya.ui.screens
 
+import android.app.Activity
 import androidx.activity.compose.BackHandler
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -80,6 +82,11 @@ fun StarDetailScreen(
     var showBreakdown by remember { mutableStateOf(false) }
     var askLink by remember { mutableStateOf(false) }
     var unlinkTarget by remember { mutableStateOf<StarItem?>(null) }
+    var showShareSheet by remember { mutableStateOf(false) }
+    // 22장: 별 제목 넣기 is off by default.
+    var withTitle by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val activity = context as? Activity
 
     val scope = rememberCoroutineScope()
 
@@ -237,7 +244,7 @@ fun StarDetailScreen(
                         text = "카드 공유",
                         compact = true,
                         modifier = Modifier.weight(1f),
-                        onClick = { model.message = "다음 단계에서 만들어요." },
+                        onClick = { showShareSheet = true },
                     )
                     GhostButton(
                         text = "내보내기",
@@ -352,6 +359,40 @@ fun StarDetailScreen(
                     },
                     ghostText = "취소",
                     onGhost = { unlinkTarget = null },
+                )
+            }
+        }
+
+        // 12-13 공유 시트
+        if (showShareSheet) {
+            YouniyaSheet("star-share-sheet", onDismiss = { showShareSheet = false }) {
+                CardShareSheetContent(
+                    title = "별 카드로 나누기",
+                    withTitle = withTitle,
+                    onTitleToggle = { withTitle = it },
+                    cardPreview = {
+                        StarShareCard(model = model, star = star, withTitle = withTitle)
+                    },
+                    onInstagram = { bitmap ->
+                        run {
+                                                        val uri = CardShareUtil.saveBitmapToCache(context, bitmap)
+                            CardShareUtil.shareToInstagramStories(context, uri)
+                        }
+                        showShareSheet = false
+                    },
+                    onSaveImage = { bitmap ->
+                        run {
+                                                        CardShareUtil.saveToGallery(context, bitmap)
+                        }
+                        showShareSheet = false
+                    },
+                    onOtherApps = { bitmap ->
+                        run {
+                                                        val uri = CardShareUtil.saveBitmapToCache(context, bitmap)
+                            CardShareUtil.shareToOtherApps(context, uri, "별 카드로 나누기")
+                        }
+                        showShareSheet = false
+                    },
                 )
             }
         }

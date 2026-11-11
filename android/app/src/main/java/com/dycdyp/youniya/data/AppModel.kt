@@ -568,4 +568,111 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun keepInstead(id: String): StarItem? = stars.firstOrNull { it.id == id }
+
+    var liveConstellations = androidx.compose.runtime.mutableStateMapOf<String, MonthConstellation>()
+    var constellationsOverview by mutableStateOf<ServerConstellationsOverview?>(null)
+    var liveStories = androidx.compose.runtime.mutableStateMapOf<String, ServerStory>()
+
+    fun constellation(key: String): MonthConstellation {
+        liveConstellations[key]?.let { return it }
+        val c = MonthConstellation.local(key, stars)
+        val updatedSlots = c.slots.map { slot ->
+            val s = slot.star
+            if (s != null) {
+                val star = stars.firstOrNull { it.id == s.id }
+                val isDeep = (star?.analysis?.depthScore ?: 0) >= 280
+                slot.copy(star = s.copy(isDeep = isDeep))
+            } else slot
+        }
+        return c.copy(slots = updatedSlots)
+    }
+
+    val firstConstellationMonth: String
+        get() {
+            val earliest = stars.mapNotNull { it.parsedDate }.minOrNull()
+            return MonthConstellation.monthKey(earliest)
+        }
+
+    suspend fun loadConstellation(key: String): MonthConstellation? {
+        if (!isSignedIn) return null
+        return try {
+            val r = api.get<ServerConstellation>("/v1/constellations/$key")
+            val slots = r.slots.sortedBy { it.index }.map { slotOut ->
+                val star = slotOut.star?.let { s ->
+                    val shape = s.shape?.toSpec() ?: stars.firstOrNull { it.id == s.id }?.shape
+                    MonthConstellation.Star(
+                        id = s.id,
+                        title = s.title,
+                        mood = s.mood,
+                        hasStarlight = s.hasStarlight,
+                        starlight = s.starlight,
+                        createdAt = s.createdAt,
+                        shape = shape,
+                        isDeep = (stars.firstOrNull { it.id == s.id }?.analysis?.depthScore ?: 0) >= 280,
+                    )
+                }
+                MonthConstellation.Slot(
+                    point = ConstellationPoint(slotOut.x.toFloat(), slotOut.y.toFloat()),
+                    star = star,
+                )
+            }
+            val extraStars = (r.extra ?: emptyList()).map { s ->
+                val shape = s.shape?.toSpec() ?: stars.firstOrNull { it.id == s.id }?.shape
+                MonthConstellation.Star(
+                    id = s.id,
+                    title = s.title,
+                    mood = s.mood,
+                    hasStarlight = s.hasStarlight,
+                    starlight = s.starlight,
+                    createdAt = s.createdAt,
+                    shape = shape,
+                    isDeep = (stars.firstOrNull { it.id == s.id }?.analysis?.depthScore ?: 0) >= 280,
+                )
+            }
+            val name = if (r.name.endsWith("자리")) r.name else "${r.name}자리"
+            val c = MonthConstellation(
+                month = r.month,
+                name = name,
+                slots = slots,
+                lines = r.lines,
+                extra = extraStars,
+                deep = r.deep,
+            )
+            liveConstellations[key] = c
+            c
+        } catch (e: ApiError) {
+            if (e.status == 404) {
+                null
+            } else {
+                handle(e)
+                null
+            }
+        } catch (e: Exception) {
+            handle(e)
+            null
+        }
+    }
+
+    suspend fun loadConstellationStory(key: String): ServerStory? {
+        if (!isSignedIn) return null
+        return try {
+            val story = api.get<ServerStory>("/v1/constellations/$key/story")
+            liveStories[key] = story
+            story
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    suspend fun loadConstellationsOverview(): ServerConstellationsOverview? {
+        if (!isSignedIn) return null
+        return try {
+            val overview = api.get<ServerConstellationsOverview>("/v1/constellations")
+            constellationsOverview = overview
+            overview
+        } catch (e: Exception) {
+            handle(e)
+            null
+        }
+    }
 }

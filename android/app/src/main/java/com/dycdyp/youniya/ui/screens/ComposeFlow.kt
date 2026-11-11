@@ -12,9 +12,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import com.dycdyp.youniya.R
 import com.dycdyp.youniya.data.ApiError
 import com.dycdyp.youniya.data.AppModel
+import com.dycdyp.youniya.data.MonthConstellation
 import com.dycdyp.youniya.data.StarDraft
 import com.dycdyp.youniya.data.StarItem
 import com.dycdyp.youniya.ui.components.ActionSheetContent
@@ -28,6 +30,7 @@ private sealed interface ComposeStep {
     data class Reading(val attemptId: String, val draft: StarDraft) : ComposeStep
     data class Birth(val star: StarItem) : ComposeStep
     data class Card(val star: StarItem) : ComposeStep
+    data class Completed(val month: String, val thenAction: () -> Unit) : ComposeStep
     data class Crisis(val star: StarItem, val floated: Boolean) : ComposeStep
     data class SendFailed(val draft: StarDraft, val floated: Boolean) : ComposeStep
     data class AnalysisFailed(val star: StarItem) : ComposeStep
@@ -238,6 +241,11 @@ fun ComposeFlow(
                 onClose()
             }
         }
+        is ComposeStep.Completed -> {
+            BackHandler(enabled = true) {
+                currentStep.thenAction()
+            }
+        }
         is ComposeStep.Writing -> {
             // Screen handles its own back
         }
@@ -336,9 +344,43 @@ fun ComposeFlow(
             }
 
             is ComposeStep.Card -> {
+                val context = LocalContext.current
+                var completedMonth by remember { mutableStateOf<String?>(null) }
+
+                LaunchedEffect(s.star.id) {
+                    val month = MonthConstellation.monthKey(s.star.parsedDate)
+                    if (!ConstellationCompleteTracker.wasShown(context, month)) {
+                        model.loadConstellation(month)
+                        val c = model.constellation(month)
+                        if (c.isComplete && c.slots.lastOrNull()?.star?.id == s.star.id) {
+                            completedMonth = month
+                        }
+                    }
+                }
+
+                val afterCard: (() -> Unit) -> Unit = { next ->
+                    val m = completedMonth
+                    if (m != null) {
+                        completedMonth = null
+                        ConstellationCompleteTracker.markShown(context, m)
+                        step = ComposeStep.Completed(month = m, thenAction = next)
+                    } else {
+                        next()
+                    }
+                }
+
                 StarCardView(
                     star = s.star,
-                    onClose = onClose,
+                    onClose = { afterCard(onClose) },
+                    onShowNebula = { afterCard(onShowNebula) },
+                )
+            }
+
+            is ComposeStep.Completed -> {
+                ConstellationCompleteView(
+                    model = model,
+                    month = s.month,
+                    onClose = s.thenAction,
                     onShowNebula = onShowNebula,
                 )
             }

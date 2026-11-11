@@ -14,6 +14,8 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "1.0.0"
+        // Meta (Facebook) App ID for Instagram Stories; empty hides the button, as on iOS (INSTAGRAM_APP_ID).
+        buildConfigField("String", "INSTAGRAM_APP_ID", "\"\"")
     }
 
     buildTypes {
