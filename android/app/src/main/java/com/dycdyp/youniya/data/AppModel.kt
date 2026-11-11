@@ -78,7 +78,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         get() {
             val until = plazaRestrictedUntil ?: return false
             return try {
-                java.time.Instant.parse(until).isAfter(java.time.Instant.now())
+                (parseServerInstant(until)?.isAfter(java.time.Instant.now()) == true)
             } catch (_: Exception) {
                 false
             }

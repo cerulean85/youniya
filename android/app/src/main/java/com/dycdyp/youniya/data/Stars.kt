@@ -310,3 +310,10 @@ data class StarDraft(
     val isEmpty: Boolean
         get() = title.trim().isEmpty() && body.trim().isEmpty()
 }
+
+/** The server's ISO times come as "2026-11-11T12:33:51.826699+00:00" (Python isoformat); Instant.parse
+ *  alone rejects the "+00:00" offset on Android, so read it as an OffsetDateTime first. */
+fun parseServerInstant(iso: String?): Instant? {
+    if (iso.isNullOrBlank()) return null
+    return runCatching { OffsetDateTime.parse(iso).toInstant() }.getOrElse { runCatching { Instant.parse(iso) }.getOrNull() }
+}

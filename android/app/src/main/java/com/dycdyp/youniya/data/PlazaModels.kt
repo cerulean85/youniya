@@ -450,7 +450,7 @@ fun splitShareSentences(body: String): List<String> {
 fun formatPlazaWhen(isoString: String?): String {
     if (isoString == null) return "방금"
     return try {
-        val instant = Instant.parse(isoString)
+        val instant = parseServerInstant(isoString) ?: return "방금"
         val now = Instant.now()
         val seconds = ChronoUnit.SECONDS.between(instant, now).coerceAtLeast(0)
         when {
