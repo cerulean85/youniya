@@ -1,4 +1,4 @@
-.wrap { position: relative; width: 100%; height: 100%; }
+.wrap { position: relative; width: 100%; aspect-ratio: var(--ar, 342 / 300); }
 .star { cursor: pointer; outline: none; }
 .star:focus-visible circle:last-child { stroke: #fff; stroke-width: 2; }
 /* 같은 달 이어진 별: silver dotted lines that show for a moment, then stay faint. */

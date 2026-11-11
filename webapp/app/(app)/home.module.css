@@ -42,3 +42,4 @@
   .recent, .steps { grid-template-columns: 1fr; }
   .cta { width: 100%; }
 }
+@media (max-width: 720px) { .heroStar > svg { width: min(236px, 52vw); height: auto; } .hero { min-height: 300px; } }

@@ -106,3 +106,4 @@
   .v2 { grid-template-columns: 1fr; }
   .heroCol { position: relative; top: 0; min-height: 360px; order: -1; }
 }
+@media (max-width: 720px) { .heroCol > svg { width: min(283px, 56vw); height: auto; } .heroCol { min-height: 300px; } .title { font-size: 32px; } .actions > :is(button, a).btn, .actions :global(.btn-block) { flex: 1; min-width: 0; } .textLinks { margin-left: 0; } }

@@ -42,12 +42,14 @@ function Header({ band = [], children }: { band?: PlazaStar[]; children?: React.
       <span className="v2-glow" style={{ ["--c" as string]: "var(--primary)", left: "-6%", top: "-260px", width: "120%", height: "520px" }} aria-hidden="true" />
       {band.length > 0 && (
         <span className={styles.band} aria-hidden="true">
-          {band.slice(0, 32).map((s, i) => {
-            // A fixed scatter: the same star lands in the same place every visit.
+          {Array.from({ length: Math.min(28, band.length * 6) }, (_, i) => band[i % band.length]).map((s, i) => {
+            // A fixed scatter of the plaza's own stars (cycled when there are few); the same star lands in the same
+            // place every visit, and the left side keeps to the top, clear of the title.
             const r = (n: number) => { const x = Math.sin((i + 1) * 12.9898 + n * 78.233) * 43758.5453; return x - Math.floor(x); };
-            const size = s.has_starlight ? 9 + Math.round(r(3) * 15) : 7;
+            const x = r(1), y = x < 0.55 ? r(2) * 0.32 : r(2);
+            const size = s.has_starlight ? 8 + Math.round(r(3) * (i < band.length ? 16 : 10)) : 7;
             return (
-              <span key={s.id} style={{ left: `${(r(1) * 100).toFixed(1)}%`, top: `${(r(2) * 100).toFixed(1)}%` }}>
+              <span key={`${s.id}-${i}`} style={{ left: `${(x * 100).toFixed(1)}%`, top: `${(y * 100).toFixed(1)}%`, opacity: i < band.length ? 1 : 0.75 }}>
                 <StarGlyph points={s.has_starlight ? s.shape?.points : 4} sharpness={s.shape?.sharpness} mood={s.mood} size={size} twinkle />
               </span>
             );

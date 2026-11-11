@@ -4,7 +4,9 @@
 .gold { font: 400 18px/26px var(--sans); color: #fcd34d; margin: 0; }
 /* The figure rises under the heading's right side, as in the design, and fits the window's height. */
 .stage { position: relative; margin-top: -72px; min-height: 420px; display: grid; place-items: center; }
-.figure { position: relative; z-index: 1; aspect-ratio: 342 / 300; width: min(100%, 940px, max(360px, (100dvh - 300px) * 342 / 300)); margin-left: auto; margin-right: 0; }
+.figure { position: relative; z-index: 1; width: min(100%, 940px); margin-left: auto; margin-right: 0; display: flex; justify-content: flex-end; }
+/* The figure (framed to its stars) as wide as the design's, but never taller than the window allows. */
+.figure > * { max-width: max(360px, calc((100dvh - 330px) * var(--arn, 1.14))); }
 .months { position: absolute; inset: 50% 0 auto; transform: translateY(-50%); display: flex; justify-content: space-between; pointer-events: none; z-index: 2; }
 .months a { pointer-events: auto; font: 400 15px/20px var(--sans); color: var(--text-2); }
 .months a:hover { color: var(--text); }
@@ -13,7 +15,7 @@
 .completeCard:hover { background: rgb(251 191 36 / 0.22); }
 .foot { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
 .stats { display: flex; gap: 72px; margin: 0; }
-.stat { display: flex; flex-direction: column-reverse; gap: 4px; }
+.stat { display: flex; flex-direction: column; gap: 2px; }
 .stat dd { margin: 0; font: 600 44px/1.1 var(--serif); color: #f1f5f9; }
 .stat dt { margin: 0; }
 .more { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }

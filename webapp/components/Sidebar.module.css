@@ -24,3 +24,18 @@
 .dot { margin-left: auto; width: 5px; height: 5px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 8px var(--gold); }
 .spacer { flex: 1; }
 .unread { margin-left: auto; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); }
+
+/* Narrow screens (≤720px): the sidebar becomes a top bar — the logo, a nav that scrolls sideways, and the
+ * balance; the account card's other parts and the big button step aside (오늘 has its own 오늘의 별 만들기). */
+@media (max-width: 720px) {
+  .sidebar { position: sticky; top: 0; z-index: 20; height: auto; width: 100%; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 16px; border-right: 0; border-bottom: 1px solid var(--border); overflow: visible; }
+  .sidebar > :global(.btn) { display: none; }
+  .logo { padding-left: 0; font-size: 15px; }
+  .spacer { display: none; }
+  .nav { order: 3; width: 100%; flex-direction: row; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+  .nav::-webkit-scrollbar { display: none; }
+  .group { flex-direction: row; gap: 4px; flex: none; }
+  .groupLabel, .divider { display: none; }
+  .item { padding: 6px 10px; flex: none; white-space: nowrap; }
+  .dot, .unread { margin-left: 4px; }
+}

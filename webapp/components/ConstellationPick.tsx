@@ -25,6 +25,9 @@ export function ConstellationPick({ c, shapes, still = false }: { c: Constellati
   const [, start] = useTransition();
   const slot = picked == null ? null : c.slots[picked];
   const at = (i: number) => [c.slots[i].x * W, c.slots[i].y * H] as const;
+  // Framed to the figure's own stars (as the design frames each constellation), with room for shapes and dates.
+  const xs = c.slots.map((sl) => sl.x * W), ys = c.slots.map((sl) => sl.y * H), m = 56;
+  const box = { x: Math.min(...xs) - m, y: Math.min(...ys) - m, w: Math.max(...xs) - Math.min(...xs) + m * 2, h: Math.max(...ys) - Math.min(...ys) + m * 2 };
   const indexOf = new Map(c.slots.filter((s) => s.star).map((s) => [s.star!.id, s.index]));
   const here = (links ?? []).filter((l) => indexOf.has(l.id));
   const away = (links ?? []).filter((l) => !indexOf.has(l.id));
@@ -45,8 +48,8 @@ export function ConstellationPick({ c, shapes, still = false }: { c: Constellati
   };
 
   return (
-    <div className={styles.wrap}>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" role="img" aria-label={`${c.name}자리 · ${c.filled} / ${c.total} 자리 채움`} style={{ overflow: "visible" }}>
+    <div className={styles.wrap} style={{ ["--ar" as string]: `${box.w.toFixed(1)} / ${box.h.toFixed(1)}`, ["--arn" as string]: (box.w / box.h).toFixed(3) }}>
+      <svg viewBox={`${box.x.toFixed(1)} ${box.y.toFixed(1)} ${box.w.toFixed(1)} ${box.h.toFixed(1)}`} width="100%" height="100%" role="img" aria-label={`${c.name}자리 · ${c.filled} / ${c.total} 자리 채움`} style={{ overflow: "visible" }}>
         <defs>
           {MOODS.map((m) => (
             <g key={m}>

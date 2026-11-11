@@ -7,3 +7,8 @@
 .coins svg { color: var(--gold); }
 .logout { background: none; border: 0; padding: 0; cursor: pointer; font: 400 12px/18px var(--sans); color: var(--text-3); }
 .logout:hover { color: var(--text); }
+/* Narrow screens: only the balance, at the right of the top bar (settings stay in the nav). */
+@media (max-width: 720px) {
+  .box { order: 2; margin-left: auto; padding: 0; gap: 0; background: none; border: 0; }
+  .who, .logout { display: none; }
+}
