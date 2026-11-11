@@ -297,7 +297,11 @@ fun SettingsView(
                             primaryText = "영구 삭제",
                             onPrimary = {
                                 sheet = null
-                                model.deleteAccount()
+                                if (model.provider == "apple") {
+                                    com.dycdyp.youniya.data.AppleSignIn.start(context, com.dycdyp.youniya.data.AppleSignIn.Purpose.Delete)
+                                } else {
+                                    model.deleteAccount()
+                                }
                             },
                             secondaryText = "먼저 내보내기",
                             onSecondary = { sheet = SettingsSheet.Export },

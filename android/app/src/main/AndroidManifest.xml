@@ -32,6 +32,13 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- AN-02-1: the server's Apple web flow returns here (youniya://auth/apple?code=…&purpose=…). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="youniya" android:host="auth" android:path="/apple" />
+            </intent-filter>
         </activity>
 
         <service

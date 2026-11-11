@@ -157,8 +157,8 @@ fun LoginScreen(model: AppModel) {
                     }
                 }
                 SocialButton(SocialProvider.Apple) {
-                    // AN-02-1 (Sign in with Apple in a Custom Tab) needs the server's return-to-app step.
-                    model.message = "안드로이드의 Apple 로그인은 준비 중이에요."
+                    // AN-02-1: Sign in with Apple in a Custom Tab; MainActivity takes the return link.
+                    com.dycdyp.youniya.data.AppleSignIn.start(context, com.dycdyp.youniya.data.AppleSignIn.Purpose.SignIn)
                 }
                 Text(
                     "처음이라면 다음 화면에서\n이용약관과 개인정보 처리 동의를 받아요.",

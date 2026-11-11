@@ -29,6 +29,8 @@ data class Me(
 )
 
 @Serializable private data class IdTokenIn(val idToken: String)
+@Serializable private data class AppleExchangeIn(val code: String, val codeVerifier: String)
+@Serializable private data class DeleteMeIn(val appleHandoffCode: String, val appleHandoffVerifier: String)
 @Serializable private data class DevIn(val name: String)
 @Serializable private data class InviteIn(val login: String, val password: String)
 @Serializable private data class ConsentIn(val terms: Boolean = true, val privacy: Boolean = true, val sensitive: Boolean = true, val marketing: Boolean)
@@ -199,6 +201,22 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         true
     } catch (e: Exception) {
         handle(e); false
+    }
+
+    /** AN-02-1: the Custom Tab came back on youniya://auth/apple (sign-in or the 계정 삭제 re-check). */
+    fun appleReturned(r: AppleSignIn.Return) = viewModelScope.launch {
+        when (r) {
+            is AppleSignIn.Return.Failed ->
+                if (!r.cancelled) message = "Apple 로그인을 마치지 못했어요. 다시 시도해 주세요."
+            is AppleSignIn.Return.Code -> when (r.purpose) {
+                AppleSignIn.Purpose.SignIn -> try {
+                    signedIn(api.send<AppleExchangeIn, AuthSession>("POST", "/v1/auth/apple/exchange", AppleExchangeIn(r.code, r.verifier), authorized = false))
+                } catch (e: Exception) {
+                    handle(e)
+                }
+                AppleSignIn.Purpose.Delete -> deleteAccount(DeleteMeIn(r.code, r.verifier))
+            }
+        }
     }
 
     /** Debug only: the dev server's `DEV_LOGIN` sign-in (same name = same account). */
@@ -1151,11 +1169,18 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }.onFailure(::handle)
     }
 
-    fun deleteAccount() = viewModelScope.launch {
+    /**
+     * iOS 5.1.1(v): an Apple account confirms with Apple once more first (the settings sheet opens
+     * the Custom Tab with purpose=delete, and [appleReturned] lands here with the handoff code).
+     */
+    fun deleteAccount() = deleteAccount(null)
+
+    private fun deleteAccount(apple: DeleteMeIn?) = viewModelScope.launch {
         if (!isSignedIn) return@launch
         try {
             PushRegistration.unregister(getApplication(), api)
-            api.call("DELETE", "/v1/me", null, emptyMap(), authorized = true)
+            if (apple != null) api.sendNoContent("DELETE", "/v1/me", apple)
+            else api.call("DELETE", "/v1/me", null, emptyMap(), authorized = true)
             api.store(null)
             isSignedIn = false
             appNotice = com.dycdyp.youniya.ui.screens.AppNotice.AccountDeleted

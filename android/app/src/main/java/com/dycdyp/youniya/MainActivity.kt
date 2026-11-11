@@ -81,6 +81,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleNotificationIntent(intent: android.content.Intent?) {
+        com.dycdyp.youniya.data.AppleSignIn.handle(this, intent?.data)?.let { model.appleReturned(it); return }
         // iOS: a tap opens what `target.screen` names; a push without one opens the 알림함.
         // Background pushes arrive here with the FCM data keys as extras.
         val extras = intent?.extras ?: return
