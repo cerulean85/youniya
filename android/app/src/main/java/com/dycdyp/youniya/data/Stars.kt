@@ -62,7 +62,25 @@ data class ShapeOut(
 }
 
 @Serializable
-data class LinkedOut(val id: String)
+data class LinkedOut(
+    val id: String,
+    val title: String = "",
+    @SerialName("created_at") val createdAt: String? = null,
+    val mood: Mood = Mood.calm,
+    val moods: List<Mood>? = null,
+    @SerialName("has_starlight") val hasStarlight: Boolean = false,
+)
+
+@Serializable
+data class LinksIn(
+    @SerialName("star_ids") val starIds: List<String>,
+)
+
+@Serializable
+data class LinksOut(
+    val added: Int? = null,
+    @SerialName("linked_stars") val linkedStars: List<LinkedOut> = emptyList(),
+)
 
 @Serializable
 data class ServerStar(
@@ -169,22 +187,35 @@ data class StarIn(
 
 private val KST = ZoneId.of("Asia/Seoul")
 private val DateFormatKst = DateTimeFormatter.ofPattern("M월 d일 · HH:mm", Locale.KOREAN)
+private val DateFormatKstLong = DateTimeFormatter.ofPattern("M월 d일 EEEE · HH:mm", Locale.KOREAN)
+private val DateFormatKstShort = DateTimeFormatter.ofPattern("M월 d일", Locale.KOREAN)
 
-fun formatKstDate(iso: String?): String {
-    if (iso.isNullOrBlank()) {
-        return DateFormatKst.format(ZonedDateTime.now(KST))
-    }
+fun parseKstDate(iso: String?): ZonedDateTime? {
+    if (iso.isNullOrBlank()) return null
     return try {
-        val instant = Instant.parse(iso)
-        DateFormatKst.format(instant.atZone(KST))
+        Instant.parse(iso).atZone(KST)
     } catch (_: Exception) {
         try {
-            val odt = OffsetDateTime.parse(iso)
-            DateFormatKst.format(odt.atZoneSameInstant(KST))
+            OffsetDateTime.parse(iso).atZoneSameInstant(KST)
         } catch (_: Exception) {
-            iso
+            null
         }
     }
+}
+
+fun formatKstDate(iso: String?): String {
+    val zdt = parseKstDate(iso) ?: return DateFormatKst.format(ZonedDateTime.now(KST))
+    return DateFormatKst.format(zdt)
+}
+
+fun formatKstLongDate(iso: String?): String? {
+    val zdt = parseKstDate(iso) ?: return null
+    return DateFormatKstLong.format(zdt)
+}
+
+fun formatKstShortDate(iso: String?): String? {
+    val zdt = parseKstDate(iso) ?: return null
+    return DateFormatKstShort.format(zdt)
 }
 
 fun ServerStar.toItem(local: StarItem? = null): StarItem {
@@ -213,6 +244,8 @@ fun ServerStar.toItem(local: StarItem? = null): StarItem {
         shared = shared,
         linkedIds = linkedStars?.map { it.id } ?: local?.linkedIds,
         shape = shapeSpec,
+        lineCount = lineCount ?: local?.lineCount,
+        shareQuoteMissing = if (shared) local?.shareQuoteMissing else null,
     )
 }
 
@@ -232,11 +265,23 @@ data class StarItem(
     val shared: Boolean = false,
     val linkedIds: List<String>? = null,
     val shape: StarShapeSpec? = null,
+    val lineCount: Int? = null,
+    val shareQuoteMissing: Boolean? = null,
 ) {
     val isFloated: Boolean get() = floated
+    val isShared: Boolean get() = shared
 
     val allMoods: List<Mood>
         get() = listOf(mood) + (extraMoods ?: emptyList())
+
+    val longDateText: String
+        get() = formatKstLongDate(createdAt) ?: dateText
+
+    val shortDateText: String
+        get() = formatKstShortDate(createdAt) ?: dateText.split(" ·").firstOrNull() ?: dateText
+
+    val parsedDate: ZonedDateTime?
+        get() = parseKstDate(createdAt)
 }
 
 @Serializable

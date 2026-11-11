@@ -36,17 +36,22 @@ private sealed interface ComposeStep {
 /**
  * Full-screen compose flow (iOS ComposeFlowView):
  * Writing -> Confirm (05-3) -> Reading (06) -> Birth (61~64) -> Card (07-1).
- * Unlit: Writing -> Birth -> Home.
+ * Unlit: Writing -> Birth -> Home / Detail.
  */
 @Composable
 fun ComposeFlow(
     model: AppModel,
     onClose: () -> Unit,
     onShowNebula: () -> Unit,
+    onOpenStar: (StarItem) -> Unit = {},
+    rewriteOf: StarItem? = null,
+    revising: StarItem? = null,
+    floatingKept: StarItem? = null,
     modifier: Modifier = Modifier,
 ) {
     var step by remember { mutableStateOf<ComposeStep>(ComposeStep.Writing) }
     var confirmFloatDraft by remember { mutableStateOf<StarDraft?>(null) }
+    var confirmRevise by remember { mutableStateOf<StarDraft?>(null) }
     var showShortage by remember { mutableStateOf(false) }
     var shortageDraft by remember { mutableStateOf<StarDraft?>(null) }
 
@@ -56,16 +61,33 @@ fun ComposeFlow(
 
     val scope = rememberCoroutineScope()
 
+    // 12-10: When floating a kept star, open the confirm sheet immediately
+    LaunchedEffect(floatingKept) {
+        if (floatingKept != null && step is ComposeStep.Writing) {
+            confirmFloatDraft = StarDraft(
+                mood = floatingKept.mood,
+                extraMoods = floatingKept.extraMoods,
+                title = floatingKept.title,
+                body = floatingKept.body,
+            )
+        }
+    }
+
     fun stopReading(attemptId: String) {
         if (stopping) return
         stopping = true
         scope.launch {
-            val (wasStopped, _) = model.stopStarlight(attemptId)
+            val (wasStopped, s) = model.stopStarlight(attemptId)
             if (wasStopped) {
                 stopped = true
                 model.loadCoins()
                 model.message = "별빛 받기를 그만뒀어요. 무료와 코인은 그대로예요."
-                onClose()
+                val target = s ?: floatingKept ?: model.stars.firstOrNull()
+                if (target != null) {
+                    onOpenStar(target)
+                } else {
+                    onClose()
+                }
             } else {
                 stopping = false
                 model.message = "그만두지 못했어요. 조금만 더 기다려 주세요"
@@ -82,7 +104,20 @@ fun ComposeFlow(
 
         scope.launch {
             try {
-                val (star, crisis) = model.publishLit(draft, attemptId)
+                val star: StarItem
+                val crisis: Boolean
+
+                if (floatingKept != null) {
+                    val floated = model.floatAgain(floatingKept.id, attemptId)
+                    star = floated
+                    crisis = false
+                } else {
+                    val linkTo = if (rewriteOf != null) listOf(rewriteOf.id) else emptyList()
+                    val pair = model.publishLit(draft, attemptId, rewriteOf = revising?.id, linkTo = linkTo)
+                    star = pair.first
+                    crisis = pair.second
+                }
+
                 if (stopped) return@launch
 
                 model.loadCoins()
@@ -110,14 +145,18 @@ fun ComposeFlow(
                     }
                     e.status == 409 && e.code == "starlight_cancelled" -> {
                         model.message = "별빛 받기를 그만뒀어요. 무료와 코인은 그대로예요."
-                        val starId = e.starId
+                        val starId = e.starId ?: floatingKept?.id
                         if (starId != null) {
-                            scope.launch { model.starAfterStop(starId) }
+                            val target = model.starAfterStop(starId)
+                            if (target != null) {
+                                onOpenStar(target)
+                                return@launch
+                            }
                         }
                         onClose()
                     }
                     e.status == 502 || e.code == "analysis_failed" -> {
-                        val kept = e.starId?.let { model.starAfterStop(it) } ?: model.stars.firstOrNull()
+                        val kept = e.starId?.let { model.starAfterStop(it) } ?: floatingKept ?: model.stars.firstOrNull()
                         if (kept != null) {
                             step = ComposeStep.AnalysisFailed(kept)
                         } else {
@@ -145,7 +184,8 @@ fun ComposeFlow(
 
     fun publishUnlit(draft: StarDraft) {
         scope.launch {
-            val res = model.publish(draft, floated = false)
+            val linkTo = if (rewriteOf != null) listOf(rewriteOf.id) else emptyList()
+            val res = model.publish(draft, floated = false, rewriteOf = revising?.id, linkTo = linkTo)
             if (res != null) {
                 val (star, crisis) = res
                 if (crisis) {
@@ -199,33 +239,77 @@ fun ComposeFlow(
             }
         }
         is ComposeStep.Writing -> {
-            // StarMakingScreen manages its own back press (leave sheet)
+            // Screen handles its own back
         }
     }
 
     Box(modifier = modifier.fillMaxSize().noRippleClick { }) {
         when (val s = step) {
             is ComposeStep.Writing -> {
-                StarMakingScreen(
-                    model = model,
-                    onClose = onClose,
-                    onPublish = { draft, floated ->
-                        if (floated) {
-                            if (draft.body.length < AppModel.minFloatLength) {
-                                model.message = "${AppModel.minFloatLength}자부터 별빛을 받을 수 있어요"
-                                return@StarMakingScreen
-                            }
-                            if (model.floatNeedsCharge) {
-                                shortageDraft = draft
-                                showShortage = true
+                if (floatingKept != null) {
+                    StarDetailScreen(
+                        model = model,
+                        starId = floatingKept.id,
+                        onBack = onClose,
+                    )
+                } else if (revising != null) {
+                    StarMakingScreen(
+                        model = model,
+                        onClose = onClose,
+                        onPublish = { _, _ -> },
+                        revising = revising,
+                        onRevise = { confirmRevise = it },
+                    )
+                } else if (rewriteOf != null) {
+                    RewriteScreen(
+                        model = model,
+                        previous = rewriteOf,
+                        question = rewriteOf.analysis?.rewriteQuestion,
+                        onBack = onClose,
+                        onPublish = { body, floated ->
+                            val draft = StarDraft(
+                                mood = rewriteOf.mood,
+                                title = rewriteOf.title,
+                                body = body,
+                            )
+                            if (floated) {
+                                if (body.length < AppModel.minFloatLength) {
+                                    model.message = "${AppModel.minFloatLength}자부터 별빛을 받을 수 있어요"
+                                    return@RewriteScreen
+                                }
+                                if (model.floatNeedsCharge) {
+                                    shortageDraft = draft
+                                    showShortage = true
+                                } else {
+                                    confirmFloatDraft = draft
+                                }
                             } else {
-                                confirmFloatDraft = draft
+                                publishUnlit(draft)
                             }
-                        } else {
-                            publishUnlit(draft)
-                        }
-                    },
-                )
+                        },
+                    )
+                } else {
+                    StarMakingScreen(
+                        model = model,
+                        onClose = onClose,
+                        onPublish = { draft, floated ->
+                            if (floated) {
+                                if (draft.body.length < AppModel.minFloatLength) {
+                                    model.message = "${AppModel.minFloatLength}자부터 별빛을 받을 수 있어요"
+                                    return@StarMakingScreen
+                                }
+                                if (model.floatNeedsCharge) {
+                                    shortageDraft = draft
+                                    showShortage = true
+                                } else {
+                                    confirmFloatDraft = draft
+                                }
+                            } else {
+                                publishUnlit(draft)
+                            }
+                        },
+                    )
+                }
             }
 
             is ComposeStep.Reading -> {
@@ -243,7 +327,7 @@ fun ComposeFlow(
                     unlit = !s.star.isFloated,
                     onShow = {
                         if (!s.star.isFloated) {
-                            onClose()
+                            onOpenStar(s.star)
                         } else {
                             step = ComposeStep.Card(s.star)
                         }
@@ -323,32 +407,93 @@ fun ComposeFlow(
             }
         }
 
-        // 05-3 / 05-4 별빛을 받아 띄울까요? 확인 시트
+        // 05-3 / 05-4 / 12-10 별빛을 받아 띄울까요? 확인 시트
         if (confirmFloatDraft != null) {
             val draft = confirmFloatDraft!!
+            val isKept = floatingKept != null
             val floatCostLine = if (model.isFloatFree) {
                 "오늘 무료 1번 남았어요."
             } else {
                 "오늘 무료를 다 썼어요. 코인 ${AppModel.floatCost}개가 사용돼요(지금 ${model.coins}개)."
             }
-            val floatPrimaryTitle = if (model.isFloatFree) {
+            val floatPrimaryTitle = if (isKept) {
+                "별빛 받기"
+            } else if (model.isFloatFree) {
                 "별빛 받고 띄우기 · 오늘 무료 1번"
             } else {
                 "별빛 받고 띄우기 · ${AppModel.floatCost}코인"
             }
 
-            YouniyaSheet("float-confirm", onDismiss = { confirmFloatDraft = null }) {
+            val sheetTitle = if (isKept) "이 별에 별빛을 받을까요?" else "별빛을 받아 띄울까요?"
+            val sheetMessage = if (isKept) {
+                "별빛 프리즘이 글을 읽고 별빛·깊이·고유한 별 모양과 별빛 풀이를 줘요. $floatCostLine\n별빛을 받으면 이 글은 잠겨서 고칠 수 없어요. 고치고 싶은 곳이 있으면 먼저 고친 뒤 받아 주세요."
+            } else {
+                "별빛 프리즘이 글을 읽고 별빛·깊이·고유한 별 모양을 줘요. $floatCostLine\n별빛을 받으면 이 글은 잠겨서 고칠 수 없어요. 고치고 싶으면 '고쳐 쓰기'로 새 별을 만들 수 있어요."
+            }
+
+            YouniyaSheet("float-confirm", onDismiss = {
+                confirmFloatDraft = null
+                if (isKept) onClose()
+            }) {
                 ActionSheetContent(
-                    title = "별빛을 받아 띄울까요?",
-                    message = "별빛 프리즘이 글을 읽고 별빛·깊이·고유한 별 모양을 줘요. $floatCostLine\n별빛을 받으면 이 글은 잠겨서 고칠 수 없어요. 고치고 싶으면 '고쳐 쓰기'로 새 별을 만들 수 있어요.",
+                    title = sheetTitle,
+                    message = sheetMessage,
                     primaryText = floatPrimaryTitle,
                     onPrimary = {
                         confirmFloatDraft = null
-                        startReading(draft)
+                        if (isKept && (floatingKept?.body?.length ?: 0) < AppModel.minFloatLength) {
+                            model.message = "${AppModel.minFloatLength}자부터 별빛을 받을 수 있어요"
+                            return@ActionSheetContent
+                        }
+                        if (model.floatNeedsCharge) {
+                            shortageDraft = draft
+                            showShortage = true
+                        } else {
+                            startReading(draft)
+                        }
                     },
-                    secondaryText = "조금 더 쓸게요",
-                    onSecondary = { confirmFloatDraft = null },
+                    secondaryText = if (isKept) "다음에" else "조금 더 쓸게요",
+                    onSecondary = {
+                        confirmFloatDraft = null
+                        if (isKept) onClose()
+                    },
                     secondaryIsGhost = true,
+                )
+            }
+        }
+
+        // 05-5 고쳐 쓴 글을 새 별로 띄울까요? 확인 시트
+        if (confirmRevise != null && revising != null) {
+            val draft = confirmRevise!!
+            val original = revising
+            val costLine = if (model.isFloatFree) "별빛을 받으면 오늘 무료 1번을 써요." else "별빛을 받으면 코인 ${AppModel.floatCost}개를 써요(지금 ${model.coins}개)."
+            val msg = "「${original.title}」를 고쳐 쓴 글이에요. 원래 별과 별빛은 그대로 남고, 새 별이 하나 더 생겨 원래 별과 이어져요.\n$costLine 별빛 없이 띄우면 무료예요."
+
+            YouniyaSheet("revise-confirm", onDismiss = { confirmRevise = null }) {
+                ActionSheetContent(
+                    title = "고쳐 쓴 글을 새 별로 띄울까요?",
+                    message = msg,
+                    primaryText = "별빛 받고 새 별로 띄우기",
+                    onPrimary = {
+                        confirmRevise = null
+                        if (draft.body.length < AppModel.minFloatLength) {
+                            model.message = "${AppModel.minFloatLength}자부터 별빛을 받을 수 있어요"
+                            return@ActionSheetContent
+                        }
+                        if (model.floatNeedsCharge) {
+                            shortageDraft = draft
+                            showShortage = true
+                        } else {
+                            startReading(draft)
+                        }
+                    },
+                    secondaryText = "별빛 없이 새 별로 띄우기",
+                    onSecondary = {
+                        confirmRevise = null
+                        publishUnlit(draft)
+                    },
+                    ghostText = "취소",
+                    onGhost = { confirmRevise = null },
                 )
             }
         }

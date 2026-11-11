@@ -95,19 +95,31 @@ enum class SkyTab(val title: String, val icon: Int) {
     Records("기록", R.drawable.icon_archive),
 }
 
+sealed interface MainNav {
+    data class StarDetail(val starId: String) : MainNav
+    data class StarEdit(val starId: String) : MainNav
+    data class LinkExisting(val starId: String) : MainNav
+    data class Compose(
+        val rewriteOf: StarItem? = null,
+        val revising: StarItem? = null,
+        val floatingKept: StarItem? = null,
+    ) : MainNav
+}
+
 /** The main shell (iOS MainView): four tabs, the write FAB, the menu button and the drawer. */
 @Composable
 fun MainScreen(model: AppModel) {
     var tab by rememberSaveable { mutableStateOf(SkyTab.Sky) }
     var drawerOpen by remember { mutableStateOf(false) }
     var showWelcome by remember { mutableStateOf(false) }
-    var composing by rememberSaveable { mutableStateOf(false) }
+    var navStack by remember { mutableStateOf<List<MainNav>>(emptyList()) }
     val scope = rememberCoroutineScope()
     val prefs = LocalContext.current.getSharedPreferences("app", 0)
-    val compose = { composing = true }
+    val compose = { navStack = navStack + MainNav.Compose() }
 
     BackHandler(enabled = drawerOpen) { drawerOpen = false }
-    BackHandler(enabled = !drawerOpen && tab != SkyTab.Sky) { tab = SkyTab.Sky }
+    BackHandler(enabled = !drawerOpen && navStack.isNotEmpty()) { navStack = navStack.dropLast(1) }
+    BackHandler(enabled = !drawerOpen && navStack.isEmpty() && tab != SkyTab.Sky) { tab = SkyTab.Sky }
 
     Box(Modifier.fillMaxSize()) {
         StarField()
@@ -125,7 +137,12 @@ fun MainScreen(model: AppModel) {
                             }
                         }
                         null -> Unit
-                        else -> Home(stars = model.stars, onCompose = compose, onSeeAll = { tab = SkyTab.Records })
+                        else -> Home(
+                            stars = model.stars,
+                            onCompose = compose,
+                            onSeeAll = { tab = SkyTab.Records },
+                            onOpenStar = { star -> navStack = navStack + MainNav.StarDetail(star.id) },
+                        )
                     }
                     else -> ComingSoon(tab.title)
                 }
@@ -141,15 +158,62 @@ fun MainScreen(model: AppModel) {
             }
         })
 
-        if (composing) {
-            ComposeFlow(
-                model = model,
-                onClose = { composing = false },
-                onShowNebula = {
-                    composing = false
-                    tab = SkyTab.Nebula
-                },
-            )
+        when (val top = navStack.lastOrNull()) {
+            is MainNav.StarDetail -> {
+                StarDetailScreen(
+                    model = model,
+                    starId = top.starId,
+                    onBack = { navStack = navStack.dropLast(1) },
+                    onRewrite = {
+                        val s = model.stars.firstOrNull { it.id == top.starId }
+                        if (s != null) navStack = navStack + MainNav.Compose(rewriteOf = s)
+                    },
+                    onEdit = { navStack = navStack + MainNav.StarEdit(top.starId) },
+                    onFloat = {
+                        val s = model.stars.firstOrNull { it.id == top.starId }
+                        if (s != null) navStack = navStack + MainNav.Compose(floatingKept = s)
+                    },
+                    onRevise = {
+                        val s = model.stars.firstOrNull { it.id == top.starId }
+                        if (s != null) navStack = navStack + MainNav.Compose(revising = s)
+                    },
+                    onLinkExisting = { navStack = navStack + MainNav.LinkExisting(top.starId) },
+                    onOpenLinked = { other -> navStack = navStack + MainNav.StarDetail(other.id) },
+                    onDeleted = { navStack = navStack.dropLast(1) },
+                )
+            }
+            is MainNav.StarEdit -> {
+                StarEditScreen(
+                    model = model,
+                    starId = top.starId,
+                    onClose = { navStack = navStack.dropLast(1) },
+                )
+            }
+            is MainNav.LinkExisting -> {
+                LinkStarsScreen(
+                    model = model,
+                    starId = top.starId,
+                    onBack = { navStack = navStack.dropLast(1) },
+                    onLinked = { navStack = navStack.dropLast(1) },
+                )
+            }
+            is MainNav.Compose -> {
+                ComposeFlow(
+                    model = model,
+                    rewriteOf = top.rewriteOf,
+                    revising = top.revising,
+                    floatingKept = top.floatingKept,
+                    onClose = { navStack = navStack.dropLast(1) },
+                    onShowNebula = {
+                        navStack = navStack.dropLast(1)
+                        tab = SkyTab.Nebula
+                    },
+                    onOpenStar = { star ->
+                        navStack = navStack.dropLast(1) + MainNav.StarDetail(star.id)
+                    },
+                )
+            }
+            null -> Unit
         }
     }
     if (showWelcome) WelcomeSheet(onCompose = { showWelcome = false; compose() }, onBrowse = { showWelcome = false })
@@ -201,7 +265,12 @@ private fun FirstNightSky(onCompose: () -> Unit) {
 
 /** 04 홈 · 오늘 */
 @Composable
-private fun Home(stars: List<StarItem>, onCompose: () -> Unit, onSeeAll: () -> Unit) {
+private fun Home(
+    stars: List<StarItem>,
+    onCompose: () -> Unit,
+    onSeeAll: () -> Unit,
+    onOpenStar: (StarItem) -> Unit = {},
+) {
     val a = sky()
     val today = LocalDate.now().format(DateTimeFormatter.ofPattern("M월 d일 EEEE", Locale.KOREAN))
     Column(
@@ -242,7 +311,7 @@ private fun Home(stars: List<StarItem>, onCompose: () -> Unit, onSeeAll: () -> U
 
         Column(verticalArrangement = Arrangement.spacedBy(Space.md)) {
             stars.take(4).forEach { star ->
-                StarRow(star = star)
+                StarRow(star = star, onClick = { onOpenStar(star) })
             }
         }
     }

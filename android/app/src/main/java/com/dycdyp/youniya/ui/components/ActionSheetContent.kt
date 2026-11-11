@@ -21,8 +21,8 @@ fun ActionSheetContent(
     message: String,
     primaryText: String,
     onPrimary: () -> Unit,
-    secondaryText: String,
-    onSecondary: () -> Unit,
+    secondaryText: String? = null,
+    onSecondary: (() -> Unit)? = null,
     ghostText: String? = null,
     onGhost: (() -> Unit)? = null,
     destructive: Boolean = false,
@@ -49,10 +49,12 @@ fun ActionSheetContent(
                 PrimaryButton(text = primaryText, onClick = onPrimary)
             }
 
-            if (secondaryIsGhost) {
-                GhostButton(text = secondaryText, onClick = onSecondary)
-            } else {
-                SecondaryButton(text = secondaryText, onClick = onSecondary)
+            if (secondaryText != null && onSecondary != null) {
+                if (secondaryIsGhost) {
+                    GhostButton(text = secondaryText, onClick = onSecondary)
+                } else {
+                    SecondaryButton(text = secondaryText, onClick = onSecondary)
+                }
             }
 
             if (ghostText != null && onGhost != null) {

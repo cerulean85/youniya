@@ -37,6 +37,7 @@ data class Me(
 @Serializable private data class NicknameIn(val name: String)
 @Serializable private data class NicknameOut(val nickname: String, val nextChange: String? = null)
 @Serializable private data class LogoutIn(val refreshToken: String)
+@Serializable private data class StarPatch(val title: String, val body: String? = null, val mood: Mood? = null)
 
 sealed interface NicknameResult {
     data object Ok : NicknameResult
@@ -83,6 +84,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     var draft by mutableStateOf(loadLocalDraft())
         private set
+    val reviseDrafts = mutableMapOf<String, StarDraft>()
 
     var message by mutableStateOf<String?>(null)
 
@@ -306,13 +308,20 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             .onSuccess(::apply)
     }
 
-    suspend fun publishLit(d: StarDraft, attemptId: String): Pair<StarItem, Boolean> {
+    suspend fun publishLit(
+        d: StarDraft,
+        attemptId: String,
+        rewriteOf: String? = null,
+        linkTo: List<String> = emptyList(),
+    ): Pair<StarItem, Boolean> {
         val starIn = StarIn(
             mood = d.mood,
             moods = d.moods,
             title = d.title.trim(),
             body = d.body,
             mode = "lit",
+            rewriteOf = rewriteOf,
+            linkTo = linkTo.ifEmpty { null },
             attemptId = attemptId,
         )
         val r = api.send<StarIn, StarCreated>("POST", "/v1/stars", starIn, timeoutSeconds = starlightTimeout)
@@ -320,13 +329,21 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         freeStarToday = 0
         val item = r.star.toItem()
         stars = listOf(item) + stars
-        saveDraft(StarDraft())
+        if (rewriteOf == null) {
+            saveDraft(StarDraft())
+        }
         return Pair(item, r.crisis != null)
     }
 
-    suspend fun publish(d: StarDraft, floated: Boolean = false, attemptId: String? = null): Pair<StarItem, Boolean>? = try {
+    suspend fun publish(
+        d: StarDraft,
+        floated: Boolean = false,
+        attemptId: String? = null,
+        rewriteOf: String? = null,
+        linkTo: List<String> = emptyList(),
+    ): Pair<StarItem, Boolean>? = try {
         if (floated) {
-            publishLit(d, attemptId ?: java.util.UUID.randomUUID().toString().lowercase())
+            publishLit(d, attemptId ?: java.util.UUID.randomUUID().toString().lowercase(), rewriteOf, linkTo)
         } else {
             val starIn = StarIn(
                 mood = d.mood,
@@ -334,13 +351,151 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 title = d.title.trim(),
                 body = d.body,
                 mode = "unlit",
+                rewriteOf = rewriteOf,
+                linkTo = linkTo.ifEmpty { null },
             )
             val r = api.send<StarIn, StarCreated>("POST", "/v1/stars", starIn)
             val item = r.star.toItem()
             stars = listOf(item) + stars
-            saveDraft(StarDraft())
+            if (rewriteOf == null) {
+                saveDraft(StarDraft())
+            }
             Pair(item, r.crisis != null)
         }
+    } catch (e: Exception) {
+        handle(e)
+        null
+    }
+
+    suspend fun editStar(id: String, mood: Mood?, title: String, body: String?): Boolean? {
+        val t = title.trim()
+        val finalTitle = t.ifEmpty { "제목 없는 별" }
+        fun applyLocally() {
+            val idx = stars.indexOfFirst { it.id == id }
+            if (idx >= 0) {
+                val m = stars.toMutableList()
+                var current = m[idx].copy(title = finalTitle)
+                if (body != null) current = current.copy(body = body)
+                if (mood != null) current = current.copy(mood = mood)
+                m[idx] = current
+                stars = m
+            }
+        }
+        return try {
+            val patch = StarPatch(title = finalTitle, body = body, mood = mood)
+            val r = api.send<StarPatch, StarCreated>("PATCH", "/v1/stars/$id", patch)
+            val local = stars.firstOrNull { it.id == id }
+            val updated = r.star.toItem(local).let {
+                if (r.quoteMissing == true && it.isShared) it.copy(shareQuoteMissing = true) else it
+            }
+            val idx = stars.indexOfFirst { it.id == id }
+            if (idx >= 0) {
+                val m = stars.toMutableList()
+                m[idx] = updated
+                stars = m
+            } else {
+                applyLocally()
+            }
+            r.crisis != null
+        } catch (e: Exception) {
+            handle(e)
+            null
+        }
+    }
+
+    suspend fun deleteStar(id: String) {
+        try {
+            api.call("DELETE", "/v1/stars/$id", null, emptyMap(), authorized = true)
+            stars = stars.filterNot { it.id == id }
+        } catch (e: ApiError) {
+            if (e.code == "not_found") {
+                stars = stars.filterNot { it.id == id }
+            } else {
+                handle(e)
+            }
+        } catch (e: Exception) {
+            handle(e)
+        }
+    }
+
+    fun linkedStars(id: String): List<StarItem> {
+        val ids = stars.firstOrNull { it.id == id }?.linkedIds?.toSet() ?: emptySet()
+        return stars.filter { ids.contains(it.id) }.sortedByDescending { it.parsedDate ?: java.time.ZonedDateTime.now() }
+    }
+
+    fun linkLocally(id: String, others: List<String>) {
+        val m = stars.toMutableList()
+        for (other in others) {
+            if (other == id) continue
+            val i = m.indexOfFirst { it.id == id }
+            if (i >= 0) {
+                val current = m[i].linkedIds ?: emptyList()
+                m[i] = m[i].copy(linkedIds = (current + other).distinct())
+            }
+            val j = m.indexOfFirst { it.id == other }
+            if (j >= 0) {
+                val current = m[j].linkedIds ?: emptyList()
+                m[j] = m[j].copy(linkedIds = (current + id).distinct())
+            }
+        }
+        stars = m
+    }
+
+    fun unlinkLocally(id: String, other: String) {
+        val m = stars.toMutableList()
+        val i = m.indexOfFirst { it.id == id }
+        if (i >= 0) {
+            val current = m[i].linkedIds ?: emptyList()
+            m[i] = m[i].copy(linkedIds = current.filter { it != other })
+        }
+        val j = m.indexOfFirst { it.id == other }
+        if (j >= 0) {
+            val current = m[j].linkedIds ?: emptyList()
+            m[j] = m[j].copy(linkedIds = current.filter { it != id })
+        }
+        stars = m
+    }
+
+    suspend fun linkStars(id: String, others: List<String>): Boolean = try {
+        val r = api.send<LinksIn, LinksOut>("POST", "/v1/stars/$id/links", LinksIn(starIds = others))
+        val serverIds = r.linkedStars.map { it.id }
+        val idx = stars.indexOfFirst { it.id == id }
+        if (idx >= 0) {
+            val m = stars.toMutableList()
+            m[idx] = m[idx].copy(linkedIds = serverIds)
+            stars = m
+        }
+        for (other in others) {
+            linkLocally(other, listOf(id))
+        }
+        true
+    } catch (e: Exception) {
+        handle(e)
+        false
+    }
+
+    suspend fun unlinkStar(id: String, other: String) {
+        try {
+            api.call("DELETE", "/v1/stars/$id/links/$other", null, emptyMap(), authorized = true)
+            unlinkLocally(id, other)
+        } catch (e: Exception) {
+            handle(e)
+        }
+    }
+
+    suspend fun starDetail(id: String): StarItem? = try {
+        val s = api.get<ServerStar>("/v1/stars/$id")
+        val local = stars.firstOrNull { it.id == s.id }
+        val item = s.toItem(local)
+        val idx = stars.indexOfFirst { it.id == item.id }
+        if (idx >= 0) {
+            val m = stars.toMutableList()
+            m[idx] = item
+            stars = m
+        } else {
+            stars = listOf(item) + stars
+        }
+        item
     } catch (e: Exception) {
         handle(e)
         null

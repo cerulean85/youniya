@@ -198,3 +198,27 @@ fun StatusHero(
         )
     }
 }
+
+/**
+ * 122 별을 찾을 수 없어요 (iOS NotFoundView):
+ * deleted, or tidied away on another device.
+ */
+@Composable
+fun NotFoundView(
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    StatusView(
+        icon = R.drawable.icon_star,
+        title = "별을 찾을 수 없어요",
+        message = "이미 지웠거나 다른 기기에서 정리한 별이에요.",
+        actions = listOf(
+            StatusAction(
+                title = "오늘로 돌아가기",
+                style = StatusAction.Style.Primary,
+                run = onBack,
+            ),
+        ),
+        modifier = modifier,
+    )
+}

@@ -38,12 +38,17 @@ import com.dycdyp.youniya.ui.theme.sky
  * 78dp tall.
  */
 @Composable
-fun StarRow(star: StarItem, modifier: Modifier = Modifier) {
+fun StarRow(
+    star: StarItem,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+) {
     val shape = RoundedCornerShape(Radius.lg)
     Row(
         modifier
             .fillMaxWidth()
             .heightIn(min = 78.dp)
+            .then(if (onClick != null) Modifier.noRippleClick(onClick) else Modifier)
             .cosmos(star.id, shape)
             .background(YColor.bgSurface, shape)
             .border(1.dp, YColor.borderDefault, shape)

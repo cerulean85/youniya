@@ -52,6 +52,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -178,17 +179,23 @@ fun LoginScreen(model: AppModel) {
 @Composable
 fun YouniyaSheet(seed: String, onDismiss: () -> Unit, content: @Composable () -> Unit) {
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val shape = RoundedCornerShape(topStart = Radius.xl, topEnd = Radius.xl)
+    // As on iOS (Figma Bottom Sheet, e.g. 34 at x 8, 8 above the bottom): the sheet floats
+    // 8dp in from the sides and the bottom, with all four corners rounded.
+    val shape = RoundedCornerShape(Radius.xl)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = state,
-        shape = shape,
-        containerColor = YColor.bgSurfaceRaised,
+        shape = RectangleShape,
+        containerColor = Color.Transparent,
+        tonalElevation = 0.dp,
         scrimColor = Color.Black.copy(alpha = 0.5f),
         dragHandle = null,
         contentWindowInsets = { WindowInsets(0) },
     ) {
-        Box(Modifier.cosmos(seed, shape).navigationBarsPadding().imePadding()) { content() }
+        Box(
+            Modifier.navigationBarsPadding().imePadding().padding(start = 8.dp, end = 8.dp, bottom = 8.dp)
+                .background(YColor.bgSurfaceRaised, shape).cosmos(seed, shape),
+        ) { content() }
     }
 }
 

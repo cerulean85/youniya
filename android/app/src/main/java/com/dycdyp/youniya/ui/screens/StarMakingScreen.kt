@@ -62,11 +62,34 @@ fun StarMakingScreen(
     model: AppModel,
     onClose: () -> Unit,
     onPublish: (StarDraft, Boolean) -> Unit,
+    revising: com.dycdyp.youniya.data.StarItem? = null,
+    onRevise: (StarDraft) -> Unit = {},
+    revisePublished: Boolean = false,
 ) {
-    var draft by remember { mutableStateOf(model.draft) }
-    var isSaved by remember { mutableStateOf(!model.draft.isEmpty) }
+    val initialDraft = remember(revising) {
+        if (revising != null) {
+            model.reviseDrafts[revising.id] ?: StarDraft(
+                mood = revising.mood,
+                extraMoods = revising.extraMoods,
+                title = revising.title,
+                body = revising.body,
+            )
+        } else {
+            model.draft
+        }
+    }
+    var draft by remember { mutableStateOf(initialDraft) }
+    var isSaved by remember { mutableStateOf(if (revising != null) model.reviseDrafts.containsKey(revising.id) else !model.draft.isEmpty) }
     var didPublish by remember { mutableStateOf(false) }
     var askLeave by remember { mutableStateOf(false) }
+
+    fun save(d: StarDraft) {
+        if (revising != null) {
+            model.reviseDrafts[revising.id] = d
+        } else {
+            model.saveDraft(d)
+        }
+    }
 
     val titleFocus = remember { FocusRequester() }
     val bodyFocus = remember { FocusRequester() }
@@ -87,20 +110,21 @@ fun StarMakingScreen(
 
     // Autosave after 0.8s
     LaunchedEffect(draft) {
-        if (draft == model.draft) {
+        val savedDraft = if (revising != null) model.reviseDrafts[revising.id] ?: StarDraft() else model.draft
+        if (draft == savedDraft) {
             isSaved = !draft.isEmpty
             return@LaunchedEffect
         }
         isSaved = false
         delay(800)
-        model.saveDraft(draft)
+        save(draft)
         isSaved = !draft.isEmpty
     }
 
     DisposableEffect(Unit) {
         onDispose {
-            if (!didPublish) {
-                model.saveDraft(draft)
+            if (!didPublish && !revisePublished) {
+                save(draft)
             }
         }
     }
@@ -130,7 +154,7 @@ fun StarMakingScreen(
         ) {
             // Top Bar
             FlowTopBar(
-                title = "별 만들기",
+                title = if (revising != null) "고쳐 쓰기" else "별 만들기",
                 onClose = handleClose,
                 trailing = {
                     Text(
@@ -141,6 +165,10 @@ fun StarMakingScreen(
                     )
                 },
             )
+
+            if (revising != null) {
+                NoticeBanner(message = "「${revising.title}」를 고쳐 쓰고 있어요. 원래 별과 별빛은 그대로 남고, 띄우면 새 별이 되어 원래 별과 이어져요.")
+            }
 
             // Mood Chips
             Column(verticalArrangement = Arrangement.spacedBy(Space.sm)) {
@@ -228,27 +256,38 @@ fun StarMakingScreen(
             }
 
             // Buttons
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Space.md),
-            ) {
-                SecondaryButton(
-                    text = "별빛 없이 띄우기",
-                    modifier = Modifier.weight(1f),
+            if (revising != null) {
+                PrimaryButton(
+                    text = "새 별로 띄우기",
+                    modifier = Modifier.fillMaxWidth(),
                     enabled = canPublish,
                     onClick = {
-                        didPublish = true
-                        onPublish(draft, false)
+                        onRevise(draft)
                     },
                 )
-                PrimaryButton(
-                    text = model.floatButtonTitle,
-                    modifier = Modifier.weight(1f),
-                    enabled = canFloat,
-                    onClick = {
-                        onPublish(draft, true)
-                    },
-                )
+            } else {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Space.md),
+                ) {
+                    SecondaryButton(
+                        text = "별빛 없이 띄우기",
+                        modifier = Modifier.weight(1f),
+                        enabled = canPublish,
+                        onClick = {
+                            didPublish = true
+                            onPublish(draft, false)
+                        },
+                    )
+                    PrimaryButton(
+                        text = model.floatButtonTitle,
+                        modifier = Modifier.weight(1f),
+                        enabled = canFloat,
+                        onClick = {
+                            onPublish(draft, true)
+                        },
+                    )
+                }
             }
         }
 
@@ -257,7 +296,7 @@ fun StarMakingScreen(
             LeaveDraftSheet(
                 onSaveAndLeave = {
                     askLeave = false
-                    model.saveDraft(draft)
+                    save(draft)
                     onClose()
                 },
                 onKeepWriting = {
@@ -267,7 +306,11 @@ fun StarMakingScreen(
                     askLeave = false
                     didPublish = true
                     draft = StarDraft()
-                    model.saveDraft(StarDraft())
+                    if (revising != null) {
+                        model.reviseDrafts.remove(revising.id)
+                    } else {
+                        model.saveDraft(StarDraft())
+                    }
                     onClose()
                 },
             )

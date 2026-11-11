@@ -45,6 +45,7 @@ data class SkyAccent(
     val pressed: Pair<Color, Color>? = null,
 ) {
     val brandPrimary get() = strong
+    val brandPrimaryText get() = text
     val borderFocus get() = focus
     val tintPrimary get() = tint.copy(alpha = 0.16f)
     val tintPrimarySoft get() = tint.copy(alpha = 0.12f)
