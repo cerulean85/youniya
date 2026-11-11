@@ -1,5 +1,7 @@
 package com.dycdyp.youniya.ui.screens
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -138,7 +140,7 @@ fun StarEditScreen(
                 BasicTextField(
                     value = title,
                     onValueChange = { title = it },
-                    modifier = Modifier
+                    modifier = Modifier.semantics { contentDescription = "제목을 붙여주세요" }
                         .fillMaxWidth()
                         .focusRequester(titleFocus),
                     textStyle = YText.h2.copy(color = YColor.textPrimary),
@@ -176,7 +178,7 @@ fun StarEditScreen(
                     BasicTextField(
                         value = text,
                         onValueChange = { text = it },
-                        modifier = Modifier
+                        modifier = Modifier.semantics { contentDescription = "마음에 머무는 이야기를 적어주세요." }
                             .fillMaxSize()
                             .focusRequester(bodyFocus),
                         textStyle = YText.journalBody.copy(color = YColor.textSecondary),

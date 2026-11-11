@@ -1,5 +1,7 @@
 package com.dycdyp.youniya.ui.screens
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -138,7 +140,7 @@ fun RewriteScreen(
                     BasicTextField(
                         value = text,
                         onValueChange = { text = it },
-                        modifier = Modifier
+                        modifier = Modifier.semantics { contentDescription = "이번에는 어떤 마음이 떠오르나요?" }
                             .fillMaxSize()
                             .focusRequester(focusRequester),
                         textStyle = YText.journalBody.copy(color = YColor.textSecondary),

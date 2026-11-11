@@ -203,7 +203,7 @@ fun StarMakingScreen(
                 BasicTextField(
                     value = draft.title,
                     onValueChange = { draft = draft.copy(title = it) },
-                    modifier = Modifier
+                    modifier = Modifier.semantics { contentDescription = "제목을 붙여주세요" }
                         .fillMaxWidth()
                         .focusRequester(titleFocus),
                     textStyle = YText.h2.copy(color = YColor.textPrimary),
@@ -226,7 +226,7 @@ fun StarMakingScreen(
                 BasicTextField(
                     value = draft.body,
                     onValueChange = { draft = draft.copy(body = it) },
-                    modifier = Modifier
+                    modifier = Modifier.semantics { contentDescription = "마음에 머무는 이야기를 적어주세요." }
                         .fillMaxSize()
                         .focusRequester(bodyFocus),
                     textStyle = YText.journalBody.copy(color = YColor.textSecondary),

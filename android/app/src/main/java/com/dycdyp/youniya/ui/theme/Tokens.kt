@@ -7,6 +7,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -107,6 +108,9 @@ object YText {
         lineHeight = line.sp,
         letterSpacing = tracking.sp,
         lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
+        // Korean breaks between words, as on iOS (hangul word priority); API 33+, ignored below.
+        lineBreak = LineBreak.Paragraph.copy(wordBreak = LineBreak.WordBreak.Phrase),
+        localeList = androidx.compose.ui.text.intl.LocaleList("ko-KR"),
     )
 
     val display = style(NotoSerifKR, FontWeight.SemiBold, 40f, 52f, 3.2f)

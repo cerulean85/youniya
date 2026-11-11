@@ -320,15 +320,6 @@ fun openWeb(context: Context, url: String) {
 @Composable
 fun ConsentScreen(model: AppModel) {
     val context = LocalContext.current
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-    ) { _ -> }
-
-    fun checkMarketingPermission() {
-        if (!NotificationAccess.hasPermission(context) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-        }
-    }
 
     var agreed by remember { mutableStateOf(setOf<Term>()) }
     var openDoc by remember { mutableStateOf<PolicyDoc?>(null) }
@@ -355,7 +346,6 @@ fun ConsentScreen(model: AppModel) {
                             if (all) {
                                 agreed = emptySet()
                             } else {
-                                if (Term.Marketing !in agreed) checkMarketingPermission()
                                 agreed = Term.entries.toSet()
                             }
                         },
@@ -367,7 +357,6 @@ fun ConsentScreen(model: AppModel) {
                                 if (t in agreed) {
                                     agreed = agreed - t
                                 } else {
-                                    if (t == Term.Marketing) checkMarketingPermission()
                                     agreed = agreed + t
                                 }
                             },

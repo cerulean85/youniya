@@ -1,5 +1,6 @@
 package com.dycdyp.youniya.ui.screens
 
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.activity.compose.BackHandler
@@ -227,7 +228,7 @@ private fun RecordsSearchBar(query: String, onQueryChange: (String) -> Unit) {
             BasicTextField(
                 value = query,
                 onValueChange = onQueryChange,
-                modifier = Modifier
+                modifier = Modifier.semantics { contentDescription = "제목이나 내용으로 찾기" }
                     .fillMaxWidth()
                     .focusRequester(focusRequester)
                     .onFocusChanged { focused = it.isFocused },

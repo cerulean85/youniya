@@ -427,7 +427,7 @@ private fun SearchInput(
                 onValueChange = onQueryChange,
                 textStyle = YText.bodyM.copy(color = YColor.textPrimary),
                 cursorBrush = SolidColor(sky().borderFocus),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.semantics { contentDescription = "제목이나 내용으로 찾기" }.fillMaxWidth(),
                 singleLine = true,
             )
         }

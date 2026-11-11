@@ -1,5 +1,7 @@
 package com.dycdyp.youniya.ui.screens
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -204,7 +206,7 @@ fun StarLineComposeScreen(
                                             draft = it
                                             if (problem != null) problem = null
                                         },
-                                        modifier = Modifier.fillMaxWidth(),
+                                        modifier = Modifier.semantics { contentDescription = "한 줄을 남겨 보세요 (60자)" }.fillMaxWidth(),
                                         textStyle = YText.bodyM.copy(color = YColor.textPrimary),
                                         cursorBrush = SolidColor(theme.borderFocus),
                                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
