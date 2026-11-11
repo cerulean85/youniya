@@ -107,6 +107,18 @@ sealed interface MainNav {
     data class ConstellationStory(val month: String) : MainNav
     data object MilkyWay : MainNav
     data class NebulaStars(val kind: NebulaStarKind = NebulaStarKind.Floated) : MainNav
+    data object BrightnessFlow : MainNav
+    data object KeptStars : MainNav
+    data object Settings : MainNav
+    data object SkyColor : MainNav
+    data object BlockedKeepers : MainNav
+    data object CoinCharge : MainNav
+    data object CoinHistory : MainNav
+    data object Inquiry : MainNav
+    data object Inbox : MainNav
+    data class NoticeDetail(val noticeId: String) : MainNav
+    data class NicknameChange(val mode: NicknameMode) : MainNav
+    data class Policy(val doc: PolicyDoc) : MainNav
 }
 
 /** The main shell (iOS MainView): four tabs, the write FAB, the menu button and the drawer. */
@@ -139,7 +151,7 @@ fun MainScreen(model: AppModel) {
                                 }
                             }
                         }
-                        null -> Unit
+                        null -> com.dycdyp.youniya.ui.components.HomeSkeleton()
                         else -> Home(
                             model = model,
                             stars = model.stars,
@@ -166,6 +178,12 @@ fun MainScreen(model: AppModel) {
                             navStack = navStack + MainNav.StarDetail(star.id)
                         },
                     )
+                    SkyTab.Records -> RecordsView(
+                        model = model,
+                        onOpenStar = { star -> navStack = navStack + MainNav.StarDetail(star.id) },
+                        onBrightness = { navStack = navStack + MainNav.BrightnessFlow },
+                        onCompose = compose,
+                    )
                     else -> ComingSoon(tab.title)
                 }
                 MenuButton(Modifier.align(Alignment.TopEnd).padding(end = 16.dp, top = 2.dp)) { drawerOpen = true }
@@ -175,8 +193,12 @@ fun MainScreen(model: AppModel) {
         Drawer(model, open = drawerOpen, onClose = { drawerOpen = false }, onSelect = { title ->
             drawerOpen = false
             when (title) {
+                "알림" -> navStack = navStack + MainNav.Inbox
+                "코인" -> navStack = navStack + MainNav.CoinCharge
+                "설정" -> navStack = navStack + MainNav.Settings
+                "문의하기" -> navStack = navStack + MainNav.Inquiry
                 "별빛 기록" -> tab = SkyTab.Records
-                else -> model.message = "$title 화면은 다음 단계에서 만들어요."
+                else -> model.message = "$title 화면을 열어요."
             }
         })
 
@@ -256,6 +278,102 @@ fun MainScreen(model: AppModel) {
                     initialKind = top.kind,
                     onBack = { navStack = navStack.dropLast(1) },
                     onOpenStar = { star -> navStack = navStack + MainNav.StarDetail(star.id) },
+                )
+            }
+            is MainNav.BrightnessFlow -> {
+                BrightnessFlowView(
+                    model = model,
+                    onBack = { navStack = navStack.dropLast(1) },
+                )
+            }
+            is MainNav.KeptStars -> {
+                KeptView(
+                    model = model,
+                    onBack = { navStack = navStack.dropLast(1) },
+                    onOpenStar = { star -> navStack = navStack + MainNav.StarDetail(star.id) },
+                )
+            }
+            is MainNav.Settings -> {
+                SettingsView(
+                    model = model,
+                    onBack = { navStack = navStack.dropLast(1) },
+                    onOpenNickname = {
+                        val m = if (model.nicknameRenameRequired) NicknameMode.OperatorRequest else NicknameMode.Change
+                        navStack = navStack + MainNav.NicknameChange(m)
+                    },
+                    onOpenSky = { navStack = navStack + MainNav.SkyColor },
+                    onOpenBlocked = { navStack = navStack + MainNav.BlockedKeepers },
+                    onPolicy = { doc -> navStack = navStack + MainNav.Policy(doc) },
+                )
+            }
+            is MainNav.SkyColor -> {
+                SkyColorView(
+                    model = model,
+                    onBack = { navStack = navStack.dropLast(1) },
+                )
+            }
+            is MainNav.BlockedKeepers -> {
+                BlockedKeepersView(
+                    model = model,
+                    onBack = { navStack = navStack.dropLast(1) },
+                )
+            }
+            is MainNav.CoinCharge -> {
+                CoinChargeView(
+                    model = model,
+                    onBack = { navStack = navStack.dropLast(1) },
+                    onPolicy = { navStack = navStack + MainNav.Policy(PolicyDoc.Payment) },
+                    onHistory = { navStack = navStack + MainNav.CoinHistory },
+                )
+            }
+            is MainNav.CoinHistory -> {
+                CoinHistoryView(
+                    model = model,
+                    onBack = { navStack = navStack.dropLast(1) },
+                )
+            }
+            is MainNav.Inquiry -> {
+                InquiryView(
+                    model = model,
+                    onBack = { navStack = navStack.dropLast(1) },
+                )
+            }
+            is MainNav.Inbox -> {
+                InboxView(
+                    model = model,
+                    onBack = { navStack = navStack.dropLast(1) },
+                    onOpen = { target ->
+                        when (target) {
+                            is NotificationTarget.Notice -> navStack = navStack + MainNav.NoticeDetail(target.noticeId)
+                            is NotificationTarget.Star -> navStack = navStack + MainNav.StarDetail(target.starId)
+                            NotificationTarget.Nickname -> navStack = navStack + MainNav.NicknameChange(NicknameMode.OperatorRequest)
+                            NotificationTarget.CoinHistory -> navStack = navStack + MainNav.CoinHistory
+                            NotificationTarget.NotificationSettings -> navStack = navStack + MainNav.Settings
+                            NotificationTarget.Plaza -> tab = SkyTab.Plaza
+                            else -> Unit
+                        }
+                    },
+                )
+            }
+            is MainNav.NoticeDetail -> {
+                NoticeDetailView(
+                    model = model,
+                    noticeId = top.noticeId,
+                    onBack = { navStack = navStack.dropLast(1) },
+                )
+            }
+            is MainNav.NicknameChange -> {
+                NicknameScreen(
+                    model = model,
+                    mode = top.mode,
+                    onBack = { navStack = navStack.dropLast(1) },
+                    onDone = { navStack = navStack.dropLast(1) },
+                )
+            }
+            is MainNav.Policy -> {
+                PolicyDocView(
+                    doc = top.doc,
+                    onBack = { navStack = navStack.dropLast(1) },
                 )
             }
             null -> Unit
@@ -497,8 +615,6 @@ private fun Drawer(model: AppModel, open: Boolean, onClose: () -> Unit, onSelect
             drawerItems.forEach { item ->
                 DrawerRow(item, if (item.title == "코인") "%,d코인".format(model.coins) else null) { onSelect(item.title) }
             }
-            Spacer(Modifier.height(Space.lg))
-            GhostButton("로그아웃 (개발용)", compact = true) { onClose(); model.signOut() }
         }
     }
 }

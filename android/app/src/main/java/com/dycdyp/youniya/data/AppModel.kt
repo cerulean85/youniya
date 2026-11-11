@@ -120,6 +120,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         nicknameNextChange = me.nicknameNextChange
         nicknameRenameRequired = me.nicknameRenameRequired
         provider = me.provider
+        joinedAt = me.joinedAt?.let { parseKstDate(it)?.let { z -> "${z.year}년 ${z.monthValue}월 ${z.dayOfMonth}일" } } ?: me.joinedAt
         coins = me.coins
         freeStarToday = me.freeStarToday
         marketingOptIn = me.marketingOptIn
@@ -232,11 +233,26 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     fun handle(e: Throwable) {
         val err = e as? ApiError ?: return
-        // Only a lost session signs out; a refused sign-in (401 invalid_id_token) says why.
-        if (err.status == 401 && err.code in setOf("token_expired", "signed_out", "unauthorized", "invalid_token")) {
-            api.store(null); isSignedIn = false
-        } else {
-            message = err.message
+        when {
+            err.status == 401 && err.code in setOf("token_expired", "signed_out", "unauthorized", "invalid_token") -> {
+                api.store(null)
+                isSignedIn = false
+                appNotice = com.dycdyp.youniya.ui.screens.AppNotice.LoginExpired
+            }
+            err.status == 426 || err.code == "update_required" -> {
+                appNotice = com.dycdyp.youniya.ui.screens.AppNotice.UpdateRequired
+            }
+            err.status == 503 || err.code == "maintenance" -> {
+                val window = err.until?.let { parseKstDate(it)?.let { z -> "${z.monthValue}월 ${z.dayOfMonth}일 ${z.hour}:${"%02d".format(z.minute)}까지" } } ?: "곧 다시 열어요"
+                appNotice = com.dycdyp.youniya.ui.screens.AppNotice.Maintenance(window)
+            }
+            err.status == 429 || err.code == "rate_limited" -> {
+                retryAvailableAt = System.currentTimeMillis() + (err.retryAfter ?: 60) * 1000L
+                appNotice = com.dycdyp.youniya.ui.screens.AppNotice.RateLimited
+            }
+            else -> {
+                message = err.message
+            }
         }
     }
 
@@ -675,4 +691,223 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             null
         }
     }
+
+    // MARK: - 5단계 추가 기능 (기록·설정·알림함·코인·차단)
+
+    var appNotice by mutableStateOf<com.dycdyp.youniya.ui.screens.AppNotice?>(null)
+    var retryAvailableAt by mutableStateOf<Long?>(null)
+    var starReminder by mutableStateOf(false)
+        private set
+    var reminderMinutes by mutableIntStateOf(21 * 60 + 30) // 21:30 KST
+        private set
+    var reduceAnimations by mutableStateOf(false)
+        private set
+    var skyThemeKey by mutableStateOf("violet")
+        private set
+    var joinedAt by mutableStateOf<String?>(null)
+        private set
+    var coinHistory by mutableStateOf<List<CoinEntry>>(emptyList())
+        private set
+    var blockedKeepers by mutableStateOf<List<BlockedKeeper>>(emptyList())
+        private set
+    var inbox by mutableStateOf<List<com.dycdyp.youniya.ui.screens.InboxItem>>(emptyList())
+        private set
+    var notices by mutableStateOf<List<com.dycdyp.youniya.ui.screens.AppNoticeItem>>(emptyList())
+        private set
+
+    val nicknameNextChangeText: String?
+        get() = nicknameNextChange?.let {
+            val z = parseKstDate(it) ?: return null
+            if (z.toInstant().isAfter(java.time.Instant.now())) "${z.monthValue}월 ${z.dayOfMonth}일" else null
+        }
+
+    fun setStarReminder(on: Boolean) = viewModelScope.launch {
+        starReminder = on
+        StarReminder.reschedule(getApplication(), on, reminderMinutes, stars.any { it.parsedDate?.toLocalDate() == java.time.LocalDate.now() })
+        runCatching {
+            api.send<SettingsPatchIn, Unit>("PATCH", "/v1/me/settings", SettingsPatchIn(starReminder = on))
+        }
+    }
+
+    fun updateReminderMinutes(minutes: Int) {
+        reminderMinutes = minutes
+        StarReminder.reschedule(getApplication(), starReminder, minutes, stars.any { it.parsedDate?.toLocalDate() == java.time.LocalDate.now() })
+    }
+
+    fun setReduceAnimations(reduce: Boolean) = viewModelScope.launch {
+        reduceAnimations = reduce
+        runCatching {
+            api.send<SettingsPatchIn, Unit>("PATCH", "/v1/me/settings", SettingsPatchIn(reduceAnimations = reduce))
+        }
+    }
+
+    fun setSkyThemeKey(theme: String) = viewModelScope.launch {
+        skyThemeKey = theme
+        runCatching {
+            api.send<SettingsPatchIn, Unit>("PATCH", "/v1/me/settings", SettingsPatchIn(sky = theme))
+        }
+    }
+
+    fun setMarketing(optIn: Boolean) = viewModelScope.launch {
+        marketingOptIn = optIn
+        runCatching {
+            val r = api.send<MarketingIn, MarketingOut>("PUT", "/v1/me/marketing", MarketingIn(optIn))
+            marketingOptIn = r.optIn
+        }.onFailure(::handle)
+    }
+
+    fun loadCoinHistory() = viewModelScope.launch {
+        if (!isSignedIn) return@launch
+        runCatching {
+            val r = api.get<ServerCoinHistoryOut>("/v1/coins/history")
+            coinHistory = r.items.map {
+                CoinEntry(id = it.id, kind = it.kind, title = it.title, delta = it.delta, source = it.source, createdAt = it.createdAt)
+            }
+        }.onFailure(::handle)
+    }
+
+    fun loadBlocks() = viewModelScope.launch {
+        if (!isSignedIn) return@launch
+        runCatching {
+            val r = api.get<ServerBlocksOut>("/v1/blocks")
+            blockedKeepers = r.items.map {
+                BlockedKeeper(id = it.id, source = it.source, createdAt = it.createdAt)
+            }
+        }.onFailure(::handle)
+    }
+
+    fun unblock(blockId: String) = viewModelScope.launch {
+        if (!isSignedIn) return@launch
+        try {
+            api.call("DELETE", "/v1/blocks/$blockId", null, emptyMap(), authorized = true)
+            blockedKeepers = blockedKeepers.filter { it.id != blockId }
+            message = "차단을 풀었어요"
+        } catch (e: Exception) {
+            handle(e)
+        }
+    }
+
+    fun loadInbox() = viewModelScope.launch {
+        if (!isSignedIn) return@launch
+        runCatching {
+            val r = api.get<ServerNotificationsOut>("/v1/me/notifications")
+            inbox = r.items.map { item ->
+                com.dycdyp.youniya.ui.screens.InboxItem(
+                    id = item.id,
+                    kind = item.kind,
+                    title = item.title,
+                    body = item.body,
+                    target = com.dycdyp.youniya.ui.screens.NotificationTarget.fromJson(item.target),
+                    createdAt = item.createdAt,
+                    read = item.read,
+                )
+            }
+        }.onFailure(::handle)
+    }
+
+    fun markRead(ids: List<String>) = viewModelScope.launch {
+        inbox = inbox.map { if (it.id in ids) it.copy(read = true) else it }
+        if (!isSignedIn || ids.isEmpty()) return@launch
+        runCatching {
+            api.send<ReadIn, Unit>("POST", "/v1/me/notifications/read", ReadIn(ids))
+        }
+    }
+
+    fun loadNotices() = viewModelScope.launch {
+        if (!isSignedIn) return@launch
+        runCatching {
+            val r = api.get<ServerNoticesOut>("/v1/notices")
+            notices = r.items.map {
+                com.dycdyp.youniya.ui.screens.AppNoticeItem(id = it.id, title = it.title, body = it.body, publishedAt = it.publishedAt)
+            }
+        }.onFailure(::handle)
+    }
+
+    fun deleteAccount() = viewModelScope.launch {
+        if (!isSignedIn) return@launch
+        try {
+            api.call("DELETE", "/v1/me", null, emptyMap(), authorized = true)
+            api.store(null)
+            isSignedIn = false
+            appNotice = com.dycdyp.youniya.ui.screens.AppNotice.AccountDeleted
+        } catch (e: Exception) {
+            handle(e)
+        }
+    }
+
+    fun withdrawAllShares() = viewModelScope.launch {
+        if (!isSignedIn) return@launch
+        try {
+            api.call("DELETE", "/v1/me/shares", null, emptyMap(), authorized = true)
+            stars = stars.map { it.copy(shared = false) }
+            message = "우주 광장에서 나눈 별을 모두 거뒀어요."
+        } catch (e: Exception) {
+            handle(e)
+        }
+    }
+
+    fun exportText(): String {
+        val sb = StringBuilder("YOUNIYA 기록 내보내기\n\n")
+        for (s in stars) {
+            sb.append("■ ").append(s.title).append("\n")
+            sb.append(s.dateText).append(" · ").append(if (s.isFloated) "별빛 받은 별" else "별빛 없는 별").append("\n")
+            if (s.body.isNotEmpty()) {
+                sb.append("\n").append(s.body).append("\n")
+            }
+            sb.append("\n")
+        }
+        return sb.toString()
+    }
+
+    fun sendInquiry(kind: String, email: String, body: String, onDone: (Boolean) -> Unit) = viewModelScope.launch {
+        try {
+            api.send<InquiryIn, InquiryOut>("POST", "/v1/inquiries", InquiryIn(kind = kind, email = email, body = body))
+            message = "문의를 보냈어요."
+            onDone(true)
+        } catch (e: Exception) {
+            handle(e)
+            onDone(false)
+        }
+    }
 }
+
+@Serializable private data class SettingsPatchIn(val sky: String? = null, val reduceAnimations: Boolean? = null, val starReminder: Boolean? = null)
+@Serializable private data class MarketingIn(val optIn: Boolean)
+@Serializable private data class MarketingOut(val optIn: Boolean)
+@Serializable private data class ServerCoinItem(val id: String, val kind: String, val title: String, val delta: Int, val source: String = "server", val createdAt: String? = null)
+@Serializable private data class ServerCoinHistoryOut(val items: List<ServerCoinItem> = emptyList())
+@Serializable private data class ServerBlockItem(val id: String, val source: String = "line", val createdAt: String? = null)
+@Serializable private data class ServerBlocksOut(val items: List<ServerBlockItem> = emptyList())
+@Serializable private data class ServerNotificationItem(val id: String, val kind: String, val title: String, val body: String, val target: kotlinx.serialization.json.JsonObject? = null, val createdAt: String? = null, val read: Boolean = false)
+@Serializable private data class ServerNotificationsOut(val items: List<ServerNotificationItem> = emptyList(), val unread: Int = 0, val nextBefore: String? = null)
+@Serializable private data class ServerNoticeItem(val id: String, val title: String, val body: String, val publishedAt: String? = null)
+@Serializable private data class ServerNoticesOut(val items: List<ServerNoticeItem> = emptyList())
+@Serializable private data class ReadIn(val ids: List<String>, val all: Boolean = false)
+@Serializable private data class InquiryIn(val kind: String, val email: String, val body: String)
+@Serializable private data class InquiryOut(val id: String)
+
+data class CoinEntry(
+    val id: String,
+    val kind: String = "purchase",
+    val title: String,
+    val delta: Int,
+    val source: String = "server",
+    val createdAt: String? = null,
+)
+
+data class BlockedKeeper(
+    val id: String,
+    val source: String = "line",
+    val createdAt: String? = null,
+) {
+    val detail: String
+        get() {
+            val label = when (source) {
+                "star", "nebula" -> "별"
+                else -> "별빛 한 줄"
+            }
+            val dateStr = formatKstShortDate(createdAt) ?: ""
+            return if (dateStr.isNotEmpty()) "$label · $dateStr 차단" else label
+        }
+}
+
