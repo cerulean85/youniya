@@ -7,6 +7,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
@@ -34,8 +37,6 @@ data class Me(
 @Serializable private data class NicknameIn(val name: String)
 @Serializable private data class NicknameOut(val nickname: String, val nextChange: String? = null)
 @Serializable private data class LogoutIn(val refreshToken: String)
-@Serializable private data class StarListLite(val items: List<StarLite> = emptyList())
-@Serializable data class StarLite(val id: String)
 
 sealed interface NicknameResult {
     data object Ok : NicknameResult
@@ -45,6 +46,7 @@ sealed interface NicknameResult {
 /** App state shared by the screens (iOS AppModel): session, consent, nickname, coins. */
 class AppModel(app: Application) : AndroidViewModel(app) {
     val api = ApiClient(TokenStore(app))
+    private val prefs = app.getSharedPreferences("youniya_draft", 0)
 
     var isSignedIn by mutableStateOf(api.isSignedIn)
         private set
@@ -65,10 +67,25 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         private set
     var marketingOptIn by mutableStateOf(false)
         private set
-    /** null until the first list loads (the home tab waits on it). */
-    var starCount by mutableStateOf<Int?>(null)
+
+    var stars by mutableStateOf<List<StarItem>>(emptyList())
         private set
+    var starsLoaded by mutableStateOf(false)
+        private set
+    /** null until the first list loads (the home tab waits on it). */
+    val starCount: Int?
+        get() = if (starsLoaded) stars.size else null
+
+    var draft by mutableStateOf(loadLocalDraft())
+        private set
+
     var message by mutableStateOf<String?>(null)
+
+    val floatButtonTitle = "별빛 받고 띄우기"
+
+    companion object {
+        const val minFloatLength = 50
+    }
 
     init {
         api.onSignedOut = { isSignedIn = false }
@@ -79,12 +96,17 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         runCatching { api.get<Me>("/v1/me") }
             .onSuccess(::apply)
             .onFailure(::handle)
-        runCatching { api.get<StarListLite>("/v1/stars", mapOf("limit" to "200")) }
-            .onSuccess { starCount = it.items.size }
+        // The star list and the draft need consent (403 consent_required before it).
+        if (hasConsented) {
+            loadStars()
+            loadDraft()
+        }
     }
 
     private fun apply(me: Me) {
         hasConsented = !me.needsConsent
+        // Keep the saved session in step, so the next launch doesn't flash 11 before /v1/me answers.
+        api.session?.let { if (it.needsConsent != me.needsConsent) api.store(it.copy(needsConsent = me.needsConsent)) }
         nickname = me.nickname
         nicknameNextChange = me.nicknameNextChange
         nicknameRenameRequired = me.nicknameRenameRequired
@@ -130,6 +152,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 marketingOptIn = it.marketingOptIn
                 justConsented = true
                 hasConsented = !it.needsConsent
+                api.session?.let { s -> api.store(s.copy(needsConsent = it.needsConsent)) }
                 // The star list needs consent, so it loads only now for a new account.
                 refreshMe()
             }
@@ -143,7 +166,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         hasConsented = false
         justConsented = false
         nickname = null
-        starCount = null
+        stars = emptyList()
+        starsLoaded = false
+        draft = StarDraft()
+        prefs.edit().remove("current_draft").apply()
     }
 
     fun nicknameFormProblem(name: String): String? {
@@ -202,5 +228,85 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         } else {
             message = err.message
         }
+    }
+
+    fun loadStars() = viewModelScope.launch {
+        if (!isSignedIn) return@launch
+        try {
+            val list = api.get<StarList>("/v1/stars", mapOf("limit" to "200"))
+            val details = kotlinx.coroutines.coroutineScope {
+                list.items.map { item ->
+                    async(Dispatchers.IO) {
+                        runCatching { api.get<ServerStar>("/v1/stars/${item.id}") }.getOrNull()
+                    }
+                }.awaitAll().filterNotNull().associateBy { it.id }
+            }
+            val previous = stars.associateBy { it.id }
+            stars = list.items.map { item ->
+                val s = details[item.id] ?: item
+                s.toItem(local = previous[s.id])
+            }
+            starsLoaded = true
+        } catch (e: Exception) {
+            handle(e)
+        }
+    }
+
+    private fun loadLocalDraft(): StarDraft {
+        val json = prefs.getString("current_draft", null) ?: return StarDraft()
+        return runCatching { ApiJson.decodeFromString(StarDraft.serializer(), json) }.getOrDefault(StarDraft())
+    }
+
+    fun saveDraft(d: StarDraft) {
+        draft = d
+        if (d.isEmpty) {
+            prefs.edit().remove("current_draft").apply()
+        } else {
+            val json = ApiJson.encodeToString(StarDraft.serializer(), d)
+            prefs.edit().putString("current_draft", json).apply()
+        }
+        syncDraft(d)
+    }
+
+    fun syncDraft(d: StarDraft) {
+        if (!isSignedIn) return
+        viewModelScope.launch(Dispatchers.IO) {
+            if (d.isEmpty) {
+                runCatching { api.call("DELETE", "/v1/drafts/current", null, emptyMap(), authorized = true) }
+            } else {
+                runCatching {
+                    api.sendNoContent("PUT", "/v1/drafts/current", DraftIn(mood = d.mood, moods = d.moods, title = d.title, body = d.body))
+                }
+            }
+        }
+    }
+
+    fun loadDraft() = viewModelScope.launch {
+        if (!isSignedIn || !draft.isEmpty) return@launch
+        try {
+            val resText = api.call("GET", "/v1/drafts/current", null, emptyMap(), authorized = true)
+            if (resText.isBlank() || resText.trim() == "null") return@launch
+            val d = api.decode(ServerDraft.serializer(), resText)
+            val extra = if ((d.moods?.size ?: 0) > 1) d.moods?.drop(1) else null
+            saveDraft(StarDraft(mood = d.mood, extraMoods = extra, title = d.title, body = d.body))
+        } catch (_: Exception) {}
+    }
+
+    suspend fun publish(d: StarDraft, floated: Boolean = false): StarItem? = try {
+        val starIn = StarIn(
+            mood = d.mood,
+            moods = d.moods,
+            title = d.title.trim(),
+            body = d.body,
+            mode = if (floated) "lit" else "unlit",
+        )
+        val r = api.send<StarIn, StarCreated>("POST", "/v1/stars", starIn)
+        val item = r.star.toItem()
+        stars = listOf(item) + stars
+        saveDraft(StarDraft())
+        item
+    } catch (e: Exception) {
+        handle(e)
+        null
     }
 }

@@ -34,6 +34,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -59,12 +60,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dycdyp.youniya.R
 import com.dycdyp.youniya.data.AppModel
+import com.dycdyp.youniya.data.StarItem
 import com.dycdyp.youniya.ui.components.GhostButton
 import com.dycdyp.youniya.ui.components.LogoMark
 import com.dycdyp.youniya.ui.components.LogoSize
 import com.dycdyp.youniya.ui.components.MenuButton
 import com.dycdyp.youniya.ui.components.PrimaryButton
 import com.dycdyp.youniya.ui.components.SheetGrabber
+import com.dycdyp.youniya.ui.components.StarRow
 import com.dycdyp.youniya.ui.components.noRippleClick
 import com.dycdyp.youniya.ui.design.StarField
 import com.dycdyp.youniya.ui.design.Twinkle
@@ -80,6 +83,7 @@ import com.dycdyp.youniya.ui.theme.Space
 import com.dycdyp.youniya.ui.theme.YColor
 import com.dycdyp.youniya.ui.theme.YText
 import com.dycdyp.youniya.ui.theme.sky
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -97,8 +101,10 @@ fun MainScreen(model: AppModel) {
     var tab by rememberSaveable { mutableStateOf(SkyTab.Sky) }
     var drawerOpen by remember { mutableStateOf(false) }
     var showWelcome by remember { mutableStateOf(false) }
+    var composing by rememberSaveable { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     val prefs = LocalContext.current.getSharedPreferences("app", 0)
-    val compose = { model.message = "별 만들기는 다음 단계에서 만들어요." }
+    val compose = { composing = true }
 
     BackHandler(enabled = drawerOpen) { drawerOpen = false }
     BackHandler(enabled = !drawerOpen && tab != SkyTab.Sky) { tab = SkyTab.Sky }
@@ -119,7 +125,7 @@ fun MainScreen(model: AppModel) {
                             }
                         }
                         null -> Unit
-                        else -> Home(onCompose = compose)
+                        else -> Home(stars = model.stars, onCompose = compose, onSeeAll = { tab = SkyTab.Records })
                     }
                     else -> ComingSoon(tab.title)
                 }
@@ -134,6 +140,29 @@ fun MainScreen(model: AppModel) {
                 else -> model.message = "$title 화면은 다음 단계에서 만들어요."
             }
         })
+
+        if (composing) {
+            // A full-screen page over the tabs: it takes every touch, so none reaches the tab bar below.
+            Box(Modifier.fillMaxSize().noRippleClick { }) {
+            StarMakingScreen(
+                model = model,
+                onClose = { composing = false },
+                onPublish = { draft, floated ->
+                    if (floated) {
+                        model.message = "별빛 받기는 다음 단계에서 만들어요."
+                    } else {
+                        scope.launch {
+                            val star = model.publish(draft, floated = false)
+                            if (star != null) {
+                                composing = false
+                                tab = SkyTab.Sky
+                            }
+                        }
+                    }
+                }
+            )
+            }
+        }
     }
     if (showWelcome) WelcomeSheet(onCompose = { showWelcome = false; compose() }, onBrowse = { showWelcome = false })
 }
@@ -182,16 +211,52 @@ private fun FirstNightSky(onCompose: () -> Unit) {
     }
 }
 
-/** 04 홈 · 오늘 (the recent stars and the month link come with the star screens). */
+/** 04 홈 · 오늘 */
 @Composable
-private fun Home(onCompose: () -> Unit) {
+private fun Home(stars: List<StarItem>, onCompose: () -> Unit, onSeeAll: () -> Unit) {
+    val a = sky()
     val today = LocalDate.now().format(DateTimeFormatter.ofPattern("M월 d일 EEEE", Locale.KOREAN))
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = Space.xl, vertical = Space.lg),
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = Space.xl, vertical = Space.lg),
         verticalArrangement = Arrangement.spacedBy(Space.lg),
     ) {
         SkyHeader("$today · 오늘은 어떤 마음이 머물렀나요?")
         PrimaryButton("오늘의 별 만들기", onClick = onCompose)
+
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                "최근 별",
+                style = YText.labelM,
+                color = YColor.textSecondary,
+                modifier = Modifier.semantics { heading() },
+            )
+            Row(
+                Modifier.noRippleClick(onSeeAll),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text("전체 보기", style = YText.labelS, color = a.borderFocus)
+                Icon(
+                    painterResource(R.drawable.icon_chevron_right),
+                    null,
+                    Modifier.size(16.dp),
+                    tint = a.borderFocus,
+                )
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(Space.md)) {
+            stars.take(4).forEach { star ->
+                StarRow(star = star)
+            }
+        }
     }
 }
 

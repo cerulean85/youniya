@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -181,6 +182,39 @@ fun MenuButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         repeat(3) { Box(Modifier.size(16.dp, 2.dp).background(YColor.textSecondary, RoundedCornerShape(1.dp))) }
+    }
+}
+
+/** Top bar used by full-screen flows: "닫기" · centered title · trailing accessory. 20dp tall. */
+@Composable
+fun FlowTopBar(
+    title: String,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+    closeLabel: String = "닫기",
+    trailing: @Composable () -> Unit = {},
+) {
+    Box(modifier.fillMaxWidth().height(20.dp)) {
+        Text(
+            title,
+            style = YText.labelM,
+            color = YColor.textPrimary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.align(Alignment.Center).semantics { heading() },
+        )
+        Row(
+            Modifier.fillMaxWidth().fillMaxHeight(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                closeLabel,
+                style = YText.labelM,
+                color = YColor.textSecondary,
+                modifier = Modifier.noRippleClick(onClose),
+            )
+            trailing()
+        }
     }
 }
 

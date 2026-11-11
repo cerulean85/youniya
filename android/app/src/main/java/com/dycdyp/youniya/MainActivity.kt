@@ -37,6 +37,9 @@ import com.dycdyp.youniya.ui.screens.MainScreen
 import com.dycdyp.youniya.ui.screens.NicknameScreen
 import com.dycdyp.youniya.ui.screens.SplashScreen
 import com.dycdyp.youniya.ui.theme.LocalMotionReduced
+import com.dycdyp.youniya.ui.theme.SkyThemes
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import com.dycdyp.youniya.ui.theme.Space
 import com.dycdyp.youniya.ui.theme.YColor
 import com.dycdyp.youniya.ui.theme.YText
@@ -57,7 +60,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val reduced = Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
         setContent {
-            CompositionLocalProvider(LocalMotionReduced provides reduced) {
+            // Text cursor handles and selection in the theme's focus color, not Material blue.
+            val selection = TextSelectionColors(handleColor = SkyThemes.violet.focus, backgroundColor = SkyThemes.violet.focus.copy(alpha = 0.35f))
+            CompositionLocalProvider(LocalMotionReduced provides reduced, LocalTextSelectionColors provides selection) {
                 Root(model)
             }
         }
