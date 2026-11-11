@@ -142,26 +142,14 @@ fun MainScreen(model: AppModel) {
         })
 
         if (composing) {
-            // A full-screen page over the tabs: it takes every touch, so none reaches the tab bar below.
-            Box(Modifier.fillMaxSize().noRippleClick { }) {
-            StarMakingScreen(
+            ComposeFlow(
                 model = model,
                 onClose = { composing = false },
-                onPublish = { draft, floated ->
-                    if (floated) {
-                        model.message = "별빛 받기는 다음 단계에서 만들어요."
-                    } else {
-                        scope.launch {
-                            val star = model.publish(draft, floated = false)
-                            if (star != null) {
-                                composing = false
-                                tab = SkyTab.Sky
-                            }
-                        }
-                    }
-                }
+                onShowNebula = {
+                    composing = false
+                    tab = SkyTab.Nebula
+                },
             )
-            }
         }
     }
     if (showWelcome) WelcomeSheet(onCompose = { showWelcome = false; compose() }, onBrowse = { showWelcome = false })

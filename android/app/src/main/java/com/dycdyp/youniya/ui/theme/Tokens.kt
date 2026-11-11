@@ -23,6 +23,7 @@ object YColor {
     val textTertiary = Color(0xFF8090A6)
     val textOnBrand = Color(0xFFFFFFFF)
     val starBright = Color(0xFFFBBF24)
+    val starClear = Color(0xFF22D3EE)
     val brandWarm = Color(0xFFEC4899)
     val emotionCalm = Color(0xFF34D399)
     val emotionSorrow = Color(0xFFA5B4FC)

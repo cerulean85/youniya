@@ -65,8 +65,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         private set
     var coins by mutableIntStateOf(0)
         private set
+    var freeStarToday by mutableIntStateOf(0)
+        private set
     var marketingOptIn by mutableStateOf(false)
         private set
+
+    val isFloatFree: Boolean get() = freeStarToday > 0
+    val floatNeedsCharge: Boolean get() = !isFloatFree && coins < floatCost
 
     var stars by mutableStateOf<List<StarItem>>(emptyList())
         private set
@@ -85,6 +90,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     companion object {
         const val minFloatLength = 50
+        const val floatCost = 5
+        const val starlightTimeout = 60L
     }
 
     init {
@@ -112,6 +119,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         nicknameRenameRequired = me.nicknameRenameRequired
         provider = me.provider
         coins = me.coins
+        freeStarToday = me.freeStarToday
         marketingOptIn = me.marketingOptIn
     }
 
@@ -292,21 +300,117 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         } catch (_: Exception) {}
     }
 
-    suspend fun publish(d: StarDraft, floated: Boolean = false): StarItem? = try {
+    fun loadCoins() = viewModelScope.launch {
+        if (!isSignedIn) return@launch
+        runCatching { api.get<Me>("/v1/me") }
+            .onSuccess(::apply)
+    }
+
+    suspend fun publishLit(d: StarDraft, attemptId: String): Pair<StarItem, Boolean> {
         val starIn = StarIn(
             mood = d.mood,
             moods = d.moods,
             title = d.title.trim(),
             body = d.body,
-            mode = if (floated) "lit" else "unlit",
+            mode = "lit",
+            attemptId = attemptId,
         )
-        val r = api.send<StarIn, StarCreated>("POST", "/v1/stars", starIn)
+        val r = api.send<StarIn, StarCreated>("POST", "/v1/stars", starIn, timeoutSeconds = starlightTimeout)
+        r.coins?.let { coins = it }
+        freeStarToday = 0
         val item = r.star.toItem()
         stars = listOf(item) + stars
         saveDraft(StarDraft())
-        item
+        return Pair(item, r.crisis != null)
+    }
+
+    suspend fun publish(d: StarDraft, floated: Boolean = false, attemptId: String? = null): Pair<StarItem, Boolean>? = try {
+        if (floated) {
+            publishLit(d, attemptId ?: java.util.UUID.randomUUID().toString().lowercase())
+        } else {
+            val starIn = StarIn(
+                mood = d.mood,
+                moods = d.moods,
+                title = d.title.trim(),
+                body = d.body,
+                mode = "unlit",
+            )
+            val r = api.send<StarIn, StarCreated>("POST", "/v1/stars", starIn)
+            val item = r.star.toItem()
+            stars = listOf(item) + stars
+            saveDraft(StarDraft())
+            Pair(item, r.crisis != null)
+        }
     } catch (e: Exception) {
         handle(e)
         null
     }
+
+    suspend fun stopStarlight(attemptId: String): Pair<Boolean, StarItem?> = try {
+        val r = api.sendEmpty<CancelOut>("POST", "/v1/starlight/attempts/$attemptId/cancel")
+        r.coins?.let { coins = it }
+        val s = r.star?.let { serverStar ->
+            val local = stars.firstOrNull { it.id == serverStar.id }
+            serverStar.toItem(local)
+        }
+        if (s != null) {
+            val idx = stars.indexOfFirst { it.id == s.id }
+            if (idx >= 0) {
+                val m = stars.toMutableList()
+                m[idx] = s
+                stars = m
+            } else {
+                stars = listOf(s) + stars
+            }
+        }
+        Pair(true, s)
+    } catch (e: ApiError) {
+        if (e.code == "not_found") {
+            Pair(true, null)
+        } else {
+            Pair(false, null)
+        }
+    } catch (_: Exception) {
+        Pair(false, null)
+    }
+
+    suspend fun starAfterStop(id: String): StarItem? = try {
+        val s = api.get<ServerStar>("/v1/stars/$id")
+        val local = stars.firstOrNull { it.id == s.id }
+        val star = s.toItem(local)
+        val idx = stars.indexOfFirst { it.id == star.id }
+        if (idx >= 0) {
+            val m = stars.toMutableList()
+            m[idx] = star
+            stars = m
+        } else {
+            stars = listOf(star) + stars
+        }
+        star
+    } catch (_: Exception) {
+        null
+    }
+
+    suspend fun floatAgain(id: String, attemptId: String = java.util.UUID.randomUUID().toString().lowercase()): StarItem {
+        val r = api.send<FloatIn, StarCreated>(
+            "POST",
+            "/v1/stars/$id/starlight",
+            FloatIn(attemptId),
+            timeoutSeconds = starlightTimeout,
+        )
+        r.coins?.let { coins = it }
+        val local = stars.firstOrNull { it.id == id }
+        val star = r.star.toItem(local)
+        val idx = stars.indexOfFirst { it.id == id }
+        if (idx >= 0) {
+            val m = stars.toMutableList()
+            m[idx] = star
+            stars = m
+        } else {
+            stars = listOf(star) + stars
+        }
+        return star
+    }
+
+    fun keepInstead(id: String): StarItem? = stars.firstOrNull { it.id == id }
 }

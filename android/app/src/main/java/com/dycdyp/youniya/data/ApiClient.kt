@@ -39,6 +39,8 @@ class ApiError(
     val until: String? = null,
     val retryAfter: Int? = null,
     val starId: String? = null,
+    val coins: Int? = null,
+    val cost: Int? = null,
 ) : Exception(message) {
     companion object {
         fun offline() = ApiError(0, "offline", "서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.")
@@ -50,7 +52,15 @@ class ApiError(
 @Serializable
 private data class ErrorEnvelope(val error: Body, val starId: String? = null) {
     @Serializable
-    data class Body(val code: String, val message: String, val until: String? = null, val retryAfter: Int? = null, val starId: String? = null)
+    data class Body(
+        val code: String,
+        val message: String,
+        val until: String? = null,
+        val retryAfter: Int? = null,
+        val starId: String? = null,
+        val coins: Int? = null,
+        val cost: Int? = null,
+    )
 }
 
 @Serializable private data class RefreshIn(val refreshToken: String)
@@ -83,24 +93,46 @@ class ApiClient(private val store: TokenStore) {
     suspend inline fun <reified T> get(path: String, query: Map<String, String> = emptyMap()): T =
         decode(serializer(), call("GET", path, null, query, authorized = true))
 
-    suspend inline fun <reified B, reified T> send(method: String, path: String, body: B, authorized: Boolean = true): T =
-        decode(serializer(), call(method, path, ApiJson.encodeToString(serializer<B>(), body), emptyMap(), authorized))
+    suspend inline fun <reified B, reified T> send(
+        method: String,
+        path: String,
+        body: B,
+        authorized: Boolean = true,
+        timeoutSeconds: Long? = null,
+    ): T =
+        decode(serializer(), call(method, path, ApiJson.encodeToString(serializer<B>(), body), emptyMap(), authorized, timeoutSeconds = timeoutSeconds))
+
+    suspend inline fun <reified T> sendEmpty(
+        method: String,
+        path: String,
+        authorized: Boolean = true,
+        timeoutSeconds: Long? = null,
+    ): T =
+        decode(serializer(), call(method, path, null, emptyMap(), authorized, timeoutSeconds = timeoutSeconds))
 
     suspend inline fun <reified B> sendNoContent(method: String, path: String, body: B, authorized: Boolean = true) {
         call(method, path, ApiJson.encodeToString(serializer<B>(), body), emptyMap(), authorized)
     }
 
     fun <T> decode(s: KSerializer<T>, text: String): T =
-        try { ApiJson.decodeFromString(s, text.ifEmpty { "{}" }) } catch (e: Exception) { throw ApiError.badResponse() }
+        try { ApiJson.decodeFromString(s, text.ifEmpty { "{}" }) } catch (e: Exception) { android.util.Log.w("YouniyaApi", "decode failed: ${e.message}"); throw ApiError.badResponse() }
 
-    suspend fun call(method: String, path: String, body: String?, query: Map<String, String>, authorized: Boolean, retried: Boolean = false): String {
+    suspend fun call(
+        method: String,
+        path: String,
+        body: String?,
+        query: Map<String, String>,
+        authorized: Boolean,
+        retried: Boolean = false,
+        timeoutSeconds: Long? = null,
+    ): String {
         val token = if (authorized) (session?.accessToken ?: throw ApiError.signedOut()) else null
-        val (status, text) = raw(method, path, body, query, token)
+        val (status, text) = raw(method, path, body, query, token, timeoutSeconds)
         if (status in 200..299) return text
         val err = parseError(status, text)
         if (authorized && status == 401 && err.code == "token_expired" && !retried) {
             refresh(token)
-            return call(method, path, body, query, authorized, retried = true)
+            return call(method, path, body, query, authorized, retried = true, timeoutSeconds = timeoutSeconds)
         }
         throw err
     }
@@ -119,19 +151,32 @@ class ApiClient(private val store: TokenStore) {
         }
     }
 
-    private suspend fun raw(method: String, path: String, body: String?, query: Map<String, String>, token: String?): Pair<Int, String> =
+    private suspend fun raw(
+        method: String,
+        path: String,
+        body: String?,
+        query: Map<String, String>,
+        token: String?,
+        timeoutSeconds: Long? = null,
+    ): Pair<Int, String> =
         withContext(Dispatchers.IO) {
             val url = (baseUrl + path).toHttpUrl().newBuilder().apply { query.forEach { (k, v) -> addQueryParameter(k, v) } }.build()
+            val reqBody = body?.toRequestBody(JSON) ?: if (method == "GET" || method == "DELETE") null else "".toRequestBody(null)
             val req = Request.Builder().url(url)
                 .header("Accept", "application/json")
                 .header("X-App-Version", BuildConfig.VERSION_NAME)
                 .header("X-App-Platform", "android")
                 .header("X-Device-Model", "${Build.MANUFACTURER} ${Build.MODEL}")
                 .apply { if (token != null) header("Authorization", "Bearer $token") }
-                .method(method, body?.toRequestBody(JSON) ?: if (method == "GET" || method == "DELETE") null else "{}".toRequestBody(JSON))
+                .method(method, reqBody)
                 .build()
+            val client = if (timeoutSeconds != null) {
+                http.newBuilder().readTimeout(timeoutSeconds, TimeUnit.SECONDS).build()
+            } else {
+                http
+            }
             try {
-                http.newCall(req).execute().use { it.code to (it.body.string()) }
+                client.newCall(req).execute().use { it.code to (it.body.string()) }
             } catch (e: IOException) {
                 throw ApiError.offline()
             }
@@ -139,7 +184,7 @@ class ApiClient(private val store: TokenStore) {
 
     private fun parseError(status: Int, text: String): ApiError = runCatching {
         val e = ApiJson.decodeFromString(ErrorEnvelope.serializer(), text)
-        ApiError(status, e.error.code, e.error.message, e.error.until, e.error.retryAfter, e.error.starId ?: e.starId)
+        ApiError(status, e.error.code, e.error.message, e.error.until, e.error.retryAfter, e.error.starId ?: e.starId, e.error.coins, e.error.cost)
     }.getOrElse { ApiError(status, "http_$status", "잠시 후 다시 시도해 주세요.") }
 
     private companion object {

@@ -102,17 +102,36 @@ data class ServerAnalysis(
     val weightReason: String? = null,
     val interpretation: String? = null,
     val shape: ShapeOut? = null,
+    val prismVersion: String? = null,
 ) {
     @Serializable
     data class Share(val mood: Mood, val share: Int)
+
+    val depthScore: Int get() = kotlin.math.round(depth * 400).toInt()
+    val clarityScore: Int get() = kotlin.math.round(clarity * 300).toInt()
+    val weightScore: Int get() = kotlin.math.round(weight * 300).toInt()
+    val tones: List<Mood> get() = moods.sortedByDescending { it.share }.map { it.mood }
 }
 
 @Serializable
 data class StarCreated(
     val star: ServerStar,
     val crisis: JsonObject? = null,
+    val charged: Int? = null,
+    val coins: Int? = null,
     val quoteMissing: Boolean? = null,
 )
+
+@Serializable
+data class CancelOut(
+    val status: String? = null,
+    val star: ServerStar? = null,
+    val refunded: Boolean? = null,
+    val coins: Int? = null,
+)
+
+@Serializable
+data class FloatIn(val attemptId: String)
 
 @Serializable
 data class StarList(
@@ -172,16 +191,23 @@ fun ServerStar.toItem(local: StarItem? = null): StarItem {
     val isFloated = state == "floated"
     val shapeSpec = shape?.toSpec() ?: analysis?.shape?.toSpec() ?: local?.shape
     val extra = if ((moods?.size ?: 0) > 1) moods?.drop(1) else local?.extraMoods
+    val formattedPrism = prismVersion?.let { v ->
+        val parts = v.split("-")
+        if (parts.size > 1) "별빛 프리즘 ${parts[1]}" else "별빛 프리즘"
+    }
+    val finalAnalysis = (analysis ?: local?.analysis)?.let { a ->
+        if (a.prismVersion == null && formattedPrism != null) a.copy(prismVersion = formattedPrism) else a
+    }
     return StarItem(
         id = id,
         title = title.ifBlank { "제목 없는 별" },
         dateText = formatKstDate(createdAt),
         floated = isFloated,
-        starlight = starlight ?: analysis?.starlight ?: local?.starlight,
+        starlight = starlight ?: finalAnalysis?.starlight ?: local?.starlight,
         mood = mood,
         extraMoods = extra,
         body = body ?: local?.body ?: "",
-        analysis = analysis ?: local?.analysis,
+        analysis = finalAnalysis,
         createdAt = createdAt ?: local?.createdAt,
         rewriteOf = rewriteOf ?: local?.rewriteOf,
         shared = shared,
