@@ -70,6 +70,25 @@ class Settings:
     apple_siwa_private_key_base64: str | None = field(
         default_factory=lambda: os.getenv("APPLE_SIWA_PRIVATE_KEY_BASE64") or None)
     apple_siwa_private_key_path: str | None = field(default_factory=lambda: os.getenv("APPLE_SIWA_PRIVATE_KEY_PATH") or None)
+    # Google Play (안드로이드 코인 충전): the app's package and a service account with access to it in Play Console
+    # (사용자 및 권한 › 재무 데이터 보기, 주문 관리). Without both, Android purchases are refused (TRUST_PURCHASES
+    # aside) and Play refunds are not checked. The key JSON as one base64 line, or a path.
+    google_play_package: str | None = field(default_factory=lambda: os.getenv("GOOGLE_PLAY_PACKAGE") or None)
+    google_play_service_account_base64: str | None = field(
+        default_factory=lambda: os.getenv("GOOGLE_PLAY_SERVICE_ACCOUNT_BASE64") or None)
+    google_play_service_account_path: str | None = field(
+        default_factory=lambda: os.getenv("GOOGLE_PLAY_SERVICE_ACCOUNT_PATH") or None)
+    # FCM (안드로이드 알림): a service account key of Firebase project youniya (프로젝트 설정 › 서비스 계정).
+    fcm_service_account_base64: str | None = field(default_factory=lambda: os.getenv("FCM_SERVICE_ACCOUNT_BASE64") or None)
+    fcm_service_account_path: str | None = field(default_factory=lambda: os.getenv("FCM_SERVICE_ACCOUNT_PATH") or None)
+    # 안드로이드 Apple 로그인 (web flow in a Custom Tab): the Services ID (also in APPLE_CLIENT_IDS) and this
+    # server's callback, registered as a Return URL of that Services ID. Unset: the flow is 404.
+    apple_services_id: str | None = field(default_factory=lambda: os.getenv("APPLE_SERVICES_ID") or None)
+    apple_handoff_redirect_uri: str | None = field(
+        default_factory=lambda: os.getenv("APPLE_HANDOFF_REDIRECT_URI") or None)
+    # Where the callback sends the one-time code: the Android app's deep link.
+    apple_handoff_return: str = field(
+        default_factory=lambda: os.getenv("APPLE_HANDOFF_RETURN", "youniya://auth/apple"))
     allow_sandbox_purchases: bool = field(default_factory=lambda: os.getenv("ALLOW_SANDBOX_PURCHASES", "1") == "1")
     # X-Admin-Token for /v1/admin. Without it the operator API does not exist.
     admin_token: str | None = field(default_factory=lambda: os.getenv("ADMIN_TOKEN") or None)

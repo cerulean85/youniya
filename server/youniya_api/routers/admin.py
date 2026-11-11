@@ -36,6 +36,9 @@ def status(request: Request):
     state, settings = request.app.state, request.app.state.settings
     return {
         "push": state.push is not None,
+        "push_android": getattr(state.push, "fcm", None) is not None,
+        "google_play": state.play is not None,
+        "apple_android_sign_in": bool(settings.apple_services_id and settings.apple_handoff_redirect_uri),
         "storekit": state.storekit is not None,
         "refund_answers": state.appstore is not None,
         "real_model": bool(settings.gemini_api_key),
@@ -61,7 +64,7 @@ def push_test(body: PushTestIn, request: Request, db: Session = Depends(get_db))
         raise ApiError(404, "not_found", "사용자를 찾지 못했어요.")
     client = request.app.state.push
     if client is None:
-        raise ApiError(409, "push_not_configured", "APNs 키가 설정되지 않았어요.")
+        raise ApiError(409, "push_not_configured", "APNs·FCM 키가 설정되지 않았어요.")
     devices = db.scalars(select(DeviceToken).where(DeviceToken.user_id == body.user_id)
                          .order_by(DeviceToken.updated_at.desc())).all()
     message = Message("시험 알림", "YOUNIYA 알림이 이 기기에 잘 도착했어요.", "test")

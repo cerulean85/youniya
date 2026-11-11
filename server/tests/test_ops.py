@@ -272,4 +272,4 @@ def test_vercel_cron_purges_with_the_secret_only(make_app):
                          created_at=datetime.now(timezone.utc) - coins.DETACHED_KEEP - timedelta(days=1)))
         db.commit()
     r = client.get(url, headers={"Authorization": "Bearer s3cret"})
-    assert r.status_code == 200 and r.json() == {"deleted": 1}
+    assert r.status_code == 200 and r.json() == {"deleted": 1, "play_refunds": None}
