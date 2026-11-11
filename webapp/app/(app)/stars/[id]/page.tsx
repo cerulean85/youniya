@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ChevronLeft, Heart, StarFilled, Warn } from "@/components/icons";
 import { StarCard } from "@/components/StarCard";
+import { StarGlyph } from "@/components/StarGlyph";
 import { StarlightReading } from "@/components/StarlightReading";
 import { api, ApiError } from "@/lib/api";
 import { kst, longDate, moodOf, dateTime, MIN_FLOAT_LENGTH } from "@/lib/format";
@@ -32,7 +33,7 @@ export const maxDuration = 120;
 export default function StarPage({ params, searchParams }: PageProps<"/stars/[id]">) {
   return (
     <>
-      <Link href="/" className={styles.back}><ChevronLeft size={18} />오늘</Link>
+      <Link href="/" className={styles.back}><ChevronLeft size={16} />오늘</Link>
       <Suspense fallback={<StarSkeleton />}>
         <StarView params={params} searchParams={searchParams} />
       </Suspense>
@@ -71,16 +72,22 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
   const completed = (justFloated || sp.kept === "1") ? await completedBy(star) : null;
   // W-102: the birth plays once over the new star, lit or not.
   if (justFloated) return <><StarBirth id={star.id} shape={star.analysis?.shape} color={mood.color} /><Result star={star} />{completed}</>;
+  const a = floated ? star.analysis! : null;
+  const shape = a?.shape ?? star.shape ?? null;
+  const light = `color-mix(in srgb, ${mood.color} 45%, #fff)`;
+  const meters = a ? [
+    { label: "별의 깊이", v: a.scores?.depth ?? Math.round(a.depth * 400), max: 400, color: "#8b5cf6" },
+    { label: "빛의 선명함", v: a.scores?.clarity ?? Math.round(a.clarity * 300), max: 300, color: "#22d3ee" },
+    { label: "마음의 무게", v: a.scores?.weight ?? Math.round(a.weight * 300), max: 300, color: "#ec4899" },
+  ] : [];
   return (
-    <div className={styles.body}>
-      <article className={styles.article}>
-        {justFloated && <p className={styles.born}><StarFilled size={16} />별이 떠올랐어요</p>}
-        <p className="caption faint">{longDate(star.created_at)} · {dateTime(star.created_at).split(" · ")[1]}</p>
-        <h1 className="display">{title}</h1>
-        <div className={styles.meta}>
-          <span className={styles.mood} style={{ ["--c" as string]: mood.color }}>{mood.label}</span>
-          {!floated && <span className="label-s muted">{star.analysis_failed ? "별빛을 읽지 못한 별 · 다시 받을 수 있어요" : "별빛 없는 별"}</span>}
-        </div>
+    // Figma Web 시안 v2 · 별 상세 (592:28301): the writing and its starlight on the left, this star large in its
+    // mood's light on the right; no boxes, faint rules between.
+    <div className={styles.v2}>
+      <article className={styles.left}>
+        <p className={styles.when} style={{ color: light }}>{longDate(star.created_at)} · {dateTime(star.created_at).split(" · ")[1]}</p>
+        <h1 className={styles.title}>{title}</h1>
+        {!floated && <p className="v2-meta">{mood.label} · {star.analysis_failed ? "별빛을 읽지 못한 별 · 다시 받을 수 있어요" : "별빛 없는 별"}</p>}
         {care && <CrisisCare />}
         {care && (
           <div className={styles.care} role="note">
@@ -91,65 +98,82 @@ async function StarView({ params, searchParams }: Pick<PageProps<"/stars/[id]">,
             </div>
           </div>
         )}
-        <div className={`journal ${styles.text}`}>{star.body}</div>
-      </article>
-      <aside className={styles.side}>
-        {floated ? (
-          <>
-            <StarCard analysis={star.analysis!} />
-            <StarlightReading analysis={star.analysis!} readAt={star.created_at} version={star.prism_version} />
-          </>
+        <div className={styles.text}>{star.body}</div>
+        <hr className="v2-rule" />
+        {a ? (
+          <section className={styles.reading} aria-label="별빛">
+            <p className={styles.starlight}>
+              <b>{a.starlight}</b><span>별빛</span>
+              {a.moods.map((m) => <span key={m.mood} className={styles.moodDot} style={{ ["--c" as string]: moodOf(m.mood).color }}>{moodOf(m.mood).label}</span>)}
+            </p>
+            <p className={styles.observation}>“{a.observation}”</p>
+            {meters.map((m) => (
+              <div key={m.label} className={styles.meter}>
+                <span>{m.label}</span><span className="v2-small">{m.v} / {m.max}</span>
+                <i style={{ ["--v" as string]: `${Math.min(100, (m.v / m.max) * 100)}%`, ["--c" as string]: m.color }} />
+              </div>
+            ))}
+            <StarlightReading analysis={a} readAt={star.created_at} version={star.prism_version} />
+          </section>
         ) : (
-          <div className={styles.kept}>
-            <p className="body-s muted">
+          <section className={styles.keptV2}>
+            <p className="v2-body">
               {star.analysis_failed ? "별빛을 읽지 못했어요. 코인은 차감되지 않았어요. 다시 받으면 별빛 프리즘이 한 번 더 읽어요."
                 : "별빛 없이 띄운 별이에요. 별빛을 받으면 별빛 풀이를 볼 수 있어요."}
             </p>
-            {!care && (star.body.trim().length >= MIN_FLOAT_LENGTH
-              ? <FloatButton id={star.id} free={me.free_star_today > 0} coins={me.coins} />
-              : <p className="caption faint">별빛은 {MIN_FLOAT_LENGTH}자부터 받을 수 있어요. 글을 조금 더 써 보세요.</p>)}
-            <p className={`caption faint ${styles.keptNote}`}>
+            <div className={styles.actions}>
+              {!care && star.body.trim().length >= MIN_FLOAT_LENGTH && <FloatButton id={star.id} free={me.free_star_today > 0} coins={me.coins} />}
+              <Link href={`/stars/${star.id}/edit`} className="btn btn-secondary">글 수정</Link>
+            </div>
+            <p className="v2-meta">
+              {!care && star.body.trim().length < MIN_FLOAT_LENGTH ? `별빛은 ${MIN_FLOAT_LENGTH}자부터 받을 수 있어요. 글을 조금 더 써 보세요. · ` : ""}
               {me.free_star_today > 0 ? "오늘 무료 별빛 받기가 1번 남았어요. 이후 한 번에 5코인이에요." : "오늘 무료 별빛 받기를 썼어요. 한 번에 5코인이에요."}
             </p>
-            <Link href={`/stars/${star.id}/edit`} className="btn btn-secondary btn-block">글 수정</Link>
-            <ShareStar id={star.id} title={title} body={star.body} shared={star.shared} lit={false} nickname={me.nickname ?? null} quoteMissing={quoteMissing} />
-          </div>
+          </section>
         )}
         {(star.shared || (star.line_count ?? 0) > 0) && (
           <Suspense fallback={null}><ReceivedLines id={star.id} shared={star.shared} /></Suspense>
         )}
         {linked.length > 0 && (
           <section className={styles.linked} aria-label="이어진 별">
-            <span className="label-m">이어진 별 {linked.length}</span>
+            <span className="v2-meta">이어진 별 {linked.length}</span>
             <div className={styles.chips}>{linked.map((l) => <LinkedChip key={l.id} id={star.id} star={l} />)}</div>
           </section>
         )}
-        {floated && (
-          <>
-            <LinkStar id={star.id} title={title} linkedIds={linked.map((l) => l.id)} />
-            <ShareStar id={star.id} title={title} body={star.body} shared={star.shared} lit nickname={me.nickname ?? null} quoteMissing={quoteMissing} />
-          </>
-        )}
-        <div className={styles.footerLinks}>
-          <ExportButton title={title} date={dateTime(star.created_at)} body={star.body} />
-          {/* 기획서 22장: the star card, never the writing. */}
-          <ShareCard kind="star" title={title} data={{
-            date: `${kst(star.created_at).m}월 ${kst(star.created_at).d}일`,
-            month: `${kst(star.created_at).m}월 ${MONTH_NAMES[kst(star.created_at).month.slice(5)] ?? ""}자리`,
-            title: null, color: mood.color,
-            shape: floated ? star.analysis?.shape ?? null : null,
-            starlight: floated ? star.analysis!.starlight : null,
-            moods: (floated ? star.analysis!.moods.map((m) => m.mood) : star.moods ?? [star.mood]).map((m) => ({ label: moodOf(m).label, color: moodOf(m).color })),
-          }} />
-          {floated && <Link href={`/write?rewrite=${star.id}`} className="btn btn-ghost">고쳐 쓰기</Link>}
-          <DeleteButton id={star.id} title={title} />
+        <div className={styles.actions}>
+          {floated && <LinkStar id={star.id} title={title} linkedIds={linked.map((l) => l.id)} />}
+          <ShareStar id={star.id} title={title} body={star.body} shared={star.shared} lit={!!floated} nickname={me.nickname ?? null} quoteMissing={quoteMissing} />
+          <div className={styles.textLinks}>
+            {/* 기획서 22장: the star card, never the writing. */}
+            <ShareCard kind="star" title={title} data={{
+              date: `${kst(star.created_at).m}월 ${kst(star.created_at).d}일`,
+              month: `${kst(star.created_at).m}월 ${MONTH_NAMES[kst(star.created_at).month.slice(5)] ?? ""}자리`,
+              title: null, color: mood.color,
+              shape: floated ? star.analysis?.shape ?? null : null,
+              starlight: floated ? star.analysis!.starlight : null,
+              moods: (floated ? star.analysis!.moods.map((m) => m.mood) : star.moods ?? [star.mood]).map((m) => ({ label: moodOf(m).label, color: moodOf(m).color })),
+            }} />
+            {floated && <Link href={`/write?rewrite=${star.id}`} className="btn btn-ghost">고쳐 쓰기</Link>}
+            <ExportButton title={title} date={dateTime(star.created_at)} body={star.body} />
+            <DeleteButton id={star.id} title={title} />
+          </div>
         </div>
+      </article>
+      <aside className={styles.heroCol} aria-hidden="true">
+        <span className="v2-glow" style={{ ["--c" as string]: mood.color, inset: "-20% -30%" }} />
+        {floated ? <StarGlyph points={shape?.points} sharpness={shape?.sharpness} mood={star.mood} size={283} twinkle />
+          : <span className={styles.unlitHero} style={{ background: mood.color, color: mood.color }} />}
+        <span className={styles.heroCaption} style={{ color: light }}>
+          {floated && shape ? `꼭짓점 ${shape.points} · ${SHARP[shape.sharpness] ?? "보통 뾰족함"} · ` : floated ? "" : "별빛 없는 별 · "}{mood.label}
+        </span>
       </aside>
       {sp.stopped === "1" && <Toast title="별빛 받기를 그만뒀어요" sub="무료와 코인은 그대로예요" />}
       {sp.kept === "1" && <><StarBirth id={star.id} unlit={mood.color} /><Toast title="별빛 없이 띄웠어요" />{completed}</>}
     </div>
   );
 }
+
+const SHARP: Record<string, string> = { soft: "둥근", normal: "보통 뾰족함", sharp: "아주 뾰족함" };
 
 /** The 완성 sheet when this star took the last slot of its month's constellation. */
 async function completedBy(star: Star) {

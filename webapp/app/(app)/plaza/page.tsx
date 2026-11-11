@@ -4,8 +4,8 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { ChevronRight } from "@/components/icons";
 import { PlazaRow } from "@/components/PlazaRow";
+import { StarGlyph } from "@/components/StarGlyph";
 import { RestrictedBanner } from "@/components/Restricted";
 import { api } from "@/lib/api";
 import { requireNickname, withAgo } from "@/lib/plaza";
@@ -27,7 +27,7 @@ type Filter = (typeof FILTERS)[number]["key"];
 export default function PlazaPage({ searchParams }: PageProps<"/plaza">) {
   return (
     // The list and its side card as one block in the middle of wide screens (2026-11-10).
-    <div className="page-column" style={{ ["--column" as string]: "1092px" }}>
+    <div className="page-column" style={{ ["--column" as string]: "1056px" }}>
       <Suspense fallback={<><Header /><PlazaSkeleton /></>}>
         <Gate searchParams={searchParams} />
       </Suspense>
@@ -35,11 +35,27 @@ export default function PlazaPage({ searchParams }: PageProps<"/plaza">) {
   );
 }
 
-function Header() {
+// Figma Web 시안 v2 · 우주 광장 (593:28550): a band of the plaza's own stars across the top is the lead.
+function Header({ band = [], children }: { band?: PlazaStar[]; children?: React.ReactNode }) {
   return (
     <header className={styles.header}>
-      <h1 className="h1">우주 광장</h1>
-      <p className="body-m muted">별지기들이 나눈 별이에요. 눌러서 글을 읽고, 마음이 닿으면 공명을 남겨 보세요.</p>
+      <span className="v2-glow" style={{ ["--c" as string]: "var(--primary)", left: "-6%", top: "-260px", width: "120%", height: "520px" }} aria-hidden="true" />
+      {band.length > 0 && (
+        <span className={styles.band} aria-hidden="true">
+          {band.slice(0, 32).map((s, i) => {
+            // A fixed scatter: the same star lands in the same place every visit.
+            const r = (n: number) => { const x = Math.sin((i + 1) * 12.9898 + n * 78.233) * 43758.5453; return x - Math.floor(x); };
+            const size = s.has_starlight ? 9 + Math.round(r(3) * 15) : 7;
+            return (
+              <span key={s.id} style={{ left: `${(r(1) * 100).toFixed(1)}%`, top: `${(r(2) * 100).toFixed(1)}%` }}>
+                <StarGlyph points={s.has_starlight ? s.shape?.points : 4} sharpness={s.shape?.sharpness} mood={s.mood} size={size} twinkle />
+              </span>
+            );
+          })}
+        </span>
+      )}
+      <h1 className="v2-hero-s">우주 광장</h1>
+      {children ?? <p className="v2-body">별지기들이 나눈 별이에요. 눌러서 글을 읽고, 마음이 닿으면 공명을 남겨 보세요.</p>}
     </header>
   );
 }
@@ -48,12 +64,9 @@ function Header() {
 async function Gate({ searchParams }: Pick<PageProps<"/plaza">, "searchParams">) {
   if (!(await cookies()).get("yn_plaza_seen")) return <PlazaWelcome />;
   return (
-    <>
-      <Header />
-      <Suspense fallback={<PlazaSkeleton />}>
-        <Plaza searchParams={searchParams} />
-      </Suspense>
-    </>
+    <Suspense fallback={<><Header /><PlazaSkeleton /></>}>
+      <Plaza searchParams={searchParams} />
+    </Suspense>
   );
 }
 
@@ -79,12 +92,15 @@ async function Plaza({ searchParams }: Pick<PageProps<"/plaza">, "searchParams">
   const notice = sp.reported ? "신고를 받았어요. 이제 보이지 않아요." : sp.blocked ? "차단했어요. 서로의 별과 별빛 한 줄이 더 이상 보이지 않아요." : null;
   return (
     <>
-      {notice && <p className={styles.notice} role="status">{notice}</p>}
-      {tonight.count > 0 && (
-        <p className={styles.tonight}>
-          오늘 밤, <b>{tonight.count.toLocaleString("ko-KR")}개</b>의 마음이 모였어요{tonight.mine > 0 && <> · 내 별 <b>{tonight.mine}개</b>도 함께 빛나요</>}
+      <Header band={stars.items}>
+        {tonight.count > 0 ? <p className={styles.tonight}>오늘 밤, {tonight.count.toLocaleString("ko-KR")}개의 마음이 모였어요</p>
+          : <p className="v2-body">별지기들이 나눈 별이에요. 눌러서 글을 읽고, 마음이 닿으면 공명을 남겨 보세요.</p>}
+        <p className={styles.tonightSub}>
+          {tonight.mine > 0 && <>내 별 {tonight.mine}개도 함께 빛나요 · </>}
+          <Link href="/settings/shares">내가 나눈 별 {mine.stars.length}개 ›</Link>
         </p>
-      )}
+      </Header>
+      {notice && <p className={styles.notice} role="status">{notice}</p>}
       {me.plaza_restricted_until && new Date(me.plaza_restricted_until) > new Date() && <RestrictedBanner until={me.plaza_restricted_until} open={sp.restricted === "1"} />}
       <nav className={styles.sorts} aria-label="거르기">
         {FILTERS.map((f) => (
@@ -113,22 +129,23 @@ async function Plaza({ searchParams }: Pick<PageProps<"/plaza">, "searchParams">
             : <Link href={`/plaza?${new URLSearchParams({ ...(filter !== "new" && { filter }), more: "1" })}`} scroll={false} className={`btn btn-secondary ${styles.more}`}>더 보기</Link>)}
         </section>
         <aside className={styles.side}>
-          <div className={`card ${styles.mine}`}>
-            <span className="label-m">내 별</span>
-            <Link href="/settings/shares"><span>내가 나눈 별</span><span>{mine.stars.length}개<ChevronRight size={14} /></span></Link>
-            <Link href="/plaza?filter=beside"><span>곁에 둔 별</span><span>{besideCount}개<ChevronRight size={14} /></span></Link>
+          <section className={styles.mine}>
+            <h2 className={styles.sideTitle}>내 별</h2>
+            <Link href="/settings/shares"><span>내가 나눈 별</span><span>{mine.stars.length}개 ›</span></Link>
+            <Link href="/plaza?filter=beside"><span>곁에 둔 별</span><span>{besideCount}개 ›</span></Link>
             <span className={styles.mineRow}><span>받은 별빛 한 줄</span><span>{lines}개</span></span>
-          </div>
-          <div className={`card ${styles.rules}`}>
-            <span className="label-m">광장에서 지켜 주세요</span>
+          </section>
+          <hr className="v2-rule" />
+          <section className={styles.rules}>
+            <h2 className={styles.sideTitle} style={{ fontSize: 18 }}>광장에서 지켜 주세요</h2>
             <ul>
               <li>별을 누르면 글 전체를 읽을 수 있어요.</li>
               <li>마음이 닿으면 공명이나 별빛 한 줄을 남겨요. 별빛 한 줄은 별 주인만 읽어요.</li>
               <li>별빛 없이 띄운 별은 목록 아래쪽에 놓여요.</li>
-              <li>불편한 별은 신고하거나 그 별지기를 차단할 수 있어요.</li>
+              <li>불편한 별은 ··· 에서 신고하거나 차단할 수 있어요.</li>
             </ul>
-          </div>
-          <Link href="/records" className="btn btn-primary btn-block">내 별 나누기</Link>
+          </section>
+          <Link href="/records" className="btn btn-secondary btn-block">내 별 나누기</Link>
         </aside>
       </div>
     </>

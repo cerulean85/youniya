@@ -1,30 +1,27 @@
+/* Figma Web 시안 v2 · 별자리 (591:28041). */
 .loading { min-height: 560px; opacity: 0.5; }
-.header { display: flex; flex-direction: column; gap: 8px; }
-.body { display: flex; gap: 32px; align-items: flex-start; }
-.figureCard { flex: 1; min-width: 0; border-radius: 24px; padding: 24px 32px 28px; display: flex; flex-direction: column; gap: 12px; }
-.figure { aspect-ratio: 600 / 560; display: grid; place-items: center; }
-.months { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; font: 500 12px/16px var(--sans); color: var(--text-2); }
-.months > :last-child { justify-self: end; }
+.header { display: flex; flex-direction: column; gap: 6px; max-width: 560px; position: relative; z-index: 1; }
+.gold { font: 400 18px/26px var(--sans); color: #fcd34d; margin: 0; }
+/* The figure rises under the heading's right side, as in the design, and fits the window's height. */
+.stage { position: relative; margin-top: -72px; min-height: 420px; display: grid; place-items: center; }
+.figure { position: relative; z-index: 1; aspect-ratio: 342 / 300; width: min(100%, 940px, max(360px, (100dvh - 300px) * 342 / 300)); margin-left: auto; margin-right: 0; }
+.months { position: absolute; inset: 50% 0 auto; transform: translateY(-50%); display: flex; justify-content: space-between; pointer-events: none; z-index: 2; }
+.months a { pointer-events: auto; font: 400 15px/20px var(--sans); color: var(--text-2); }
 .months a:hover { color: var(--text); }
-.side { width: 360px; flex: none; display: flex; flex-direction: column; gap: 20px; }
-.stats { display: flex; gap: 12px; }
-.stat { flex: 1; padding: 20px 0; border-radius: 16px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.progress { padding: 20px 22px; border-radius: 16px; display: flex; flex-direction: column; gap: 12px; }
-.progressHead { display: flex; justify-content: space-between; }
-.progress i { display: block; height: 6px; border-radius: 3px; background: var(--border); position: relative; overflow: hidden; }
-.progress i::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--v); background: var(--gold); border-radius: 3px; }
-.more { display: flex; flex-direction: column; gap: 8px; }
-.link { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 12px; background: rgba(19, 26, 42, 0.7); border: 1px solid var(--border); color: var(--primary-text); }
-.link > span { flex: 1; display: flex; flex-direction: column; gap: 2px; color: var(--text); }
-.link:hover { border-color: rgb(var(--primary-rgb) / 0.6); }
-.soon { opacity: 0.55; }
-.soon:hover { border-color: var(--border); }
-@media (max-width: 1100px) { .body { flex-direction: column; } .side { width: 100%; } }
-/* The whole figure fits the window: its width follows the height left after the heading, card padding and month row. */
-.figure { aspect-ratio: 342 / 300; width: min(100%, max(320px, (100dvh - 290px) * 342 / 300)); margin-inline: auto; }
-.figureCard { position: relative; }
-.completeCard { position: absolute; top: 18px; right: 18px; z-index: 2; padding: 6px 10px; border-radius: 14px; background: rgb(251 191 36 / 0.14); border: 1px solid rgb(251 191 36 / 0.45);
+.completeCard { position: absolute; top: 80px; right: 0; z-index: 3; padding: 6px 10px; border-radius: 14px; background: rgb(251 191 36 / 0.14); border: 1px solid rgb(251 191 36 / 0.45);
   color: #fbbf24; font: 500 12px/16px var(--sans); cursor: pointer; }
 .completeCard:hover { background: rgb(251 191 36 / 0.22); }
-.figureCard > :not(:first-child) { position: relative; z-index: 1; }
-.figureCard > .completeCard { position: absolute; z-index: 2; }
+.foot { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
+.stats { display: flex; gap: 72px; margin: 0; }
+.stat { display: flex; flex-direction: column-reverse; gap: 4px; }
+.stat dd { margin: 0; font: 600 44px/1.1 var(--serif); color: #f1f5f9; }
+.stat dt { margin: 0; }
+.more { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.more a { font-size: 16px; }
+@media (max-width: 720px) {
+  .stage { margin-top: 0; min-height: 0; }
+  .figure { width: 100%; }
+  .months { position: static; transform: none; margin-top: 8px; }
+  .stats { gap: 32px; }
+  .more { align-items: flex-start; }
+}

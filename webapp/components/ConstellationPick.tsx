@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { starLinks } from "@/app/(app)/constellation/actions";
+import { starPoints } from "@/components/StarGlyph";
 import { CANVAS, type Constellation } from "@/lib/constellation";
 import { kst, moodOf } from "@/lib/format";
 import styles from "./ConstellationPick.module.css";
@@ -11,7 +12,13 @@ const W = 600, H = Math.round((600 * CANVAS.height) / CANVAS.width);
 
 // Figma W-16-1 (기획서 23장): pressing a star on W-16 rings it, shows its 별 잇기 in this month as silver dotted
 // lines, and a card under the figure: 내 별 · 제목, 이어진 별, 별 보기 ›. No zoom and no table (W-68/W-69 are gone).
-export function ConstellationPick({ c }: { c: Constellation }) {
+type Shape = { points: number; sharpness: string } | null;
+const MOODS = ["calm", "sorrow", "anger", "insight"] as const;
+
+// Web 시안 v2 (591:28041): each filled slot is its star's own shape in its first mood's colour, sized by its
+// starlight, with its date under it; a star without starlight is a small faint light. `shapes` fills in for
+// servers whose constellation doesn't carry them.
+export function ConstellationPick({ c, shapes }: { c: Constellation; shapes?: Map<string, Shape> }) {
   const [picked, setPicked] = useState<number | null>(null);
   const [links, setLinks] = useState<{ id: string; created_at: string }[] | null>(null);
   const [, start] = useTransition();
@@ -38,7 +45,17 @@ export function ConstellationPick({ c }: { c: Constellation }) {
 
   return (
     <div className={styles.wrap}>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" role="img" aria-label={`${c.name}자리 · ${c.filled} / ${c.total} 자리 채움`}>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" role="img" aria-label={`${c.name}자리 · ${c.filled} / ${c.total} 자리 채움`} style={{ overflow: "visible" }}>
+        <defs>
+          {MOODS.map((m) => (
+            <g key={m}>
+              <radialGradient id={`cp-fill-${m}`} cx="50%" cy="50%" r="50%">
+                <stop offset="0" stopColor="#fff" stopOpacity={0.95} /><stop offset="0.35" stopColor={moodOf(m).color} stopOpacity={0.95} /><stop offset="1" stopColor={moodOf(m).color} stopOpacity={0.78} />
+              </radialGradient>
+              <radialGradient id={`cp-glow-${m}`}><stop offset="0" stopColor={moodOf(m).color} stopOpacity={0.28} /><stop offset="1" stopColor={moodOf(m).color} stopOpacity={0} /></radialGradient>
+            </g>
+          ))}
+        </defs>
         {c.lines.map(([a, b]) => {
           const lit = !!(c.slots[a]?.star && c.slots[b]?.star);
           const [x1, y1] = at(a), [x2, y2] = at(b);
@@ -51,15 +68,24 @@ export function ConstellationPick({ c }: { c: Constellation }) {
         {extra.map(({ s, x, y }) => <circle key={s.id} cx={x} cy={y} r={3} fill={moodOf(s.mood).color} opacity={0.35} />)}
         {c.slots.map((s) => {
           const [x, y] = at(s.index);
-          if (!s.star) return <circle key={s.index} cx={x} cy={y} r={6} fill="none" stroke="#fff" strokeOpacity={0.35} strokeWidth={1} strokeDasharray="3 3" />;
+          if (!s.star) return <circle key={s.index} cx={x} cy={y} r={7} fill="none" stroke="#fff" strokeOpacity={0.35} strokeWidth={1} strokeDasharray="3 3" />;
           const color = moodOf(s.star.mood).color, lit = s.star.has_starlight !== false && s.star.starlight != null;
-          const r = lit ? 8 + ((s.star.starlight ?? 300) / 1000) * 5 : 5;
+          const shape = s.star.shape !== undefined ? s.star.shape : shapes?.get(s.star.id) ?? null;
+          const size = lit ? 46 + ((s.star.starlight ?? 300) / 1000) * 30 : 12; // in the 600-wide canvas
+          const day = `${kst(s.star.created_at).m}/${kst(s.star.created_at).d}`;
           return (
             <g key={s.index} className={styles.star} onClick={() => pick(s.index)} role="button" tabIndex={0} aria-pressed={picked === s.index}
               aria-label={`${s.star.title || "제목 없는 별"} 고르기`} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(s.index); } }}>
-              <circle cx={x} cy={y} r={r + 10} fill="transparent" />
-              {picked === s.index && <circle cx={x} cy={y} r={r * 2} fill="none" stroke="#fbbf24" strokeOpacity={0.7} strokeWidth={1} strokeDasharray="2 3" />}
-              <circle cx={x} cy={y} r={r} fill={color} opacity={lit ? 1 : 0.55} style={lit ? { filter: `drop-shadow(0 0 6px ${color})` } : undefined} />
+              <circle cx={x} cy={y} r={size / 2 + 8} fill={`url(#cp-glow-${s.star.mood})`} />
+              {picked === s.index && <circle cx={x} cy={y} r={size * 0.72 + 6} fill="none" stroke="#fbbf24" strokeOpacity={0.7} strokeWidth={1} strokeDasharray="2 3" />}
+              {lit ? (
+                <g className="v2-twinkle" style={{ transformOrigin: `${x}px ${y}px`, filter: `drop-shadow(0 0 6px ${color})` }}>
+                  <polygon transform={`translate(${x - size / 2} ${y - size / 2}) scale(${size / 100})`} points={starPoints(shape?.points ?? 5, shape?.sharpness ?? "normal")}
+                    fill={`url(#cp-fill-${s.star.mood})`} stroke="#fff" strokeOpacity={0.55} strokeWidth={1.5 * 100 / size} strokeLinejoin="round" />
+                  <circle cx={x} cy={y} r={size * 0.07} fill="#fff" opacity={0.92} />
+                </g>
+              ) : <circle cx={x} cy={y} r={6} fill={color} opacity={0.6} />}
+              <text x={x} y={y + (lit ? size / 2 + 16 : 20)} textAnchor="middle" className={styles.date}>{day}</text>
             </g>
           );
         })}

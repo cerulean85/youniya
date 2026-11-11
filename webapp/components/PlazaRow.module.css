@@ -1,9 +1,12 @@
-.row { display: flex; align-items: center; gap: 16px; padding: 16px 4px; }
-.row:hover .observation, .row:hover { color: var(--text); }
-.thumb { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: var(--raised); border: 1px solid var(--border); }
+/* Figma Web 시안 v2 · 우주 광장 rows (593:28550): the star's shape in its mood's glow, the quote in serif. */
+.row { position: relative; display: flex; align-items: center; gap: 20px; padding: 22px 4px; }
+.glow { width: 170px; height: 130px; left: -20px; top: calc(50% - 65px); }
+.thumb { position: relative; flex: none; width: 46px; display: grid; place-items: center; }
 .row[data-unlit] .thumb { opacity: 0.6; }
-.text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.meta { display: flex; gap: 6px; flex-wrap: wrap; font: 500 12px/18px var(--sans); color: var(--text-2); }
-.nick { color: var(--text); }
-.res { flex: none; font-size: 18px; color: var(--text-3); opacity: 0.6; }
-.res[data-on="true"] { color: var(--primary-text); opacity: 1; }
+.text { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.quote { font: 600 21px/1.45 var(--serif); color: #f8fafc; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px; font: 400 14px/20px var(--sans); color: #a3b0c6; }
+.nick { color: #a3b0c6; }
+.res { position: relative; flex: none; font-size: 16px; color: #64748b; }
+.res[data-on="true"] { color: #c4b5fd; }
+.row:hover .quote { color: #fff; }

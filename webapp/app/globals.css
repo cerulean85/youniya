@@ -142,3 +142,32 @@ dialog.sheet p { margin: 0 0 4px; }
 
 /* A single-column page sits in the middle of the area beside the sidebar (2026-11-10), as 설정 does. */
 .page-column { width: 100%; max-width: var(--column, 760px); margin: 0 auto; display: flex; flex-direction: column; gap: 32px; }
+
+/* ── Web 시안 v2 · 하늘이 화면 (Figma 590:27780, 2026-11-11) ──────────────────────────────
+ * Mobile tokens only: a hero title on screens with a lead (오늘·별자리·광장·기록), a smaller one on tool
+ * screens (설정·알림·코인·문의), text set straight on the sky with faint 1px rules instead of boxes. */
+.v2-hero { font: 600 64px/1.15 var(--serif); color: #f8fafc; letter-spacing: -0.01em; }
+.v2-hero-s { font: 600 48px/1.2 var(--serif); color: #f8fafc; }
+.v2-title { font: 600 36px/1.3 var(--serif); color: #f1f5f9; }
+.v2-tool { font: 600 36px/1.3 var(--serif); color: #f8fafc; }
+.v2-lead { font: 400 18px/26px var(--sans); color: #cbd5e1; }
+.v2-body { font: 400 17px/26px var(--sans); color: #cbd5e1; }
+.v2-meta { font: 400 14px/20px var(--sans); color: var(--text-2); }
+.v2-small { font: 400 13px/18px var(--sans); color: #a3b0c6; }
+.v2-item { font: 400 17px/24px var(--sans); color: #f1f5f9; }
+.v2-group { font: 500 14px/20px var(--sans); color: var(--primary-text); }
+.v2-link { font: 400 14px/20px var(--sans); color: #c4b5fd; }
+.v2-link:hover { color: var(--text); }
+.v2-rule { height: 1px; background: rgb(255 255 255 / 0.08); border: 0; margin: 0; }
+/* A mood-coloured round glow behind something (--c), sized by its box. */
+.v2-glow { position: absolute; border-radius: 50%; pointer-events: none; background: radial-gradient(closest-side, color-mix(in srgb, var(--c) 32%, transparent), transparent); }
+/* 반짝임: a slow breath on stars; 마우스 빛 번짐: a row's glow widens under the pointer. Both stop with 동작 줄이기. */
+@keyframes v2-twinkle { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.82; transform: scale(0.96); } }
+.v2-twinkle { animation: v2-twinkle 4.8s ease-in-out infinite; transform-origin: center; }
+.v2-twinkle:nth-child(3n) { animation-duration: 6.2s; animation-delay: -1.4s; }
+.v2-twinkle:nth-child(3n+1) { animation-duration: 5.4s; animation-delay: -2.8s; }
+.v2-hover { position: relative; }
+.v2-hover > .v2-glow { transition: transform 0.2s ease-out, opacity 0.2s ease-out; opacity: 0.75; }
+.v2-hover:hover > .v2-glow, .v2-hover:focus-visible > .v2-glow { transform: scale(1.25); opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .v2-twinkle { animation: none; } .v2-hover > .v2-glow { transition: none; } }
+@media (max-width: 720px) { .v2-hero { font-size: 44px; } .v2-hero-s { font-size: 36px; } .v2-title { font-size: 28px; } .v2-tool { font-size: 30px; } }
