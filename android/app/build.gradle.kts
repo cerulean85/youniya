@@ -22,7 +22,10 @@ android {
     buildTypes {
         debug {
             // Home-desktop dev server over Tailscale (the same one the iOS debug build uses).
-            buildConfigField("String", "API_BASE_URL", "\"http://100.126.111.107:8000\"")
+            // `-PapiBaseUrl=https://youniya-api.dycdyp.com` points a debug build at production
+            // (e.g. to try the real Apple web flow, which the dev server has no Services ID for).
+            val apiBaseUrl = (project.findProperty("apiBaseUrl") as String?) ?: "http://100.126.111.107:8000"
+            buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
         }
         release {
             isMinifyEnabled = true

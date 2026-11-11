@@ -235,7 +235,7 @@ fun CoinChargeView(
                 verticalArrangement = Arrangement.spacedBy(Space.lg),
             ) {
                 Text(
-                    "충전한 코인만큼 남아 있을 때만 환불할 수 있어요.\n환불을 요청하면 코인 사용 내역이 Google Play에 전달돼요.",
+                    "충전한 코인만큼 남아 있을 때만 환불할 수 있어요.\n48시간이 지난 환불은 문의하기에서 요청해 주세요.",
                     style = YText.caption,
                     color = YColor.textTertiary,
                     textAlign = TextAlign.Center,
