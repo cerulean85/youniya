@@ -2,7 +2,6 @@ import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { Archive, Bell, Mail, Moon, Nebula, Settings, Star } from "./icons";
 import { UnreadDot } from "./UnreadDot";
-import { LogoMark } from "./LogoMark";
 import { NavLinks } from "./NavLinks";
 import styles from "./Sidebar.module.css";
 
@@ -25,7 +24,7 @@ export function Sidebar({ account }: { account: ReactNode }) {
   return (
     <aside className={styles.sidebar}>
       <Link href="/" className={styles.logo}>
-        <LogoMark size={20} />
+        <Star size={22} className={styles.logoMark} />
         YOUNIYA
       </Link>
       <Link href="/write" className="btn btn-primary btn-block">오늘의 별 만들기</Link>

@@ -1,7 +1,7 @@
 .shell { display: flex; min-height: 100vh; }
 .sidebar { width: 240px; flex: none; display: flex; flex-direction: column; gap: 24px; padding: 28px 16px 20px; background: #0d1220; border-right: 1px solid var(--line); position: sticky; top: 0; height: 100vh; }
 .brand { display: flex; flex-direction: column; padding: 0 8px; }
-.brand b { display: inline-flex; align-items: center; gap: 8px; font-size: 18px; letter-spacing: 0.02em; }
+.brand b { font-size: 18px; letter-spacing: 0.02em; }
 .nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
 .nav a { padding: 9px 12px; border-radius: 10px; color: var(--text-2); }
 .nav a:hover { background: var(--row); }
