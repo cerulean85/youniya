@@ -18,12 +18,12 @@ const PROVIDERS: Record<string, string> = { apple: "Apple", google: "Google", de
 
 type MeFull = Me & { marketing?: { opt_in: boolean; consented_at: string | null; revoked_at: string | null } };
 
-// Figma W-79 (iOS 87, 87-6): one column of rows (나눈 별 moved to the plaza, 2026-11-10); 차단한 별지기, 별지기 이름 and 우주의 색 open their own pages
+// Figma Web 시안 v2 · 설정 (597:29996) on W-79 (iOS 87, 87-6): one column of rows (나눈 별 moved to the plaza, 2026-11-10); 차단한 별지기, 별지기 이름 and 우주의 색 open their own pages
 // (W-77, W-82, W-80, W-90). 진동, 별 만들기 알림 and 알림 시각 belong to the phone and stay in the app.
 export default function SettingsPage({ searchParams }: PageProps<"/settings">) {
   return (
     <div className={styles.page}>
-      <PageHeader title="나에게 맞는 밤하늘" sub="필요한 것만 켜 두세요. 언제든 바꿀 수 있어요." />
+      <PageHeader title="설정" />
       <Suspense fallback={<div className={styles.loading} aria-busy="true" />}>
         <Settings searchParams={searchParams} />
       </Suspense>
@@ -87,7 +87,7 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
 function Group({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
   return (
     <section className={styles.group} aria-label={title}>
-      <h2 className={`caption faint ${styles.groupTitle}`}>{title}</h2>
+      <h2 className={`v2-group ${styles.groupTitle}`}>{title}</h2>
       <div className={styles.rows}>{children}</div>
       {note && <p className="caption faint">{note}</p>}
     </section>

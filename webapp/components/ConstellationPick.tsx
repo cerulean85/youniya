@@ -18,7 +18,8 @@ const MOODS = ["calm", "sorrow", "anger", "insight"] as const;
 // Web 시안 v2 (591:28041): each filled slot is its star's own shape in its first mood's colour, sized by its
 // starlight, with its date under it; a star without starlight is a small faint light. `shapes` fills in for
 // servers whose constellation doesn't carry them.
-export function ConstellationPick({ c, shapes }: { c: Constellation; shapes?: Map<string, Shape> }) {
+// `still`: a picture only (no picking, no dates), as on 별자리 이야기.
+export function ConstellationPick({ c, shapes, still = false }: { c: Constellation; shapes?: Map<string, Shape>; still?: boolean }) {
   const [picked, setPicked] = useState<number | null>(null);
   const [links, setLinks] = useState<{ id: string; created_at: string }[] | null>(null);
   const [, start] = useTransition();
@@ -74,8 +75,8 @@ export function ConstellationPick({ c, shapes }: { c: Constellation; shapes?: Ma
           const size = lit ? 46 + ((s.star.starlight ?? 300) / 1000) * 30 : 12; // in the 600-wide canvas
           const day = `${kst(s.star.created_at).m}/${kst(s.star.created_at).d}`;
           return (
-            <g key={s.index} className={styles.star} onClick={() => pick(s.index)} role="button" tabIndex={0} aria-pressed={picked === s.index}
-              aria-label={`${s.star.title || "제목 없는 별"} 고르기`} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(s.index); } }}>
+            <g key={s.index} {...(still ? {} : { className: styles.star, onClick: () => pick(s.index), role: "button", tabIndex: 0, "aria-pressed": picked === s.index,
+              "aria-label": `${s.star.title || "제목 없는 별"} 고르기`, onKeyDown: (e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(s.index); } } })}>
               <circle cx={x} cy={y} r={size / 2 + 8} fill={`url(#cp-glow-${s.star.mood})`} />
               {picked === s.index && <circle cx={x} cy={y} r={size * 0.72 + 6} fill="none" stroke="#fbbf24" strokeOpacity={0.7} strokeWidth={1} strokeDasharray="2 3" />}
               {lit ? (
@@ -85,7 +86,7 @@ export function ConstellationPick({ c, shapes }: { c: Constellation; shapes?: Ma
                   <circle cx={x} cy={y} r={size * 0.07} fill="#fff" opacity={0.92} />
                 </g>
               ) : <circle cx={x} cy={y} r={6} fill={color} opacity={0.6} />}
-              <text x={x} y={y + (lit ? size / 2 + 16 : 20)} textAnchor="middle" className={styles.date}>{day}</text>
+              {!still && <text x={x} y={y + (lit ? size / 2 + 16 : 20)} textAnchor="middle" className={styles.date}>{day}</text>}
             </g>
           );
         })}

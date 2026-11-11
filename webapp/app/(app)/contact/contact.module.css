@@ -1,8 +1,11 @@
-.card { max-width: 640px; padding: 28px 32px; border-radius: 20px; display: flex; flex-direction: column; gap: 16px; }
-.kinds { border: 0; margin: 0; padding: 0; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
-.kinds legend { margin-bottom: 8px; }
-.kinds label { display: inline-flex; gap: 6px; align-items: center; font: 400 14px/20px var(--sans); cursor: pointer; }
-.kinds input { accent-color: var(--primary); }
-.field { display: flex; flex-direction: column; gap: 6px; }
-.field input, .field textarea { background: var(--raised); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; color: var(--text); font: 400 14px/22px var(--sans); outline: none; resize: vertical; }
-.field input:focus, .field textarea:focus { border-color: var(--primary); }
+/* Figma Web 시안 v2 · 문의하기 (597:30827). */
+.card { display: flex; flex-direction: column; gap: 22px; }
+.field { display: flex; flex-direction: column; gap: 8px; }
+.field input, .field textarea, .field select { background: rgb(255 255 255 / 0.04); border: 1px solid rgb(255 255 255 / 0.12); border-radius: 12px; padding: 12px 14px; color: var(--text); font: 400 15px/22px var(--sans); outline: none; resize: vertical; }
+.field select { appearance: none; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round'><path d='m6 9 6 6 6-6'/></svg>"); background-repeat: no-repeat; background-position: right 14px center; }
+.field select option { background: #131a2a; }
+.field input:focus, .field textarea:focus, .field select:focus { border-color: rgb(167 139 250 / 0.8); }
+.field input::placeholder, .field textarea::placeholder { color: var(--text-3); }
+.foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.foot p { margin: 0; max-width: 420px; }
+.crisis { margin: 28px 0 0; font: 400 17px/1.6 var(--serif); color: #f1f5f9; }

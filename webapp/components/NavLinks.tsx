@@ -10,6 +10,8 @@ type Item = { href: string; label: string; icon: ReactNode; badge?: ReactNode };
 function isActive(href: string, path: string | null) {
   if (path === null) return false;
   if (href === "/") return path === "/" || path.startsWith("/stars");
+  // A notice opened from 알림 keeps 알림 lit (Web 시안 v2, 2026-11-11).
+  if (href === "/notifications" && path.startsWith("/notices/")) return true;
   return path === href || path.startsWith(`${href}/`);
 }
 

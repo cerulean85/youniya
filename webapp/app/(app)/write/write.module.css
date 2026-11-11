@@ -37,3 +37,24 @@
 .saved { justify-self: end; }
 .rewriteText { min-height: 420px; field-sizing: content; line-height: 1.9; }
 .count { align-self: flex-end; }
+
+/* Figma Web 시안 v2 · 별 만들기 (595:29321). */
+.v2 { position: relative; display: flex; flex-direction: column; gap: 24px; min-height: calc(100dvh - 96px); }
+.v2Top { display: flex; justify-content: space-between; align-items: center; }
+.v2Top .close { font: 400 15px/20px var(--sans); }
+.v2Column { width: 100%; max-width: 720px; margin: 0 auto; flex: 1; display: flex; flex-direction: column; gap: 12px; padding-top: 24px; }
+.v2Source { margin: 0 0 8px; font: 400 14px/22px var(--sans); color: #c4b5fd; }
+.v2Moods { display: flex; gap: 10px; flex-wrap: wrap; }
+.v2Mood { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 18px; cursor: pointer; font: 400 14px/20px var(--sans);
+  background: rgb(255 255 255 / 0.04); border: 1px solid rgb(255 255 255 / 0.12); color: #cbd5e1; }
+.v2Mood::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.v2Mood[aria-pressed="true"] { color: #f8fafc; border-color: var(--c); background: color-mix(in srgb, var(--c) 18%, transparent); }
+.v2Title { margin-top: 20px; background: none; border: 0; outline: none; padding: 0; width: 100%; font: 600 40px/1.4 var(--serif); color: #f8fafc; }
+.v2Title::placeholder { color: rgb(248 250 252 / 0.35); }
+.v2Text { flex: 1; min-height: 320px; resize: none; background: none; border: 0; outline: none; padding: 6px 0 0; font: 400 17px/1.8 var(--sans); color: var(--text); }
+.v2Text::placeholder { color: var(--text-3); }
+.v2Bar { position: sticky; bottom: 0; display: flex; align-items: center; gap: 16px; padding: 14px 0 6px; border-top: 1px solid rgb(255 255 255 / 0.08);
+  background: linear-gradient(transparent, rgb(11 15 25 / 0.9) 30%); }
+.v2Bar .btn { height: 52px; min-width: 200px; }
+.v2Bar .btn-primary { min-width: 240px; }
+@media (max-width: 720px) { .v2Bar { flex-wrap: wrap; } .v2Bar .btn { flex: 1; min-width: 0; } .v2Title { font-size: 30px; } }

@@ -2,7 +2,7 @@
 
 import { loadTossPayments } from "@tosspayments/tosspayments-sdk";
 import { useState, useTransition } from "react";
-import { ChevronRight, Coin } from "@/components/icons";
+import { ChevronRight } from "@/components/icons";
 import type { CoinsInfo } from "@/lib/types";
 import { createOrder } from "./actions";
 import styles from "./coins.module.css";
@@ -41,15 +41,13 @@ export function Recharge({ packages, available, site , from }: { packages: Coins
   });
 
   return (
-    <section className={`card ${styles.recharge}`} aria-labelledby="recharge-title">
-      <h2 id="recharge-title" className="h3">충전하기</h2>
+    <section className={styles.recharge} aria-label="충전하기">
       <div className={styles.packs} role="radiogroup" aria-label="코인 상품">
         {packages.map((p) => (
           <button key={p.product_id} type="button" role="radio" aria-checked={p.product_id === picked} className={styles.pack} onClick={() => setPicked(p.product_id)}>
-            <span className={styles.coinMark}><Coin size={16} /></span>
             <span className={styles.packText}>
-              <span className="h3">{p.coins.toLocaleString("ko-KR")} 코인</span>
-              <span className="caption faint">{p.bonus ? `보너스 ${p.bonus} 코인 포함` : `₩${p.price.toLocaleString("ko-KR")}`}</span>
+              <span className={styles.packCoins}>{p.coins.toLocaleString("ko-KR")}코인</span>
+              <span className="v2-small">{p.bonus ? `${(p.coins - p.bonus).toLocaleString("ko-KR")} + 보너스 ${p.bonus}` : `별빛 받기 ${Math.floor(p.coins / 5)}번`}</span>
             </span>
             <span className={styles.price}>{p.price.toLocaleString("ko-KR")}원</span>
           </button>
@@ -63,8 +61,8 @@ export function Recharge({ packages, available, site , from }: { packages: Coins
       </label>
       {!ready && <p className="body-s muted" role="status">지금은 웹 충전을 준비 중이에요. 앱에서 충전해 주세요.</p>}
       {error && <p className="body-s" role="alert" style={{ color: "var(--anger)" }}>{error}</p>}
-      <button type="button" className="btn btn-primary btn-block" disabled={!ready || !agreed || !pack || pending} onClick={pay}>
-        {!ready ? "웹 충전 준비 중" : pending ? "결제창을 여는 중…" : `${pack?.price.toLocaleString("ko-KR")}원 충전하기`}
+      <button type="button" className={`btn btn-primary ${styles.pay}`} disabled={!ready || !agreed || !pack || pending} onClick={pay}>
+        {!ready ? "웹 충전 준비 중" : pending ? "결제창을 여는 중…" : `${pack?.coins.toLocaleString("ko-KR")}코인 충전하기 · ${pack?.price.toLocaleString("ko-KR")}원`}
       </button>
     </section>
   );

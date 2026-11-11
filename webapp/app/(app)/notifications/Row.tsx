@@ -14,13 +14,13 @@ export function NotificationRow({ n, ago }: { n: AppNotification; ago: string })
       <span className={styles.text}>
         <span className={styles.meta}><span style={{ color: k.color }}>{k.label}</span><span className="faint">{ago}</span></span>
         <span className={styles.title}>{n.title}</span>
-        <span className="body-s muted">{n.body}</span>
+        <span className={styles.body}>{n.body}</span>
       </span>
       {go && <span className={styles.action}>{k.action} ›</span>}
     </>
   );
   return (
-    <li className={`card ${styles.item}`} data-unread={!n.read || undefined}>
+    <li className={styles.item} data-unread={!n.read || undefined}>
       {go ? <Link href={go} prefetch={false} aria-label={`${n.title} · ${k.action}`}>{body}</Link> : <div>{body}</div>}
     </li>
   );

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { Info, Lock } from "@/components/icons";
+import { Info } from "@/components/icons";
 import { FlashToast, OfflineBanner, useOnline } from "@/components/Offline";
 import { AttemptField, freshAttempt, PrismOverlay } from "@/components/PrismOverlay";
 import { MIN_FLOAT_LENGTH, MOODS } from "@/lib/format";
@@ -205,61 +205,52 @@ export function WriteForm({ draft, source, freeStarToday, coins }: { draft: Draf
     );
   }
 
+  // Figma Web 시안 v2 · 별 만들기 (595:29321): deliberately quiet — one 720px column on the sky, no boxes,
+  // and a bar at the bottom with the count, what's free today, and the two ways to float.
   return (
-    <form action={action} className={styles.body} onSubmit={guard}>
+    <form action={action} className={styles.v2} onSubmit={guard}>
       <input type="hidden" name="moods" value={moods.join(",")} />
       <AttemptField />
       {source && <input type="hidden" name={rewrite ? "rewrite_of" : "link_to"} value={source.id} />}
-      <div className={`card ${styles.editor}`}>
-        <div className={styles.moods} role="group" aria-label="오늘의 기분">
+      <div className={styles.v2Top}>
+        <Link href={source ? `/stars/${source.id}` : "/"} className={styles.close} data-leave>‹ 닫기</Link>
+        <span className="v2-small">{saved ?? ""}</span>
+      </div>
+      <div className={styles.v2Column}>
+        {source?.kind === "link" && (
+          <p className={styles.v2Source}>지난번 기록 · {source.title}{source.question && <><br />{source.question}</>}</p>
+        )}
+        <p className="v2-small" style={{ color: "var(--text-2)" }}>오늘의 마음</p>
+        <div className={styles.v2Moods} role="group" aria-label="오늘의 기분">
           {MOODS.map((m) => (
-            <button key={m.key} type="button" aria-pressed={moods.includes(m.key)} className={styles.mood}
+            <button key={m.key} type="button" aria-pressed={moods.includes(m.key)} className={styles.v2Mood}
               style={{ ["--c" as string]: m.color }} onClick={() => toggleMood(m.key)}>{m.label}</button>
           ))}
         </div>
-        <p className="caption faint" style={{ marginTop: -12 }}>오늘의 마음을 여러 개 고를 수 있어요 · 처음 고른 마음이 별의 색이 돼요</p>
-        <input name="title" className={`h1 ${styles.title}`} placeholder="제목 없는 별" value={title} maxLength={60}
+        <p className="caption faint">여러 개 고를 수 있어요 · 처음 고른 마음이 별의 색이 돼요</p>
+        <input name="title" className={styles.v2Title} placeholder="제목 없는 별" value={title} maxLength={60}
           onChange={(e) => setTitle(e.target.value)} aria-label="제목" />
-        <textarea name="body" className={`journal ${styles.text}`} placeholder="오늘은 어떤 마음이 머물렀나요? 떠오르는 대로 적어 주세요."
+        <hr className="v2-rule" />
+        <textarea name="body" className={styles.v2Text} placeholder="오늘은 어떤 마음이 머물렀나요? 떠오르는 대로 적어 주세요."
           value={body} maxLength={20000} onChange={(e) => setBody(e.target.value)} aria-label="본문" />
-        <div className={styles.footer}>
-          <span className="caption faint">{length.toLocaleString("ko-KR")}자{!canFloat && length > 0 ? ` · ${MIN_FLOAT_LENGTH - length}자 더 쓰면 별빛을 받을 수 있어요` : ""}</span>
-          <span className={styles.spacer} />
-          {saved && <span className="caption faint">{saved}</span>}
-          {rewrite ? (
-            <button type="button" className="btn btn-secondary" disabled={length === 0} onClick={() => confirm.current?.showModal()}>별빛 없이 띄우기</button>
-          ) : <Submit mode="keep" label="별빛 없이 띄우기" style="btn-secondary" disabled={length === 0} />}
-          <button type="button" className="btn btn-primary" disabled={!canFloat} onClick={openFloat}>별빛 받고 띄우기</button>
-        </div>
-      </div>
-      <aside className={styles.side}>
-        {source?.kind === "link" ? (
-          <div className={styles.banner}>
-            <Info size={18} />
-            <span>지난번 기록 · {source.title}{source.question && <><br />{source.question}</>}</span>
-          </div>
-        ) : (
-          <div className={styles.banner}>
-            <Info size={18} />
-            {freeLeft ? "오늘 무료 별빛 받기가 1번 남았어요." : `오늘 무료 별빛 받기를 썼어요. 별빛을 받으면 ${STAR_COST}코인이 들어요 (보유 ${coins}).`}
-          </div>
-        )}
         {state?.error && (
           <div className={styles.error} role="alert">
             {state.error}
             {state.code === "insufficient_coins" && <CoinsLink className={styles.link}>코인 충전하기</CoinsLink>}
           </div>
         )}
-        <div className={`card ${styles.tips}`}>
-          <span className="label-m">쓰는 동안</span>
-          <ul>
-            <li>떠오르는 대로 적어도 괜찮아요. 맞춤법은 신경 쓰지 않아도 돼요.</li>
-            <li>별빛은 {MIN_FLOAT_LENGTH}자부터 받을 수 있어요. 짧은 날은 별빛 없이 띄워도 괜찮아요.</li>
-            <li>별빛 받고 띄우면 별빛과 별빛 풀이를 받아요. 별빛을 받은 글은 고칠 수 없어요.</li>
-          </ul>
-        </div>
-        <p className={`caption faint ${styles.privacy}`}><Lock size={16} />글은 나에게만 보여요. 우주 광장에는 내가 고른 한 줄만 나가요.</p>
-      </aside>
+      </div>
+      <div className={styles.v2Bar}>
+        <span className="v2-meta">
+          {length.toLocaleString("ko-KR")}자 · {!canFloat && length > 0 ? `${MIN_FLOAT_LENGTH - length}자 더 쓰면 별빛을 받을 수 있어요`
+            : freeLeft ? "오늘 무료 별빛 1번 남았어요" : `별빛을 받으면 ${STAR_COST}코인 (보유 ${coins})`}
+        </span>
+        <span className={styles.spacer} />
+        {rewrite ? (
+          <button type="button" className="btn btn-secondary" disabled={length === 0} onClick={() => confirm.current?.showModal()}>별빛 없이 띄우기</button>
+        ) : <Submit mode="keep" label="별빛 없이 띄우기" style="btn-secondary" disabled={length === 0} />}
+        <button type="button" className="btn btn-primary" disabled={!canFloat} onClick={openFloat}>별빛 받고 띄우기</button>
+      </div>
       <PrismOverlay mode="float" draft={localKey} />
       {confirmDialog}
       {extraDialogs}

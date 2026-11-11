@@ -1,8 +1,17 @@
-.back { display: inline-flex; align-items: center; gap: 6px; font: 500 14px/20px var(--sans); color: var(--text-2); margin-bottom: -8px; }
-.card { max-width: 760px; padding: 36px 44px; border-radius: 24px; display: flex; flex-direction: column; gap: 12px; }
-.entries { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.entries li { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
-.sep { align-self: center; color: var(--gold); font-size: 14px; }
-.entry { display: flex; flex-direction: column; gap: 4px; padding: 8px 0; }
-.entry:hover .journal { color: var(--text); }
-.chev { color: var(--text-3); margin-left: 2px; }
+/* Figma Web 시안 v2 · 별자리 이야기 (596:29495). */
+.loading { min-height: 560px; }
+.page { position: relative; display: flex; flex-direction: column; gap: 20px; }
+.figure { position: absolute; top: 40px; right: -20px; width: min(48%, 580px); aspect-ratio: 342 / 300; pointer-events: none; }
+.back { position: relative; font: 400 15px/20px var(--sans); color: var(--text-2); }
+.back:hover { color: var(--text); }
+.header { position: relative; display: flex; flex-direction: column; gap: 8px; max-width: 520px; padding-top: 16px; }
+.entries { position: relative; list-style: none; margin: 40px 0 0; padding: 0; max-width: 560px; display: flex; flex-direction: column; }
+.entries li { display: flex; flex-direction: column; align-items: flex-start; }
+.sep { margin: 18px 0 18px 24px; color: #c4b5fd; font-size: 13px; }
+.entry { display: flex; flex-direction: column; gap: 8px; }
+.head { display: inline-flex; align-items: center; gap: 12px; font: 400 14px/20px var(--sans); color: var(--text-2); }
+.head i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.sentence { padding-left: 22px; font: 600 24px/1.5 var(--serif); color: #f1f5f9; }
+.entry:hover .sentence { color: #fff; }
+.chev { color: var(--text-3); }
+@media (max-width: 1100px) { .figure { position: relative; top: 0; right: 0; width: 100%; max-width: 520px; align-self: center; order: 3; } }

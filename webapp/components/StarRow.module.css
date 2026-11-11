@@ -1,12 +1,13 @@
-.row { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-radius: 16px; }
-.row:hover { border-color: rgb(var(--primary-rgb) / 0.6); }
-.glyph { display: inline-flex; color: var(--text-3); }
-.glyph[data-floated="true"] { color: var(--sorrow); filter: drop-shadow(0 0 6px rgba(165, 180, 252, 0.6)); }
-.text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.text > :first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.badge {
-  display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px;
-  background: var(--tint); border: 1px solid rgb(var(--primary-rgb) / 0.5); font: 500 13px/20px var(--sans);
-}
-.badge svg { color: var(--sorrow); }
-.badge small { font-size: 11px; color: var(--text-2); }
+/* Figma Web 시안 v2 · 기록 rows (595:28950). */
+.row { position: relative; display: flex; align-items: center; gap: 24px; padding: 20px 4px; border-bottom: 1px solid rgb(255 255 255 / 0.06); }
+.glow { width: 180px; height: 130px; left: -24px; top: calc(50% - 65px); }
+.glyph { position: relative; flex: none; width: 48px; display: grid; place-items: center; }
+.glyph[data-lit="false"] { opacity: 0.55; }
+.text { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.title { font: 600 21px/1.4 var(--serif); color: #f8fafc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.when { font: 400 14px/20px var(--sans); color: #a3b0c6; }
+.light { position: relative; display: flex; flex-direction: column; align-items: flex-end; }
+.light b { font: 600 24px/1.2 var(--serif); color: #f8fafc; }
+.light small { font: 400 12px/16px var(--sans); color: #a3b0c6; }
+.none { position: relative; font: 400 14px/20px var(--sans); color: #a3b0c6; }
+.row:hover .title { color: #fff; }

@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
 import { Toast } from "@/components/Flash";
-import { Close } from "@/components/icons";
 import { api } from "@/lib/api";
 import type { Draft, Me, Star } from "@/lib/types";
 import { WriteForm, type Source } from "./WriteForm";
@@ -36,14 +34,8 @@ async function Editor({ searchParams }: Pick<PageProps<"/write">, "searchParams"
   };
   // One draft per person: a 고쳐 쓰기 draft belongs to its star, every other draft to plain writing.
   const own = draft && (source?.kind === "rewrite" ? draft.source_star_id === source.id : !draft.source_star_id) ? draft : null;
-  const back = source ? `/stars/${source.id}` : "/";
   return (
     <>
-      {source?.kind !== "rewrite" && <div className={styles.top}>
-        <Link href={back} className={styles.close} data-leave><Close size={18} />닫기</Link>
-        <span className="label-m">{source ? "별 잇기 · 새 별 쓰기" : "별 만들기"}</span>
-        <span className={styles.spacer} />
-      </div>}
       <WriteForm key={source ? `${source.kind}-${source.id}` : "new"} draft={own} source={source}
         freeStarToday={me.free_star_today} coins={me.coins} />
       {sp.stopped === "1" && <Toast title="별빛 받기를 그만뒀어요" sub="무료와 코인은 그대로예요" />}
