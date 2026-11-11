@@ -47,6 +47,7 @@ fun ComposeFlow(
     onClose: () -> Unit,
     onShowNebula: () -> Unit,
     onOpenStar: (StarItem) -> Unit = {},
+    onOpenCoinCharge: (() -> Unit)? = null,
     rewriteOf: StarItem? = null,
     revising: StarItem? = null,
     floatingKept: StarItem? = null,
@@ -549,7 +550,7 @@ fun ComposeFlow(
                     primaryText = "코인 충전",
                     onPrimary = {
                         showShortage = false
-                        model.message = "코인 충전은 다음 단계에서 만들어요."
+                        onOpenCoinCharge?.invoke()
                     },
                     secondaryText = "별빛 없이 띄우기",
                     onSecondary = {

@@ -49,6 +49,19 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     val api = ApiClient(TokenStore(app))
     private val prefs = app.getSharedPreferences("youniya_draft", 0)
 
+    var userId by mutableStateOf<String?>(api.session?.userId)
+        private set
+    var pendingTarget by mutableStateOf<com.dycdyp.youniya.ui.screens.NotificationTarget?>(null)
+    val playBilling by lazy {
+        PlayBilling(
+            context = app,
+            scope = viewModelScope,
+            api = api,
+            onCoinsUpdated = { coins = it },
+            showToast = { message = it },
+        )
+    }
+
     var isSignedIn by mutableStateOf(api.isSignedIn)
         private set
     var hasConsented by mutableStateOf(api.session?.needsConsent == false)
@@ -153,10 +166,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         if (hasConsented) {
             loadStars()
             loadDraft()
+            PushRegistration.register(getApplication(), api)
+            playBilling.checkUnconsumedPurchases()
         }
     }
 
     private fun apply(me: Me) {
+        userId = me.id
         hasConsented = !me.needsConsent
         // Keep the saved session in step, so the next launch doesn't flash 11 before /v1/me answers.
         api.session?.let { if (it.needsConsent != me.needsConsent) api.store(it.copy(needsConsent = me.needsConsent)) }
@@ -216,6 +232,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun signOut() = viewModelScope.launch {
+        PushRegistration.unregister(getApplication(), api)
         api.session?.refreshToken?.let { r -> runCatching { api.sendNoContent("POST", "/v1/auth/logout", LogoutIn(r), authorized = false) } }
         api.store(null)
         isSignedIn = false
@@ -1137,6 +1154,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun deleteAccount() = viewModelScope.launch {
         if (!isSignedIn) return@launch
         try {
+            PushRegistration.unregister(getApplication(), api)
             api.call("DELETE", "/v1/me", null, emptyMap(), authorized = true)
             api.store(null)
             isSignedIn = false
@@ -1180,6 +1198,24 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             onDone(false)
         }
     }
+
+    // MARK: - 5b 코인 결제(Google Play) & FCM 기기 등록
+    fun applyCoins(newCoins: Int) {
+        coins = newCoins
+    }
+
+    fun checkUnconsumedPurchases() {
+        playBilling.checkUnconsumedPurchases()
+    }
+
+    fun registerDeviceToken(explicitToken: String? = null) = viewModelScope.launch {
+        PushRegistration.register(getApplication(), api, explicitToken)
+    }
+
+    fun purchaseCoinsDev(amount: Int, onResult: (BillingOutcome) -> Unit) = viewModelScope.launch {
+        val outcome = playBilling.purchaseDev(amount)
+        onResult(outcome)
+    }
 }
 
 @Serializable private data class SettingsPatchIn(val sky: String? = null, val reduceAnimations: Boolean? = null, val starReminder: Boolean? = null)
@@ -1204,7 +1240,17 @@ data class CoinEntry(
     val delta: Int,
     val source: String = "server",
     val createdAt: String? = null,
-)
+) {
+    val displayTitle: String
+        get() = when {
+            kind == "refund" -> when (source) {
+                "google_play" -> "충전 취소 · Google Play 환불"
+                "app_store" -> "충전 취소 · App Store 환불"
+                else -> "충전 취소 · 환불"
+            }
+            else -> title
+        }
+}
 
 data class BlockedKeeper(
     val id: String,

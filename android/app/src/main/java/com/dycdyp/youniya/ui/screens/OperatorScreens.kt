@@ -101,6 +101,14 @@ sealed interface NotificationTarget {
                 else -> null
             }
         }
+
+        fun fromJsonString(jsonStr: String?): NotificationTarget? {
+            if (jsonStr.isNullOrBlank()) return Inbox
+            return runCatching {
+                val element = com.dycdyp.youniya.data.ApiJson.parseToJsonElement(jsonStr)
+                if (element is kotlinx.serialization.json.JsonObject) fromJson(element) else Inbox
+            }.getOrDefault(Inbox)
+        }
     }
 }
 

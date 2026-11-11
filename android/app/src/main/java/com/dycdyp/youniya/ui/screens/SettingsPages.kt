@@ -122,15 +122,16 @@ fun SettingsView(
     var sheet by remember { mutableStateOf<SettingsSheet?>(null) }
     var exportProgress by remember { mutableDoubleStateOf(0.0) }
 
+    var pendingPermissionAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
     ) { granted ->
         if (granted) {
-            model.setStarReminder(true)
+            pendingPermissionAction?.invoke()
         } else {
-            model.setStarReminder(false)
             sheet = SettingsSheet.NotificationsOff
         }
+        pendingPermissionAction = null
     }
 
     BackHandler(onBack = onBack)
@@ -207,6 +208,7 @@ fun SettingsView(
                                     model.setStarReminder(true)
                                 } else {
                                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                                        pendingPermissionAction = { model.setStarReminder(true) }
                                         permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
                                     } else {
                                         model.setStarReminder(true)
@@ -229,7 +231,22 @@ fun SettingsView(
                         icon = R.drawable.icon_info,
                         title = "새 기능·혜택 알림",
                         isOn = model.marketingOptIn,
-                        onToggle = { model.setMarketing(!model.marketingOptIn) },
+                        onToggle = {
+                            if (!model.marketingOptIn) {
+                                if (NotificationAccess.hasPermission(context)) {
+                                    model.setMarketing(true)
+                                } else {
+                                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                                        pendingPermissionAction = { model.setMarketing(true) }
+                                        permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                                    } else {
+                                        model.setMarketing(true)
+                                    }
+                                }
+                            } else {
+                                model.setMarketing(false)
+                            }
+                        },
                     )
                 }
 
@@ -967,7 +984,7 @@ private fun CoinHistoryCard(entry: CoinEntry) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(entry.title, style = YText.labelM, color = YColor.textPrimary)
+        Text(entry.displayTitle, style = YText.labelM, color = YColor.textPrimary)
         Text(detail, style = YText.bodyS, color = YColor.textSecondary)
     }
 }

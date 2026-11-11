@@ -59,6 +59,7 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
         )
         super.onCreate(savedInstanceState)
+        if (savedInstanceState == null) handleNotificationIntent(intent)
         val reduced = Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
         setContent {
             val currentSky = if (model.skyThemeKey == "ocean") SkyThemes.ocean else SkyThemes.violet
@@ -71,6 +72,20 @@ class MainActivity : ComponentActivity() {
                 Root(model)
             }
         }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleNotificationIntent(intent)
+    }
+
+    private fun handleNotificationIntent(intent: android.content.Intent?) {
+        // iOS: a tap opens what `target.screen` names; a push without one opens the 알림함.
+        // Background pushes arrive here with the FCM data keys as extras.
+        val extras = intent?.extras ?: return
+        if (!extras.containsKey("kind") && !extras.containsKey("target")) return
+        model.pendingTarget = com.dycdyp.youniya.ui.screens.NotificationTarget.fromJsonString(extras.getString("target"))
     }
 }
 

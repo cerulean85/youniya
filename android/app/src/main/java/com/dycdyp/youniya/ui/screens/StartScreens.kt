@@ -1,6 +1,11 @@
 package com.dycdyp.youniya.ui.screens
 
 import android.content.Context
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import com.dycdyp.youniya.data.NotificationAccess
 import androidx.activity.compose.BackHandler
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
@@ -314,6 +319,17 @@ fun openWeb(context: Context, url: String) {
 /** 11 Consent: shown once after the first sign-in. */
 @Composable
 fun ConsentScreen(model: AppModel) {
+    val context = LocalContext.current
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { _ -> }
+
+    fun checkMarketingPermission() {
+        if (!NotificationAccess.hasPermission(context) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
     var agreed by remember { mutableStateOf(setOf<Term>()) }
     var openDoc by remember { mutableStateOf<PolicyDoc?>(null) }
     val all = agreed.size == Term.entries.size
@@ -332,11 +348,29 @@ fun ConsentScreen(model: AppModel) {
                 Text("시작하기 전에\n함께 약속할게요", style = YText.h1, color = YColor.textPrimary)
                 NoticeBanner("쓴 글은 AI 학습에 쓰이지 않아요. 언제든 모두 삭제할 수 있고, YOUNIYA는 상담이나 진단을 대신하지 않아요.")
                 Column {
-                    CheckboxRow("전체 동의", all, onToggle = { agreed = if (all) emptySet() else Term.entries.toSet() })
+                    CheckboxRow(
+                        "전체 동의",
+                        all,
+                        onToggle = {
+                            if (all) {
+                                agreed = emptySet()
+                            } else {
+                                if (Term.Marketing !in agreed) checkMarketingPermission()
+                                agreed = Term.entries.toSet()
+                            }
+                        },
+                    )
                     Term.entries.forEach { t ->
                         CheckboxRow(
                             t.label, t in agreed,
-                            onToggle = { agreed = if (t in agreed) agreed - t else agreed + t },
+                            onToggle = {
+                                if (t in agreed) {
+                                    agreed = agreed - t
+                                } else {
+                                    if (t == Term.Marketing) checkMarketingPermission()
+                                    agreed = agreed + t
+                                }
+                            },
                             onOpen = { openDoc = t.doc },
                         )
                     }

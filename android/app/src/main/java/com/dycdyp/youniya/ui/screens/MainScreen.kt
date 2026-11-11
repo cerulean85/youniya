@@ -140,6 +140,24 @@ fun MainScreen(model: AppModel) {
     var showPlazaWelcome by rememberSaveable { mutableStateOf(!prefs.getBoolean("seen_plaza", false)) }
     val compose = { navStack = navStack + MainNav.Compose() }
 
+    LaunchedEffect(model.pendingTarget) {
+        val target = model.pendingTarget ?: return@LaunchedEffect
+        model.pendingTarget = null
+        when (target) {
+            is NotificationTarget.Star -> navStack = navStack + MainNav.StarDetail(target.starId)
+            is NotificationTarget.Nickname -> navStack = navStack + MainNav.NicknameChange(NicknameMode.OperatorRequest)
+            is NotificationTarget.PlazaRestricted -> model.showPlazaRestricted = true
+            is NotificationTarget.Plaza -> {
+                navStack = emptyList()
+                tab = SkyTab.Plaza
+            }
+            is NotificationTarget.CoinHistory -> navStack = navStack + MainNav.CoinHistory
+            is NotificationTarget.Notice -> navStack = navStack + MainNav.NoticeDetail(target.noticeId)
+            is NotificationTarget.NotificationSettings -> navStack = navStack + MainNav.Settings
+            is NotificationTarget.Inbox -> if (navStack.lastOrNull() != MainNav.Inbox) navStack = navStack + MainNav.Inbox
+        }
+    }
+
     BackHandler(enabled = drawerOpen) { drawerOpen = false }
     BackHandler(enabled = !drawerOpen && navStack.isNotEmpty()) { navStack = navStack.dropLast(1) }
     BackHandler(enabled = !drawerOpen && navStack.isEmpty() && tab != SkyTab.Sky) { tab = SkyTab.Sky }
@@ -284,6 +302,9 @@ fun MainScreen(model: AppModel) {
                     },
                     onOpenStar = { star ->
                         navStack = navStack.dropLast(1) + MainNav.StarDetail(star.id)
+                    },
+                    onOpenCoinCharge = {
+                        navStack = navStack + MainNav.CoinCharge
                     },
                 )
             }
@@ -442,8 +463,12 @@ fun MainScreen(model: AppModel) {
                             NotificationTarget.Nickname -> navStack = navStack + MainNav.NicknameChange(NicknameMode.OperatorRequest)
                             NotificationTarget.CoinHistory -> navStack = navStack + MainNav.CoinHistory
                             NotificationTarget.NotificationSettings -> navStack = navStack + MainNav.Settings
-                            NotificationTarget.Plaza -> tab = SkyTab.Plaza
-                            else -> Unit
+                            NotificationTarget.PlazaRestricted -> model.showPlazaRestricted = true
+                            NotificationTarget.Plaza -> {
+                                navStack = emptyList()
+                                tab = SkyTab.Plaza
+                            }
+                            NotificationTarget.Inbox -> if (navStack.lastOrNull() != MainNav.Inbox) navStack = navStack + MainNav.Inbox
                         }
                     },
                 )
