@@ -1,5 +1,7 @@
 package com.dycdyp.youniya.ui.screens
 
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -102,7 +104,7 @@ fun BrightnessFlowView(
     BackHandler(onBack = onBack)
     Box(modifier.fillMaxSize()) {
         StarField()
-        Column(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             TopAppBar("별빛 기록", onBack = onBack)
 
             Column(

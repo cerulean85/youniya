@@ -31,6 +31,14 @@ android {
         }
     }
 
+    // Release code (R8, no debugging) signed with the debug key, against the dev server: for timing on a device.
+    buildTypes.create("benchmark") {
+        initWith(buildTypes.getByName("release"))
+        signingConfig = signingConfigs.getByName("debug")
+        matchingFallbacks += listOf("release")
+        buildConfigField("String", "API_BASE_URL", "\"http://100.126.111.107:8000\"")
+    }
+
     buildFeatures {
         compose = true
         buildConfig = true

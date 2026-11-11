@@ -1,5 +1,7 @@
 package com.dycdyp.youniya.ui.screens
 
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -613,7 +615,7 @@ fun KeptView(
     BackHandler(onBack = onBack)
     Box(modifier.fillMaxSize()) {
         StarField()
-        Column(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             TopAppBar("별빛 없는 별", onBack = onBack)
 
             Column(

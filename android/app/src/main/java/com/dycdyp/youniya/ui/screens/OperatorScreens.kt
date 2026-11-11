@@ -1,5 +1,7 @@
 package com.dycdyp.youniya.ui.screens
 
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -139,7 +141,7 @@ fun InboxView(
     BackHandler(onBack = onBack)
     Box(modifier.fillMaxSize()) {
         StarField()
-        Column(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             TopAppBar(title = "알림", onBack = onBack)
 
             LazyColumn(
@@ -275,7 +277,7 @@ fun NoticeDetailView(
     BackHandler(onBack = onBack)
     Box(modifier.fillMaxSize()) {
         StarField()
-        Column(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             TopAppBar(title = "공지", onBack = onBack)
 
             Column(

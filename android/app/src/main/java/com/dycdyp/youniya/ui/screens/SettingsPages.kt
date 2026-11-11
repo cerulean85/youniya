@@ -1,5 +1,7 @@
 package com.dycdyp.youniya.ui.screens
 
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -134,7 +136,7 @@ fun SettingsView(
     BackHandler(onBack = onBack)
     Box(modifier.fillMaxSize()) {
         StarField()
-        Column(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             TopAppBar(title = "설정", onBack = onBack)
 
             Column(
@@ -233,11 +235,7 @@ fun SettingsView(
 
                 // 우주 광장
                 SettingsSection("우주 광장") {
-                    SettingsRow(
-                        icon = R.drawable.icon_star,
-                        title = "나눈 별",
-                        onClick = onOpenShared,
-                    )
+                    // 나눈 별 lives in the plaza tab (「내가 나눈 별 N개 ›」), as on iOS since 2026-11-10.
                     SettingsRow(
                         icon = R.drawable.icon_close,
                         title = "차단한 별지기",
@@ -692,7 +690,7 @@ fun SkyColorView(
     BackHandler(onBack = onBack)
     Box(modifier.fillMaxSize()) {
         StarField()
-        Column(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             TopAppBar(title = "우주의 색", onBack = onBack)
 
             Column(
@@ -822,7 +820,7 @@ fun BlockedKeepersView(
     BackHandler(onBack = onBack)
     Box(modifier.fillMaxSize()) {
         StarField()
-        Column(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             TopAppBar(title = "차단한 별지기", onBack = onBack)
 
             if (keepers.isEmpty()) {
@@ -920,7 +918,7 @@ fun CoinHistoryView(
     BackHandler(onBack = onBack)
     Box(modifier.fillMaxSize()) {
         StarField()
-        Column(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             TopAppBar(title = "코인 내역", onBack = onBack)
 
             Column(
@@ -999,7 +997,7 @@ fun InquiryView(
     BackHandler(onBack = onBack)
     Box(modifier.fillMaxSize()) {
         StarField()
-        Column(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             TopAppBar(title = "문의하기", onBack = onBack)
 
             Column(

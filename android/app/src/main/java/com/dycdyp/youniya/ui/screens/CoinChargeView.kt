@@ -1,5 +1,7 @@
 package com.dycdyp.youniya.ui.screens
 
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -86,7 +88,7 @@ fun CoinChargeView(
     BackHandler(onBack = onBack)
     Box(modifier.fillMaxSize()) {
         StarField()
-        Column(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             TopAppBar(title = "코인 충전", onBack = onBack)
 
             Column(
