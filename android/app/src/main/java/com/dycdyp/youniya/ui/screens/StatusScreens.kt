@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -17,6 +18,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -221,4 +224,245 @@ fun NotFoundView(
         ),
         modifier = modifier,
     )
+}
+
+// MARK: - 39–41 App notices
+
+sealed interface AppNotice {
+    data object LoginExpired : AppNotice // 39
+    data object UpdateRequired : AppNotice // 40
+    data class Maintenance(val window: String) : AppNotice // 41
+    data object AccountDeleted : AppNotice // 113
+    data object RateLimited : AppNotice // 120
+}
+
+@Composable
+fun AppNoticeView(
+    notice: AppNotice,
+    retryAvailableAt: Long? = null,
+    onDismiss: () -> Unit = {},
+    onSignOut: () -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    when (notice) {
+        is AppNotice.LoginExpired -> {
+            StatusView(
+                icon = R.drawable.icon_user,
+                title = "다시 로그인해 주세요",
+                message = "쓴 글은 그대로 남아 있어요.",
+                actions = listOf(
+                    StatusAction(
+                        title = "로그인",
+                        style = StatusAction.Style.Primary,
+                        run = {
+                            onDismiss()
+                            onSignOut()
+                        },
+                    ),
+                ),
+                modifier = modifier,
+            )
+        }
+        is AppNotice.UpdateRequired -> {
+            StatusView(
+                icon = R.drawable.icon_info,
+                title = "새 버전이 필요해요",
+                message = "더 안전하게 쓰기 위해 업데이트가 필요해요.",
+                actions = listOf(
+                    StatusAction(
+                        title = "업데이트",
+                        style = StatusAction.Style.Primary,
+                        run = {
+                            val pkg = context.packageName
+                            val intent = android.content.Intent(
+                                android.content.Intent.ACTION_VIEW,
+                                android.net.Uri.parse("market://details?id=$pkg"),
+                            ).apply { addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK) }
+                            runCatching { context.startActivity(intent) }
+                                .onFailure {
+                                    val web = android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse("https://play.google.com/store/apps/details?id=$pkg"),
+                                    ).apply { addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK) }
+                                    runCatching { context.startActivity(web) }
+                                }
+                        },
+                    ),
+                ),
+                modifier = modifier,
+            )
+        }
+        is AppNotice.Maintenance -> {
+            StatusView(
+                icon = R.drawable.icon_moon,
+                title = "잠시 점검 중이에요",
+                message = "${notice.window}\n기록은 안전하게 보관돼요.",
+                actions = listOf(
+                    StatusAction(
+                        title = "닫기",
+                        style = StatusAction.Style.Ghost,
+                        run = onDismiss,
+                    ),
+                ),
+                modifier = modifier,
+            )
+        }
+        is AppNotice.AccountDeleted -> {
+            StatusView(
+                icon = R.drawable.icon_moon,
+                title = "계정을 삭제했어요",
+                message = "그동안 띄운 별과 별자리가 모두 사라졌어요.\n언제든 다시 첫 별을 띄울 수 있어요.",
+                actions = listOf(
+                    StatusAction(
+                        title = "처음 화면으로",
+                        style = StatusAction.Style.Primary,
+                        run = {
+                            onDismiss()
+                            onSignOut()
+                        },
+                    ),
+                ),
+                modifier = modifier,
+            )
+        }
+        is AppNotice.RateLimited -> {
+            var now by androidx.compose.runtime.remember { androidx.compose.runtime.mutableLongStateOf(System.currentTimeMillis()) }
+            androidx.compose.runtime.LaunchedEffect(Unit) {
+                while (true) {
+                    kotlinx.coroutines.delay(1000)
+                    now = System.currentTimeMillis()
+                }
+            }
+            val leftMillis = (retryAvailableAt ?: 0L) - now
+            val leftSeconds = (leftMillis / 1000).coerceAtLeast(0)
+            val minutes = ((leftSeconds + 59) / 60).toInt()
+            val base = "요청이 한꺼번에 몰렸어요. 쓰던 글은 그대로 있고 코인도 차감되지 않았어요."
+            val msg = if (leftSeconds > 0) "$base ${minutes}분 뒤에 다시 시도할 수 있어요." else "$base 조금 뒤에 다시 시도해 주세요."
+            val btnTitle = if (leftSeconds > 0) "${minutes}분 뒤에 다시 시도" else "다시 시도하기"
+
+            StatusView(
+                icon = R.drawable.icon_moon,
+                title = "잠시 숨을 고르고 있어요",
+                message = msg,
+                actions = listOf(
+                    StatusAction(
+                        title = btnTitle,
+                        style = StatusAction.Style.Primary,
+                        disabled = leftSeconds > 0,
+                        run = onDismiss,
+                    ),
+                ),
+                modifier = modifier,
+            )
+        }
+    }
+}
+
+// MARK: - Empty state (96–98, 103, 108, 109, 119)
+
+enum class EmptyStateActionStyle { Primary, Outline }
+
+/**
+ * Figma empty states (iOS EmptyStateView):
+ * a dim star glyph, a title, a short note, and an optional action.
+ */
+@Composable
+fun EmptyStateView(
+    title: String,
+    message: String,
+    modifier: Modifier = Modifier,
+    actionTitle: String? = null,
+    actionStyle: EmptyStateActionStyle = EmptyStateActionStyle.Primary,
+    onAction: (() -> Unit)? = null,
+    floatedGlyph: Boolean = true,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Space.md),
+    ) {
+        Image(
+            painter = painterResource(if (floatedGlyph) R.drawable.star_shape_floated else R.drawable.star_shape_kept),
+            contentDescription = null,
+            modifier = Modifier
+                .padding(bottom = Space.sm)
+                .size(40.dp)
+                .alpha(0.55f),
+        )
+        Text(
+            text = title,
+            style = YText.h3,
+            color = YColor.textPrimary,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = message,
+            style = YText.bodyS,
+            color = YColor.textSecondary,
+            textAlign = TextAlign.Center,
+        )
+        if (actionTitle != null && onAction != null) {
+            Spacer(Modifier.size(Space.sm))
+            when (actionStyle) {
+                EmptyStateActionStyle.Primary -> PrimaryButton(
+                    text = actionTitle,
+                    onClick = onAction,
+                )
+                EmptyStateActionStyle.Outline -> SecondaryButton(
+                    text = actionTitle,
+                    onClick = onAction,
+                )
+            }
+        }
+    }
+}
+
+// MARK: - 114 Export in progress
+
+/** 114 내보내는 중이에요 (iOS ExportProgressSheet) */
+@Composable
+fun ExportProgressSheet(
+    detail: String,
+    progress: Float,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val a = sky()
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = Space.xl, end = Space.xl, top = Space.md, bottom = Space.xl),
+        verticalArrangement = Arrangement.spacedBy(Space.lg),
+    ) {
+        com.dycdyp.youniya.ui.components.SheetGrabber()
+
+        Column(verticalArrangement = Arrangement.spacedBy(Space.sm)) {
+            Text("내보내는 중이에요", style = YText.h3, color = YColor.textPrimary)
+            Text(detail, style = YText.bodyM, color = YColor.textSecondary)
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(Space.sm)) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .background(YColor.borderDefault.copy(alpha = 0.5f), androidx.compose.foundation.shape.CircleShape),
+            ) {
+                Box(
+                    Modifier
+                        .fillMaxWidth(fraction = progress.coerceIn(0f, 1f))
+                        .height(6.dp)
+                        .background(a.brandPrimary, androidx.compose.foundation.shape.CircleShape),
+                )
+            }
+            Text(
+                "${(progress * 100).toInt()}% · ${if (progress >= 0.5f) "거의 다 됐어요" else "모으는 중이에요"}",
+                style = YText.caption,
+                color = YColor.textTertiary,
+            )
+        }
+
+        GhostButton("닫기", onClick = onClose)
+    }
 }

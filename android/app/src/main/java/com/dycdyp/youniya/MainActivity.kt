@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.dycdyp.youniya.ui.theme.LocalSky
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.dycdyp.youniya.data.AppModel
@@ -60,9 +61,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val reduced = Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
         setContent {
-            // Text cursor handles and selection in the theme's focus color, not Material blue.
-            val selection = TextSelectionColors(handleColor = SkyThemes.violet.focus, backgroundColor = SkyThemes.violet.focus.copy(alpha = 0.35f))
-            CompositionLocalProvider(LocalMotionReduced provides reduced, LocalTextSelectionColors provides selection) {
+            val currentSky = if (model.skyThemeKey == "ocean") SkyThemes.ocean else SkyThemes.violet
+            val selection = TextSelectionColors(handleColor = currentSky.focus, backgroundColor = currentSky.focus.copy(alpha = 0.35f))
+            CompositionLocalProvider(
+                LocalMotionReduced provides (reduced || model.reduceAnimations),
+                LocalSky provides currentSky,
+                LocalTextSelectionColors provides selection,
+            ) {
                 Root(model)
             }
         }
@@ -93,6 +98,14 @@ private fun Root(model: AppModel) {
             }
         }
         Toast(model.message) { model.message = null }
+        model.appNotice?.let { notice ->
+            com.dycdyp.youniya.ui.screens.AppNoticeView(
+                notice = notice,
+                retryAvailableAt = model.retryAvailableAt,
+                onDismiss = { model.appNotice = null },
+                onSignOut = { model.signOut() },
+            )
+        }
     }
 }
 

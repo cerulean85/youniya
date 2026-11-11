@@ -128,6 +128,7 @@ fun LoginScreen(model: AppModel) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var invite by remember { mutableStateOf(false) }
+    var loginDoc by remember { mutableStateOf<PolicyDoc?>(null) }
     Box(Modifier.fillMaxSize()) {
         StarField()
         Column(
@@ -156,7 +157,8 @@ fun LoginScreen(model: AppModel) {
                 }
                 Text(
                     "처음이라면 다음 화면에서\n이용약관과 개인정보 처리 동의를 받아요.",
-                    style = YText.caption, color = YColor.textTertiary, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
+                    style = YText.caption, color = YColor.textTertiary, textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().noRippleClick { loginDoc = PolicyDoc.Terms },
                 )
                 Box(Modifier.fillMaxWidth().heightIn(min = 32.dp).noRippleClick { invite = true }, contentAlignment = Alignment.Center) {
                     Text("초대 계정으로 로그인", style = YText.caption.copy(textDecoration = TextDecoration.Underline), color = sky().borderFocus)
@@ -169,6 +171,9 @@ fun LoginScreen(model: AppModel) {
                     }
                 }
             }
+        }
+        loginDoc?.let { doc ->
+            PolicyDocView(doc = doc, onBack = { loginDoc = null })
         }
     }
     if (invite) InviteLoginSheet(model) { invite = false }
@@ -292,11 +297,11 @@ private fun FieldBox(label: String, seed: String, error: Boolean, input: @Compos
     }
 }
 
-private enum class Term(val label: String, val required: Boolean, val path: String?) {
-    Terms("(필수) 이용약관", true, "/terms"),
-    Privacy("(필수) 개인정보 처리방침", true, "/privacy"),
-    Sensitive("(필수) 심리 일기 수집·이용(민감정보)", true, "/sensitive"),
-    Marketing("(선택) 새 기능·혜택 알림", false, null),
+private enum class Term(val label: String, val required: Boolean, val doc: PolicyDoc) {
+    Terms("(필수) 이용약관", true, PolicyDoc.Terms),
+    Privacy("(필수) 개인정보 처리방침", true, PolicyDoc.Privacy),
+    Sensitive("(필수) 심리 일기 수집·이용(민감정보)", true, PolicyDoc.Sensitive),
+    Marketing("(선택) 새 기능·혜택 알림", false, PolicyDoc.Marketing),
 }
 
 fun openWeb(context: Context, url: String) {
@@ -309,11 +314,13 @@ fun openWeb(context: Context, url: String) {
 /** 11 Consent: shown once after the first sign-in. */
 @Composable
 fun ConsentScreen(model: AppModel) {
-    val context = LocalContext.current
     var agreed by remember { mutableStateOf(setOf<Term>()) }
+    var openDoc by remember { mutableStateOf<PolicyDoc?>(null) }
     val all = agreed.size == Term.entries.size
     val canStart = Term.entries.filter { it.required }.all { it in agreed }
-    BackHandler { model.signOut() }
+    BackHandler {
+        if (openDoc != null) openDoc = null else model.signOut()
+    }
     Box(Modifier.fillMaxSize()) {
         StarField()
         Column(Modifier.fillMaxSize().safeDrawingPadding()) {
@@ -330,7 +337,7 @@ fun ConsentScreen(model: AppModel) {
                         CheckboxRow(
                             t.label, t in agreed,
                             onToggle = { agreed = if (t in agreed) agreed - t else agreed + t },
-                            onOpen = t.path?.let { p -> { openWeb(context, "https://youniya.dycdyp.com$p") } },
+                            onOpen = { openDoc = t.doc },
                         )
                     }
                 }
@@ -338,21 +345,41 @@ fun ConsentScreen(model: AppModel) {
                 PrimaryButton("동의하고 시작하기", enabled = canStart) { model.acceptConsent(Term.Marketing in agreed) }
             }
         }
+        openDoc?.let { doc ->
+            PolicyDocView(doc = doc, onBack = { openDoc = null })
+        }
     }
 }
 
-/** 21-1 / 21-2 별지기 이름 정하기 (after 11). Checked as it is typed. */
+enum class NicknameMode { Signup, Plaza, Change, OperatorRequest }
+
+/** 21-1 / 21-2 별지기 이름 정하기 / 87-7 / 87-8 (iOS NicknameView). */
 @Composable
-fun NicknameScreen(model: AppModel, onBack: () -> Unit, onDone: () -> Unit) {
+fun NicknameScreen(
+    model: AppModel,
+    mode: NicknameMode = NicknameMode.Signup,
+    onBack: () -> Unit,
+    onDone: () -> Unit,
+) {
     val scope = rememberCoroutineScope()
-    var name by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf(if (mode == NicknameMode.Change || mode == NicknameMode.OperatorRequest) model.nickname ?: "" else "") }
     var result by remember { mutableStateOf<NicknameResult?>(null) }
     var checking by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
     val trimmed = name.trim()
-    val canSave = result == NicknameResult.Ok && !checking && !saving && trimmed != model.nickname
+    val tooSoon = mode == NicknameMode.Change && !model.nicknameRenameRequired && model.nicknameNextChangeText != null
+    val canSave = result == NicknameResult.Ok && !checking && !saving && !tooSoon && trimmed != model.nickname
     val a = sky()
+
+    val topBarTitle = if (mode == NicknameMode.Change || mode == NicknameMode.OperatorRequest) "별지기 이름" else "가입"
+    val headerTitle = if (mode == NicknameMode.Change || mode == NicknameMode.OperatorRequest) "별지기 이름 바꾸기" else "별지기 이름을 정해 주세요"
+    val subtitle = when (mode) {
+        NicknameMode.Signup -> "우주 광장에 별을 나누면 이 이름이 함께 보여요. 내가 건넨 별빛 한 줄에도 이 이름이 보여요."
+        NicknameMode.Plaza -> "우주 광장을 쓰려면 별지기 이름이 필요해요. 나눈 별과 건넨 별빛 한 줄에 이 이름이 보여요."
+        NicknameMode.Change -> "바꾸면 지금까지 나눈 별과 남긴 별빛 한 줄에도 새 이름이 보여요."
+        NicknameMode.OperatorRequest -> "운영자가 이름을 바꿔 달라고 요청했어요. 사칭이나 불편을 줄 수 있는 이름이라는 신고가 확인됐어요. 바꾸면 나눈 별과 남긴 별빛 한 줄에도 새 이름이 보여요."
+    }
 
     LaunchedEffect(trimmed) {
         if (trimmed.isEmpty()) { result = null; return@LaunchedEffect }
@@ -361,7 +388,9 @@ fun NicknameScreen(model: AppModel, onBack: () -> Unit, onDone: () -> Unit) {
         result = model.checkNickname(trimmed)
         checking = false
     }
-    LaunchedEffect(Unit) { focus.requestFocus() }
+    LaunchedEffect(Unit) {
+        if (!tooSoon) focus.requestFocus()
+    }
     fun save() {
         saving = true
         scope.launch {
@@ -374,14 +403,14 @@ fun NicknameScreen(model: AppModel, onBack: () -> Unit, onDone: () -> Unit) {
     Box(Modifier.fillMaxSize()) {
         StarField()
         Column(Modifier.fillMaxSize().safeDrawingPadding()) {
-            TopAppBar("가입", onBack = onBack)
+            TopAppBar(topBarTitle, onBack = onBack)
             Column(
                 Modifier.weight(1f).imePadding().padding(start = Space.xl, end = Space.xl, top = Space.sm, bottom = Space.xl),
                 verticalArrangement = Arrangement.spacedBy(Space.lg),
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(Space.sm)) {
-                    Text("별지기 이름을 정해 주세요", style = YText.h1, color = YColor.textPrimary)
-                    Text("우주 광장에 별을 나누면 이 이름이 함께 보여요. 내가 건넨 별빛 한 줄에도 이 이름이 보여요.", style = YText.bodyM, color = YColor.textSecondary)
+                    Text(headerTitle, style = YText.h1, color = YColor.textPrimary)
+                    Text(subtitle, style = YText.bodyM, color = YColor.textSecondary)
                 }
                 val problem = result as? NicknameResult.Problem
                 Column(
@@ -406,6 +435,10 @@ fun NicknameScreen(model: AppModel, onBack: () -> Unit, onDone: () -> Unit) {
                     }
                 }
                 when {
+                    mode == NicknameMode.OperatorRequest && (result == null || trimmed == model.nickname) ->
+                        Text("운영자 요청이라 30일 제한 없이 지금 바로 바꿀 수 있어요", style = YText.labelS, color = YColor.starBright)
+                    tooSoon && model.nicknameNextChangeText != null ->
+                        Text("다음 변경은 ${model.nicknameNextChangeText}부터 할 수 있어요", style = YText.labelS, color = YColor.emotionCalm)
                     problem != null -> Text(problem.why, style = YText.labelS, color = YColor.brandWarm)
                     result == NicknameResult.Ok && trimmed.isNotEmpty() ->
                         Text(if (trimmed == model.nickname) "지금 쓰고 있는 이름이에요" else "✓ 쓸 수 있는 이름이에요 · ${trimmed.length}/12", style = YText.labelS, color = YColor.emotionCalm)
@@ -415,7 +448,8 @@ fun NicknameScreen(model: AppModel, onBack: () -> Unit, onDone: () -> Unit) {
                         .forEach { Text("• $it", style = YText.caption, color = YColor.textTertiary) }
                 }
                 Spacer(Modifier.weight(1f))
-                PrimaryButton("이 이름으로 시작하기", enabled = canSave) { save() }
+                val buttonText = if (mode == NicknameMode.Change || mode == NicknameMode.OperatorRequest) "바꾸기" else "이 이름으로 시작하기"
+                PrimaryButton(buttonText, enabled = canSave) { save() }
             }
         }
     }
