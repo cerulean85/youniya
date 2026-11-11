@@ -11,6 +11,8 @@ import styles from "./coins.module.css";
 
 export const metadata: Metadata = { title: "코인" };
 
+/** Where a purchase or refund was paid (the server's own entries have no label). */
+const PAID: Record<string, string> = { toss: "웹 결제", app_store: "App Store", google_play: "Google Play" };
 const day = (iso: string) => new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric" }).format(new Date(iso));
 
 // Figma W-18 (Web 시안 v2 597:30548): 충전하기 (Toss on the web), what's still free, and the last 30 days of coins.
@@ -57,7 +59,7 @@ async function Coins({ searchParams }: Pick<PageProps<"/coins">, "searchParams">
               const plus = x.delta > 0, free = x.delta === 0;
               return (
                 <li key={x.id}>
-                  <span className={styles.what}><span>{x.title}{(x.source === "toss" || x.source === "app_store") && <span className="v2-small"> · {x.source === "toss" ? "웹 결제" : "App Store"}</span>}</span><span className="v2-small">{day(x.created_at)}</span></span>
+                  <span className={styles.what}><span>{x.title}{x.source && PAID[x.source] && <span className="v2-small"> · {PAID[x.source]}</span>}</span><span className="v2-small">{day(x.created_at)}</span></span>
                   <span className={styles.delta} data-tone={free ? "free" : plus ? "plus" : undefined}>{free ? "무료" : plus ? `+${x.delta.toLocaleString("ko-KR")}` : `−${(-x.delta).toLocaleString("ko-KR")}`}</span>
                 </li>
               );

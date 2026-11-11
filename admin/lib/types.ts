@@ -94,8 +94,8 @@ export type LedgerKind = "charge" | "use" | "refund" | "grant" | "revoke";
 export type Ledger = {
   month: string;
   summary: { charge_krw: number; charge_count: number; refund_krw: number; refund_count: number; usage_share?: { starlight: number; telescope: number } | null; free_used?: { starlight: number; telescope: number } | null; spend_coins?: number; grant_coins?: number };
-  /** `krw_estimate`: from the product price (the API's); `source`: app_store | server (toss once the web pays). */
-  items: { at: string; keeper: { id: string | null; no: string; nickname: string | null }; kind: LedgerKind; detail: string; coins: number; amount_krw?: number | null; krw_estimate?: number | null; reference: string | null; channel?: "app_store" | "toss" | "admin" | null; source?: string | null; payment?: "toss" | "app_store" | null }[];
+  /** `krw_estimate`: from the product price (the API's); `source`: app_store | toss | google_play | operator | server. */
+  items: { at: string; keeper: { id: string | null; no: string; nickname: string | null }; kind: LedgerKind; detail: string; coins: number; amount_krw?: number | null; krw_estimate?: number | null; reference: string | null; channel?: "app_store" | "toss" | "google_play" | "admin" | null; source?: string | null; payment?: "toss" | "app_store" | "google_play" | null }[];
 };
 export type AiUsage = {
   month: string; model?: string | null; thinking?: string | null; krw_per_usd?: number | null;
