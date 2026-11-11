@@ -107,6 +107,13 @@ sealed interface MainNav {
     data class ConstellationStory(val month: String) : MainNav
     data object MilkyWay : MainNav
     data class NebulaStars(val kind: NebulaStarKind = NebulaStarKind.Floated) : MainNav
+    data class PlazaStar(val star: com.dycdyp.youniya.data.PlazaNebula) : MainNav
+    data class KeeperPage(val nickname: String) : MainNav
+    data class StarLineCompose(val star: com.dycdyp.youniya.data.PlazaNebula) : MainNav
+    data class ReceivedLines(val starId: String) : MainNav
+    data class PrivacyCheck(val starId: String) : MainNav
+    data object SharedStars : MainNav
+    data object PlazaNickname : MainNav
 }
 
 /** The main shell (iOS MainView): four tabs, the write FAB, the menu button and the drawer. */
@@ -118,6 +125,7 @@ fun MainScreen(model: AppModel) {
     var navStack by remember { mutableStateOf<List<MainNav>>(emptyList()) }
     val scope = rememberCoroutineScope()
     val prefs = LocalContext.current.getSharedPreferences("app", 0)
+    var showPlazaWelcome by rememberSaveable { mutableStateOf(!prefs.getBoolean("seen_plaza", false)) }
     val compose = { navStack = navStack + MainNav.Compose() }
 
     BackHandler(enabled = drawerOpen) { drawerOpen = false }
@@ -166,6 +174,27 @@ fun MainScreen(model: AppModel) {
                             navStack = navStack + MainNav.StarDetail(star.id)
                         },
                     )
+                    SkyTab.Plaza -> {
+                        if (showPlazaWelcome) {
+                            PlazaWelcomeView(
+                                onBrowse = {
+                                    showPlazaWelcome = false
+                                    prefs.edit().putBoolean("seen_plaza", true).apply()
+                                },
+                                onLater = {
+                                    showPlazaWelcome = false
+                                    tab = SkyTab.Sky
+                                },
+                            )
+                        } else {
+                            PlazaView(
+                                model = model,
+                                onOpenStar = { star -> navStack = navStack + MainNav.PlazaStar(star) },
+                                onNickname = { navStack = navStack + MainNav.PlazaNickname },
+                                onShared = { navStack = navStack + MainNav.SharedStars },
+                            )
+                        }
+                    }
                     else -> ComingSoon(tab.title)
                 }
                 MenuButton(Modifier.align(Alignment.TopEnd).padding(end = 16.dp, top = 2.dp)) { drawerOpen = true }
@@ -201,6 +230,8 @@ fun MainScreen(model: AppModel) {
                     },
                     onLinkExisting = { navStack = navStack + MainNav.LinkExisting(top.starId) },
                     onOpenLinked = { other -> navStack = navStack + MainNav.StarDetail(other.id) },
+                    onOpenLines = { id -> navStack = navStack + MainNav.ReceivedLines(id) },
+                    onReviewShare = { id -> navStack = navStack + MainNav.PrivacyCheck(id) },
                     onDeleted = { navStack = navStack.dropLast(1) },
                 )
             }
@@ -258,10 +289,91 @@ fun MainScreen(model: AppModel) {
                     onOpenStar = { star -> navStack = navStack + MainNav.StarDetail(star.id) },
                 )
             }
+            is MainNav.PlazaStar -> {
+                PlazaStarScreen(
+                    model = model,
+                    star = top.star,
+                    onBack = { navStack = navStack.dropLast(1) },
+                    onKeeper = { name -> navStack = navStack + MainNav.KeeperPage(name) },
+                    onLine = { navStack = navStack + MainNav.StarLineCompose(top.star) },
+                    onBlocked = {
+                        navStack = navStack.dropLast(1)
+                        model.message = "차단했어요."
+                    },
+                )
+            }
+            is MainNav.KeeperPage -> {
+                KeeperPageScreen(
+                    model = model,
+                    nickname = top.nickname,
+                    onBack = { navStack = navStack.dropLast(1) },
+                    onOpenStar = { star -> navStack = navStack + MainNav.PlazaStar(star) },
+                )
+            }
+            is MainNav.StarLineCompose -> {
+                StarLineComposeScreen(
+                    model = model,
+                    star = top.star,
+                    onBack = { navStack = navStack.dropLast(1) },
+                )
+            }
+            is MainNav.ReceivedLines -> {
+                ReceivedLinesScreen(
+                    model = model,
+                    starId = top.starId,
+                    onBack = { navStack = navStack.dropLast(1) },
+                )
+            }
+            is MainNav.PrivacyCheck -> {
+                val s = model.stars.firstOrNull { it.id == top.starId }
+                if (s != null) {
+                    PrivacyCheckScreen(
+                        star = s,
+                        onConfirm = {
+                            scope.launch {
+                                model.shareStarLive(s.id)
+                                navStack = navStack.dropLast(1)
+                                model.message = "우주 광장에 별을 나눴어요."
+                            }
+                        },
+                        onBack = { navStack = navStack.dropLast(1) },
+                    )
+                }
+            }
+            is MainNav.SharedStars -> {
+                SharedStarsScreen(
+                    model = model,
+                    onBack = { navStack = navStack.dropLast(1) },
+                    onOpenStar = { star -> navStack = navStack + MainNav.StarDetail(star.id) },
+                    onPlaza = {
+                        navStack = navStack.dropLast(1)
+                        tab = SkyTab.Plaza
+                    },
+                )
+            }
+            is MainNav.PlazaNickname -> {
+                NicknameScreen(
+                    model = model,
+                    onBack = { navStack = navStack.dropLast(1) },
+                    onDone = { navStack = navStack.dropLast(1) },
+                )
+            }
             null -> Unit
         }
     }
     if (showWelcome) WelcomeSheet(onCompose = { showWelcome = false; compose() }, onBrowse = { showWelcome = false })
+    if (model.showPlazaRestricted) {
+        YouniyaSheet("plaza-restricted", onDismiss = { model.showPlazaRestricted = false }) {
+            PlazaRestrictedSheetContent(
+                restrictedText = model.restrictedText(true),
+                onDismiss = { model.showPlazaRestricted = false },
+                onInquiry = {
+                    model.showPlazaRestricted = false
+                    model.message = "문의하기는 준비 중이에요."
+                },
+            )
+        }
+    }
 }
 
 /** iOS SkyHeader: "오늘" (H1) and a subtitle. */

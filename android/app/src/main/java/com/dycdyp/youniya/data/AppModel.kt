@@ -70,6 +70,50 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         private set
     var marketingOptIn by mutableStateOf(false)
         private set
+    var plazaRestrictedUntil by mutableStateOf<String?>(null)
+        private set
+    var showPlazaRestricted by mutableStateOf(false)
+
+    val isPlazaRestricted: Boolean
+        get() {
+            val until = plazaRestrictedUntil ?: return false
+            return try {
+                java.time.Instant.parse(until).isAfter(java.time.Instant.now())
+            } catch (_: Exception) {
+                false
+            }
+        }
+
+    fun restrictedText(withTime: Boolean): String = formatRestrictedUntil(plazaRestrictedUntil, withTime)
+
+    fun plazaAllowed(): Boolean {
+        if (isPlazaRestricted) {
+            showPlazaRestricted = true
+            return false
+        }
+        return true
+    }
+
+    var plazaStarsLive by mutableStateOf<List<PlazaNebula>>(emptyList())
+        private set
+    var plazaStarsBeside by mutableStateOf<List<PlazaNebula>>(emptyList())
+        private set
+    var resonated by mutableStateOf<Set<String>>(emptySet())
+        private set
+    var tonightCount by mutableStateOf<Int?>(null)
+        private set
+    var tonightMine by mutableStateOf<Int?>(null)
+        private set
+    val sentStarLines = androidx.compose.runtime.mutableStateMapOf<String, String>()
+    var blockedKeepers by mutableStateOf<Set<String>>(emptySet())
+        private set
+
+    val plazaStarItems: List<PlazaNebula>
+        get() = if (isSignedIn && plazaStarsLive.isNotEmpty()) {
+            plazaStarsLive.filter { it.name !in blockedKeepers && it.serverID !in blockedKeepers }
+        } else {
+            PlazaNebula.samples.filter { it.name !in blockedKeepers }
+        }
 
     val isFloatFree: Boolean get() = freeStarToday > 0
     val floatNeedsCharge: Boolean get() = !isFloatFree && coins < floatCost
@@ -123,6 +167,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         coins = me.coins
         freeStarToday = me.freeStarToday
         marketingOptIn = me.marketingOptIn
+        plazaRestrictedUntil = me.plazaRestrictedUntil
     }
 
     private fun signedIn(s: AuthSession) {
@@ -674,5 +719,271 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             handle(e)
             null
         }
+    }
+
+    // MARK: - 우주 광장 (Plaza)
+
+    suspend fun loadPlaza() {
+        if (!isSignedIn) return
+        try {
+            val newResp = viewModelScope.async(Dispatchers.IO) {
+                api.get<PlazaItemsResponse<PlazaStarItem>>("/v1/plaza/stars", mapOf("sort" to "new"))
+            }
+            val similarResp = viewModelScope.async(Dispatchers.IO) {
+                api.get<PlazaItemsResponse<PlazaStarItem>>("/v1/plaza/stars", mapOf("sort" to "similar"))
+            }
+            val besideResp = viewModelScope.async(Dispatchers.IO) {
+                api.get<PlazaItemsResponse<PlazaStarItem>>("/v1/plaza/stars", mapOf("sort" to "beside"))
+            }
+            val ns = newResp.await().items
+            val ss = similarResp.await().items
+            val bs = besideResp.await().items
+
+            val starRank = ss.mapIndexed { idx, item -> item.id to idx }.toMap()
+            val totalSimilar = ss.size.coerceAtLeast(1).toDouble()
+
+            plazaStarsLive = ns.mapIndexed { i, s ->
+                val rank = starRank[s.id] ?: ss.size
+                val sim = 1.0 - (rank.toDouble() / totalSimilar)
+                PlazaNebula.fromItem(s, order = i, similarity = sim)
+            }
+            plazaStarsBeside = bs.mapIndexed { i, s ->
+                PlazaNebula.fromItem(s, order = i, similarity = 0.0)
+            }
+
+            val newResonated = resonated.toMutableSet()
+            for (s in ns) {
+                if (s.resonated) newResonated.add(s.name)
+            }
+            resonated = newResonated
+        } catch (e: Exception) {
+            handle(e)
+        }
+    }
+
+    suspend fun loadTonight() {
+        if (!isSignedIn) return
+        try {
+            val r = api.get<PlazaTonightResponse>("/v1/plaza/tonight")
+            tonightCount = r.count
+            tonightMine = r.mine
+        } catch (e: Exception) {
+            handle(e)
+        }
+    }
+
+    fun toggleResonance(star: PlazaNebula) {
+        val key = star.name
+        val on = key !in resonated
+        resonated = if (on) resonated + key else resonated - key
+        val id = star.serverID ?: return
+        viewModelScope.launch {
+            try {
+                val method = if (on) "PUT" else "DELETE"
+                api.call(method, "/v1/plaza/star/$id/resonance", null, emptyMap(), true)
+                api.call(method, "/v1/plaza/star/$id/beside", null, emptyMap(), true)
+            } catch (e: Exception) {
+                resonated = if (on) resonated - key else resonated + key
+                handle(e)
+            }
+        }
+    }
+
+    suspend fun shareStarLive(starId: String, quote: String? = null, fullText: Boolean = true): Boolean {
+        val star = stars.firstOrNull { it.id == starId } ?: return false
+        val chosenQuote = quote ?: splitShareSentences(star.body).maxByOrNull { it.length } ?: star.body.take(300)
+        return try {
+            api.send<StarShareIn, StarShareOut>(
+                "PUT",
+                "/v1/stars/$starId/share",
+                StarShareIn(quote = chosenQuote, fullText = fullText, receiveLines = true),
+            )
+            stars = stars.map { if (it.id == starId) it.copy(shared = true, shareQuoteMissing = false) else it }
+            true
+        } catch (e: Exception) {
+            handle(e)
+            false
+        }
+    }
+
+    suspend fun unshareStarLive(starId: String) {
+        try {
+            api.call("DELETE", "/v1/stars/$starId/share", null, emptyMap(), true)
+            stars = stars.map { if (it.id == starId) it.copy(shared = false) else it }
+        } catch (e: Exception) {
+            handle(e)
+        }
+    }
+
+    suspend fun plazaStarText(shareId: String): Pair<String, String>? = try {
+        val d = api.get<PlazaStarDetail>("/v1/plaza/stars/$shareId")
+        val body = d.bodyMasked
+        if (body != null) Pair(d.titleMasked ?: "", body) else null
+    } catch (_: Exception) {
+        null
+    }
+
+    suspend fun keeperStars(nickname: String): List<PlazaNebula>? = try {
+        val r = api.get<KeeperResponse>("/v1/keepers/$nickname")
+        r.items.mapIndexed { i, s -> PlazaNebula.fromItem(s, order = i, similarity = 0.0) }
+    } catch (e: ApiError) {
+        if (e.status == 404) null else { handle(e); null }
+    } catch (e: Exception) {
+        handle(e)
+        null
+    }
+
+    suspend fun sendStarLine(star: PlazaNebula, text: String?, chip: String?): LineSendResult {
+        val id = star.serverID
+        val chipLabel = when (chip) {
+            "empathize" -> "공감해요"
+            "me_too" -> "저도 그랬어요"
+            "thanks" -> "고마워요"
+            else -> ""
+        }
+        if (id == null) {
+            if (sentStarLines[star.name] != null) return LineSendResult.Already
+            val t = text
+            if (t != null) {
+                if (listOf("한심", "바보", "멍청", "꺼져").any { t.contains(it) }) {
+                    return LineSendResult.Rejected("상처가 될 수 있는 말이 있어 건네지 못했어요")
+                }
+                if (PrivacyScan(t, contactsOnly = true).contacts > 0) {
+                    return LineSendResult.Rejected("연락처는 별빛 한 줄에 담을 수 없어요")
+                }
+                if (listOf("해야 해", "하세요", "하지 마").any { t.contains(it) }) {
+                    return LineSendResult.Rejected("조언 대신 마음을 건네 주세요")
+                }
+            }
+            sentStarLines[star.name] = text ?: chipLabel
+            return LineSendResult.Sent
+        }
+        return try {
+            api.send<StarLineIn, StarLineOut>(
+                "POST",
+                "/v1/plaza/stars/$id/lines",
+                StarLineIn(text = text, chip = chip),
+            )
+            sentStarLines[star.name] = text ?: chipLabel
+            plazaStarsLive = plazaStarsLive.map { if (it.serverID == id) it.copy(lineLeft = true) else it }
+            LineSendResult.Sent
+        } catch (e: ApiError) {
+            when (e.code) {
+                "already_left" -> LineSendResult.Already
+                "plaza_restricted" -> {
+                    handle(e)
+                    LineSendResult.Rejected("광장 이용이 잠시 멈춰 있어요")
+                }
+                "lines_closed" -> LineSendResult.Closed
+                "hurtful" -> LineSendResult.Rejected("상처가 될 수 있는 말이 있어 건네지 못했어요")
+                "contact" -> LineSendResult.Rejected("연락처는 별빛 한 줄에 담을 수 없어요")
+                "judging", "advice" -> LineSendResult.Rejected("판단이나 조언 대신 마음을 건네 주세요")
+                "too_long" -> LineSendResult.Rejected("60자 안으로 줄여 주세요")
+                else -> LineSendResult.Rejected(e.message)
+            }
+        } catch (e: Exception) {
+            handle(e)
+            LineSendResult.Rejected("건네지 못했어요. 잠시 뒤에 다시 해 주세요")
+        }
+    }
+
+    suspend fun receivedLines(starId: String): List<ReceivedLine> = try {
+        val r = api.get<ReceivedLinesResponse>("/v1/stars/$starId/lines")
+        r.items.map { item ->
+            val content = item.text ?: when (item.chip) {
+                "empathize" -> "공감해요"
+                "me_too" -> "저도 그랬어요"
+                "thanks" -> "고마워요"
+                else -> ""
+            }
+            ReceivedLine(id = item.id, text = content, nickname = item.nickname, createdAt = item.createdAt)
+        }
+    } catch (e: Exception) {
+        handle(e)
+        emptyList()
+    }
+
+    suspend fun deleteLine(starId: String, lineId: String): Boolean = try {
+        api.call("DELETE", "/v1/stars/$starId/lines/$lineId", null, emptyMap(), true)
+        true
+    } catch (e: Exception) {
+        handle(e)
+        false
+    }
+
+    suspend fun reportLine(starId: String, lineId: String, reason: String, block: Boolean): Boolean = try {
+        api.send<LineReportIn, ReportOut>(
+            "POST",
+            "/v1/stars/$starId/lines/$lineId/report",
+            LineReportIn(reason = reason, block = block),
+        )
+        true
+    } catch (e: Exception) {
+        handle(e)
+        false
+    }
+
+    suspend fun reportShare(targetId: String, reason: String, block: Boolean): Boolean = try {
+        api.send<LineReportIn, ReportOut>(
+            "POST",
+            "/v1/plaza/star/$targetId/report",
+            LineReportIn(reason = reason, block = block),
+        )
+        if (block) blockedKeepers = blockedKeepers + targetId
+        loadPlaza()
+        true
+    } catch (e: Exception) {
+        handle(e)
+        false
+    }
+
+    suspend fun blockKeeper(starShareId: String): Boolean = try {
+        api.send<BlockIn, BlockOut>("POST", "/v1/blocks", BlockIn(starId = starShareId))
+        blockedKeepers = blockedKeepers + starShareId
+        loadPlaza()
+        true
+    } catch (e: Exception) {
+        handle(e)
+        false
+    }
+
+    suspend fun maskPreview(sentence: String, contactsOnly: Boolean = false): MaskPreview {
+        if (!isSignedIn) return MaskPreview(
+            masked = PrivacyScan(sentence, contactsOnly).masked,
+            names = PrivacyScan(sentence, contactsOnly).names,
+            contacts = PrivacyScan(sentence, contactsOnly).contacts,
+            places = PrivacyScan(sentence, contactsOnly).places,
+        )
+        return try {
+            val r = api.send<ScanIn, ScanOut>(
+                "POST",
+                "/v1/plaza/privacy-scan",
+                ScanIn(text = sentence, mode = if (contactsOnly) "contacts" else "all"),
+            )
+            MaskPreview(
+                masked = r.masked,
+                names = r.counts.names,
+                contacts = r.counts.contacts,
+                places = r.counts.places,
+            )
+        } catch (_: Exception) {
+            val s = PrivacyScan(sentence, contactsOnly)
+            MaskPreview(s.masked, s.names, s.contacts, s.places)
+        }
+    }
+
+    fun sentenceOptions(starId: String): List<SentenceOption> {
+        val star = stars.firstOrNull { it.id == starId } ?: return emptyList()
+        return splitShareSentences(star.body).mapIndexed { idx, s ->
+            SentenceOption(id = idx, sentence = s)
+        }
+    }
+
+    suspend fun loadSharedStars(): List<MyShareStarItem> = try {
+        val r = api.get<MySharesResponse>("/v1/me/shares")
+        r.stars
+    } catch (e: Exception) {
+        handle(e)
+        emptyList()
     }
 }

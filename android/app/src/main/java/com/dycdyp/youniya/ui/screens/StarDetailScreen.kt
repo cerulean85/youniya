@@ -74,6 +74,8 @@ fun StarDetailScreen(
     onRevise: () -> Unit = {},
     onLinkExisting: () -> Unit = {},
     onOpenLinked: (StarItem) -> Unit = {},
+    onOpenLines: (String) -> Unit = {},
+    onReviewShare: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val star = model.stars.firstOrNull { it.id == starId }
@@ -83,6 +85,8 @@ fun StarDetailScreen(
     var askLink by remember { mutableStateOf(false) }
     var unlinkTarget by remember { mutableStateOf<StarItem?>(null) }
     var showShareSheet by remember { mutableStateOf(false) }
+    var confirmShare by remember { mutableStateOf(false) }
+    var pickQuote by remember { mutableStateOf(false) }
     // 22장: 별 제목 넣기 is off by default.
     var withTitle by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -199,7 +203,7 @@ fun StarDetailScreen(
                     val lineTitle = if (lineCount > 0) "받은 별빛 한 줄 ${lineCount}개 ›" else "받은 별빛 한 줄 ›"
                     SecondaryButton(
                         text = lineTitle,
-                        onClick = { model.message = "다음 단계에서 만들어요." },
+                        onClick = { onOpenLines(star.id) },
                     )
                 }
 
@@ -231,7 +235,16 @@ fun StarDetailScreen(
                     val plazaTitle = if (star.isShared) "우주 광장에서 거두기" else "우주 광장에 나누기"
                     SecondaryButton(
                         text = plazaTitle,
-                        onClick = { model.message = "다음 단계에서 만들어요." },
+                        onClick = {
+                            if (star.isShared) {
+                                scope.launch {
+                                    model.unshareStarLive(star.id)
+                                    model.message = "광장에서 거뒀어요. 언제든 다시 나눌 수 있어요."
+                                }
+                            } else {
+                                confirmShare = true
+                            }
+                        },
                     )
                 }
 
@@ -393,6 +406,45 @@ fun StarDetailScreen(
                         }
                         showShareSheet = false
                     },
+                )
+            }
+        }
+
+        // 19 공유 동의 시트
+        if (confirmShare) {
+            YouniyaSheet("share-consent", onDismiss = { confirmShare = false }) {
+                ShareConsentSheet(
+                    onShare = {
+                        confirmShare = false
+                        pickQuote = true
+                    },
+                    onReview = {
+                        confirmShare = false
+                        onReviewShare(star.id)
+                    },
+                    onCancel = { confirmShare = false },
+                )
+            }
+        }
+
+        // 19-1 대표 문장 고르기 시트
+        if (pickQuote) {
+            YouniyaSheet("quote-picker", onDismiss = { pickQuote = false }) {
+                SentencePickerSheet(
+                    model = model,
+                    title = "대표 문장 고르기",
+                    detail = "고른 문장은 광장 목록에 대표로 보여요. 글 전체도 함께 공개되고, 전화번호·이메일은 ●●●로 가려져요.",
+                    actionTitle = if (star.isShared) "이 문장으로 바꾸기" else "이 문장으로 나누기",
+                    options = model.sentenceOptions(star.id),
+                    fullText = star.title to star.body,
+                    onPick = { quote ->
+                        scope.launch {
+                            val ok = model.shareStarLive(star.id, quote = quote)
+                            pickQuote = false
+                            if (ok) model.message = "우주 광장에 별을 나눴어요."
+                        }
+                    },
+                    onCancel = { pickQuote = false },
                 )
             }
         }
