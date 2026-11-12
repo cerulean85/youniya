@@ -25,6 +25,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -63,12 +64,16 @@ fun PlazaStarScreen(
     var showMenu by remember { mutableStateOf(false) }
     var showReport by remember { mutableStateOf(false) }
     var showBlockConfirm by remember { mutableStateOf(false) }
-    var liveText by remember { mutableStateOf<Pair<String, String>?>(null) }
+    // Saveable, like iOS's @State on a pushed view: coming back from the keeper page keeps the
+    // whole writing instead of showing "한 문장만" while it loads again.
+    var liveTitle by rememberSaveable(star.serverID) { mutableStateOf<String?>(null) }
+    var liveBody by rememberSaveable(star.serverID) { mutableStateOf<String?>(null) }
+    val liveText = liveBody?.let { (liveTitle ?: "") to it }
 
     val serverId = star.serverID
     LaunchedEffect(star.serverID) {
-        if (star.fullText && serverId != null) {
-            liveText = model.plazaStarText(serverId)
+        if (star.fullText && serverId != null && liveBody == null) {
+            model.plazaStarText(serverId)?.let { liveTitle = it.first; liveBody = it.second }
         }
     }
 
