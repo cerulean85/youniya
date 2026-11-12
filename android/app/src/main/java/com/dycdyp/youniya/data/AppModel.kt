@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +27,15 @@ data class Me(
     val nicknameNextChange: String? = null,
     val nicknameRenameRequired: Boolean = false,
     val plazaRestrictedUntil: String? = null,
+    val settings: MeSettings? = null,
+)
+
+/** The synced settings in /v1/me (the reminder's time stays on the device, as on iOS). */
+@Serializable
+data class MeSettings(
+    val reduceAnimations: Boolean = false,
+    val starReminder: Boolean = false,
+    val sky: String = "violet",
 )
 
 @Serializable private data class IdTokenIn(val idToken: String)
@@ -158,6 +168,14 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     init {
         api.onSignedOut = { isSignedIn = false }
         if (isSignedIn) refreshMe()
+        // 87: a star written today skips today's reminder.
+        viewModelScope.launch {
+            snapshotFlow { stars }.collect { list ->
+                StarReminder.setWroteToday(
+                    getApplication(), list.any { it.parsedDate?.toLocalDate() == java.time.LocalDate.now() },
+                )
+            }
+        }
     }
 
     fun refreshMe() = viewModelScope.launch {
@@ -187,6 +205,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         freeStarToday = me.freeStarToday
         marketingOptIn = me.marketingOptIn
         plazaRestrictedUntil = me.plazaRestrictedUntil
+        me.settings?.let {
+            reduceAnimations = it.reduceAnimations
+            skyThemeKey = it.sky
+            starReminder = it.starReminder
+            StarReminder.save(getApplication(), it.starReminder, reminderMinutes)
+        }
     }
 
     private fun signedIn(s: AuthSession) {
@@ -261,6 +285,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         starsLoaded = false
         draft = StarDraft()
         prefs.edit().remove("current_draft").apply()
+        starReminder = false
+        StarReminder.save(getApplication(), false, reminderMinutes)
     }
 
     fun nicknameFormProblem(name: String): String? {
@@ -1044,7 +1070,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var retryAvailableAt by mutableStateOf<Long?>(null)
     var starReminder by mutableStateOf(false)
         private set
-    var reminderMinutes by mutableIntStateOf(21 * 60 + 30) // 21:30 KST
+    var reminderMinutes by mutableIntStateOf(StarReminder.minutes(app)) // 21:30 by default
         private set
     var reduceAnimations by mutableStateOf(false)
         private set
@@ -1069,7 +1095,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     fun setStarReminder(on: Boolean) = viewModelScope.launch {
         starReminder = on
-        StarReminder.reschedule(getApplication(), on, reminderMinutes, stars.any { it.parsedDate?.toLocalDate() == java.time.LocalDate.now() })
+        StarReminder.save(getApplication(), on, reminderMinutes)
         runCatching {
             api.send<SettingsPatchIn, Unit>("PATCH", "/v1/me/settings", SettingsPatchIn(starReminder = on))
         }
@@ -1077,7 +1103,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     fun updateReminderMinutes(minutes: Int) {
         reminderMinutes = minutes
-        StarReminder.reschedule(getApplication(), starReminder, minutes, stars.any { it.parsedDate?.toLocalDate() == java.time.LocalDate.now() })
+        StarReminder.save(getApplication(), starReminder, minutes)
     }
 
     fun setReduceAnimations(reduce: Boolean) = viewModelScope.launch {

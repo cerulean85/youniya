@@ -122,6 +122,9 @@ fun SettingsView(
     var sheet by remember { mutableStateOf<SettingsSheet?>(null) }
     var exportProgress by remember { mutableDoubleStateOf(0.0) }
 
+    // "차단한 별지기 N명" counts the server's list, which otherwise loads only on its own page.
+    LaunchedEffect(Unit) { model.loadBlocks() }
+
     var pendingPermissionAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
