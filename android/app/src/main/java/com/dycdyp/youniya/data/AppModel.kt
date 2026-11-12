@@ -290,6 +290,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         starsLoaded = false
         draft = StarDraft()
         prefs.edit().remove("current_draft").apply()
+        inbox = emptyList()
         starReminder = false
         StarReminder.save(getApplication(), false, reminderMinutes)
     }

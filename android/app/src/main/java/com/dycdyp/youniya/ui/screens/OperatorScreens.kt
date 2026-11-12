@@ -142,7 +142,7 @@ fun InboxView(
     var loaded by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        model.loadInbox()
+        model.loadInbox().join()  // "아직 받은 알림이 없어요" only once the list has answered
         loaded = true
     }
 
