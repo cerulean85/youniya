@@ -122,6 +122,21 @@ fun SettingsView(
     var sheet by remember { mutableStateOf<SettingsSheet?>(null) }
     var exportProgress by remember { mutableDoubleStateOf(0.0) }
 
+    // 93 내보내기: the user picks where the file goes (Files, Drive …); it stays on their side.
+    var exportBytes by remember { mutableStateOf<ByteArray?>(null) }
+    val onSaved: (android.net.Uri?) -> Unit = { uri ->
+        val bytes = exportBytes
+        exportBytes = null
+        if (uri != null && bytes != null) {
+            val ok = runCatching {
+                context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) } ?: error("no stream")
+            }.isSuccess
+            model.message = if (ok) "파일로 내보냈어요" else "내보내지 못했어요. 다시 시도해 주세요"
+        }
+    }
+    val saveText = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain"), onSaved)
+    val savePdf = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf"), onSaved)
+
     // "차단한 별지기 N명" counts the server's list, which otherwise loads only on its own page.
     LaunchedEffect(Unit) { model.loadBlocks() }
 
@@ -348,25 +363,31 @@ fun SettingsView(
                     }
                 }
                 is SettingsSheet.Exporting -> {
-                    LaunchedEffect(Unit) {
+                    LaunchedEffect(currentSheet) {
                         exportProgress = 0.0
-                        for (i in 1..10) {
-                            delay(140)
-                            exportProgress = i / 10.0
+                        // The server makes the file; the bar creeps while it does.
+                        val ticker = launch {
+                            while (exportProgress < 0.9) {
+                                delay(150)
+                                exportProgress += (0.9 - exportProgress) * 0.15
+                            }
                         }
+                        val bytes = model.exportFile(currentSheet.isPdf)
+                        ticker.cancel()
+                        if (bytes == null) {
+                            sheet = null
+                            return@LaunchedEffect
+                        }
+                        exportProgress = 1.0
                         delay(200)
+                        exportBytes = bytes
                         sheet = null
-                        // Share export file
-                        val text = model.exportText()
-                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, text)
-                        }
-                        context.startActivity(Intent.createChooser(shareIntent, "YOUNIYA 데이터 내보내기"))
+                        val name = "youniya-export-${java.time.LocalDate.now()}." + if (currentSheet.isPdf) "pdf" else "txt"
+                        if (currentSheet.isPdf) savePdf.launch(name) else saveText.launch(name)
                     }
                     YouniyaSheet("sheet-exporting", onDismiss = { sheet = null }) {
                         ExportProgressSheet(
-                            detail = "별 ${model.stars.size}개와 별자리 이야기를 ${if (currentSheet.isPdf) "PDF" else "텍스트"} 파일로 모으고 있어요. 창을 닫아도 이어서 만들어요.",
+                            detail = "별 ${model.stars.size}개와 별자리 이야기를 ${if (currentSheet.isPdf) "PDF" else "텍스트"} 파일로 모으고 있어요.",
                             progress = exportProgress.toFloat(),
                             onClose = { sheet = null },
                         )

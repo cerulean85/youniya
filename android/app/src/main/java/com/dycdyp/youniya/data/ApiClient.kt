@@ -137,6 +137,32 @@ class ApiClient(private val store: TokenStore) {
         throw err
     }
 
+    /** A file the server makes (93 내보내기): the bytes as they come, with the same token refresh. */
+    suspend fun download(path: String, query: Map<String, String>, retried: Boolean = false): ByteArray {
+        val token = session?.accessToken ?: throw ApiError.signedOut()
+        val (status, bytes) = withContext(Dispatchers.IO) {
+            val url = (baseUrl + path).toHttpUrl().newBuilder().apply { query.forEach { (k, v) -> addQueryParameter(k, v) } }.build()
+            val req = Request.Builder().url(url)
+                .header("X-App-Version", BuildConfig.VERSION_NAME)
+                .header("X-App-Platform", "android")
+                .header("Authorization", "Bearer $token")
+                .build()
+            try {
+                http.newBuilder().readTimeout(120, TimeUnit.SECONDS).build()
+                    .newCall(req).execute().use { it.code to it.body.bytes() }
+            } catch (e: IOException) {
+                throw ApiError.offline()
+            }
+        }
+        if (status in 200..299) return bytes
+        val err = parseError(status, bytes.decodeToString())
+        if (status == 401 && err.code == "token_expired" && !retried) {
+            refresh(token)
+            return download(path, query, retried = true)
+        }
+        throw err
+    }
+
     private suspend fun refresh(staleAccess: String?) = refreshLock.withLock {
         // Another request may already have refreshed while this one waited.
         if (session?.accessToken != staleAccess) return@withLock

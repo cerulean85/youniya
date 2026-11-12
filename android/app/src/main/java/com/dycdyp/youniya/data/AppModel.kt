@@ -1226,6 +1226,14 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** 93 텍스트 파일로 · PDF로: the server's export (every star with its 별빛 풀이 and 별자리 이야기). */
+    suspend fun exportFile(pdf: Boolean): ByteArray? = try {
+        api.download("/v1/me/export", mapOf("format" to if (pdf) "pdf" else "text"))
+    } catch (e: Exception) {
+        handle(e)
+        null
+    }
+
     fun exportText(): String {
         val sb = StringBuilder("YOUNIYA 기록 내보내기\n\n")
         for (s in stars) {
