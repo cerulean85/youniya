@@ -276,6 +276,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun signOut() = viewModelScope.launch {
         PushRegistration.unregister(getApplication(), api)
         api.session?.refreshToken?.let { r -> runCatching { api.sendNoContent("POST", "/v1/auth/logout", LogoutIn(r), authorized = false) } }
+        clearLocal()
+    }
+
+    /** What this device keeps for the account: gone on sign-out and on 계정 영구 삭제. */
+    private fun clearLocal() {
         api.store(null)
         isSignedIn = false
         hasConsented = false
@@ -1207,8 +1212,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             PushRegistration.unregister(getApplication(), api)
             if (apple != null) api.sendNoContent("DELETE", "/v1/me", apple)
             else api.call("DELETE", "/v1/me", null, emptyMap(), authorized = true)
-            api.store(null)
-            isSignedIn = false
+            clearLocal()
             appNotice = com.dycdyp.youniya.ui.screens.AppNotice.AccountDeleted
         } catch (e: Exception) {
             handle(e)
