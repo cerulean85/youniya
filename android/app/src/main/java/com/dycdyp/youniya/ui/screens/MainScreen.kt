@@ -1,5 +1,14 @@
 package com.dycdyp.youniya.ui.screens
 
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.AnimatedContent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -248,260 +257,278 @@ fun MainScreen(model: AppModel) {
             }
         })
 
-        when (val top = navStack.lastOrNull()) {
-            is MainNav.StarDetail -> {
-                StarDetailScreen(
-                    model = model,
-                    starId = top.starId,
-                    onBack = { navStack = navStack.dropLast(1) },
-                    onRewrite = {
-                        val s = model.stars.firstOrNull { it.id == top.starId }
-                        if (s != null) navStack = navStack + MainNav.Compose(rewriteOf = s)
-                    },
-                    onEdit = { navStack = navStack + MainNav.StarEdit(top.starId) },
-                    onFloat = {
-                        val s = model.stars.firstOrNull { it.id == top.starId }
-                        if (s != null) navStack = navStack + MainNav.Compose(floatingKept = s)
-                    },
-                    onRevise = {
-                        val s = model.stars.firstOrNull { it.id == top.starId }
-                        if (s != null) navStack = navStack + MainNav.Compose(revising = s)
-                    },
-                    onLinkExisting = { navStack = navStack + MainNav.LinkExisting(top.starId) },
-                    onOpenLinked = { other -> navStack = navStack + MainNav.StarDetail(other.id) },
-                    onOpenLines = { id -> navStack = navStack + MainNav.ReceivedLines(id) },
-                    onReviewShare = { id -> navStack = navStack + MainNav.PrivacyCheck(id) },
-                    onDeleted = { navStack = navStack.dropLast(1) },
-                )
-            }
-            is MainNav.StarEdit -> {
-                StarEditScreen(
-                    model = model,
-                    starId = top.starId,
-                    onClose = { navStack = navStack.dropLast(1) },
-                )
-            }
-            is MainNav.LinkExisting -> {
-                LinkStarsScreen(
-                    model = model,
-                    starId = top.starId,
-                    onBack = { navStack = navStack.dropLast(1) },
-                    onLinked = { navStack = navStack.dropLast(1) },
-                )
-            }
-            is MainNav.Compose -> {
-                ComposeFlow(
-                    model = model,
-                    rewriteOf = top.rewriteOf,
-                    revising = top.revising,
-                    floatingKept = top.floatingKept,
-                    onClose = { navStack = navStack.dropLast(1) },
-                    onShowNebula = {
-                        navStack = navStack.dropLast(1)
-                        tab = SkyTab.Nebula
-                    },
-                    onOpenStar = { star ->
-                        navStack = navStack.dropLast(1) + MainNav.StarDetail(star.id)
-                    },
-                    onOpenCoinCharge = {
-                        navStack = navStack + MainNav.CoinCharge
-                    },
-                )
-            }
-            is MainNav.ConstellationStory -> {
-                ConstellationStoryView(
-                    model = model,
-                    month = top.month,
-                    onBack = { navStack = navStack.dropLast(1) },
-                    onOpenStar = { star -> navStack = navStack + MainNav.StarDetail(star.id) },
-                )
-            }
-            is MainNav.MilkyWay -> {
-                MilkyWayView(
-                    model = model,
-                    onBack = { navStack = navStack.dropLast(1) },
-                    onOpenStar = { star -> navStack = navStack + MainNav.StarDetail(star.id) },
-                )
-            }
-            is MainNav.NebulaStars -> {
-                NebulaStarsView(
-                    model = model,
-                    initialKind = top.kind,
-                    onBack = { navStack = navStack.dropLast(1) },
-                    onOpenStar = { star -> navStack = navStack + MainNav.StarDetail(star.id) },
-                )
-            }
-            is MainNav.PlazaStar -> {
-                PlazaStarScreen(
-                    model = model,
-                    star = top.star,
-                    onBack = { navStack = navStack.dropLast(1) },
-                    onKeeper = { name -> navStack = navStack + MainNav.KeeperPage(name) },
-                    onLine = { navStack = navStack + MainNav.StarLineCompose(top.star) },
-                    onBlocked = {
-                        navStack = navStack.dropLast(1)
-                        model.message = "차단했어요."
-                    },
-                )
-            }
-            is MainNav.KeeperPage -> {
-                KeeperPageScreen(
-                    model = model,
-                    nickname = top.nickname,
-                    onBack = { navStack = navStack.dropLast(1) },
-                    onOpenStar = { star -> navStack = navStack + MainNav.PlazaStar(star) },
-                )
-            }
-            is MainNav.StarLineCompose -> {
-                StarLineComposeScreen(
-                    model = model,
-                    star = top.star,
-                    onBack = { navStack = navStack.dropLast(1) },
-                )
-            }
-            is MainNav.ReceivedLines -> {
-                ReceivedLinesScreen(
-                    model = model,
-                    starId = top.starId,
-                    onBack = { navStack = navStack.dropLast(1) },
-                )
-            }
-            is MainNav.PrivacyCheck -> {
-                val s = model.stars.firstOrNull { it.id == top.starId }
-                if (s != null) {
-                    PrivacyCheckScreen(
-                        star = s,
-                        onConfirm = {
-                            scope.launch {
-                                model.shareStarLive(s.id)
-                                navStack = navStack.dropLast(1)
-                                model.message = "우주 광장에 별을 나눴어요."
-                            }
+        // iOS MainView: a pushed page moves in from the trailing edge over a page that stays put,
+        // and moves out the same way on back (easeInOut 0.32s).
+        val reduced = LocalMotionReduced.current
+        AnimatedContent(
+            targetState = navStack,
+            contentKey = { it.size to it.lastOrNull() },
+            transitionSpec = {
+                val push = targetState.size >= initialState.size
+                val spec = tween<IntOffset>(if (reduced) 0 else 320, easing = FastOutSlowInEasing)
+                val t = (if (push) slideInHorizontally(spec) { it } else EnterTransition.None) togetherWith
+                    (if (push) ExitTransition.KeepUntilTransitionsFinished else slideOutHorizontally(spec) { it }) using null
+                // The deeper page stays on top, so on back it slides off the one beneath.
+                t.targetContentZIndex = targetState.size.toFloat()
+                t
+            },
+            label = "nav",
+        ) { stack ->
+            when (val top = stack.lastOrNull()) {
+                is MainNav.StarDetail -> {
+                    StarDetailScreen(
+                        model = model,
+                        starId = top.starId,
+                        onBack = { navStack = navStack.dropLast(1) },
+                        onRewrite = {
+                            val s = model.stars.firstOrNull { it.id == top.starId }
+                            if (s != null) navStack = navStack + MainNav.Compose(rewriteOf = s)
                         },
+                        onEdit = { navStack = navStack + MainNav.StarEdit(top.starId) },
+                        onFloat = {
+                            val s = model.stars.firstOrNull { it.id == top.starId }
+                            if (s != null) navStack = navStack + MainNav.Compose(floatingKept = s)
+                        },
+                        onRevise = {
+                            val s = model.stars.firstOrNull { it.id == top.starId }
+                            if (s != null) navStack = navStack + MainNav.Compose(revising = s)
+                        },
+                        onLinkExisting = { navStack = navStack + MainNav.LinkExisting(top.starId) },
+                        onOpenLinked = { other -> navStack = navStack + MainNav.StarDetail(other.id) },
+                        onOpenLines = { id -> navStack = navStack + MainNav.ReceivedLines(id) },
+                        onReviewShare = { id -> navStack = navStack + MainNav.PrivacyCheck(id) },
+                        onDeleted = { navStack = navStack.dropLast(1) },
+                    )
+                }
+                is MainNav.StarEdit -> {
+                    StarEditScreen(
+                        model = model,
+                        starId = top.starId,
+                        onClose = { navStack = navStack.dropLast(1) },
+                    )
+                }
+                is MainNav.LinkExisting -> {
+                    LinkStarsScreen(
+                        model = model,
+                        starId = top.starId,
+                        onBack = { navStack = navStack.dropLast(1) },
+                        onLinked = { navStack = navStack.dropLast(1) },
+                    )
+                }
+                is MainNav.Compose -> {
+                    ComposeFlow(
+                        model = model,
+                        rewriteOf = top.rewriteOf,
+                        revising = top.revising,
+                        floatingKept = top.floatingKept,
+                        onClose = { navStack = navStack.dropLast(1) },
+                        onShowNebula = {
+                            navStack = navStack.dropLast(1)
+                            tab = SkyTab.Nebula
+                        },
+                        onOpenStar = { star ->
+                            navStack = navStack.dropLast(1) + MainNav.StarDetail(star.id)
+                        },
+                        onOpenCoinCharge = {
+                            navStack = navStack + MainNav.CoinCharge
+                        },
+                    )
+                }
+                is MainNav.ConstellationStory -> {
+                    ConstellationStoryView(
+                        model = model,
+                        month = top.month,
+                        onBack = { navStack = navStack.dropLast(1) },
+                        onOpenStar = { star -> navStack = navStack + MainNav.StarDetail(star.id) },
+                    )
+                }
+                is MainNav.MilkyWay -> {
+                    MilkyWayView(
+                        model = model,
+                        onBack = { navStack = navStack.dropLast(1) },
+                        onOpenStar = { star -> navStack = navStack + MainNav.StarDetail(star.id) },
+                    )
+                }
+                is MainNav.NebulaStars -> {
+                    NebulaStarsView(
+                        model = model,
+                        initialKind = top.kind,
+                        onBack = { navStack = navStack.dropLast(1) },
+                        onOpenStar = { star -> navStack = navStack + MainNav.StarDetail(star.id) },
+                    )
+                }
+                is MainNav.PlazaStar -> {
+                    PlazaStarScreen(
+                        model = model,
+                        star = top.star,
+                        onBack = { navStack = navStack.dropLast(1) },
+                        onKeeper = { name -> navStack = navStack + MainNav.KeeperPage(name) },
+                        onLine = { navStack = navStack + MainNav.StarLineCompose(top.star) },
+                        onBlocked = {
+                            navStack = navStack.dropLast(1)
+                            model.message = "차단했어요."
+                        },
+                    )
+                }
+                is MainNav.KeeperPage -> {
+                    KeeperPageScreen(
+                        model = model,
+                        nickname = top.nickname,
+                        onBack = { navStack = navStack.dropLast(1) },
+                        onOpenStar = { star -> navStack = navStack + MainNav.PlazaStar(star) },
+                    )
+                }
+                is MainNav.StarLineCompose -> {
+                    StarLineComposeScreen(
+                        model = model,
+                        star = top.star,
                         onBack = { navStack = navStack.dropLast(1) },
                     )
                 }
-            }
-            is MainNav.SharedStars -> {
-                SharedStarsScreen(
-                    model = model,
-                    onBack = { navStack = navStack.dropLast(1) },
-                    onOpenStar = { star -> navStack = navStack + MainNav.StarDetail(star.id) },
-                    onPlaza = {
-                        navStack = navStack.dropLast(1)
-                        tab = SkyTab.Plaza
-                    },
-                )
-            }
-            is MainNav.BrightnessFlow -> {
-                BrightnessFlowView(
-                    model = model,
-                    onBack = { navStack = navStack.dropLast(1) },
-                )
-            }
-            is MainNav.KeptStars -> {
-                KeptView(
-                    model = model,
-                    onBack = { navStack = navStack.dropLast(1) },
-                    onOpenStar = { star -> navStack = navStack + MainNav.StarDetail(star.id) },
-                )
-            }
-            is MainNav.Settings -> {
-                SettingsView(
-                    model = model,
-                    onBack = { navStack = navStack.dropLast(1) },
-                    onOpenNickname = {
-                        val m = if (model.nicknameRenameRequired) NicknameMode.OperatorRequest else NicknameMode.Change
-                        navStack = navStack + MainNav.NicknameChange(m)
-                    },
-                    onOpenSky = { navStack = navStack + MainNav.SkyColor },
-                    onOpenBlocked = { navStack = navStack + MainNav.BlockedKeepers },
-                    onOpenShared = { navStack = navStack + MainNav.SharedStars },
-                    onPolicy = { doc -> navStack = navStack + MainNav.Policy(doc) },
-                )
-            }
-            is MainNav.SkyColor -> {
-                SkyColorView(
-                    model = model,
-                    onBack = { navStack = navStack.dropLast(1) },
-                )
-            }
-            is MainNav.BlockedKeepers -> {
-                BlockedKeepersView(
-                    model = model,
-                    onBack = { navStack = navStack.dropLast(1) },
-                )
-            }
-            is MainNav.CoinCharge -> {
-                CoinChargeView(
-                    model = model,
-                    onBack = { navStack = navStack.dropLast(1) },
-                    onPolicy = { navStack = navStack + MainNav.Policy(PolicyDoc.Payment) },
-                    onHistory = { navStack = navStack + MainNav.CoinHistory },
-                )
-            }
-            is MainNav.CoinHistory -> {
-                CoinHistoryView(
-                    model = model,
-                    onBack = { navStack = navStack.dropLast(1) },
-                )
-            }
-            is MainNav.Inquiry -> {
-                InquiryView(
-                    model = model,
-                    onBack = { navStack = navStack.dropLast(1) },
-                )
-            }
-            is MainNav.Inbox -> {
-                InboxView(
-                    model = model,
-                    onBack = { navStack = navStack.dropLast(1) },
-                    onOpen = { target ->
-                        when (target) {
-                            is NotificationTarget.Notice -> navStack = navStack + MainNav.NoticeDetail(target.noticeId)
-                            is NotificationTarget.Star -> navStack = navStack + MainNav.StarDetail(target.starId)
-                            NotificationTarget.Nickname -> navStack = navStack + MainNav.NicknameChange(NicknameMode.OperatorRequest)
-                            NotificationTarget.CoinHistory -> navStack = navStack + MainNav.CoinHistory
-                            NotificationTarget.NotificationSettings -> navStack = navStack + MainNav.Settings
-                            NotificationTarget.PlazaRestricted -> model.showPlazaRestricted = true
-                            NotificationTarget.Plaza -> {
-                                navStack = emptyList()
-                                tab = SkyTab.Plaza
+                is MainNav.ReceivedLines -> {
+                    ReceivedLinesScreen(
+                        model = model,
+                        starId = top.starId,
+                        onBack = { navStack = navStack.dropLast(1) },
+                    )
+                }
+                is MainNav.PrivacyCheck -> {
+                    val s = model.stars.firstOrNull { it.id == top.starId }
+                    if (s != null) {
+                        PrivacyCheckScreen(
+                            star = s,
+                            onConfirm = {
+                                scope.launch {
+                                    model.shareStarLive(s.id)
+                                    navStack = navStack.dropLast(1)
+                                    model.message = "우주 광장에 별을 나눴어요."
+                                }
+                            },
+                            onBack = { navStack = navStack.dropLast(1) },
+                        )
+                    }
+                }
+                is MainNav.SharedStars -> {
+                    SharedStarsScreen(
+                        model = model,
+                        onBack = { navStack = navStack.dropLast(1) },
+                        onOpenStar = { star -> navStack = navStack + MainNav.StarDetail(star.id) },
+                        onPlaza = {
+                            navStack = navStack.dropLast(1)
+                            tab = SkyTab.Plaza
+                        },
+                    )
+                }
+                is MainNav.BrightnessFlow -> {
+                    BrightnessFlowView(
+                        model = model,
+                        onBack = { navStack = navStack.dropLast(1) },
+                    )
+                }
+                is MainNav.KeptStars -> {
+                    KeptView(
+                        model = model,
+                        onBack = { navStack = navStack.dropLast(1) },
+                        onOpenStar = { star -> navStack = navStack + MainNav.StarDetail(star.id) },
+                    )
+                }
+                is MainNav.Settings -> {
+                    SettingsView(
+                        model = model,
+                        onBack = { navStack = navStack.dropLast(1) },
+                        onOpenNickname = {
+                            val m = if (model.nicknameRenameRequired) NicknameMode.OperatorRequest else NicknameMode.Change
+                            navStack = navStack + MainNav.NicknameChange(m)
+                        },
+                        onOpenSky = { navStack = navStack + MainNav.SkyColor },
+                        onOpenBlocked = { navStack = navStack + MainNav.BlockedKeepers },
+                        onOpenShared = { navStack = navStack + MainNav.SharedStars },
+                        onPolicy = { doc -> navStack = navStack + MainNav.Policy(doc) },
+                    )
+                }
+                is MainNav.SkyColor -> {
+                    SkyColorView(
+                        model = model,
+                        onBack = { navStack = navStack.dropLast(1) },
+                    )
+                }
+                is MainNav.BlockedKeepers -> {
+                    BlockedKeepersView(
+                        model = model,
+                        onBack = { navStack = navStack.dropLast(1) },
+                    )
+                }
+                is MainNav.CoinCharge -> {
+                    CoinChargeView(
+                        model = model,
+                        onBack = { navStack = navStack.dropLast(1) },
+                        onPolicy = { navStack = navStack + MainNav.Policy(PolicyDoc.Payment) },
+                        onHistory = { navStack = navStack + MainNav.CoinHistory },
+                    )
+                }
+                is MainNav.CoinHistory -> {
+                    CoinHistoryView(
+                        model = model,
+                        onBack = { navStack = navStack.dropLast(1) },
+                    )
+                }
+                is MainNav.Inquiry -> {
+                    InquiryView(
+                        model = model,
+                        onBack = { navStack = navStack.dropLast(1) },
+                    )
+                }
+                is MainNav.Inbox -> {
+                    InboxView(
+                        model = model,
+                        onBack = { navStack = navStack.dropLast(1) },
+                        onOpen = { target ->
+                            when (target) {
+                                is NotificationTarget.Notice -> navStack = navStack + MainNav.NoticeDetail(target.noticeId)
+                                is NotificationTarget.Star -> navStack = navStack + MainNav.StarDetail(target.starId)
+                                NotificationTarget.Nickname -> navStack = navStack + MainNav.NicknameChange(NicknameMode.OperatorRequest)
+                                NotificationTarget.CoinHistory -> navStack = navStack + MainNav.CoinHistory
+                                NotificationTarget.NotificationSettings -> navStack = navStack + MainNav.Settings
+                                NotificationTarget.PlazaRestricted -> model.showPlazaRestricted = true
+                                NotificationTarget.Plaza -> {
+                                    navStack = emptyList()
+                                    tab = SkyTab.Plaza
+                                }
+                                NotificationTarget.Inbox -> if (navStack.lastOrNull() != MainNav.Inbox) navStack = navStack + MainNav.Inbox
                             }
-                            NotificationTarget.Inbox -> if (navStack.lastOrNull() != MainNav.Inbox) navStack = navStack + MainNav.Inbox
-                        }
-                    },
-                )
+                        },
+                    )
+                }
+                is MainNav.NoticeDetail -> {
+                    NoticeDetailView(
+                        model = model,
+                        noticeId = top.noticeId,
+                        onBack = { navStack = navStack.dropLast(1) },
+                    )
+                }
+                is MainNav.NicknameChange -> {
+                    NicknameScreen(
+                        model = model,
+                        mode = top.mode,
+                        onBack = { navStack = navStack.dropLast(1) },
+                        onDone = { navStack = navStack.dropLast(1) },
+                    )
+                }
+                is MainNav.Policy -> {
+                    PolicyDocView(
+                        doc = top.doc,
+                        onBack = { navStack = navStack.dropLast(1) },
+                    )
+                }
+                is MainNav.PlazaNickname -> {
+                    NicknameScreen(
+                        model = model,
+                        onBack = { navStack = navStack.dropLast(1) },
+                        onDone = { navStack = navStack.dropLast(1) },
+                    )
+                }
+                null -> Unit
             }
-            is MainNav.NoticeDetail -> {
-                NoticeDetailView(
-                    model = model,
-                    noticeId = top.noticeId,
-                    onBack = { navStack = navStack.dropLast(1) },
-                )
-            }
-            is MainNav.NicknameChange -> {
-                NicknameScreen(
-                    model = model,
-                    mode = top.mode,
-                    onBack = { navStack = navStack.dropLast(1) },
-                    onDone = { navStack = navStack.dropLast(1) },
-                )
-            }
-            is MainNav.Policy -> {
-                PolicyDocView(
-                    doc = top.doc,
-                    onBack = { navStack = navStack.dropLast(1) },
-                )
-            }
-            is MainNav.PlazaNickname -> {
-                NicknameScreen(
-                    model = model,
-                    onBack = { navStack = navStack.dropLast(1) },
-                    onDone = { navStack = navStack.dropLast(1) },
-                )
-            }
-            null -> Unit
         }
     }
     if (showWelcome) WelcomeSheet(onCompose = { showWelcome = false; compose() }, onBrowse = { showWelcome = false })
