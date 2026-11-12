@@ -19,6 +19,20 @@ android {
         buildConfigField("String", "INSTAGRAM_APP_ID", "\"\"")
     }
 
+    // Play upload key (Play App Signing re-signs for users). The path and passwords live in
+    // ~/.gradle/gradle.properties, outside the repo; without them a release build stays unsigned.
+    val uploadStore = project.findProperty("YOUNIYA_UPLOAD_STORE") as String?
+    signingConfigs {
+        if (uploadStore != null) {
+            create("upload") {
+                storeFile = file(uploadStore)
+                storePassword = project.findProperty("YOUNIYA_UPLOAD_STORE_PASSWORD") as String?
+                keyAlias = project.findProperty("YOUNIYA_UPLOAD_ALIAS") as String?
+                keyPassword = project.findProperty("YOUNIYA_UPLOAD_KEY_PASSWORD") as String?
+            }
+        }
+    }
+
     buildTypes {
         debug {
             // Home-desktop dev server over Tailscale (the same one the iOS debug build uses).
@@ -32,6 +46,7 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             buildConfigField("String", "API_BASE_URL", "\"https://youniya-api.dycdyp.com\"")
+            if (uploadStore != null) signingConfig = signingConfigs.getByName("upload")
         }
     }
 
