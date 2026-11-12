@@ -1,6 +1,7 @@
 """28 코인 충전, 102 충전 완료, 38 결제 미완료, 33/108 코인 사용 내역."""
 
 import logging
+from typing import Literal
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Request
@@ -14,6 +15,7 @@ from ..models import CoinEntry, User
 from .. import allowance, membership
 from ..rules import MEMBERSHIP_PRODUCTS
 from ..rules import COIN_PACKAGES, REFUND_WINDOW_DAYS, STAR_FLOAT_COST, TELESCOPE_COST
+from ..google_api import PlayPurchaseInvalid, PlayUnavailable, play_transaction_id
 from ..storekit import PurchaseInvalid
 from ..views import aware, iso
 from ..ratelimit import per_user
@@ -23,8 +25,13 @@ router = APIRouter(prefix="/v1/coins", tags=["coins"])
 
 
 class PurchaseIn(BaseModel):
+    # "android": Google Play Billing. Buy with obfuscatedAccountId = the user id.
+    platform: Literal["ios", "android"] = "ios"
     # StoreKit 2 `Transaction.jwsRepresentation`. Buy with `appAccountToken` = the user id.
     signed_transaction: str | None = Field(None, max_length=20000)
+    # Android: Purchase.getPurchaseToken() and getOrderId(); product_id is required too.
+    purchase_token: str | None = Field(None, min_length=1, max_length=4096)
+    order_id: str | None = Field(None, max_length=100)
     # 28: the buyer agreed that spent coins aren't refunded and that this purchase's coin use
     # goes to the App Store when a refund is requested. Stored per purchase.
     consumption_consent: bool = False
@@ -58,10 +65,12 @@ def history(user: User = Depends(consented_user), db: Session = Depends(get_db))
 
 
 def source(entry: CoinEntry) -> str:
-    """Where a purchase or refund was paid: toss (웹 결제) · app_store. Everything else is the server's."""
+    """Where a purchase or refund was paid: toss (웹 결제) · google_play · app_store. Everything else is the
+    server's."""
     if not entry.transaction_id:
         return "server"
-    return "toss" if entry.transaction_id.removeprefix("refund:").startswith("toss:") else "app_store"
+    key = entry.transaction_id.removeprefix("refund:")
+    return "toss" if key.startswith("toss:") else "google_play" if key.startswith("gp:") else "app_store"
 
 
 def _kind(entry: CoinEntry) -> str:
@@ -74,6 +83,8 @@ def _kind(entry: CoinEntry) -> str:
 @router.post("/purchases", dependencies=[per_user("purchase", 30, 3600)])
 def purchase(body: PurchaseIn, request: Request, user: User = Depends(consented_user),
              db: Session = Depends(get_db)):
+    if body.platform == "android":
+        return _google_play(body, request, user, db)
     verifier = request.app.state.storekit
     if body.signed_transaction and verifier:
         try:
@@ -90,6 +101,10 @@ def purchase(body: PurchaseIn, request: Request, user: User = Depends(consented_
         # 38 결제가 끝나지 않았어요: nothing is added until the store confirms it.
         raise ApiError(503, "purchase_unverified", "결제를 확인하지 못했어요. 코인은 지급되지 않았어요.")
 
+    return _grant(db, user, product_id, transaction_id, quantity, body.consumption_consent)
+
+
+def _grant(db: Session, user: User, product_id: str, transaction_id: str, quantity: int, consent: bool) -> dict:
     package = COIN_PACKAGES.get(product_id)
     if package is None:
         raise ApiError(422, "unknown_product", "알 수 없는 상품이에요.")
@@ -101,9 +116,51 @@ def purchase(body: PurchaseIn, request: Request, user: User = Depends(consented_
         return {"coins": user.coins, "added": 0, "already_processed": True}
     added = package["coins"] * quantity
     coins.add(db, user, added, "코인 충전", transaction_id=transaction_id,
-              refund_consent_at=datetime.now(timezone.utc) if body.consumption_consent else None)
+              refund_consent_at=datetime.now(timezone.utc) if consent else None)
     db.commit()
     return {"coins": user.coins, "added": added, "already_processed": False}
+
+
+def _google_play(body: PurchaseIn, request: Request, user: User, db: Session) -> dict:
+    """Google Play Billing (기획서 24장). The server asks Google (purchases.products.get), grants once per
+    order, then consumes the purchase. `consumed` false: the app consumes it itself (consumeAsync), after the
+    coins are granted; a retry of the same purchase grants nothing more and tries to consume again."""
+    if not body.product_id:
+        raise ApiError(422, "unknown_product", "알 수 없는 상품이에요.")
+    play, settings = request.app.state.play, request.app.state.settings
+    if play is not None and body.purchase_token:
+        try:
+            p = play.product_purchase(body.product_id, body.purchase_token)
+        except PlayPurchaseInvalid:
+            raise ApiError(422, "purchase_invalid", "결제를 확인하지 못했어요. 코인은 지급되지 않았어요.")
+        except PlayUnavailable:
+            raise ApiError(503, "purchase_unverified", "결제를 확인하지 못했어요. 코인은 지급되지 않았어요.")
+        state = p.get("purchaseState", 0)
+        if state == 2:
+            raise ApiError(409, "purchase_pending", "결제가 아직 끝나지 않았어요. 끝나면 코인이 들어와요.")
+        if state != 0:
+            raise ApiError(422, "purchase_invalid", "결제를 확인하지 못했어요. 코인은 지급되지 않았어요.")
+        if p.get("purchaseType") == 0 and not settings.allow_sandbox_purchases:
+            raise ApiError(422, "purchase_invalid", "결제를 확인하지 못했어요. 코인은 지급되지 않았어요.")
+        account = p.get("obfuscatedExternalAccountId")
+        if account and account.lower() != user.id:
+            raise ApiError(409, "transaction_used", "이미 처리된 결제예요.")
+        transaction_id = play_transaction_id(p.get("orderId"), body.purchase_token)
+        out = _grant(db, user, body.product_id, transaction_id, int(p.get("quantity") or 1), body.consumption_consent)
+        consumed = p.get("consumptionState") == 1
+        if not consumed:
+            try:
+                play.consume(body.product_id, body.purchase_token)
+                consumed = True
+            except (PlayPurchaseInvalid, PlayUnavailable) as e:
+                logger.warning("consuming Play purchase %s failed: %s", transaction_id, e)
+        return {**out, "consumed": consumed}
+    if settings.trust_purchases and body.order_id:
+        # Development only: no Google. The app consumes the purchase itself.
+        return {**_grant(db, user, body.product_id, f"gp:{body.order_id}", 1, body.consumption_consent),
+                "consumed": False}
+    # Google Play is not configured (no service account yet): nothing is added.
+    raise ApiError(503, "purchase_unverified", "결제를 확인하지 못했어요. 코인은 지급되지 않았어요.")
 
 
 notifications = APIRouter(prefix="/v1/storekit", tags=["coins"])

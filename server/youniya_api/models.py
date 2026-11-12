@@ -365,13 +365,15 @@ class RateHit(Base):
 
 
 class DeviceToken(Base):
-    """An APNs device token. A device belongs to whoever signed in on it last."""
+    """An APNs device token (hex, lower case) or an FCM registration token (Android, case kept).
+    A device belongs to whoever signed in on it last."""
 
     __tablename__ = "device_tokens"
 
-    token: Mapped[str] = mapped_column(String(200), primary_key=True)
+    token: Mapped[str] = mapped_column(String(512), primary_key=True)
     user_id: Mapped[str] = user_fk()
-    environment: Mapped[str] = mapped_column(String(16))  # "production" | "sandbox"
+    # APNs: "production" | "sandbox". Android: "fcm".
+    environment: Mapped[str] = mapped_column(String(16))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
 
 
@@ -641,3 +643,22 @@ def _keeper_no(mapper, connection, target: User) -> None:
     if target.keeper_no is None:
         top = connection.execute(select(func.max(User.keeper_no))).scalar()
         target.keeper_no = (top or 0) + 1
+
+
+class AuthHandoff(Base):
+    """안드로이드 Apple 로그인 (web flow): what the callback hands the app, behind a one-time code.
+    Only the code's hash is kept. `challenge` is the app's PKCE S256 challenge: the code alone is not enough,
+    so another app catching the deep link can't use it. 2 minutes, once."""
+
+    __tablename__ = "auth_handoffs"
+
+    code_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    purpose: Mapped[str] = mapped_column(String(8))  # "signin" | "delete"
+    provider: Mapped[str] = mapped_column(String(16))  # "apple" ("dev" with DEV_LOGIN)
+    sub: Mapped[str] = mapped_column(String(255))
+    challenge: Mapped[str] = mapped_column(String(64))
+    # purpose "delete": Apple's authorization code, encrypted, to revoke the Apple tokens (5.1.1(v)).
+    apple_code_enc: Mapped[str | None] = mapped_column(Text, nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

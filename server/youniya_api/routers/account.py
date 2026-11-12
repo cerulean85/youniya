@@ -1,12 +1,13 @@
 """11 가입 동의, 87 설정, 91 계정 삭제, 92 공유 거두기, 93 내보내기, 32 문의하기."""
 
 import logging
+import re
 from datetime import datetime, timezone
 from typing import Literal
 
 import httpx
 from fastapi import APIRouter, Depends, Query, Request, Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -23,6 +24,7 @@ from ..security import Cipher
 from ..views import iso, local
 from ..ratelimit import per_user
 from ..siwa import ReauthRequired
+from .apple_handoff import take_handoff
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1", tags=["account"])
@@ -59,10 +61,26 @@ class Consent(BaseModel):
     marketing: bool = False
 
 
+APNS_TOKEN = re.compile(r"^[0-9a-fA-F]{64,200}$")
+FCM_TOKEN = re.compile(r"^[A-Za-z0-9_:\-]{32,512}$")
+
+
 class DeviceIn(BaseModel):
-    token: str = Field(..., pattern=r"^[0-9a-fA-F]{64,200}$", description="APNs device token, hex")
-    environment: Literal["production", "sandbox"] = Field(
-        ..., description="sandbox for Xcode debug builds, production for TestFlight and the App Store")
+    platform: Literal["ios", "android"] = Field("ios", description="android: an FCM registration token")
+    token: str = Field(..., max_length=512, description="iOS: APNs device token, hex. Android: FCM token, as given")
+    environment: Literal["production", "sandbox"] | None = Field(
+        None, description="iOS only, required: sandbox for Xcode debug builds, production for TestFlight and the App Store")
+
+    @model_validator(mode="after")
+    def _shape(self):
+        if self.platform == "ios":
+            if not APNS_TOKEN.match(self.token):
+                raise ValueError("token: an APNs device token is 64-200 hex characters")
+            if self.environment is None:
+                raise ValueError("environment is required for iOS")
+        elif not FCM_TOKEN.match(self.token):
+            raise ValueError("token: not an FCM registration token")
+        return self
 
 
 class InquiryIn(BaseModel):
@@ -179,6 +197,10 @@ class DeleteIn(BaseModel):
     # sign-in used. The app sends neither (its bundle id is the default).
     apple_client_id: str | None = Field(None, max_length=200)
     apple_redirect_uri: str | None = Field(None, max_length=500, pattern=r"^https://")
+    # Android (web flow, purpose=delete): the deep link's code and the app's PKCE code_verifier, instead of the
+    # three above. See routers/apple_handoff.py.
+    apple_handoff_code: str | None = Field(None, min_length=1, max_length=200)
+    apple_handoff_verifier: str | None = Field(None, pattern=r"^[A-Za-z0-9._~-]{43,128}$")
 
 
 @router.delete("/me", status_code=204)
@@ -188,20 +210,30 @@ def delete_account(request: Request, body: DeleteIn | None = None, user: User = 
     Everything hangs off users.id with ON DELETE CASCADE, except the store purchase and refund
     records: they stay, cut off from the account, for 5 years (전자상거래법; 개인정보 처리방침 3).
 
-    Apple accounts send `apple_authorization_code`: the Apple tokens are revoked first (App Review 5.1.1(v)).
+    Apple accounts send `apple_authorization_code` (Android: `apple_handoff_code` + `apple_handoff_verifier`):
+    the Apple tokens are revoked first (App Review 5.1.1(v)).
     A code Apple refuses is 400 apple_reauth_required (get a new one and try again); Apple being unreachable
     never stops the deletion (logged to Sentry). Without a code (older apps, Google, invite) nothing changes."""
     code = body.apple_authorization_code if body else None
+    client_id = body.apple_client_id if body else None
+    redirect_uri = body.apple_redirect_uri if body else None
+    if body and body.apple_handoff_code and user.provider == "apple":
+        s = request.app.state.settings
+        row = take_handoff(db, body.apple_handoff_code, body.apple_handoff_verifier or "", "delete")
+        if row is None or row.provider != "apple" or row.sub != user.provider_sub or not row.apple_code_enc:
+            raise ApiError(400, "apple_reauth_required", "Apple 계정 확인이 필요해요. 다시 시도해 주세요.",
+                           apple_error="handoff_invalid")
+        code = request.app.state.cipher.dec(row.apple_code_enc)
+        client_id, redirect_uri = s.apple_services_id, s.apple_handoff_redirect_uri
     if code and user.provider == "apple":
         siwa, s = request.app.state.siwa, request.app.state.settings
-        client_id = body.apple_client_id
         if client_id and client_id != s.apple_bundle_id and client_id not in s.apple_client_ids:
             raise ApiError(422, "unknown_apple_client", "알 수 없는 Apple 로그인 ID예요.")
         if siwa is None:
             log.error("Sign in with Apple key not configured: Apple tokens of %s not revoked", user.id)
         else:
             try:
-                siwa.revoke_with_code(code, client_id, body.apple_redirect_uri, expected_sub=user.provider_sub)
+                siwa.revoke_with_code(code, client_id, redirect_uri, expected_sub=user.provider_sub)
             except ReauthRequired as e:
                 raise ApiError(400, "apple_reauth_required", "Apple 계정 확인이 필요해요. 다시 시도해 주세요.",
                                apple_error=str(e))
@@ -215,11 +247,13 @@ def delete_account(request: Request, body: DeleteIn | None = None, user: User = 
 
 @router.put("/me/devices", status_code=204)
 def register_device(body: DeviceIn, user: User = Depends(current_user), db: Session = Depends(get_db)):
-    """After the user allows notifications: remember where to reach them. Call it again whenever iOS hands
-    the app a token (it can change). A device moves to whoever signed in on it last."""
-    token = body.token.lower()
+    """After the user allows notifications: remember where to reach them. Call it again whenever iOS or FCM
+    hands the app a token (it can change). A device moves to whoever signed in on it last.
+    iOS: {token (hex), environment}. Android: {platform: "android", token (FCM)}."""
+    android = body.platform == "android"
+    token = body.token if android else body.token.lower()  # FCM tokens are case-sensitive
     row = db.get(DeviceToken, token) or DeviceToken(token=token)
-    row.user_id, row.environment = user.id, body.environment
+    row.user_id, row.environment = user.id, "fcm" if android else body.environment
     db.add(row)
     db.commit()
 
@@ -227,7 +261,7 @@ def register_device(body: DeviceIn, user: User = Depends(current_user), db: Sess
 @router.delete("/me/devices/{token}", status_code=204)
 def unregister_device(token: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
     """Before signing out, or when the user turns notifications off in iOS settings."""
-    db.execute(delete(DeviceToken).where(DeviceToken.token == token.lower(), DeviceToken.user_id == user.id))
+    db.execute(delete(DeviceToken).where(DeviceToken.token.in_({token, token.lower()}), DeviceToken.user_id == user.id))
     db.commit()
 
 

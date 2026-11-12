@@ -12,9 +12,10 @@ from .db import make_engine
 from .deps import ApiError
 from .monitoring import init_sentry
 from .prism import PrismEngine
-from .push import ApnsClient
+from .google_api import PlayClient, load_service_account
+from .push import ApnsClient, FcmClient, Push
 from .ratelimit import RateLimiter
-from .routers import (account, admin, admin_auth, admin_ops, admin_owner, auth, blocks, coins, constellations, cron, membership, nebulae, payments, plaza, stars,
+from .routers import (account, admin, apple_handoff, admin_auth, admin_ops, admin_owner, auth, blocks, coins, constellations, cron, membership, nebulae, payments, plaza, stars,
                       telescope)
 from .security import Cipher, IdTokenVerifier
 from .storekit import AppStoreClient, StoreKitVerifier
@@ -56,9 +57,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if settings.apple_bundle_id and settings.appstore_issuer_id and settings.appstore_key_id and appstore_key
         else None)
     apns_key = settings.apns_private_key()
-    app.state.push = (ApnsClient(settings.apns_team_id, settings.apns_key_id, apns_key, settings.apple_bundle_id)
-                      if settings.apple_bundle_id and settings.apns_team_id and settings.apns_key_id and apns_key
-                      else None)
+    apns = (ApnsClient(settings.apns_team_id, settings.apns_key_id, apns_key, settings.apple_bundle_id)
+            if settings.apple_bundle_id and settings.apns_team_id and settings.apns_key_id and apns_key else None)
+    fcm_account = load_service_account(settings.fcm_service_account_base64, settings.fcm_service_account_path)
+    fcm = FcmClient(fcm_account) if fcm_account else None
+    app.state.push = Push(apns, fcm) if apns or fcm else None
+    play_account = load_service_account(settings.google_play_service_account_base64,
+                                        settings.google_play_service_account_path)
+    app.state.play = (PlayClient(play_account, settings.google_play_package)
+                      if play_account and settings.google_play_package else None)
     app.state.toss = TossClient(settings.toss_secret_key) if settings.toss_secret_key else None
     siwa_key = settings.siwa_private_key()
     app.state.siwa = (SiwaClient(settings.apple_team_id, settings.apple_siwa_key_id, siwa_key, settings.apple_bundle_id)
@@ -111,7 +118,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "in_maintenance": runtime.in_maintenance(app),
         }
 
-    for router in (auth.router, account.router, stars.router, telescope.router, coins.router, coins.notifications,
+    for router in (auth.router, apple_handoff.router, account.router, stars.router, telescope.router, coins.router, coins.notifications,
                    nebulae.router, plaza.router, blocks.router, membership.router, admin.router, cron.router,
                    constellations.router, admin_auth.auth, admin_auth.router, admin_ops.router,
                    admin_owner.router, payments.router):

@@ -45,6 +45,35 @@ def take_back(db: Session, user: User, amount: int, title: str, transaction_id: 
     raise RuntimeError("balance kept changing")
 
 
+# Google Play keeps voided purchases 30 days; a daily check looks back this far, so a missed day or two is caught.
+PLAY_VOIDED_LOOKBACK = timedelta(days=7)
+
+
+def take_back_play_voided(db: Session, play, now: datetime | None = None) -> int:
+    """Google Play refunds (Voided Purchases API), with the App Store's rule (기획서 11.6): only the coins that
+    are left go, the balance stops at 0, and each order is taken back once (`refund:gp:…`).
+    Returns how many purchases were taken back."""
+    from .google_api import play_transaction_id
+
+    since = (now or datetime.now(timezone.utc)) - PLAY_VOIDED_LOOKBACK
+    done = 0
+    for v in play.voided(int(since.timestamp() * 1000)):
+        key = play_transaction_id(v.get("orderId"), v.get("purchaseToken", ""))
+        purchase = db.scalar(select(CoinEntry).where(CoinEntry.transaction_id == key))
+        if purchase is None or purchase.delta <= 0:
+            continue  # not a coin purchase of ours
+        refund_id = f"refund:{key}"
+        if db.scalar(select(CoinEntry.id).where(CoinEntry.transaction_id == refund_id)) is not None:
+            continue
+        user = db.get(User, purchase.user_id) if purchase.user_id else None
+        if user is None:
+            continue  # a deleted account has no coins left to take back
+        take_back(db, user, purchase.delta, "환불", transaction_id=refund_id)
+        db.commit()
+        done += 1
+    return done
+
+
 # 전자상거래법: payment records are kept 5 years. After an account is deleted only its store purchases and
 # refunds stay (user_id NULL, 개인정보 처리방침 3); this is how long. 5 × 365 days plus a leap day or two.
 DETACHED_KEEP = timedelta(days=5 * 365 + 2)

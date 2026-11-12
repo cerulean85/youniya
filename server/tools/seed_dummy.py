@@ -39,6 +39,13 @@ WRITINGS = [
     ("insight", "다시 읽은 편지", "예전에 쓴 편지를 다시 읽었다. 그때의 나는 생각보다 용감했다. 정리해 보면 나는 지금도 그 마음을 갖고 있는데 잊고 살았던 것 같다."),
     ("sorrow", "끝난 드라마", "좋아하던 드라마가 끝났다. 괜히 서운하고 마음 한쪽이 비어 있는 것 같았다. 무언가를 떠나보내는 연습을 이렇게 작게 하고 있는지도 모르겠다."),
     ("calm", "정리한 책상", "미뤄 두던 책상을 정리했다. 깨끗해진 자리를 보니 마음도 같이 정돈되는 기분이었다. 오늘은 이 정도면 충분하다고 스스로에게 말해 줬다."),
+    ("insight", "거절한 날", "처음으로 부탁을 거절했다. 미안한 마음이 오래 남았지만 이제 보니 나를 지키는 일이기도 했다. 내가 원하는 건 모두에게 좋은 사람이 되는 게 아니었다."),
+    ("sorrow", "늦은 답장", "오래 연락하지 못한 친구에게 답장을 보냈다. 그동안 외로웠을 친구 생각에 마음이 아팠다. 서운했던 마음보다 보고 싶은 마음이 더 컸다는 걸 알았다."),
+    ("calm", "첫눈 소식", "첫눈이 온다는 소식에 창문을 열어 두었다. 차가운 공기가 들어와도 마음은 편안했다. 계절이 바뀌는 걸 천천히 느끼는 것도 괜찮은 하루였다."),
+    ("anger", "약속 시간", "친구가 또 늦었다. 기다리는 동안 짜증이 났는데 정리해 보면 내 시간이 가볍게 여겨지는 것 같아 억울했던 것 같다. 다음엔 그 마음을 말해 보려고 한다."),
+    ("insight", "오래된 습관", "밤마다 휴대폰을 보다 잠드는 습관을 알아차렸다. 왜 그랬을까 생각해 보니 하루를 그냥 끝내기가 아쉬웠다. 내가 원했던 건 조금 더 나만의 시간이었다."),
+    ("sorrow", "엄마의 목소리", "전화 너머 엄마 목소리가 조금 지쳐 보였다. 괜히 눈물이 나서 말을 아꼈다. 그립고 미안한 마음을 오늘은 짧은 문자로라도 전해야겠다."),
+    ("calm", "따뜻한 국", "퇴근하고 국을 끓여 먹었다. 따뜻한 국물이 들어가니 하루가 조용히 풀리는 느낌이었다. 쉬어 가는 저녁이 고마웠다."),
 ]
 NEBULA_NAMES = ["조용한 계절", "마음의 지도", "작은 용기들", "흐린 날의 빛", "나를 지나간 것들"]
 
@@ -52,12 +59,16 @@ def ensure_key(db, cipher: Cipher) -> None:
 
 
 def seed_user(db, cipher: Cipher, user: User, rnd: random.Random, ids: dict,
-              start: datetime | None = None, end: datetime | None = None) -> None:
-    """Dates fall between `start` and `end` (default: the last 40 days)."""
+              start: datetime | None = None, end: datetime | None = None, count: int = 10,
+              stars_only: bool = False) -> None:
+    """Dates fall between `start` and `end` (default: the last 40 days). Titles the account already has
+    are not used again."""
     now = datetime.now(timezone.utc)
     end = end or now - timedelta(days=1)
     start = start or now - timedelta(days=40)
-    picks = rnd.sample(WRITINGS, 10)
+    have = {cipher.dec(t) for t in db.scalars(select(Star.title_enc).where(Star.user_id == user.id))}
+    fresh = [w for w in WRITINGS if w[1] not in have]
+    picks = rnd.sample(fresh if len(fresh) >= count else WRITINGS, count)
     stars = []
     for i, (mood, title, body) in enumerate(picks):
         at = start + timedelta(seconds=rnd.uniform(0, (end - start).total_seconds()))
@@ -74,6 +85,8 @@ def seed_user(db, cipher: Cipher, user: User, rnd: random.Random, ids: dict,
         stars.append((star, title, body, lit))
     db.flush()
     ids["stars"] += [s.id for s, *_ in stars]
+    if stars_only:
+        return
 
     lit_stars = sorted([s for s, _, _, lit in stars if lit], key=lambda s: s.created_at)[:4]
     nebula = Nebula(user_id=user.id, name=rnd.choice(NEBULA_NAMES), silhouette=None,
@@ -119,6 +132,9 @@ def main() -> int:
     ap.add_argument("--remove")
     ap.add_argument("--start", help="ISO date-time, e.g. 2026-11-01T00:00:00+09:00")
     ap.add_argument("--end")
+    ap.add_argument("--count", type=int, default=10)
+    ap.add_argument("--stars-only", action="store_true", help="no nebula, no plaza shares")
+    ap.add_argument("--provider", help="only accounts signed up with this provider (apple, google, …)")
     a = ap.parse_args()
     db = sessionmaker(make_engine(os.environ["DATABASE_URL"]))()
     cipher = Cipher(os.environ["DATA_ENCRYPTION_KEY"])
@@ -126,7 +142,10 @@ def main() -> int:
     if a.remove:
         remove(db, a.remove)
         return 0
-    users = db.scalars(select(User).order_by(User.keeper_no)).all()
+    q = select(User).order_by(User.keeper_no)
+    if a.provider:
+        q = q.where(User.provider == a.provider)
+    users = db.scalars(q).all()
     print("accounts:", [(u.keeper_no, u.provider, u.nickname) for u in users])
     if not a.go:
         return 0
@@ -136,7 +155,7 @@ def main() -> int:
     rnd = random.Random()
     for u in users:
         seed_user(db, cipher, u, rnd, ids, datetime.fromisoformat(a.start) if a.start else None,
-                  datetime.fromisoformat(a.end) if a.end else None)
+                  datetime.fromisoformat(a.end) if a.end else None, a.count, a.stars_only)
     db.commit()
     with open(a.out, "w") as f:
         json.dump(ids, f, indent=1)
