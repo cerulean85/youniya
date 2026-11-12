@@ -1,5 +1,12 @@
 package com.dycdyp.youniya.ui.screens
 
+import com.dycdyp.youniya.ui.components.EdgeSwipeWidth
+import com.dycdyp.youniya.ui.components.EdgeSwipeBack
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.animation.core.Animatable
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.slideOutHorizontally
@@ -10,7 +17,6 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.AnimatedContent
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -246,7 +252,7 @@ fun MainScreen(model: AppModel) {
             }
             SkyTabBar(tab, onSelect = { tab = it }, onCompose = compose)
         }
-        Drawer(model, open = drawerOpen, onClose = { drawerOpen = false }, onSelect = { title ->
+        Drawer(model, open = drawerOpen, edgeEnabled = navStack.isEmpty(), onOpenChange = { drawerOpen = it }, onSelect = { title ->
             drawerOpen = false
             when (title) {
                 "알림" -> navStack = navStack + MainNav.Inbox
@@ -257,24 +263,8 @@ fun MainScreen(model: AppModel) {
             }
         })
 
-        // iOS MainView: a pushed page moves in from the trailing edge over a page that stays put,
-        // and moves out the same way on back (easeInOut 0.32s).
-        val reduced = LocalMotionReduced.current
-        AnimatedContent(
-            targetState = navStack,
-            contentKey = { it.size to it.lastOrNull() },
-            transitionSpec = {
-                val push = targetState.size >= initialState.size
-                val spec = tween<IntOffset>(if (reduced) 0 else 320, easing = FastOutSlowInEasing)
-                val t = (if (push) slideInHorizontally(spec) { it } else EnterTransition.None) togetherWith
-                    (if (push) ExitTransition.KeepUntilTransitionsFinished else slideOutHorizontally(spec) { it }) using null
-                // The deeper page stays on top, so on back it slides off the one beneath.
-                t.targetContentZIndex = targetState.size.toFloat()
-                t
-            },
-            label = "nav",
-        ) { stack ->
-            when (val top = stack.lastOrNull()) {
+        val page: @Composable (MainNav?) -> Unit = { top ->
+            when (top) {
                 is MainNav.StarDetail -> {
                     StarDetailScreen(
                         model = model,
@@ -530,6 +520,30 @@ fun MainScreen(model: AppModel) {
                 null -> Unit
             }
         }
+        // iOS MainView: a pushed page moves in from the trailing edge over a page that stays put,
+        // and moves out the same way on back (easeInOut 0.32s).
+        val reduced = LocalMotionReduced.current
+        AnimatedContent(
+            targetState = navStack,
+            contentKey = { it.size to it.lastOrNull() },
+            transitionSpec = {
+                val push = targetState.size >= initialState.size
+                val spec = tween<IntOffset>(if (reduced) 0 else 320, easing = FastOutSlowInEasing)
+                val t = (if (push) slideInHorizontally(spec) { it } else EnterTransition.None) togetherWith
+                    (if (push) ExitTransition.KeepUntilTransitionsFinished else slideOutHorizontally(spec) { it }) using null
+                // The deeper page stays on top, so on back it slides off the one beneath.
+                t.targetContentZIndex = targetState.size.toFloat()
+                t
+            },
+            label = "nav",
+        ) { stack ->
+            // iOS edgeSwipeBack: from the left edge, the page follows the finger over the one beneath.
+            EdgeSwipeBack(
+                enabled = stack.isNotEmpty(),
+                below = { if (stack.size >= 2) page(stack[stack.size - 2]) },
+                onBack = { navStack = navStack.dropLast(1) },
+            ) { page(stack.lastOrNull()) }
+        }
     }
     if (showWelcome) WelcomeSheet(onCompose = { showWelcome = false; compose() }, onBrowse = { showWelcome = false })
     if (model.showPlazaRestricted) {
@@ -740,16 +754,43 @@ private val drawerItems = listOf(
 
 /** 67-1 서랍: slides in from the right, min(320, 84%) wide, over a 0.65 scrim. */
 @Composable
-private fun Drawer(model: AppModel, open: Boolean, onClose: () -> Unit, onSelect: (String) -> Unit) {
-    val progress by animateFloatAsState(if (open) 1f else 0f, spring(dampingRatio = 0.9f, stiffness = 500f), label = "drawer")
-    if (progress == 0f && !open) return
+private fun Drawer(
+    model: AppModel,
+    open: Boolean,
+    edgeEnabled: Boolean,
+    onOpenChange: (Boolean) -> Unit,
+    onSelect: (String) -> Unit,
+) {
+    // iOS EdgeSwipeDrawer: pulled in from the right edge and pushed back out, following the finger.
+    val reveal = remember { Animatable(if (open) 1f else 0f) }
+    val scope = rememberCoroutineScope()
+    val settle = spring<Float>(dampingRatio = 0.9f, stiffness = 500f)
+    LaunchedEffect(open) { reveal.animateTo(if (open) 1f else 0f, settle) }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val width = minOf(320.dp, maxWidth * 0.84f)
-        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.65f * progress)).noRippleClick(onClose))
+        val widthPx = with(LocalDensity.current) { width.toPx() }
+        val drag = rememberDraggableState { d -> scope.launch { reveal.snapTo((reveal.value - d / widthPx).coerceIn(0f, 1f)) } }
+        fun release(velocity: Float, opening: Boolean) {
+            val target = if (opening) reveal.value > 0.35f || velocity < -1200f else !(reveal.value < 0.65f || velocity > 1200f)
+            if (target == open) scope.launch { reveal.animateTo(if (open) 1f else 0f, settle) } else onOpenChange(target)
+        }
+        val progress = reveal.value
+        if (edgeEnabled && !open) {
+            Box(
+                Modifier.align(Alignment.CenterEnd).width(EdgeSwipeWidth).fillMaxHeight()
+                    .draggable(drag, Orientation.Horizontal, onDragStopped = { v -> release(v, opening = true) }),
+            )
+        }
+        if (progress == 0f && !open) return@BoxWithConstraints
+        Box(
+            Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.65f * progress)).noRippleClick { onOpenChange(false) }
+                .draggable(drag, Orientation.Horizontal, onDragStopped = { v -> release(v, opening = false) }),
+        )
         val shape = RoundedCornerShape(topStart = Radius.xl, bottomStart = Radius.xl)
         Column(
             Modifier.align(Alignment.CenterEnd).width(width).fillMaxHeight()
                 .offset(x = width * (1 - progress))
+                .draggable(drag, Orientation.Horizontal, onDragStopped = { v -> release(v, opening = false) })
                 .dropShadow(shape, Shadow(radius = 24.dp, color = Color.Black.copy(alpha = 0.4f), offset = androidx.compose.ui.unit.DpOffset(0.dp, 8.dp)))
                 .background(YColor.bgSurfaceRaised, shape)
                 .cosmos("menu", shape)
