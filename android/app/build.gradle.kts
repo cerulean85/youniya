@@ -40,12 +40,17 @@ android {
             // (e.g. to try the real Apple web flow, which the dev server has no Services ID for).
             val apiBaseUrl = (project.findProperty("apiBaseUrl") as String?) ?: "http://100.126.111.107:8000"
             buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
+            // The dev account the Apple button signs into on the dev server; `-PdevName=…` picks another
+            // (e.g. the store-screenshot demo account).
+            val devName = (project.findProperty("devName") as String?) ?: "android-apple"
+            buildConfigField("String", "DEV_NAME", "\"$devName\"")
         }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             buildConfigField("String", "API_BASE_URL", "\"https://youniya-api.dycdyp.com\"")
+            buildConfigField("String", "DEV_NAME", "\"\"")
             if (uploadStore != null) signingConfig = signingConfigs.getByName("upload")
         }
     }

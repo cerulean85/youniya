@@ -37,7 +37,7 @@ object AppleSignIn {
             .apply {
                 // The dev server has no Apple Services ID; its DEV_LOGIN skips Apple for a dev account
                 // (sign-in only), to try the deep link and the exchange.
-                if (BuildConfig.DEBUG && purpose == Purpose.SignIn) appendQueryParameter("dev_name", "android-apple")
+                if (BuildConfig.DEBUG && purpose == Purpose.SignIn) appendQueryParameter("dev_name", BuildConfig.DEV_NAME)
             }
             .build()
         CustomTabsIntent.Builder().setShowTitle(true).build().launchUrl(context, url)
