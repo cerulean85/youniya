@@ -30,3 +30,15 @@
 .dev { width: 100%; display: flex; gap: 8px; padding-top: 16px; border-top: 1px dashed var(--border); }
 .dev input { flex: 1; min-width: 0; height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--canvas); color: var(--text); }
 .dev .btn { height: 40px; }
+/* 02-1 초대 계정으로 로그인 */
+.inviteLink { font-size: 13px; color: var(--text-3); text-decoration: underline; text-underline-offset: 3px; }
+.inviteLink:hover { color: var(--text); }
+.invite { width: 100%; display: flex; flex-direction: column; gap: 16px; text-align: left; }
+.field { display: flex; flex-direction: column; gap: 8px; }
+.field input { width: 100%; min-width: 0; height: 48px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--canvas); color: var(--text); font: inherit; }
+.field input:focus { outline: none; border-color: var(--primary); }
+.pw { position: relative; display: block; }
+.pw input { padding-right: 72px; }
+.reveal { position: absolute; right: 6px; top: 6px; height: 36px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: var(--text-2); font-size: 13px; cursor: pointer; }
+.reveal:hover { color: var(--text); }
+.error { color: var(--anger); }

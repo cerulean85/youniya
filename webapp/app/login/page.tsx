@@ -35,6 +35,7 @@ export default function LoginPage() {
             <SignInButtons googleClientId={GOOGLE_CLIENT_ID} />
           </Suspense>
           <p className="caption faint">처음이라면 다음 화면에서 이용약관과 개인정보 처리 동의를 받아요.</p>
+          <Link href="/login/invite" className={styles.inviteLink}>초대 계정으로 로그인</Link>
           {DEV_LOGIN && (
             <form action="/auth/dev" method="post" className={styles.dev}>
               <input name="name" placeholder="테스트 계정 이름" defaultValue="web-dev" aria-label="테스트 계정 이름" />
