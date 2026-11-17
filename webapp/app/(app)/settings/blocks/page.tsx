@@ -4,6 +4,7 @@ import { Star } from "@/components/icons";
 import { api } from "@/lib/api";
 import { longDate } from "@/lib/format";
 import { Back } from "../Back";
+import { Sub } from "../Sub";
 import { UnblockButton } from "../SettingsControls";
 import styles from "../settings.module.css";
 
@@ -15,10 +16,10 @@ const WHERE: Record<string, string> = { star: "우주 광장 별", line: "별빛
 // Figma W-82: the API keeps who it was to itself (설정 › 차단한 별지기: when and where, never who).
 export default function BlocksPage() {
   return (
-    <div className={styles.page}>
+    <Sub group="plaza">
       <Back />
       <Suspense fallback={<div className={styles.loading} aria-busy="true" />}><Blocks /></Suspense>
-    </div>
+    </Sub>
   );
 }
 
@@ -33,6 +34,7 @@ async function Blocks() {
   );
   return (
     <>
+      <h1 className="h1">차단한 별지기</h1>
       <p className="body-s muted">차단한 별지기 {items.length}명이에요. 서로의 별과 별빛 한 줄이 보이지 않아요. 누구인지는 보여 드리지 않아요.</p>
       <ul className={styles.items}>
         {items.map((b) => (

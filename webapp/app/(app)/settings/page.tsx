@@ -11,6 +11,7 @@ import { LogoutButton } from "@/components/LogoutButton";
 import { ExportDialog } from "./ExportDialog";
 import { DangerZone, MarketingToggle, MotionToggle } from "./SettingsControls";
 import styles from "./settings.module.css";
+import { GROUPS } from "./Sub";
 
 export const metadata: Metadata = { title: "설정" };
 
@@ -37,7 +38,6 @@ export default function SettingsPage({ searchParams }: PageProps<"/settings">) {
   );
 }
 
-const GROUPS = [["account", "계정"], ["screen", "화면과 움직임"], ["alerts", "알림"], ["plaza", "우주 광장"], ["data", "데이터"], ["help", "도움"]] as const;
 
 const DELETE_NOTE: Record<string, string> = {
   cancel: "Apple 확인을 닫아서 아무것도 지우지 않았어요.",

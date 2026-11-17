@@ -76,3 +76,24 @@
   .toc ul { flex-direction: row; flex-wrap: wrap; gap: 4px 8px; }
   .toc a { padding: 4px 8px; border-left: 0; }
 }
+
+/* Figma 웹 v1.1 설정 세부 (W1.1-17~24): the page beside the index, lists as ruled rows, actions on the right. */
+.toc a[aria-current="true"] { color: var(--text); font-weight: 500; border-left-color: var(--primary); }
+.sub { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+.sub > .back { margin-bottom: -8px; }
+.sub .h1 { margin: 0; }
+.sub .items { gap: 0; }
+.sub .items > li { display: flex; align-items: center; gap: 16px; border-top: 1px solid var(--border); }
+.sub .items > li:last-child { border-bottom: 1px solid var(--border); }
+.sub .item { flex: 1; min-width: 0; padding: 14px 0; border: 0; border-radius: 0; background: none; }
+.sub .item > svg { color: var(--text); }
+.sub .under { margin: 0; flex: none; }
+.sub .textButton { padding: 12px 8px; font: 500 14px/20px var(--sans); color: var(--text-2); }
+.sub .badge { flex: none; background: var(--tint-gold); border: 0; color: var(--gold); }
+.sub .badgeDim { background: var(--raised); color: var(--text-2); }
+.sub .empty { align-items: flex-start; text-align: left; padding: 48px 0 0; }
+.sub .current { padding: 0; background: none; border: 0; }
+.sub .next { padding-top: 16px; border-top: 1px solid var(--border); max-width: 480px; color: var(--text-2); font-weight: 400; }
+.sub .notice { max-width: 480px; }
+.narrow { width: 100%; max-width: 480px; }
+.sub .skyCards { max-width: 560px; }

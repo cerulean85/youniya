@@ -3,7 +3,7 @@
   position: sticky; top: 0; z-index: 20;
   display: flex; align-items: center; justify-content: space-between; gap: 24px;
   height: 64px; padding: 0 40px;
-  background: var(--canvas); border-bottom: 1px solid var(--border);
+  background: rgb(11 15 25 / 0.72); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border);
 }
 .left { display: flex; align-items: center; gap: 40px; height: 100%; min-width: 0; }
 .logo { display: inline-flex; align-items: center; gap: 8px; flex: none; font: 500 18px/28px var(--serif); letter-spacing: 2px; color: var(--text); }
