@@ -64,7 +64,7 @@ export function Recharge({ packages, available, site , from }: { packages: Coins
       <button type="button" className={`btn btn-primary btn-block ${styles.pay}`} disabled={!ready || !agreed || !pack || pending} onClick={pay}>
         {!ready ? "웹 충전 준비 중" : pending ? "결제창을 여는 중…" : `${pack?.coins.toLocaleString("ko-KR")}코인 충전하기 · ${pack?.price.toLocaleString("ko-KR")}원`}
       </button>
-      <p className="caption faint">누르면 토스페이먼츠 결제창이 열려요. 결제 후 7일 안에 쓰지 않은 코인은 문의하기로 환불을 요청할 수 있어요.</p>
+      <p className="caption faint">누르면 토스페이먼츠 결제창이 열려요. 결제하면 코인이 바로 지급되고, 유효기간 없이 쓸 수 있어요. 결제 후 7일 안에 쓰지 않은 코인은 문의하기로 환불을 요청할 수 있어요.</p>
     </section>
   );
 }
