@@ -1,54 +1,35 @@
+/* Figma 웹 v1.1 · 코인 (642:31448): the balance and 충전하기 (640) | the history (500). */
 .loading { min-height: 480px; }
-.balance { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 999px; border: 1px solid rgba(251, 191, 36, 0.6); background: var(--tint-gold); color: var(--text-2); font: 500 14px/20px var(--sans); }
-.balance svg { color: var(--gold); }
-.balance b { font: 400 18px/24px var(--serif); color: var(--gold); }
+.page { display: grid; grid-template-columns: minmax(0, 640fr) minmax(300px, 500fr); gap: 56px; align-items: start; }
+.main { display: flex; flex-direction: column; gap: 28px; min-width: 0; }
 .notice { align-self: flex-start; padding: 10px 16px; border-radius: 12px; background: var(--tint-calm); border: 1px solid rgba(52, 211, 153, 0.4); font: 400 13px/20px var(--sans); }
-.body { display: grid; grid-template-columns: 440px 1fr; gap: 24px; align-items: start; }
-.recharge { padding: 24px; border-radius: 22px; display: flex; flex-direction: column; gap: 14px; }
-.packs { display: flex; flex-direction: column; gap: 10px; }
-.pack { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-radius: 14px; background: var(--raised); border: 1px solid var(--border); color: var(--text); cursor: pointer; text-align: left; }
-.pack[aria-checked="true"] { border-color: var(--primary); background: var(--tint); }
-.pack[aria-checked="true"] .price { color: var(--primary-text); }
-.coinMark { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--gold); color: #3b2a00; flex: none; }
+.balance { display: flex; flex-direction: column; gap: 8px; padding-bottom: 24px; border-bottom: 1px solid var(--border); margin-top: -8px; }
+.balance > p:first-child { margin: 0; display: flex; align-items: baseline; gap: 10px; }
+.balance b { font: 300 56px/1.1 var(--sans); color: #f8fafc; font-variant-numeric: tabular-nums; }
+.balance > p:first-child span { font: 400 15px/22px var(--sans); color: var(--text-2); }
+.recharge { display: flex; flex-direction: column; gap: 20px; }
+.packs { display: flex; flex-direction: column; border-top: 1px solid var(--border); }
+.pack { display: flex; align-items: center; gap: 16px; padding: 18px 16px; border: 0; border-bottom: 1px solid var(--border); background: none; color: var(--text); cursor: pointer; text-align: left; }
+.pack:hover { background: rgb(255 255 255 / 0.02); }
+.pack[aria-checked="true"] { background: rgb(var(--tint-rgb) / 0.14); }
+.radio { flex: none; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--text-2); }
+.pack[aria-checked="true"] .radio { border-color: var(--primary); background: var(--primary); box-shadow: inset 0 0 0 3px var(--canvas); }
 .packText { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-.price { font: 500 14px/20px var(--sans); }
-.agree { display: flex; align-items: center; gap: 10px; padding: 8px 0; font: 400 14px/20px var(--sans); cursor: pointer; }
-.agree input { accent-color: var(--primary); width: 18px; height: 18px; }
-.agree span { flex: 1; }
-.agree a { color: var(--text-3); display: grid; }
-.side { display: flex; flex-direction: column; gap: 16px; }
-.free { padding: 20px; border-radius: 18px; display: flex; flex-direction: column; gap: 12px; }
-.freeGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.freeGrid > div { padding: 14px 16px; border-radius: 12px; background: var(--tint-calm); display: flex; flex-direction: column; gap: 4px; }
-.freeGrid b { font: 400 22px/28px var(--serif); color: var(--calm); }
-.history { padding: 20px; border-radius: 18px; display: flex; flex-direction: column; gap: 8px; }
-.historyHead { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.price { font: 500 14px/20px var(--sans); font-variant-numeric: tabular-nums; }
+.agree { display: flex; align-items: center; gap: 10px; font: 400 14px/20px var(--sans); color: var(--text-2); cursor: pointer; }
+.agree input { accent-color: var(--primary); width: 18px; height: 18px; margin: 0; }
+.agree a { font: 400 12px/18px var(--sans); color: var(--text-2); }
+.agree a:hover { color: var(--text); }
+.pay { height: 48px; }
+.history { display: flex; flex-direction: column; }
+.historyHead { display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0 14px; border-bottom: 1px solid var(--border); }
+.historyLink { font: 400 12px/18px var(--sans); color: var(--text); }
+.historyLink:hover { color: var(--primary-text); }
+.historyEmpty { padding: 20px 0; }
 .history ul { list-style: none; margin: 0; padding: 0; }
-.history li { display: grid; grid-template-columns: 72px 1fr auto; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
-.history li:last-child { border-bottom: 0; }
-.what { display: flex; flex-direction: column; gap: 2px; }
-.delta { font: 500 14px/20px var(--sans); color: var(--text-2); }
-.delta[data-tone="plus"] { color: var(--gold); }
+.history li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.what { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.delta { flex: none; font: 400 14px/20px var(--sans); color: var(--text-2); font-variant-numeric: tabular-nums; }
+.delta[data-tone="plus"] { color: var(--text); }
 .delta[data-tone="free"] { color: var(--calm); }
-@media (max-width: 1100px) { .body { grid-template-columns: 1fr; } }
-.historyLink { color: var(--primary-text); }
-.historyLink:hover { color: var(--text); }
-
-/* Figma Web 시안 v2 · 코인 (597:30548). */
-.balanceV2 { display: flex; flex-direction: column; gap: 6px; }
-.balanceV2 > p:first-child { margin: 0; display: flex; align-items: baseline; gap: 14px; }
-.balanceV2 b { font: 600 44px/1.1 var(--serif); color: #fcd34d; }
-.balanceV2 > p:first-child span { font: 400 15px/22px var(--sans); color: #fcd34d; }
-.recharge { padding: 0; border-radius: 0; background: none; border: 0; box-shadow: none; display: flex; flex-direction: column; gap: 14px; }
-.packs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-.pack { flex-direction: column; align-items: flex-start; gap: 18px; padding: 18px 18px 16px; border-radius: 16px; background: rgb(255 255 255 / 0.04); border: 1px solid rgb(255 255 255 / 0.12); }
-.pack[aria-checked="true"] { border-color: rgb(167 139 250 / 0.8); background: rgb(139 92 246 / 0.18); }
-.packCoins { font: 600 22px/1.3 var(--serif); color: #f8fafc; }
-.pay { align-self: flex-start; min-width: 240px; height: 52px; }
-.history { padding: 0; background: none; border: 0; border-radius: 0; display: flex; flex-direction: column; gap: 4px; margin-top: 12px; }
-.historyHead { border-bottom: 0; padding-bottom: 4px; }
-.history li { grid-template-columns: 1fr auto; padding: 12px 0; border-bottom: 1px solid rgb(255 255 255 / 0.08); }
-.history li:last-child { border-bottom: 1px solid rgb(255 255 255 / 0.08); }
-.what > span:first-child { font: 400 15px/22px var(--sans); color: #f1f5f9; }
-.delta { font: 400 16px/22px var(--serif); color: #cbd5e1; }
-@media (max-width: 720px) { .packs { grid-template-columns: 1fr; } .pay { width: 100%; } }
+@media (max-width: 1100px) { .page { grid-template-columns: 1fr; } }

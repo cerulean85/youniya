@@ -1,11 +1,19 @@
-/* Figma Web 시안 v2 · 문의하기 (597:30827). */
-.card { display: flex; flex-direction: column; gap: 22px; }
-.field { display: flex; flex-direction: column; gap: 8px; }
-.field input, .field textarea, .field select { background: rgb(255 255 255 / 0.04); border: 1px solid rgb(255 255 255 / 0.12); border-radius: 12px; padding: 12px 14px; color: var(--text); font: 400 15px/22px var(--sans); outline: none; resize: vertical; }
+/* Figma 웹 v1.1 · 문의 (642:31638): the form (600) | a hairline | 109. */
+.page { display: grid; grid-template-columns: minmax(0, 600px) minmax(260px, 420px); gap: 80px; align-items: start; }
+.main { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+.back { align-self: flex-start; margin-bottom: 8px; font: 400 14px/20px var(--sans); color: var(--text-2); }
+.back:hover { color: var(--text); }
+.card { display: flex; flex-direction: column; gap: 20px; }
+.field { display: flex; flex-direction: column; gap: 10px; }
+.field input, .field select, .box { background: var(--raised); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; color: var(--text); font: 400 14px/22px var(--sans); outline: none; }
+.kind { align-self: flex-start; padding-right: 40px !important; }
 .field select { appearance: none; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round'><path d='m6 9 6 6 6-6'/></svg>"); background-repeat: no-repeat; background-position: right 14px center; }
 .field select option { background: #131a2a; }
-.field input:focus, .field textarea:focus, .field select:focus { border-color: rgb(167 139 250 / 0.8); }
-.field input::placeholder, .field textarea::placeholder { color: var(--text-3); }
-.foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.foot p { margin: 0; max-width: 420px; }
-.crisis { margin: 28px 0 0; font: 400 17px/1.6 var(--serif); color: #f1f5f9; }
+.box { display: flex; flex-direction: column; gap: 8px; cursor: text; }
+.box textarea { resize: vertical; min-height: 130px; padding: 0; background: none; border: 0; outline: none; color: var(--text); font: inherit; }
+.field input:focus, .field select:focus, .box:focus-within { border-color: var(--focus); }
+.field input::placeholder, .box textarea::placeholder { color: var(--text-3); }
+.side { display: flex; flex-direction: column; gap: 12px; margin-top: 0; padding: 130px 0 0 40px; border-left: 1px solid var(--border); min-height: 228px; }
+.call { font: 500 14px/20px var(--sans); color: var(--text); }
+.call:hover { color: var(--primary-text); }
+@media (max-width: 1000px) { .page { grid-template-columns: 1fr; gap: 32px; } .side { padding: 24px 0 0; border-left: 0; border-top: 1px solid var(--border); min-height: 0; } }

@@ -1,14 +1,10 @@
-.box { display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 16px; background: var(--raised); border: 1px solid var(--border); }
-.row { display: flex; align-items: center; gap: 8px; }
-.who { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; color: var(--text); }
-.who > svg { flex: none; color: var(--text-2); }
-.whoText { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.coins { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--canvas); font: 500 13px/20px var(--sans); }
+/* Figma 웹 v1.1 Coin Chip (12:136) and Account (633:30963). */
+.coins { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--raised); font: 500 14px/20px var(--sans); color: var(--text); }
 .coins svg { color: var(--gold); }
-.logout { background: none; border: 0; padding: 0; cursor: pointer; font: 400 12px/18px var(--sans); color: var(--text-3); }
-.logout:hover { color: var(--text); }
-/* Narrow screens: only the balance, at the right of the top bar (settings stay in the nav). */
-@media (max-width: 720px) {
-  .box { order: 2; margin-left: auto; padding: 0; gap: 0; background: none; border: 0; }
-  .who, .logout { display: none; }
-}
+.coins:hover { border-color: var(--text-3); }
+.who { display: inline-flex; align-items: center; gap: 8px; color: var(--text-2); font: 500 14px/20px var(--sans); max-width: 160px; }
+.who:hover { color: var(--text); }
+.who svg { flex: none; }
+.name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.skeleton { display: inline-block; width: 180px; height: 30px; }
+@media (max-width: 720px) { .name { display: none; } }

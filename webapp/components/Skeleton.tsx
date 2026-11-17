@@ -18,16 +18,18 @@ const Lines = ({ n, h = 10, gap = 14 }: { n: number; h?: number; gap?: number })
 
 /** W-63 오늘: the writing card, the month's link, recent stars. */
 export function HomeSkeleton() {
+  // 웹 v1.1 · 오늘: the editor box on the left, the month and recent stars beside it.
   return (
     <Wrap label="오늘을 불러오는 중">
-      <div className={styles.split} style={{ gridTemplateColumns: "1fr 400px" }}>
-        <div className={styles.col} style={{ gap: 24 }}>
-          <div className={`card ${styles.card}`} style={{ height: 230, borderRadius: 24 }}><div className={styles.row}><Bar w="45%" h={14} /><Bar w="16%" h={8} /></div><Bar w="85%" h={8} /><Bar w={240} h={40} /><Bar w="55%" h={8} /></div>
-          <div className={`card ${styles.card}`} style={{ height: 56, borderRadius: 16 }}><div className={styles.row}><Bar w="55%" h={8} /><Bar w="14%" h={8} /></div></div>
+      <div className={styles.split} style={{ gridTemplateColumns: "minmax(0, 764fr) minmax(300px, 380fr)", gap: 56 }}>
+        <div className={styles.col} style={{ gap: 16 }}>
+          <Bar w={180} h={10} />
+          <div className={`card ${styles.card}`} style={{ height: 620, borderRadius: 16, padding: "32px 40px" }}><div className={styles.row}><Bar w="50%" h={14} /></div><Bar w="40%" h={22} /><Lines n={4} h={9} gap={18} /></div>
         </div>
         <div className={styles.col}>
-          <div className={styles.row}><Bar w="80%" h={8} /><Bar w="10%" h={8} /></div>
-          {[0, 1, 2, 3, 4].map((i) => <Block key={i} h={70} r={16} />)}
+          <Bar w="60%" h={12} />
+          <Block h={250} r={16} />
+          {[0, 1, 2, 3].map((i) => <Block key={i} h={56} r={12} />)}
         </div>
       </div>
     </Wrap>
@@ -58,22 +60,18 @@ export function StarSkeleton() {
 
 /** W-65 기록: list or calendar tabs, search, filter chips, month groups and the calendar card. */
 export function RecordsSkeleton() {
+  // 웹 v1.1 · 불러오는 중 · 기록 (644:31657): the 별빛 흐름 block, the three filters, then table rows.
   return (
     <Wrap label="기록을 불러오는 중">
-      <div className={styles.col} style={{ gap: 20 }}>
-        <div className={styles.row} style={{ gap: 16 }}><Block w={340} h={42} r={999} /><Block h={42} r={14} /></div>
-        <div className={styles.chips}>{[64, 76, 100, 64, 64, 64, 64].map((w, i) => <Block key={i} w={w} h={32} r={10} />)}</div>
-        <div className={styles.splitWide} style={{ gridTemplateColumns: "1fr 340px" }}>
-          <div className={styles.col}>
-            <div className={styles.row}><Bar w="90%" h={8} /><Bar w="8%" h={8} /></div>
-            {[0, 1, 2, 3].map((i) => <Block key={i} h={78} r={16} />)}
-            <div className={styles.row}><Bar w="90%" h={8} /><Bar w="8%" h={8} /></div>
-            {[0, 1].map((i) => <Block key={i} h={78} r={16} />)}
-          </div>
-          <div className={`card ${styles.card}`}>
-            <div className={styles.row}><Bar w="80%" /><Bar w="12%" /></div>
-            <div className={styles.calDots}>{Array.from({ length: 30 }, (_, i) => <Bar key={i} w={12} h={8} />)}</div>
-          </div>
+      <div className={styles.col} style={{ gap: 24 }}>
+        <Block h={96} r={16} />
+        <div className={styles.chips}>{[72, 110, 110].map((w, i) => <Block key={i} w={w} h={36} r={999} />)}</div>
+        <div className={styles.col} style={{ gap: 0 }}>
+          {[280, 220, 320, 180, 260, 240, 200].map((w, i) => (
+            <div key={i} className={styles.row} style={{ gap: 24, padding: "20px 0", borderBottom: "1px solid var(--border)" }}>
+              <Block w={28} h={28} r={999} /><Bar w={w} h={14} /><span style={{ flex: 1 }} /><Bar w={90} h={14} /><Bar w={48} h={14} />
+            </div>
+          ))}
         </div>
       </div>
     </Wrap>

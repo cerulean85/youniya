@@ -55,7 +55,7 @@ export function StarlightReading({ analysis, readAt, version, open: startOpen = 
         </section>
       )}
       <button type="button" className={styles.toggle} aria-expanded={open} onClick={() => setOpen(!open)}>
-        {open ? "별빛 풀이 접기 ▴" : "별빛 풀이 보기 ▾"}
+        {open ? "별빛 풀이 접기 ‹" : "별빛 풀이 전체 보기 ›"}
       </button>
     </div>
   );

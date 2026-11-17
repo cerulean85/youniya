@@ -5,9 +5,9 @@ export function PageHeader({ title, sub, aside }: { title: string; sub?: ReactNo
   return (
     <header className={styles.header}>
       <div className={styles.titles}>
-        {/* Web 시안 v2 tool screens (설정·알림·코인·문의): a 36px serif title, no lead. */}
-        <h1 className="v2-tool">{title}</h1>
-        {sub && <p className="v2-body">{sub}</p>}
+        {/* 웹 v1.1 tool screens (알림·코인·설정·문의): the 28px serif title, a quiet line under it. */}
+        <h1 className="h1">{title}</h1>
+        {sub && <p className="body-m muted">{sub}</p>}
       </div>
       {aside}
     </header>

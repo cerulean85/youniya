@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import styles from "./Sidebar.module.css";
+import styles from "./TopBar.module.css";
 
 /** A gold dot beside 알림 while something is unread. Quiet on servers without the 알림함 API. */
 export async function UnreadDot() {

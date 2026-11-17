@@ -7,3 +7,16 @@
 .orb b { position: absolute; width: 6px; height: 6px; border-radius: 50%; right: 18px; top: 10px; background: var(--gold); box-shadow: -96px 76px 0 -1px #22d3ee; }
 .orb svg { position: relative; }
 .actions { width: 100%; display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+
+/* 웹 v1.1 (644:31823, 644:31950): inside the app, left-aligned under the top bar; no orb, a 24px icon. */
+.status:not([data-full]) { max-width: 600px; margin: 0; min-height: 0; align-items: flex-start; justify-content: flex-start; text-align: left; gap: 16px; padding: 80px 0 32px; }
+.status:not([data-full]) .orb { width: auto; height: auto; margin: 0 0 4px; color: var(--text-2); }
+.status:not([data-full]) .orb > :is(span, i, b) { display: none; }
+.status:not([data-full]) .orb svg { width: 28px; height: 28px; }
+.note { margin: 4px 0 0 !important; padding: 4px 0 4px 16px; border-left: 2px solid var(--pink); font: 400 14px/22px var(--sans); color: var(--text); }
+.status:not([data-full]) .actions { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin-top: 8px; }
+.status:not([data-full]) .actions :global(.btn) { width: auto; height: 48px; }
+.status:not([data-full]) .actions :global(.btn-primary) { padding: 0 24px; }
+.status:not([data-full]) .actions :global(.btn-primary[aria-disabled="true"]) { opacity: 1; color: var(--text-2); background: var(--border); box-shadow: none; pointer-events: none; }
+.status:not([data-full]) .actions :global(:is(.btn-ghost, .btn-secondary)) { padding: 0; border: 0; background: none; color: var(--text); }
+.status:not([data-full]) .actions > :is(p, div, form) { flex-basis: 100%; margin: 0; }

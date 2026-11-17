@@ -56,3 +56,43 @@ a.tag:hover { color: var(--text); background: var(--tint); }
 .head { padding-right: 44px; }
 .card [data-paused] { opacity: 0.45; }
 .sentLine { display: flex; flex-direction: column; gap: 4px; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border); background: rgb(255 255 255 / 0.03); }
+
+/* Figma 웹 v1.1 · 광장 별 상세 (640:31343): the writing (700) | a hairline | the star and 별빛 한 줄. */
+.back { align-self: flex-start; gap: 4px; font-weight: 400; margin-bottom: 0; }
+.back:hover { color: var(--text); }
+.v11 { display: grid; grid-template-columns: minmax(0, 700fr) minmax(320px, 436fr); align-items: start; margin-top: -8px; }
+.left { display: flex; flex-direction: column; gap: 18px; padding-right: 64px; min-width: 0; }
+.title { margin: 4px 0 0; font: 600 40px/52px var(--serif); color: #f8fafc; }
+.left .quote { margin: 4px 0 0; padding: 0 0 0 18px; border: 0; border-left: 2px solid var(--primary); border-radius: 0; background: none; font: 400 16px/26px var(--serif); color: var(--text); }
+.left .full { white-space: pre-wrap; padding: 0 0 28px; border-bottom: 1px solid var(--border); font: 400 16px/30px var(--serif); color: var(--text); }
+.keeperLink { color: inherit; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--text-3); }
+.keeperLink:hover { color: var(--text); }
+.left .actions { align-items: center; gap: 36px; padding-top: 28px; }
+.left .actions .btn { flex: none; height: 48px; }
+.keeper { font: 400 14px/20px var(--sans); color: var(--text); }
+.keeper:hover { color: var(--primary-text); }
+.left .menuWrap { position: relative; top: auto; right: auto; margin-left: auto; }
+.left .menuButton { width: auto; height: auto; gap: 6px; display: inline-flex; align-items: center; padding: 0; border: 0; border-radius: 0; background: none; font: 400 14px/20px var(--sans); color: var(--text-2); }
+.left .menuButton:hover, .left .menuButton[aria-expanded="true"] { color: var(--text); }
+.left .menu { top: 28px; }
+.right { display: flex; flex-direction: column; gap: 24px; padding-left: 40px; border-left: 1px solid var(--border); min-height: 480px; }
+.hero { position: relative; display: grid; place-items: center; height: 180px; }
+.hero > svg { position: relative; }
+.unlit { position: relative; width: 48px; height: 48px; border-radius: 50%; opacity: 0.55; box-shadow: 0 0 48px currentColor; }
+.panel { display: flex; flex-direction: column; gap: 14px; }
+.panel .lineForm { gap: 16px; }
+.panel .lineForm > * { order: 0; }
+.panel .chip { padding: 8px 16px; border-radius: 18px; font: 400 14px/20px var(--sans); background: none; border-color: rgb(255 255 255 / 0.16); }
+.panel .chip::before { display: none; }
+.panel .lineInput { flex-direction: column; align-items: stretch; gap: 6px; padding: 14px 16px; border-radius: 12px; background: var(--raised); border: 1px solid var(--border); cursor: text; }
+.panel .lineInput:focus-within { border-color: var(--focus); }
+.panel .lineInput textarea { resize: none; background: none; border: 0; outline: none; padding: 0; color: var(--text); font: 400 14px/22px var(--sans); }
+.panel .btn { height: 48px; }
+@media (max-width: 1100px) {
+  .v11 { grid-template-columns: 1fr; gap: 40px; }
+  .left { padding-right: 0; }
+  .right { padding-left: 0; border-left: 0; min-height: 0; }
+  .hero { display: none; }
+}
+@media (max-width: 720px) { .title { font-size: 30px; line-height: 40px; } .left .actions { gap: 16px 24px; flex-wrap: wrap; } }
+.panel[data-paused] { opacity: 0.45; }

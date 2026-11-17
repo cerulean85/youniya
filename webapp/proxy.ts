@@ -58,5 +58,5 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   // App screens only: not Next internals, icons or the public star tile.
-  matcher: ["/((?!_next/|icon|apple-icon|stars\\.svg|favicon).*)"],
+  matcher: ["/((?!_next/|icon|apple-icon|stars\\.svg|sparkle\\.svg|favicon).*)"],
 };

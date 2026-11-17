@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { Lock, Shield, Sparkle } from "./icons";
 
@@ -30,7 +29,8 @@ export function WelcomeSheet({ account }: { account: string }) {
           </li>
         ))}
       </ul>
-      <Link href="/write" className="btn btn-primary btn-block" onClick={() => dialog.current?.close()}>첫 별 만들기</Link>
+      {/* 웹 v1.1: 오늘 is the editor, so the sheet closes onto it with the writing ready. */}
+      <button type="button" className="btn btn-primary btn-block" onClick={() => { dialog.current?.close(); document.querySelector<HTMLTextAreaElement>("textarea[name=body]")?.focus(); }}>첫 별 쓰기</button>
       <button type="button" className="btn btn-ghost btn-block" onClick={() => dialog.current?.close()}>먼저 둘러볼게요</button>
     </dialog>
   );

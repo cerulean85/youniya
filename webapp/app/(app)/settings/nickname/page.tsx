@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { longDate } from "@/lib/format";
 import type { Me } from "@/lib/types";
 import { Back } from "../Back";
+import { Sub } from "../Sub";
 import styles from "../settings.module.css";
 
 export const metadata: Metadata = { title: "별지기 이름" };
@@ -12,10 +13,10 @@ export const metadata: Metadata = { title: "별지기 이름" };
 // Figma W-80: once every 30 days; the new name follows every star and line already shared.
 export default function NicknamePage() {
   return (
-    <div className={styles.page}>
+    <Sub group="account">
       <Back />
       <Suspense fallback={<div className={styles.loading} aria-busy="true" />}><Nickname /></Suspense>
-    </div>
+    </Sub>
   );
 }
 
@@ -33,7 +34,12 @@ async function Nickname() {
           <p className={styles.current}><span className="caption faint">별지기 이름</span><span className="body-l">{me.nickname}</span></p>
           <p className={styles.next}>다음 변경은 {longDate(wait)}부터 할 수 있어요</p>
         </>
-      ) : <NicknameForm initial={me.nickname ?? ""} next="/settings" submit={me.nickname ? "바꾸기" : "정하기"} />}
+      ) : (
+        <>
+          {me.nickname && <p className={styles.current}><span className="caption faint">지금 이름</span><span className="body-l">{me.nickname}</span></p>}
+          <div className={styles.narrow}><NicknameForm initial={me.nickname ?? ""} next="/settings" submit={me.nickname ? "바꾸기" : "정하기"} /></div>
+        </>
+      )}
     </>
   );
 }

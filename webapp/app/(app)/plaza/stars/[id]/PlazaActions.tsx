@@ -23,7 +23,7 @@ export const REASONS = [
 
 type Lines = "open" | "left" | "closed";
 
-export function PlazaActions({ id, resonated, keeper, lines, name = null, mine = false, restricted = false }: { id: string; resonated: boolean; beside: boolean; keeper: string | null; lines: Lines; name?: string | null; mine?: boolean; restricted?: boolean }) {
+export function PlazaActions({ id, resonated, keeper, name = null, mine = false, restricted = false }: { id: string; resonated: boolean; keeper: string | null; name?: string | null; mine?: boolean; restricted?: boolean }) {
   const router = useRouter();
   // Mobile PlazaStar: while the plaza is paused for me, 공명 and 건네기 dim and open the note about it instead.
   const paused = () => router.push("/plaza?restricted=1");
@@ -31,36 +31,18 @@ export function PlazaActions({ id, resonated, keeper, lines, name = null, mine =
   const [, start] = useTransition();
   const report = useRef<HTMLDialogElement>(null);
   const block = useRef<HTMLDialogElement>(null);
-  const line = useRef<HTMLDialogElement>(null);
 
   return (
     <>
-      {!mine && <MoreMenu onReport={() => report.current?.showModal()} onBlock={() => block.current?.showModal()} />}
+      {/* Figma 웹 v1.1 · 광장 별 상세 (640:31343): 공명 and the keeper's sky in one row, 신고 · 차단 at its end. */}
       <div className={styles.actions}>
         <button type="button" className={`btn ${on ? styles.on : "btn-secondary"}`} aria-pressed={on} data-paused={restricted || undefined}
           onClick={() => restricted ? paused() : start(async () => { setOn(!on); await toggleResonance(id, !on); })}>
           <Heart size={16} />{on ? "공명했어요" : "공명 남기기"}
         </button>
-        {keeper ? <Link href={keeper} className="btn btn-primary">이 별지기의 밤하늘 보기</Link> : <span />}
+        {keeper && <Link href={keeper} className={styles.keeper}>이 별지기의 밤하늘 보기</Link>}
+        {!mine && <MoreMenu onReport={() => report.current?.showModal()} onBlock={() => block.current?.showModal()} />}
       </div>
-      {/* 107: once left, or when the owner doesn't take lines, a dim note instead of the button. */}
-      {/* Mobile StarLine: the line I sent stays on this device, so it can be shown again. */}
-      {lines === "left" && <SentLine id={id} />}
-      {lines === "open" ? (
-        <button type="button" className={styles.lineButton} data-paused={restricted || undefined} onClick={() => restricted ? paused() : line.current?.showModal()}>✦ 별빛 한 줄 건네기</button>
-      ) : (
-        <p className={`caption faint ${styles.lineNote}`}>{lines === "left" ? "이 별에는 이미 한 줄을 건넸어요" : "이 별은 별빛 한 줄을 받지 않아요"}</p>
-      )}
-      {!mine && (
-        <div className={styles.more}>
-          <button type="button" onClick={() => report.current?.showModal()}>신고하기</button>
-          <button type="button" onClick={() => block.current?.showModal()}>이 별지기 차단</button>
-        </div>
-      )}
-
-      <dialog ref={line} className={`card ${styles.dialog}`} aria-labelledby="line-title">
-        <LineForm id={id} onDone={() => line.current?.close()} />
-      </dialog>
 
       <dialog ref={report} className={`card ${styles.dialog}`} aria-labelledby="report-title">
         <form action={reportShare.bind(null, id)}>
@@ -108,8 +90,8 @@ function MoreMenu({ onReport, onBlock }: { onReport: () => void; onBlock: () => 
   const pick = (run: () => void) => () => { setOpen(false); run(); };
   return (
     <div ref={wrap} className={styles.menuWrap}>
-      <button type="button" className={styles.menuButton} aria-label="더 보기" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-        <More size={18} />
+      <button type="button" className={styles.menuButton} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <More size={16} />신고 · 차단
       </button>
       {open && (
         <div role="menu" className={styles.menu}>
@@ -127,6 +109,26 @@ function MoreMenu({ onReport, onBlock }: { onReport: () => void; onBlock: () => 
   );
 }
 
+/** Figma 웹 v1.1 (640:31343): 별빛 한 줄 sits open in the right column instead of a dialog. */
+export function LinePanel({ id, lines, restricted = false }: { id: string; lines: Lines; restricted?: boolean }) {
+  const router = useRouter();
+  return (
+    <section className={styles.panel} aria-labelledby="line-title" data-paused={restricted || undefined}>
+      {lines === "open" ? (
+        <div onClickCapture={restricted ? (e) => { e.preventDefault(); e.stopPropagation(); router.push("/plaza?restricted=1"); } : undefined}>
+          <LineForm id={id} />
+        </div>
+      ) : (
+        <>
+          <h2 id="line-title" className="h3">별빛 한 줄</h2>
+          {lines === "left" && <SentLine id={id} />}
+          <p className="caption faint">{lines === "left" ? "이 별에는 이미 한 줄을 건넸어요. 건넨 한 줄은 고칠 수 없어요." : "이 별은 별빛 한 줄을 받지 않아요."}</p>
+        </>
+      )}
+    </section>
+  );
+}
+
 // Figma W-55: a quick chip, or up to 60 characters; checked for hurtful words, contacts and advice before it goes.
 const sentKey = (id: string) => `yn_line_${id}`;
 const onStorage = (change: () => void) => { window.addEventListener("storage", change); return () => window.removeEventListener("storage", change); };
@@ -137,35 +139,34 @@ function SentLine({ id }: { id: string }) {
   return <div className={styles.sentLine}><span className="caption faint">내가 건넨 한 줄</span><p className="body-s">{sent}</p></div>;
 }
 
-function LineForm({ id, onDone }: { id: string; onDone: () => void }) {
+function LineForm({ id }: { id: string }) {
   const [state, action] = useActionState(leaveLine.bind(null, id), null);
   const [text, setText] = useState("");
   useEffect(() => { if (state?.ok && state.sent) try { localStorage.setItem(sentKey(id), state.sent); } catch { /* private mode */ } }, [state, id]);
   if (state?.ok) {
     return (
       <div className={styles.lineDone}>
-        <h2 id="line-title" className="h2">별빛 한 줄을 건넸어요</h2>
-        <p className="body-s muted">별 주인만 읽을 수 있어요.</p>
-        <button type="button" className="btn btn-primary" onClick={onDone}>닫기</button>
+        <h2 id="line-title" className="h3">별빛 한 줄을 건넸어요</h2>
+        <SentLine id={id} />
+        <p className="caption faint">별 주인만 읽을 수 있어요. 건넨 한 줄은 고칠 수 없어요.</p>
       </div>
     );
   }
   return (
     <form action={action} className={styles.lineForm}>
-      <h2 id="line-title" className="h2">별빛 한 줄 건네기</h2>
-      <p className="caption muted">한 사람이 한 별에 한 줄씩 건넬 수 있어요. 별 주인만 읽을 수 있어요.</p>
-      {/* The text row comes first in the markup so Enter sends the text, not the first chip; CSS puts the chips above. */}
-      <div className={styles.lineInput}>
-        <input name="text" value={text} maxLength={60} onChange={(e) => setText(e.target.value)} placeholder="한 줄을 남겨 보세요 (60자)" aria-label="별빛 한 줄" />
-        <span className="caption faint">{text.length}/60</span>
-        <SendButton disabled={!text.trim()} />
-      </div>
+      <h2 id="line-title" className="h3">별빛 한 줄 건네기</h2>
+      <p className="caption muted">별 주인만 읽을 수 있어요. 한 별에 한 번, 60자까지 건넬 수 있어요.</p>
+      {/* A chip goes as it is; the box takes my own words. */}
       <div className={styles.chips}>
         {LINE_CHIPS.map((c) => <ChipButton key={c.key} chip={c.key} label={c.label} />)}
       </div>
+      <label className={styles.lineInput}>
+        <textarea name="text" value={text} maxLength={60} rows={2} onChange={(e) => setText(e.target.value)} placeholder="내 말로 한 줄 남기기" aria-label="별빛 한 줄" />
+        <span className="caption faint">{text.length} / 60</span>
+      </label>
       {state?.error && <p className="body-s" role="alert" style={{ color: "var(--anger)" }}>{state.error}</p>}
-      <p className="caption faint">상처 주는 말은 별빛이 되지 못해요 · 보내기 전에 한 번 걸러요 · 신고</p>
-      <button type="button" className="btn btn-ghost" onClick={onDone}>닫기</button>
+      <SendButton disabled={!text.trim()} />
+      <p className="caption faint">건넨 한 줄은 고칠 수 없어요. 상처 주는 말은 보내기 전에 한 번 걸러요.</p>
     </form>
   );
 }
@@ -177,7 +178,7 @@ function ChipButton({ chip, label }: { chip: string; label: string }) {
 
 function SendButton({ disabled }: { disabled: boolean }) {
   const { pending } = useFormStatus();
-  return <button className={styles.send} disabled={disabled || pending} aria-label="보내기">↑</button>;
+  return <button className="btn btn-primary btn-block" disabled={disabled || pending}>{pending ? "건네는 중…" : "건네기"}</button>;
 }
 
 function Submit({ label, busy }: { label: string; busy: string }) {

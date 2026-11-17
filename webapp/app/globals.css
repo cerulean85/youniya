@@ -48,7 +48,7 @@
   --serif: var(--font-serif), "Noto Serif KR", serif;
   --sans: var(--font-sans), "Noto Sans KR", system-ui, -apple-system, sans-serif;
 
-  --sidebar: 264px;
+  --sidebar: 0px; /* 웹 v1.1 has a top bar instead */
 }
 
 /* Figma 'Cosmos' variables (Violet above, then Aurora, Ember, Ocean, Rose). Mood colours and gold never change. */
@@ -94,12 +94,24 @@ h1, h2, h3, p { margin: 0; }
 /* Night sky behind every screen */
 .sky {
   position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden;
+}
+/* The sky's glows breathe slowly (광원 빛남, 2026-11-17); stars sit under them. */
+.sky::after {
+  content: ""; position: absolute; inset: 0; animation: sky-breathe 9s ease-in-out infinite alternate;
   background:
     radial-gradient(450px 450px at calc(100% - 110px) 190px, rgb(var(--glow-a) / 0.28), transparent 70%),
     radial-gradient(410px 410px at 150px calc(100% - 70px), rgb(var(--glow-b) / 0.14), transparent 70%),
     radial-gradient(260px 260px at calc(100% - 100px) calc(100% - 120px), rgb(var(--glow-c) / 0.1), transparent 70%);
 }
 .sky::before { content: ""; position: absolute; inset: 0; background: url("/stars.svg") 0 0 / 720px 720px; opacity: 0.9; }
+@keyframes sky-breathe { from { opacity: 1; } to { opacity: 0.6; } }
+/* 반짝이는 하늘 (2026-11-17): three layers of bright stars, each tiled differently, fading in and out on its own beat. */
+.sky-twinkle { position: absolute; inset: 0; background: url("/sparkle.svg") 0 0 / 720px 720px; opacity: 0; animation: sky-twinkle 5s ease-in-out infinite; }
+.sky-twinkle.b { background-size: 960px 960px; background-position: 310px 170px; animation-duration: 7s; animation-delay: -3s; }
+.sky-twinkle.c { background-size: 560px 560px; background-position: 140px 420px; animation-duration: 6s; animation-delay: -1.5s; }
+@keyframes sky-twinkle { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .sky-twinkle { animation: none; } }
+
 
 /* Shared surfaces */
 .card {
@@ -140,8 +152,8 @@ dialog.sheet h2 { margin: 0; }
 dialog.sheet p { margin: 0 0 4px; }
 .btn-danger { color: #fff; background: linear-gradient(180deg, #d0555b, #a5202a); border: 0; }
 
-/* A single-column page sits in the middle of the area beside the sidebar (2026-11-10), as 설정 does. */
-.page-column { width: 100%; max-width: var(--column, 760px); margin: 0 auto; display: flex; flex-direction: column; gap: 32px; }
+/* A single-column page (웹 v1.1): it starts at the page's left edge, under the title, as the other screens do. */
+.page-column { width: 100%; max-width: var(--column, 760px); margin: 0; display: flex; flex-direction: column; gap: 32px; }
 
 /* ── Web 시안 v2 · 하늘이 화면 (Figma 590:27780, 2026-11-11) ──────────────────────────────
  * Mobile tokens only: a hero title on screens with a lead (오늘·별자리·광장·기록), a smaller one on tool
@@ -169,5 +181,15 @@ dialog.sheet p { margin: 0 0 4px; }
 .v2-hover { position: relative; }
 .v2-hover > .v2-glow { transition: transform 0.2s ease-out, opacity 0.2s ease-out; opacity: 0.75; }
 .v2-hover:hover > .v2-glow, .v2-hover:focus-visible > .v2-glow { transform: scale(1.25); opacity: 1; }
-@media (prefers-reduced-motion: reduce) { .v2-twinkle { animation: none; } .v2-hover > .v2-glow { transition: none; } }
+/* Every star (StarGlyph): its core swells and fades, the glow behind it breathes; each star on its own beat. */
+.star-core, .star-glow { transform-box: fill-box; transform-origin: center; animation-delay: var(--d, 0s); }
+.star-core { animation: star-core 4.8s ease-in-out infinite; }
+.star-glow { animation: star-glow 6s ease-in-out infinite; }
+@keyframes star-core { 0%, 100% { transform: scale(1); opacity: 0.92; } 50% { transform: scale(1.6); opacity: 0.65; } }
+@keyframes star-glow { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.88); opacity: 0.45; } }
+.v2-glow { animation: glow-breathe 6s ease-in-out infinite; }
+.v2-glow:nth-child(2n) { animation-delay: -2.1s; }
+.v2-glow:nth-child(3n) { animation-duration: 7.4s; animation-delay: -4.3s; }
+@keyframes glow-breathe { 0%, 100% { filter: none; opacity: 1; } 50% { opacity: 0.55; } }
+@media (prefers-reduced-motion: reduce) { .v2-twinkle, .star-core, .star-glow, .v2-glow, .sky::after { animation: none; } .v2-hover > .v2-glow { transition: none; } }
 @media (max-width: 720px) { .v2-hero { font-size: 44px; } .v2-hero-s { font-size: 36px; } .v2-title { font-size: 28px; } .v2-tool { font-size: 30px; } }

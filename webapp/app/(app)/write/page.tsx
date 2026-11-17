@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { Toast } from "@/components/Flash";
 import { api } from "@/lib/api";
 import type { Draft, Me, Star } from "@/lib/types";
@@ -24,6 +25,8 @@ async function Editor({ searchParams }: Pick<PageProps<"/write">, "searchParams"
   const sp = await searchParams;
   const pick = (v: string | string[] | undefined) => (typeof v === "string" && /^[\w-]{8,64}$/.test(v) ? v : null);
   const rewrite = pick(sp.rewrite), link = rewrite ? null : pick(sp.link);
+  // 웹 v1.1: plain writing happens on 오늘; this page stays for 고쳐 쓰기 and 별 잇기.
+  if (!rewrite && !link) redirect(sp.stopped === "1" ? "/?stopped=1" : "/");
   const [draft, me, star] = await Promise.all([
     api<Draft>("/v1/drafts/current"), api<Me>("/v1/me"),
     rewrite || link ? api<Star>(`/v1/stars/${rewrite ?? link}`).catch(() => null) : null,

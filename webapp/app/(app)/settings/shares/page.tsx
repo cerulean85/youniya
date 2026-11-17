@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { dateTime } from "@/lib/format";
 import type { MyShare } from "@/lib/types";
 import { Back } from "../Back";
+import { Sub } from "../Sub";
 import { UnshareButton } from "../SettingsControls";
 import styles from "../settings.module.css";
 
@@ -14,11 +15,11 @@ export const metadata: Metadata = { title: "나눈 별" };
 // Figma W-77 (iOS SharedStarsView) and W-78 (비어 있음).
 export default function SharesPage() {
   return (
-    <div className={styles.page}>
+    <Sub group="plaza">
       {/* 나눈 별 lives in the plaza now (W-44 내 별 · 내가 나눈 별). */}
       <Back href="/plaza" label="우주 광장" />
       <Suspense fallback={<div className={styles.loading} aria-busy="true" />}><Shares /></Suspense>
-    </div>
+    </Sub>
   );
 }
 
@@ -34,6 +35,7 @@ async function Shares() {
   );
   return (
     <>
+      <h1 className="h1">나눈 별</h1>
       <p className="body-s muted">우주 광장에 나눈 별 {stars.length}개예요. 거두면 광장에서 바로 사라지고, 받은 공명과 별빛 한 줄은 그대로 간직돼요.</p>
       <ul className={styles.items}>
         {stars.map((s) => (

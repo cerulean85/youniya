@@ -25,7 +25,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: SKY_SCRIPT }} />
       </head>
       <body>
-        <div className="sky" aria-hidden="true" />
+        <div className="sky" aria-hidden="true"><span className="sky-twinkle a" /><span className="sky-twinkle b" /><span className="sky-twinkle c" /></div>
         {children}
       </body>
     </html>

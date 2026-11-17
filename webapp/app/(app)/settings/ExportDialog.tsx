@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ChevronRight, Upload } from "@/components/icons";
+import { Upload } from "@/components/icons";
 import { Toast } from "@/components/Flash";
 import styles from "./settings.module.css";
 
@@ -46,7 +46,7 @@ export function ExportDialog({ stars }: { stars: number }) {
   return (
     <>
       <button type="button" className={styles.row} onClick={() => dialog.current?.showModal()}>
-        <Upload size={18} /><span>데이터 내보내기</span><span className={styles.value}><ChevronRight size={16} /></span>
+        <Upload size={18} /><span>데이터 내보내기</span><span className={styles.action}>내보내기</span>
       </button>
       <dialog ref={dialog} id="export-dialog" className="card sheet" aria-labelledby="export-title">
         {phase.kind === "choose" ? (

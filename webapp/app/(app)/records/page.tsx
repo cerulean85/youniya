@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { RecordsSkeleton } from "@/components/Skeleton";
 import Link from "next/link";
 import { Suspense } from "react";
-import { ChevronLeft, ChevronRight } from "@/components/icons";
+import { ChevronLeft, ChevronRight, Search } from "@/components/icons";
+import { MONTH_NAMES } from "@/lib/constellation";
 import { StarRow } from "@/components/StarRow";
 import { StarGlyph } from "@/components/StarGlyph";
 import { api } from "@/lib/api";
-import { kst, monthLabel, MOODS, shiftMonth, subject } from "@/lib/format";
+import { dateTime, kst, monthDay, parts, monthLabel, moodOf, MOODS, shiftMonth, subject } from "@/lib/format";
 import type { StarSummary, Summary } from "@/lib/types";
 import styles from "./records.module.css";
 
@@ -31,39 +32,41 @@ export default function RecordsPage({ searchParams }: PageProps<"/records">) {
   );
 }
 
-// Figma Web 시안 v2 · 기록 (595:28950): the lead is the 별빛 흐름 of the last ten lit stars, drawn as stars.
-function Header({ total, kept, avg, flow = [] }: { total: number | null; kept?: boolean; avg?: number | null; flow?: StarSummary[] }) {
+// Figma 웹 v1.1 · 기록 (635:31252): the title and search on one line, a hairline, then the 별빛 흐름 as bars.
+function Header({ total, kept, avg, q }: { total: number | null; kept?: boolean; avg?: number | null; q?: string }) {
   return (
     <header className={styles.header}>
       <div className={styles.headText}>
-        <h1 className="v2-hero">기록</h1>
-        <p className="v2-lead">{total == null ? "\u00a0" : kept ? `별빛 없이 띄운 별 ${total}개` : `지나온 별 ${total}개${avg != null ? ` · 이번 달 별빛 평균 ${avg}` : ""}`}</p>
+        <h1 className="h1">기록</h1>
+        <p className="body-s muted">{total == null ? "\u00a0" : kept ? `별빛 없이 띄운 별 ${total}개` : `지나온 별 ${total}개${avg != null ? ` · 이번 달 평균 별빛 ${avg}` : ""}`}</p>
       </div>
-      {flow.length >= 2 && <Flow stars={flow} />}
+      {q !== undefined && (
+        <form action="/records" className={styles.search} role="search">
+          <Search size={16} />
+          <input type="search" name="q" defaultValue={q} maxLength={50} placeholder="제목이나 내용으로 찾기" aria-label="기록 검색" />
+        </form>
+      )}
     </header>
   );
 }
 
-/** The last lit stars, oldest to newest, on a line whose height is their starlight; the newest is labelled. */
+/** The latest stars, oldest to newest, as bars as tall as their starlight; the brightest is gold, a star
+ * without starlight a flat grey line. Opens 별빛 흐름. */
 function Flow({ stars }: { stars: StarSummary[] }) {
-  const W = 620, H = 210, pad = 22;
-  const values = stars.map((s) => s.starlight ?? 0);
-  const lo = Math.min(...values), hi = Math.max(...values), span = Math.max(1, hi - lo);
-  const pts = stars.map((s, i) => ({ s, x: pad + (i * (W - pad * 2)) / (stars.length - 1), y: pad + 18 + ((hi - (s.starlight ?? 0)) / span) * (H - pad * 2 - 18) }));
-  const last = pts.at(-1)!;
+  const hi = Math.max(1, ...stars.map((s) => s.starlight ?? 0));
+  const brightest = stars.reduce<StarSummary | null>((b, s) => (s.starlight != null && (!b || s.starlight > (b.starlight ?? 0)) ? s : b), null);
   return (
-    <Link href="/records/flow" className={styles.flow} aria-label={`별빛 흐름 · 최근 ${stars.length}개 · 마지막 ${last.s.starlight}`}>
-      <span className={styles.flowLabel}>별빛 흐름 · 최근 {stars.length}개 ›</span>
-      <svg viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
-        <polyline points={pts.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke="rgb(226 232 240 / 0.35)" strokeWidth={1} />
-      </svg>
-      {pts.map((p) => (
-        <span key={p.s.id} className={styles.flowStar} style={{ left: `${(p.x / W) * 100}%`, top: `${(p.y / H) * 100}%` }}>
-          <span className="v2-glow" style={{ ["--c" as string]: `var(--${p.s.mood})`, inset: -26 }} />
-          <StarGlyph points={p.s.shape?.points} sharpness={p.s.shape?.sharpness} mood={p.s.mood} size={16 + Math.round((((p.s.starlight ?? 0) - lo) / span) * 14)} twinkle />
-        </span>
-      ))}
-      <span className={styles.flowLast} style={{ left: `${(last.x / W) * 100}%`, top: `${(last.y / H) * 100}%` }}>{last.s.starlight}</span>
+    <Link href="/records/flow" className={styles.flow} aria-label={`별빛 흐름 · 최근 별 ${stars.length}개${brightest ? ` · 가장 밝은 별 ${brightest.starlight}` : ""}`}>
+      <span className={styles.flowHead}>
+        <span className="label-s muted">별빛 흐름 · 최근 별 {stars.length}개</span>
+        {brightest && <span className="caption faint">가장 밝은 별 {brightest.starlight} · {monthDay(brightest.created_at)}</span>}
+      </span>
+      <span className={styles.bars} aria-hidden="true">
+        {stars.map((s) => (
+          <span key={s.id} className={styles.bar} data-top={s.id === brightest?.id || undefined} data-unlit={s.starlight == null || undefined}
+            style={{ height: s.starlight == null ? 3 : `${Math.max(14, (s.starlight / hi) * 100)}%` }} />
+        ))}
+      </span>
     </Link>
   );
 }
@@ -73,43 +76,37 @@ async function Records({ searchParams }: Pick<PageProps<"/records">, "searchPara
   const p: Params = Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, one(v)]));
   const calendar = p.view === "calendar";
   const thisMonth = kst(new Date()).month;
-  const [summary, recentLit, monthStars] = await Promise.all([
+  const [summary, recent, monthStars] = await Promise.all([
     api<Summary>("/v1/stars/summary"),
-    api<List>("/v1/stars?state=floated&limit=10").catch(() => null),
+    api<List>("/v1/stars?limit=14").catch(() => null),
     api<List>(`/v1/stars?month=${thisMonth}&state=floated&limit=200`).catch(() => null),
   ]);
   const lit = (monthStars?.items ?? []).filter((s) => s.starlight != null);
   const avg = lit.length ? Math.round(lit.reduce((n, s) => n + s.starlight!, 0) / lit.length) : null;
-  const flow = [...(recentLit?.items ?? [])].filter((s) => s.starlight != null).reverse();
+  const flow = [...(recent?.items ?? [])].reverse();
   return (
     <>
-      <Header total={p.state === "kept" && !calendar ? summary.kept : summary.total} kept={p.state === "kept" && !calendar} avg={avg} flow={flow} />
+      <Header total={p.state === "kept" && !calendar ? summary.kept : summary.total} kept={p.state === "kept" && !calendar} avg={avg} q={calendar ? undefined : p.q ?? ""} />
+      {flow.length >= 2 && <Flow stars={flow} />}
       <div className={styles.controls}>
-        {!calendar ? <Filters p={p} /> : <span />}
-        <div className={styles.controlsEnd}>
-          {!calendar && (
-            <form action="/records" className={styles.search} role="search">
-              {p.state && <input type="hidden" name="state" value={p.state} />}
-              {p.mood && <input type="hidden" name="mood" value={p.mood} />}
-              <input type="search" name="q" defaultValue={p.q ?? ""} maxLength={50} placeholder="⌕ 제목이나 내용으로 찾기" aria-label="기록 검색" />
-            </form>
-          )}
-          <nav className={styles.segment} aria-label="보기">
-            <Link href={href({ ...p, view: undefined, day: undefined, before: undefined })} aria-current={!calendar ? "page" : undefined}>목록</Link>
-            <Link href={href({ ...p, view: "calendar", before: undefined })} aria-current={calendar ? "page" : undefined}>달력</Link>
-          </nav>
-        </div>
+        {!calendar ? <Filters p={p} summary={summary} /> : <span />}
+        <nav className={styles.segment} aria-label="보기">
+          <Link href={href({ ...p, view: undefined, day: undefined, before: undefined })} aria-current={!calendar ? "page" : undefined}>목록</Link>
+          <Link href={href({ ...p, view: "calendar", before: undefined })} aria-current={calendar ? "page" : undefined}>달력</Link>
+        </nav>
       </div>
       {calendar ? <CalendarView p={p} /> : <ListView p={p} />}
     </>
   );
 }
 
-function Filters({ p }: { p: Params }) {
+function Filters({ p, summary }: { p: Params; summary: Summary }) {
+  // The counts are of all stars, so they show only while no search narrows the list.
+  const n = (v: number) => (p.q ? "" : ` ${v}`);
   const chips: { label: string; to: Params; on: boolean; color?: string }[] = [
-    { label: "전체", to: { q: p.q }, on: !p.state && !p.mood },
-    { label: "별빛 받은 별", to: { q: p.q, state: "floated" }, on: p.state === "floated" },
-    { label: "별빛 없는 별", to: { q: p.q, state: "kept" }, on: p.state === "kept" },
+    { label: `전체${n(summary.total)}`, to: { q: p.q }, on: !p.state && !p.mood },
+    { label: `별빛 받은 별${n(summary.total - summary.kept)}`, to: { q: p.q, state: "floated" }, on: p.state === "floated" },
+    { label: `별빛 없는 별${n(summary.kept)}`, to: { q: p.q, state: "kept" }, on: p.state === "kept" },
     ...MOODS.map((m) => ({ label: m.label, to: { q: p.q, mood: m.key }, on: p.mood === m.key, color: m.color })),
   ];
   return (
@@ -125,11 +122,6 @@ async function ListView({ p }: { p: Params }) {
   const q = new URLSearchParams({ limit: "30" });
   for (const k of ["state", "mood", "q", "before"] as const) if (p[k]) q.set(k, p[k]!);
   const list = await api<List>(`/v1/stars?${q}`);
-  const groups = new Map<string, StarSummary[]>();
-  for (const s of list.items) {
-    const m = kst(s.created_at).month;
-    groups.set(m, [...(groups.get(m) ?? []), s]);
-  }
   return (
     <>
       {list.items.length === 0 && p.state === "kept" && !p.q && !p.mood ? (
@@ -137,25 +129,42 @@ async function ListView({ p }: { p: Params }) {
         <div className={`card ${styles.empty}`}>
           <p className="h3">아직 별빛 없는 별이 없어요</p>
           <p className="body-m muted">분석 없이 조용히 두고 싶은 글은<br />여기에 모여요.</p>
-          <Link href="/write" className="btn btn-primary">별 만들기</Link>
+          <Link href="/" className="btn btn-primary">오늘의 별 쓰기</Link>
         </div>
       ) : list.items.length === 0 ? (
         <div className={`card ${styles.empty}`}>
           <p className="h3">{p.q ? <>&lsquo;{p.q}&rsquo;{subject(p.q).slice(p.q.length)} 담긴 별이 없어요</> : p.state || p.mood ? "맞는 별이 없어요" : "아직 기록이 없어요"}</p>
           <p className="body-m muted">{p.q || p.state || p.mood ? "다른 말로 찾아보거나, 필터를 바꿔 보세요." : "오늘의 마음을 적으면 이곳에 쌓여요."}</p>
-          {(p.q || p.state || p.mood) ? <Link href="/records" className="btn btn-secondary">전체 보기</Link> : <Link href="/write" className="btn btn-primary">별 만들기</Link>}
+          {(p.q || p.state || p.mood) ? <Link href="/records" className="btn btn-secondary">전체 보기</Link> : <Link href="/" className="btn btn-primary">오늘의 별 쓰기</Link>}
         </div>
       ) : (
         <div className={styles.list}>
           {/* W-70: a search shows how many stars hold the words, in titles and writing. */}
-          {p.q && <div className={styles.groupHead}><span className="label-m">&lsquo;{p.q}&rsquo;{subject(p.q).slice(p.q.length)} 담긴 별 {list.items.length}{list.next_before ? "개 이상" : "개"}</span><span className="caption faint">제목 · 본문</span></div>}
-          {[...groups].map(([month, stars]) => (
-            <section key={month} className={styles.group} aria-label={monthLabel(month)}>
-              <div className={styles.groupHead}><span>{monthLabel(month)}</span><span>별 {stars.length}개</span></div>
-              {stars.map((s) => <StarRow key={s.id} star={s} />)}
-            </section>
-          ))}
-          {list.next_before && <Link href={href({ ...p, before: list.next_before })} className={`btn btn-ghost ${styles.more}`}>이전 기록 더 보기</Link>}
+          {p.q && <p className="label-m">&lsquo;{p.q}&rsquo;{subject(p.q).slice(p.q.length)} 담긴 별 {list.items.length}{list.next_before ? "개 이상" : "개"} <span className="caption faint">· 제목 · 본문</span></p>}
+          {/* Figma 웹 v1.1: one table, newest first; the whole row opens the star. */}
+          <table className={styles.table}>
+            <thead>
+              <tr><th aria-label="별" /><th>제목</th><th>마음</th><th>별자리</th><th>날짜</th><th className={styles.num}>별빛</th></tr>
+            </thead>
+            <tbody>
+              {list.items.map((s) => {
+                const lit = (s.has_starlight ?? s.state === "floated") && s.starlight != null;
+                const k = kst(s.created_at);
+                const name = MONTH_NAMES[k.month.slice(5)];
+                return (
+                  <tr key={s.id}>
+                    <td className={styles.glyph}>{lit ? <StarGlyph points={s.shape?.points} sharpness={s.shape?.sharpness} mood={s.mood} size={22} /> : <StarGlyph points={4} mood={s.mood} size={18} />}</td>
+                    <td className={styles.titleCell}><Link href={`/stars/${s.id}`} className={styles.rowLink}>{s.title || "제목 없는 별"}</Link></td>
+                    <td><span className={styles.moods}>{(s.moods ?? [s.mood]).map((m) => <span key={m} style={{ ["--c" as string]: moodOf(m).color }}>{moodOf(m).label}</span>)}</span></td>
+                    <td className="body-s muted">{name ? `${k.m}월 ${name}` : "—"}</td>
+                    <td className="body-s muted">{dateTime(s.created_at).replace(/일 · /, `일 ${parts(s.created_at, { weekday: "short" })} · `)}</td>
+                    <td className={styles.num}>{lit ? s.starlight : <span className="caption faint">별빛 없음</span>}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {list.next_before && <Link href={href({ ...p, before: list.next_before })} className={styles.more}>이전 기록 더 보기</Link>}
         </div>
       )}
     </>
