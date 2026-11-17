@@ -352,3 +352,4 @@ tr + tr td { border-top: 1px solid var(--border); }
   .foot-bottom { flex-direction: column; align-items: flex-start; }
   .btn { white-space: normal; text-align: center; }
 }
+.foot-biz { margin: 16px 0 0; font-size: 12px; line-height: 18px; color: var(--text-3); }
