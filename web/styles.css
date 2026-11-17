@@ -459,3 +459,10 @@ tr + tr td { border-top: 1px solid var(--border); }
   .lp-closing h2 { font-size: 28px; line-height: 38px; }
   .lp-hero .btn, .lp-closing .btn { flex: 1 1 auto; }
 }
+
+/* 반짝이는 하늘 (2026-11-17): three layers of bright stars, each tiled differently, fading in and out on its own beat. */
+.sky-twinkle { position: absolute; inset: 0; background: url("sparkle.svg") 0 0 / 720px 720px; opacity: 0; animation: sky-twinkle 5s ease-in-out infinite; }
+.sky-twinkle.b { background-size: 960px 960px; background-position: 310px 170px; animation-duration: 7s; animation-delay: -3s; }
+.sky-twinkle.c { background-size: 560px 560px; background-position: 140px 420px; animation-duration: 6s; animation-delay: -1.5s; }
+@keyframes sky-twinkle { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .sky-twinkle { animation: none; } }
