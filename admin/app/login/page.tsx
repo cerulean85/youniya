@@ -5,13 +5,13 @@ import "./login.css";
 
 export const metadata: Metadata = { title: "로그인" };
 
-// Figma A-01 운영자 로그인.
+// Figma A-01 운영자 로그인 (A2-17: the code step).
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const sp = await searchParams;
   return (
     <main className="login">
-      <div className="card login-card">
-        <h1>YOUNIYA 운영자 콘솔</h1>
+      <div className="login-card">
+        <div className="brand"><b>YOUNIYA</b><span className="faint">운영자 콘솔</span></div>
         {sp.expired && <p className="notice">로그인이 끝났어요. 다시 로그인해 주세요.</p>}
         {sp.setup && <p className="notice">설정을 마쳤어요. 이메일과 비밀번호, 인증 앱 코드로 로그인해 주세요.</p>}
         {(isMock || !authIsLive) && <p className="notice">목 데이터로 실행 중이에요. 로그인 값은 admin/README.md에 있어요.</p>}

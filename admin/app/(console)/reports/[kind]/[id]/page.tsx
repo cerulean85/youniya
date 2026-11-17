@@ -32,6 +32,7 @@ export default async function ReportPage({ params }: PageProps<"/reports/[kind]/
   const nick = r.kind === "nickname";
   const actions: ActionKind[] = [!nick && (r.status === "hidden" || r.auto_hidden) ? "restore" : null, nick ? null : "take_down",
     "request_rename", "restrict_7d", "restrict_30d", "note"].filter(Boolean) as ActionKind[];
+  const now = r.auto_hidden ? "광장에서 숨김 · 자동" : STATUS_LABEL[r.status];
   return (
     <>
       <div className="head">
@@ -39,23 +40,24 @@ export default async function ReportPage({ params }: PageProps<"/reports/[kind]/
           <h1>신고 상세 · {KIND_LABEL[r.kind]} #{r.target_id}</h1>
           <p className="muted">신고 {r.reports.length}건 · {r.auto_hidden ? "광장에서 자동으로 숨김" : STATUS_LABEL[r.status]}{first ? ` · 접수 ${elapsed(first)} 전` : ""}</p>
         </div>
-        <Link href="/reports" className="btn">‹ 목록</Link>
+        <Link href="/reports" className="btn-text">‹ 목록</Link>
       </div>
       <div className="cols">
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <section className="card panel">
+        <div className="stack">
+          <section className="section">
             <h2>광장에 공개된 내용</h2>
-            <dl className="kv">
-              <dt>별지기</dt><dd><Link href={`/keepers/${encodeURIComponent(r.keeper.id)}`}>{r.keeper.nickname ?? "이름 없음"}{r.keeper.no ? ` (${r.keeper.no})` : ""}</Link></dd>
-              {r.content.shared_at && <><dt>나눈 날</dt><dd>{dateTime(r.content.shared_at)}</dd></>}
-              {r.content.quote && <><dt>대표 문장</dt><dd>“{r.content.quote}”</dd></>}
-              {r.content.body_masked && <><dt>글 전체</dt><dd>{r.content.body_masked}</dd></>}
-              {r.content.line && <><dt>별빛 한 줄</dt><dd>“{r.content.line}”</dd></>}
-              {r.content.nickname && r.kind === "nickname" && <><dt>별지기 이름</dt><dd>{r.content.nickname}</dd></>}
+            <dl className="rows">
+              <div><dt>별지기</dt><dd><Link className="accent" href={`/keepers/${encodeURIComponent(r.keeper.id)}`}>{r.keeper.nickname ?? "이름 없음"}{r.keeper.no ? ` · ${r.keeper.no}` : ""} ›</Link></dd></div>
+              {r.content.shared_at && <div><dt>나눈 날</dt><dd>{dateTime(r.content.shared_at)}</dd></div>}
+              {r.content.quote && <div><dt>대표 문장</dt><dd>“{r.content.quote}”</dd></div>}
+              {r.content.body_masked && <div><dt>글 전체</dt><dd>{r.content.body_masked}</dd></div>}
+              {r.content.line && <div><dt>별빛 한 줄</dt><dd>“{r.content.line}”</dd></div>}
+              {r.content.nickname && r.kind === "nickname" && <div><dt>별지기 이름</dt><dd>{r.content.nickname}</dd></div>}
             </dl>
             <p className="faint">운영자는 우주 광장에 공개된 내용만 볼 수 있어요. 나누지 않은 글, 별빛 수치, 별빛 풀이는 볼 수 없어요.</p>
           </section>
-          <section className="card table-card">
+          <section className="section">
+            <h2>신고 {r.reports.length}건</h2>
             <table className="table">
               <thead><tr><th>신고한 별지기</th><th>사유</th><th>메모</th><th>시각</th></tr></thead>
               <tbody>
@@ -66,7 +68,8 @@ export default async function ReportPage({ params }: PageProps<"/reports/[kind]/
             </table>
           </section>
           {r.actions.length > 0 && (
-            <section className="card table-card">
+            <section className="section">
+              <h2>조치 기록</h2>
               <table className="table">
                 <thead><tr><th>조치</th><th>사유</th><th>운영자</th><th>시각</th></tr></thead>
                 <tbody>
@@ -78,12 +81,11 @@ export default async function ReportPage({ params }: PageProps<"/reports/[kind]/
             </section>
           )}
         </div>
-        <aside className="card panel">
+        <aside className="panel">
           <h2>조치</h2>
-          <p className="muted">조치는 별지기에게 앱 알림으로 알려지고, 운영 기록에 남아요.</p>
+          <div className="now"><span>지금</span><span className={`badge badge-${r.auto_hidden ? "hidden" : r.status}`}>{now}</span></div>
           <p className="rule">숨김 규칙: {instant ? "개인정보 노출·자해 관련은 1건이면 바로 숨겨요." : "괴롭힘·혐오·사칭·광고는 3건이 쌓이면 자동으로 숨겨요. 개인정보 노출·자해 관련은 1건이면 바로 숨겨요."}</p>
-          <dl className="kv"><dt>현재</dt><dd>{r.auto_hidden ? "광장에서 숨김(자동)" : STATUS_LABEL[r.status]}</dd></dl>
-          <ActionPanel kind={r.kind} id={r.target_id} actions={actions} />
+          <ActionPanel kind={r.kind} id={r.target_id} actions={actions} subject={nick ? "이 이름" : `이 ${KIND_LABEL[r.kind]}`} />
         </aside>
       </div>
     </>

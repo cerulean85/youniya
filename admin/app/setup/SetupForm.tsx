@@ -10,12 +10,13 @@ export function SetupForm({ token }: { token: string }) {
   return (
     <form action={action} className="login-form">
       <input type="hidden" name="token" value={token} />
+      <h1>{totp ? "인증 앱 등록 · 2/2" : "운영자 계정 설정 · 1/2"}</h1>
       {totp ? (
         <>
           <p className="muted">인증 앱(Google Authenticator, 1Password 등)으로 QR을 찍고, 앱에 보이는 6자리를 넣어 주세요.</p>
           <div className="qr" dangerouslySetInnerHTML={{ __html: state.qr ?? "" }} />
           <p className="faint">QR을 못 찍으면 이 키를 직접 넣어요: <code>{state.secret}</code></p>
-          <label className="field" key="code"><span>인증 앱 6자리</span><input name="code" inputMode="numeric" autoComplete="one-time-code" pattern="\d{6}" maxLength={6} required autoFocus /></label>
+          <label className="field" key="code"><span>인증 앱 6자리</span><input name="code" inputMode="numeric" autoComplete="one-time-code" pattern="\d{6}" maxLength={6} required autoFocus aria-invalid={Boolean(state?.error) || undefined} /></label>
         </>
       ) : (
         <>

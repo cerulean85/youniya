@@ -1,39 +1,61 @@
-/* Figma Admin: a plain, dark operations look, apart from the user app's design. */
+/* Figma Admin v2 (2026-11-17): a plain, dark operations look, apart from the user app's design.
+   Fewer boxes: sections are split by headings and 1px rules; only the action panel and dialogs are surfaces. */
 :root {
-  --bg: #0b0f19; --card: #131a2a; --row: #182033; --border: #334155; --line: #1f2a3d;
-  --text: #f1f5f9; --text-2: #cbd5e1; --text-3: #94a3b8;
-  --accent: #8b5cf6; --accent-tint: rgba(139, 92, 246, 0.16);
-  --red: #f87171; --red-tint: rgba(248, 113, 113, 0.14); --amber: #fbbf24; --amber-tint: rgba(251, 191, 36, 0.14);
-  --green: #34d399; --green-tint: rgba(52, 211, 153, 0.14);
+  --bg: #0b0f19; --card: #131a2a; --row: #1a2338; --border: #334155; --line: #334155;
+  --text: #e2e8f0; --text-2: #94a3b8; --text-3: #8090a6;
+  --accent: #8555ef; --accent-text: #9c74f7; --accent-tint: rgba(139, 92, 246, 0.12); --focus: #a78bfa;
+  --red: #f87171; --red-tint: rgba(248, 113, 113, 0.16); --amber: #fbbf24; --amber-tint: rgba(251, 191, 36, 0.16);
+  --green: #34d399; --green-tint: rgba(52, 211, 153, 0.16);
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; background: var(--bg); color: var(--text); font: 400 14px/1.5 "Noto Sans KR", system-ui, -apple-system, sans-serif; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font: 400 14px/22px "Noto Sans KR", system-ui, -apple-system, sans-serif; }
 a { color: inherit; text-decoration: none; }
 h1, h2, h3, p { margin: 0; }
-h1 { font-size: 26px; font-weight: 600; line-height: 1.3; }
-h2 { font-size: 15px; font-weight: 600; }
-.muted { color: var(--text-2); }
-.faint { color: var(--text-3); font-size: 12px; }
-.card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; }
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: var(--text); font: 500 13px/1 inherit; cursor: pointer; }
+h1 { font-size: 22px; font-weight: 700; line-height: 31px; }
+h2 { font-size: 14px; font-weight: 500; line-height: 20px; }
+.muted { color: var(--text-2); font-size: 13px; line-height: 20px; }
+.faint { color: var(--text-3); font-size: 12px; line-height: 18px; letter-spacing: 0.02em; }
+.accent { color: var(--accent-text); font-weight: 500; }
+.accent:hover { text-decoration: underline; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 16px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--text); font: 500 13px/1 inherit; cursor: pointer; white-space: nowrap; }
 .btn:hover:not(:disabled) { border-color: var(--text-3); }
 .btn:disabled { opacity: 0.5; cursor: default; }
-.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-.btn-danger { background: var(--red-tint); border-color: rgba(248, 113, 113, 0.6); color: var(--red); }
-.btn-block { width: 100%; height: 42px; }
+.btn:focus-visible, .btn-text:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* Filled: the one execute button in a panel or dialog. */
+.btn-primary { background: linear-gradient(#8b5cf6, #6d3fd6); border: 0; color: #fff; box-shadow: 0 0 12px rgba(139, 92, 246, 0.35); }
+.btn-danger { background: linear-gradient(#bc5457, #a5202a); border: 0; color: #fff; box-shadow: 0 0 12px rgba(248, 113, 113, 0.35); }
+.btn-primary:hover:not(:disabled), .btn-danger:hover:not(:disabled) { filter: brightness(1.08); }
+/* Outlined: a page's main action in the header (새 공지, 운영자 초대). */
+.btn-outline { border-color: var(--accent); color: var(--accent-text); }
+.btn-outline:hover:not(:disabled) { border-color: var(--focus); background: var(--accent-tint); }
+/* Text: actions inside rows and tables. */
+.btn-text { display: inline-flex; align-items: center; height: 28px; padding: 0 6px; border: 0; border-radius: 6px; background: none; color: var(--text); font: 500 13px/1 inherit; cursor: pointer; white-space: nowrap; }
+.btn-text:hover:not(:disabled) { background: var(--row); }
+.btn-text.danger { color: var(--red); }
+.btn-text:disabled { opacity: 0.5; cursor: default; }
+.btn-block { width: 100%; height: 44px; font-size: 14px; }
 .field { display: flex; flex-direction: column; gap: 6px; }
-.field span { font-size: 12px; color: var(--text-3); }
-.field input, .field textarea, .field select { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; color: var(--text); font: inherit; outline: none; }
-.field input:focus, .field textarea:focus { border-color: var(--accent); }
-.badge { display: inline-flex; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; }
+.field span { font-size: 12px; font-weight: 500; line-height: 16px; color: var(--text-2); }
+.field input, .field textarea, .field select { background: var(--row); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: var(--text); font: 13px/20px inherit; outline: none; }
+.field input:focus, .field textarea:focus, .field select:focus { border-color: var(--focus); box-shadow: inset 0 0 0 0.5px var(--focus); }
+.field input[aria-invalid="true"] { border-color: var(--red); }
+.field textarea { resize: vertical; }
+.badge { display: inline-flex; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 500; line-height: 16px; white-space: nowrap; }
 .badge-pending { background: var(--amber-tint); color: var(--amber); }
 .badge-hidden { background: var(--red-tint); color: var(--red); }
 .badge-done { background: var(--green-tint); color: var(--green); }
+.badge-muted { background: var(--row); color: var(--text-2); }
+.badge-info { background: var(--accent-tint); color: var(--accent-text); }
 .table { width: 100%; border-collapse: collapse; }
-.table th { text-align: left; font-weight: 500; font-size: 12px; color: var(--text-3); padding: 12px 16px; border-bottom: 1px solid var(--border); }
-.table td { padding: 12px 16px; border-bottom: 1px solid var(--line); }
-.table tr:last-child td { border-bottom: 0; }
-.table tbody tr:hover { background: var(--row); }
+.table th { text-align: left; font-weight: 500; font-size: 12px; line-height: 16px; color: var(--text-3); padding: 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.table td { padding: 12px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.table tbody tr:hover { background: var(--card); }
+.table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.table .act { text-align: right; white-space: nowrap; }
 .error { color: var(--red); font-size: 13px; }
-.notice { padding: 10px 14px; border-radius: 10px; background: var(--amber-tint); color: var(--amber); font-size: 13px; }
+.notice { padding: 10px 14px; border-radius: 8px; background: var(--amber-tint); color: var(--amber); font-size: 13px; line-height: 20px; }
+.overdue { color: var(--amber); }
+.neg { color: var(--red); }
+.ok-text { color: var(--green); }

@@ -10,14 +10,14 @@ export function NewInvite() {
   const dialog = useRef<HTMLDialogElement>(null);
   return (
     <>
-      <button type="button" className="btn btn-primary" onClick={() => dialog.current?.showModal()}>새 초대 계정</button>
+      <button type="button" className="btn btn-outline" onClick={() => dialog.current?.showModal()}>새 초대 계정</button>
       <dialog ref={dialog} className="card" aria-labelledby="invite-title">
         {state?.password ? (
           <div className="stack">
             <h2 id="invite-title">초대 계정을 만들었어요</h2>
             <p className="muted">아이디 {state.loginId}의 비밀번호예요. 지금 한 번만 보여요.</p>
             <p className="secret">{state.password}</p>
-            <button type="button" className="btn" onClick={() => dialog.current?.close()}>닫기</button>
+            <div className="dialog-actions"><button type="button" className="btn btn-primary" onClick={() => dialog.current?.close()}>닫기</button></div>
           </div>
         ) : (
           <form action={action}>
@@ -27,7 +27,7 @@ export function NewInvite() {
             <label className="field"><span>사유 (필수 · 운영 기록에 남아요)</span><textarea name="reason" rows={2} required /></label>
             {state?.error && <p className="error" role="alert">{state.error}</p>}
             <div className="dialog-actions">
-              <button type="button" className="btn" onClick={() => dialog.current?.close()}>취소</button>
+              <button type="button" className="btn-text" onClick={() => dialog.current?.close()}>취소</button>
               <Submit />
             </div>
           </form>

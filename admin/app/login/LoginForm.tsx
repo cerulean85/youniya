@@ -7,22 +7,27 @@ import { signIn } from "./actions";
 export function LoginForm() {
   const [state, action] = useActionState(signIn, null);
   const code = state?.step === "code";
+  const bad = Boolean(state?.error);
   return (
     <form action={action} className="login-form">
+      <h1>{code ? "인증 앱 코드" : "운영자 로그인"}</h1>
       {code ? (
-        <label className="field" key="code">
-          <span>인증 앱 6자리</span>
-          <input name="code" inputMode="numeric" autoComplete="one-time-code" pattern="\d{6}" maxLength={6} required autoFocus />
-        </label>
+        <>
+          <p className="muted">인증 앱의 YOUNIYA 운영자 코드를 넣어 주세요.</p>
+          <label className="field" key="code">
+            <span>인증 앱 6자리</span>
+            <input name="code" inputMode="numeric" autoComplete="one-time-code" pattern="\d{6}" maxLength={6} required autoFocus aria-invalid={bad || undefined} />
+          </label>
+        </>
       ) : (
         <>
-          <label className="field"><span>이메일</span><input name="email" type="email" autoComplete="username" required autoFocus /></label>
-          <label className="field"><span>비밀번호</span><input name="password" type="password" autoComplete="current-password" required /></label>
+          <label className="field"><span>이메일</span><input name="email" type="email" autoComplete="username" required autoFocus aria-invalid={bad || undefined} /></label>
+          <label className="field"><span>비밀번호</span><input name="password" type="password" autoComplete="current-password" required aria-invalid={bad || undefined} /></label>
         </>
       )}
       {state?.error && <p className="error" role="alert">{state.error}</p>}
       <Submit label={code ? "확인" : "다음"} />
-      <p className="faint">{code ? "인증 앱의 YOUNIYA 운영자 코드를 넣어 주세요." : "5번 틀리면 15분 동안 잠겨요. 모든 로그인은 운영 기록에 남아요."}</p>
+      <p className="faint">5번 틀리면 15분 동안 잠겨요. 모든 로그인은 운영 기록에 남아요.</p>
     </form>
   );
 }

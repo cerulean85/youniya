@@ -11,7 +11,7 @@ export default async function Section({ params }: PageProps<"/[section]">) {
   return (
     <>
       <div className="head"><div><h1>{item.label}</h1></div></div>
-      <div className="card placeholder">
+      <div className="placeholder">
         <h2>준비 중이에요</h2>
         <p className="muted">Figma Admin {item.figma} 화면이에요. 서버의 운영자 API(7단계)가 나오면 붙여요.</p>
       </div>

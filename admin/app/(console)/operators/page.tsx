@@ -26,13 +26,13 @@ export default async function OperatorsPage() {
     <>
       <div className="head">
         <div><h1>운영자·권한</h1><p className="muted">admin.youniya.dycdyp.com · 운영자는 초대로만 추가돼요. 모두 2단계 인증을 켜야 들어올 수 있어요.</p></div>
-        <ReasonActions action={operatorsAction.bind(null, null)} buttons={[{ key: "invite", label: "운영자 초대", primary: true, fields: [
+        <ReasonActions action={operatorsAction.bind(null, null)} buttons={[{ key: "invite", label: "운영자 초대", primary: true, submit: "초대 링크 만들기",
+          result: { title: "초대 링크를 만들었어요", note: "링크는 단체 대화방이나 공개 채널에 올리지 말고, 받을 사람에게 직접 전해 주세요.", copy: "링크 복사" }, fields: [
           { name: "email", label: "이메일", required: true },
           { name: "role", label: "권한", type: "select", options: [["moderator", "신고 처리"], ["owner", "전체"]], defaultValue: "moderator" },
         ] }]} />
       </div>
-      <div className="card table-card">
-        <table className="table">
+      <table className="table">
           <thead><tr><th>운영자</th><th>이메일</th><th>권한</th><th>2단계 인증</th><th>마지막 접속</th><th>상태</th><th /></tr></thead>
           <tbody>{ops.map((o) => {
             const self = o.id === me.id;
@@ -45,20 +45,20 @@ export default async function OperatorsPage() {
                 <td>{o.name}{self ? " (나)" : ""}</td><td>{o.email_masked}</td><td>{o.role === "owner" ? "전체" : "신고 처리"}</td>
                 <td>{o.totp ? "켜짐" : "—"}</td><td>{o.last_seen_at ? dateTime(o.last_seen_at) : "—"}</td>
                 <td><span className={`badge ${STATUS[o.status][0]}`}>{STATUS[o.status][1]}</span></td>
-                <td>{buttons.length > 0 && <ReasonActions action={operatorsAction.bind(null, o.id)} buttons={buttons} />}</td>
+                <td className="act">{buttons.length > 0 ? <ReasonActions look="text" action={operatorsAction.bind(null, o.id)} buttons={buttons} /> : self ? <span className="faint">나</span> : null}</td>
               </tr>
             );
           })}</tbody>
-        </table>
-      </div>
-      <div className="card table-card">
+      </table>
+      <section className="section">
+        <h2>권한별로 할 수 있는 일</h2>
         <table className="table">
           <thead><tr><th>할 수 있는 일</th><th>전체</th><th>신고 처리</th></tr></thead>
           <tbody>{ABILITIES.map(([what, mod]) => (
-            <tr key={what}><td>{what}</td><td><span className="badge badge-done">가능</span></td><td><span className={`badge ${mod ? "badge-done" : "badge-hidden"}`}>{mod ? "가능" : "불가"}</span></td></tr>
+            <tr key={what}><td>{what}</td><td>가능</td><td>{mod ? "가능" : <span className="faint" aria-label="불가">불가</span>}</td></tr>
           ))}</tbody>
         </table>
-      </div>
+      </section>
     </>
   );
 }
