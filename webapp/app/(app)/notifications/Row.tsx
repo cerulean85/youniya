@@ -12,7 +12,7 @@ export function NotificationRow({ n, ago }: { n: AppNotification; ago: string })
     <>
       <span className={styles.dot} style={{ ["--c" as string]: k.color }} aria-hidden="true" />
       <span className={styles.text}>
-        <span className={styles.meta}><span style={{ color: k.color }}>{k.label}</span><span className="faint">{ago}</span></span>
+        <span className={styles.meta}><span>{k.label}</span><span>{ago}</span></span>
         <span className={styles.title}>{n.title}</span>
         <span className={styles.body}>{n.body}</span>
       </span>

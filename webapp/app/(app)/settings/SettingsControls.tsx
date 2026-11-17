@@ -3,7 +3,7 @@
 import { useOptimistic, useRef, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { Toast } from "@/components/Flash";
-import { Bell, ChevronRight, Sparkle } from "@/components/icons";
+import { Bell, Sparkle } from "@/components/icons";
 import { SKIES, type Sky } from "@/lib/types";
 import { deleteAccount, setMarketing, setReduceMotion, setSky, unblock, unshareAll, unshareOne } from "./actions";
 import styles from "./settings.module.css";
@@ -56,7 +56,7 @@ export function DangerZone({ part, shared, icon, apple = false }: { part: "unsha
   if (part === "unshare") return (
     <>
       <button type="button" className={styles.row} onClick={() => dialog.current?.showModal()} disabled={shared === 0}>
-        {icon}<span>모든 공유 거두기</span><span className={styles.value}><ChevronRight size={16} /></span>
+        {icon}<span>모든 공유 거두기</span><span className={styles.action}>거두기</span>
       </button>
       <dialog ref={dialog} className={`card ${styles.dialog}`} aria-labelledby="unshare-title">
         <form action={async () => { await unshareAll(); dialog.current?.close(); }}>
@@ -72,8 +72,9 @@ export function DangerZone({ part, shared, icon, apple = false }: { part: "unsha
   );
   return (
     <>
-      <button type="button" className={`${styles.row} ${styles.danger}`} onClick={() => dialog.current?.showModal()}>
-        {icon}<span>계정 영구 삭제</span><span className={styles.value}><ChevronRight size={16} /></span>
+      {/* 웹 v1.1: a quiet row; the dialog names what goes before anything is deleted. */}
+      <button type="button" className={styles.row} onClick={() => dialog.current?.showModal()}>
+        {icon}<span>계정 영구 삭제</span><span className={styles.action}>삭제하기</span>
       </button>
       <dialog ref={dialog} className={`card ${styles.dialog}`} aria-labelledby="delete-title">
         {/* An Apple account goes through Sign in with Apple once more (/auth/apple/start?purpose=delete). */}

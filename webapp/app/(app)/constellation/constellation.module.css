@@ -1,29 +1,35 @@
-/* Figma Web 시안 v2 · 별자리 (591:28041). */
-.loading { min-height: 560px; opacity: 0.5; }
-.header { display: flex; flex-direction: column; gap: 6px; max-width: 560px; position: relative; z-index: 1; }
-.gold { font: 400 18px/26px var(--sans); color: #fcd34d; margin: 0; }
-/* The figure rises under the heading's right side, as in the design, and fits the window's height. */
-.stage { position: relative; margin-top: -72px; min-height: 420px; display: grid; place-items: center; }
-.figure { position: relative; z-index: 1; width: min(100%, 940px); margin-left: auto; margin-right: 0; display: flex; justify-content: flex-end; }
-/* The figure (framed to its stars) as wide as the design's, but never taller than the window allows. */
-.figure > * { max-width: max(360px, calc((100dvh - 330px) * var(--arn, 1.14))); }
-.months { position: absolute; inset: 50% 0 auto; transform: translateY(-50%); display: flex; justify-content: space-between; pointer-events: none; z-index: 2; }
-.months a { pointer-events: auto; font: 400 15px/20px var(--sans); color: var(--text-2); }
+/* Figma 웹 v1.1 · 별자리 (634:30995): the sky (764 of 1200) and the slot list, 56px apart. */
+.page { display: grid; grid-template-columns: minmax(0, 764fr) minmax(300px, 380fr); gap: 56px; align-items: start; }
+.sky { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; }
+.head > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.months { display: flex; gap: 20px; flex: none; }
+.months a { font: 500 14px/20px var(--sans); color: var(--text-2); }
 .months a:hover { color: var(--text); }
-.completeCard { position: absolute; top: 80px; right: 0; z-index: 3; padding: 6px 10px; border-radius: 14px; background: rgb(251 191 36 / 0.14); border: 1px solid rgb(251 191 36 / 0.45);
-  color: #fbbf24; font: 500 12px/16px var(--sans); cursor: pointer; }
-.completeCard:hover { background: rgb(251 191 36 / 0.22); }
-.foot { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
-.stats { display: flex; gap: 72px; margin: 0; }
-.stat { display: flex; flex-direction: column; gap: 2px; }
-.stat dd { margin: 0; font: 600 44px/1.1 var(--serif); color: #f1f5f9; }
-.stat dt { margin: 0; }
-.more { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
-.more a { font-size: 16px; }
-@media (max-width: 720px) {
-  .stage { margin-top: 0; min-height: 0; }
-  .figure { width: 100%; }
-  .months { position: static; transform: none; margin-top: 8px; }
-  .stats { gap: 32px; }
-  .more { align-items: flex-start; }
+.canvas {
+  position: relative; display: grid; place-items: center; min-height: 560px; height: calc(100dvh - 64px - 40px - 78px - 40px); max-height: 680px;
+  padding: 56px 48px; border-radius: 16px; overflow: hidden;
+  background: url("/stars.svg") 0 0 / 720px 720px, var(--surface);
 }
+.canvas > div { width: min(100%, calc(440px * var(--arn, 1.14))); }
+.slots { display: flex; flex-direction: column; min-width: 0; padding-top: 58px; }
+.slotsHead { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.list { list-style: none; margin: 0; padding: 0; }
+.list > li { border-bottom: 1px solid var(--border); }
+.row { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
+.row:hover .rowTitle { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--text-3); }
+.glyph { flex: none; display: grid; place-items: center; width: 24px; height: 24px; }
+.rowText { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.rowTitle { font: 400 14px/22px var(--sans); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.value { flex: none; font: 400 14px/20px var(--sans); color: var(--text-2); font-variant-numeric: tabular-nums; }
+.emptyRow { display: flex; align-items: center; gap: 12px; padding: 14px 0; }
+.ring { flex: none; width: 14px; height: 14px; margin: 0 5px; border-radius: 50%; border: 1px dashed rgb(255 255 255 / 0.35); }
+.more { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; margin-top: 32px; }
+.link { padding: 0; background: none; border: 0; cursor: pointer; font: 500 14px/20px var(--sans); color: var(--primary-text); text-align: left; }
+.link:hover { color: var(--text); }
+@media (max-width: 1100px) {
+  .page { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+  .slots { padding-top: 0; }
+  .canvas { height: auto; min-height: 420px; }
+}
+@media (max-width: 720px) { .canvas { min-height: 300px; padding: 24px 16px; } }

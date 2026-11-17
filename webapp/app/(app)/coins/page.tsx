@@ -18,11 +18,9 @@ const day = (iso: string) => new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/
 // Figma W-18 (Web 시안 v2 597:30548): 충전하기 (Toss on the web), what's still free, and the last 30 days of coins.
 export default function CoinsPage({ searchParams }: PageProps<"/coins">) {
   return (
-    <div className="page-column" style={{ ["--column" as string]: "720px", gap: 28 }}>
-      <Suspense fallback={<><PageHeader title="코인" /><div className={styles.loading} aria-busy="true" /></>}>
-        <Coins searchParams={searchParams} />
-      </Suspense>
-    </div>
+    <Suspense fallback={<><PageHeader title="코인" /><div className={styles.loading} aria-busy="true" /></>}>
+      <Coins searchParams={searchParams} />
+    </Suspense>
   );
 }
 
@@ -39,27 +37,39 @@ async function Coins({ searchParams }: Pick<PageProps<"/coins">, "searchParams">
   const all = sp.history === "all";
   const recent = all ? history.items : lastDays(history.items, 30);
   const charged = typeof sp.charged === "string" ? Number(sp.charged) : null;
-  // Figma Web 시안 v2 · 코인 (597:30548): one 720px column; the balance in gold is the only large thing.
+  // Figma 웹 v1.1 · 코인 (642:31448): the balance and 충전하기 on the left, the history beside it.
   return (
-    <>
-      <PageHeader title="코인" />
-      {charged != null && charged > 0 && <p className={styles.notice} role="status">{charged.toLocaleString("ko-KR")} 코인을 충전했어요.</p>}
-      <section className={styles.balanceV2} aria-label="보유 코인">
-        <p><b>{info.coins.toLocaleString("ko-KR")}</b><span>코인 · 별빛 받기 {Math.floor(info.coins / info.prices.star)}번</span></p>
-        <p className="v2-meta">별빛 받기는 하루 한 번 무료예요{info.free_star_today > 0 ? ` (오늘 ${info.free_star_today}번 남았어요)` : ""}. 그 이상은 {info.prices.star}코인이에요. 기록은 코인 없이도 쓸 수 있어요.</p>
-      </section>
-      <Recharge packages={packages} available={Boolean(toss?.available)} site={SITE_URL} from={typeof sp.from === "string" && sp.from.startsWith("/") && !sp.from.startsWith("//") ? sp.from : null} />
+    <div className={styles.page}>
+      <div className={styles.main}>
+        <PageHeader title="코인" />
+        {charged != null && charged > 0 && <p className={styles.notice} role="status">{charged.toLocaleString("ko-KR")} 코인을 충전했어요.</p>}
+        <section className={styles.balance} aria-label="보유 코인">
+          <p><b>{info.coins.toLocaleString("ko-KR")}</b><span>코인</span></p>
+          <p className="body-s muted">
+            별빛 받기 {Math.floor(info.coins / info.prices.star).toLocaleString("ko-KR")}번을 할 수 있어요 (1번에 {info.prices.star}코인)
+            {info.free_star_today > 0 ? ` · 오늘 무료 별빛 ${info.free_star_today}번 남았어요` : " · 오늘 무료 별빛은 썼어요"}
+          </p>
+        </section>
+        <Recharge packages={packages} available={Boolean(toss?.available)} site={SITE_URL} from={typeof sp.from === "string" && sp.from.startsWith("/") && !sp.from.startsWith("//") ? sp.from : null} />
+      </div>
       <section className={styles.history} aria-labelledby="history-title">
-        <div className={styles.historyHead}><h2 id="history-title" className="v2-group">{all ? "모든 사용 내역" : "최근 사용 내역"}</h2>{all ? <Link href="/coins" scroll={false} className="v2-link">최근 30일만 보기</Link>
-          : history.items.length > recent.length ? <Link href="/coins?history=all" scroll={false} className="v2-link">전체 보기 ›</Link>
-          : <span className="v2-small">최근 30일</span>}</div>
-        {recent.length === 0 ? <p className="v2-meta">{all ? "아직 코인을 쓰거나 충전한 기록이 없어요." : "최근 30일 동안 코인을 쓰거나 충전한 기록이 없어요."}</p> : (
+        <div className={styles.historyHead}>
+          <h2 id="history-title" className="h3">{all ? "모든 사용 내역" : "사용 내역 · 최근 30일"}</h2>
+          {all ? <Link href="/coins" scroll={false} className={styles.historyLink}>최근 30일만 보기</Link>
+            : history.items.length > recent.length && <Link href="/coins?history=all" scroll={false} className={styles.historyLink}>전체 보기 ›</Link>}
+        </div>
+        {recent.length === 0 ? (
+          <p className={`body-s muted ${styles.historyEmpty}`}>{all ? "아직 코인을 쓰거나 충전한 기록이 없어요." : "최근 30일 동안 코인을 쓰거나 충전한 기록이 없어요."} 별빛 없이 띄우기와 하루 한 번 별빛 받기는 코인 없이 할 수 있어요.</p>
+        ) : (
           <ul>
             {recent.map((x) => {
               const plus = x.delta > 0, free = x.delta === 0;
               return (
                 <li key={x.id}>
-                  <span className={styles.what}><span>{x.title}{x.source && PAID[x.source] && <span className="v2-small"> · {PAID[x.source]}</span>}</span><span className="v2-small">{day(x.created_at)}</span></span>
+                  <span className={styles.what}>
+                    <span className="label-m">{x.title}</span>
+                    <span className="caption faint">{[x.source && PAID[x.source], day(x.created_at)].filter(Boolean).join(" · ")}</span>
+                  </span>
                   <span className={styles.delta} data-tone={free ? "free" : plus ? "plus" : undefined}>{free ? "무료" : plus ? `+${x.delta.toLocaleString("ko-KR")}` : `−${(-x.delta).toLocaleString("ko-KR")}`}</span>
                 </li>
               );
@@ -67,7 +77,7 @@ async function Coins({ searchParams }: Pick<PageProps<"/coins">, "searchParams">
           </ul>
         )}
       </section>
-    </>
+    </div>
   );
 }
 

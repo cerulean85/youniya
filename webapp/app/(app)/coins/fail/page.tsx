@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Lock } from "@/components/icons";
+import { Coin } from "@/components/icons";
 import { StatusScreen } from "@/components/Status";
 
 export const metadata: Metadata = { title: "결제가 끝나지 않았어요" };
@@ -31,11 +31,12 @@ async function Reason({ searchParams }: Pick<PageProps<"/coins/fail">, "searchPa
   const detail = cancel ? null : KNOWN[code] ?? (typeof sp.message === "string" ? sp.message.slice(0, 200) : null);
   const from = safe(sp.from);
   return (
-    <StatusScreen icon={<Lock size={22} />} title="결제가 끝나지 않았어요"
-      body={<>코인은 차감되거나 지급되지 않았어요.{detail && <><br />{detail}</>}</>}>
+    <StatusScreen icon={<Coin size={24} />} title="결제가 끝나지 않았어요"
+      body="코인은 차감되거나 지급되지 않았어요." note={detail}>
       <Link href={from ? `/coins?from=${encodeURIComponent(from)}` : "/coins"} className="btn btn-primary btn-block">다시 결제하기</Link>
       <Link href={from ?? "/"} className="btn btn-ghost btn-block">닫기</Link>
-      {!cancel && code && <p className="caption faint">돈이 빠져나갔는데 코인이 들어오지 않았다면 <Link href="/contact">문의하기</Link>로 알려 주세요 (코드 {code}).</p>}
+      {!cancel && code ? <p className="caption muted">돈이 빠져나갔는데 코인이 들어오지 않았다면 <Link href="/contact">문의하기</Link>로 알려 주세요 (코드 {code}).</p>
+        : <p><Link href="/contact" className="caption muted">문의하기 ›</Link></p>}
     </StatusScreen>
   );
 }

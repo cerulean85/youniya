@@ -58,3 +58,28 @@
 .v2Bar .btn { height: 52px; min-width: 200px; }
 .v2Bar .btn-primary { min-width: 240px; }
 @media (max-width: 720px) { .v2Bar { flex-wrap: wrap; } .v2Bar .btn { flex: 1; min-width: 0; } .v2Title { font-size: 30px; } }
+
+/* Figma 웹 v1.1 · 오늘 (633:30936): the writing desk on 오늘. */
+.desk { position: relative; display: flex; flex-direction: column; gap: 16px; min-height: calc(100dvh - 64px - 80px); }
+.deskDate { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
+.deskEditor { flex: 1; display: flex; flex-direction: column; gap: 20px; padding: 32px 40px 24px; border-radius: 16px; background: var(--surface); border: 1px solid var(--border); }
+.deskEditor:focus-within { border-color: rgb(var(--tint-rgb) / 0.55); }
+.deskMoods { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.deskLabel { font: 500 12px/16px var(--sans); letter-spacing: 0.2px; color: var(--text-2); margin-right: 2px; }
+.deskTitle { background: none; border: 0; outline: none; padding: 0; width: 100%; font: 600 28px/38px var(--serif); letter-spacing: -0.3px; color: var(--text); }
+.deskTitle::placeholder { color: var(--text-3); }
+.deskText { flex: 1; min-height: 280px; resize: none; background: none; border: 0; outline: none; padding: 0; font: 400 16px/30px var(--serif); color: var(--text); }
+.deskText::placeholder { color: var(--text-3); }
+.deskFooter { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+.deskCount { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.deskActions { display: flex; gap: 12px; flex: none; }
+.deskActions .btn { height: 48px; }
+@media (max-width: 720px) {
+  .desk { min-height: 0; }
+  .deskEditor { padding: 24px 20px 20px; }
+  .deskText { min-height: 240px; }
+  .deskFooter { flex-direction: column; align-items: stretch; }
+  .deskActions .btn { flex: 1; }
+}
+.deskMoods .v2Mood:not([aria-pressed="true"]) { opacity: 0.55; }
+.deskMoods .v2Mood:not([aria-pressed="true"]):hover { opacity: 0.85; }

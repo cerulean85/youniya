@@ -1,8 +1,8 @@
-.back { display: inline-flex; align-items: center; gap: 6px; font: 500 14px/20px var(--sans); color: var(--text-2); margin-bottom: -8px; }
+.back { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; font: 400 14px/20px var(--sans); color: var(--text-2); margin-bottom: 4px; }
+.back:hover { color: var(--text); }
 .loading { min-height: 560px; opacity: 0.5; }
 .body { display: flex; gap: 48px; align-items: flex-start; }
 .article { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
-.born { display: inline-flex; align-items: center; gap: 8px; font: 500 14px/20px var(--sans); color: var(--gold); }
 .meta { display: flex; align-items: center; gap: 12px; }
 .mood { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; font: 500 12px/16px var(--sans); border: 1px solid var(--c); }
 .mood::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--c); }
@@ -29,19 +29,8 @@
 .option > span { display: flex; flex-direction: column; gap: 6px; }
 .masked { display: inline-flex; gap: 6px; align-items: center; font: 400 12px/18px var(--sans); color: var(--gold); }
 .shared { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
-.result { display: flex; gap: 56px; align-items: flex-start; justify-content: center; padding-top: 24px; }
-.resultCard { width: 360px; flex: none; position: sticky; top: 48px; }
-.resultSide { width: 440px; display: flex; flex-direction: column; gap: 18px; }
-.offer { padding: 18px 22px; border-radius: 16px; display: flex; flex-direction: column; gap: 8px; }
-.offerHead { display: inline-flex; gap: 6px; align-items: center; font: 500 12px/16px var(--sans); color: var(--primary-text); }
-.resultActions { display: flex; gap: 10px; }
-.resultActions > * { flex: 1; }
-.shareLink { align-self: center; font: 500 13px/20px var(--sans); color: var(--text-2); }
 /* 기획서 17.4: top to bottom, 0.2 s apart, each fading in while rising slightly over 0.5 s. */
-.result [data-rise] { opacity: 0; animation: rise 0.5s ease-out forwards; animation-delay: calc(var(--i, 0) * 0.2s); }
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .result [data-rise] { opacity: 1; animation: none; } }
-@media (max-width: 1100px) { .result { flex-direction: column; align-items: center; } .resultCard { position: static; } }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { display: inline-flex; align-items: center; gap: 4px; padding: 8px 8px 8px 12px; border-radius: 12px; background: var(--raised); border: 1px solid var(--border); }
 .chip a { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: center; }
@@ -107,3 +96,62 @@
   .heroCol { position: relative; top: 0; min-height: 360px; order: -1; }
 }
 @media (max-width: 720px) { .heroCol > svg { width: min(283px, 56vw); height: auto; } .heroCol { min-height: 300px; } .title { font-size: 32px; } .actions > :is(button, a).btn, .actions :global(.btn-block) { flex: 1; min-width: 0; } .textLinks { margin-left: 0; } }
+
+/* Figma 웹 v1.1 · 별 상세 (634:31404): the writing (700) | a hairline | the star and its starlight. */
+.v11 { display: grid; grid-template-columns: minmax(0, 700fr) minmax(320px, 436fr); align-items: stretch; min-height: calc(100dvh - 64px - 120px); }
+.v11 .left { padding-right: 64px; gap: 16px; }
+.v11 .title { font: 600 40px/52px var(--serif); color: #f8fafc; }
+.v11 .text { white-space: pre-wrap; font: 400 16px/30px var(--serif); color: var(--text); padding: 0 0 24px; flex: 1; }
+.moodChips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.moodChip { display: inline-flex; align-items: center; gap: 8px; padding: 7px 16px; border-radius: 18px; font: 400 14px/20px var(--sans); color: #f5f3ff;
+  border: 1px solid color-mix(in srgb, var(--c) 80%, transparent); background: color-mix(in srgb, var(--c) 24%, transparent); }
+.moodChip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 36px; padding-top: 20px; border-top: 1px solid var(--border); }
+.bar :global(.btn-secondary) { width: auto; height: 48px; padding: 0 24px; }
+/* 별 잇기 sits in the row as a plain text action, like the links beside it. */
+.quiet > :global(.btn) { width: auto; height: auto; padding: 0; background: none; border: 0; box-shadow: none; font: 400 14px/20px var(--sans); color: var(--text); }
+.quiet > :global(.btn):hover { color: var(--primary-text); }
+.v11 .textLinks { margin-left: 0; }
+.v11 .textLinks :global(.btn) { gap: 0; }
+.v11 .textLinks > :is(button, a), .v11 .textLinks :global(.btn) { color: var(--text); }
+.v11 .textLinks > :is(button, a):hover { color: var(--primary-text); }
+.del { margin-left: auto; }
+.del > :global(.btn) { padding: 0; height: auto; font: 400 14px/20px var(--sans); color: var(--text-2); }
+.del > :global(.btn):hover { color: var(--anger); }
+.right { position: relative; display: flex; flex-direction: column; gap: 14px; padding: 0 0 0 48px; border-left: 1px solid var(--border); }
+.hero { position: relative; display: grid; place-items: center; height: 240px; }
+.v11 .unlitHero { width: 64px; height: 64px; }
+.v11 .reading { gap: 16px; }
+.v11 .starlight b { font: 300 56px/1 var(--sans); color: #f8fafc; }
+.v11 .starlight > span:nth-child(2) { font: 500 14px var(--sans); color: var(--text); }
+.v11 .observation { font: 400 15px/24px var(--serif); color: var(--text-2); margin: 0 0 4px; }
+.v11 .meter { font: 400 13px/20px var(--sans); color: var(--text); }
+.v11 .meter i { background: var(--raised); }
+.floatRow :global(.btn) { width: 100%; height: 48px; }
+@media (max-width: 1100px) {
+  .v11 { grid-template-columns: 1fr; gap: 40px; }
+  .v11 .left { padding-right: 0; }
+  .right { order: -1; padding: 0; border-left: 0; }
+}
+@media (max-width: 720px) { .v11 .title { font-size: 30px; line-height: 40px; } .bar { gap: 12px 20px; } }
+
+/* Figma 웹 v1.1 · 별이 떴어요 (640:31510). */
+.born11 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 560px); gap: 72px; align-items: start; }
+.bornStar { display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; padding-top: 16px; }
+.bornHero { position: relative; display: grid; place-items: center; height: 240px; width: 100%; }
+.bornHero > svg { position: relative; }
+.bornLight { display: flex; align-items: baseline; gap: 8px; margin: 0; }
+.bornLight b { font: 300 56px/1 var(--sans); color: #f8fafc; }
+.bornLight span { font: 500 14px var(--sans); color: var(--text); }
+.bornQuote { margin: 0; max-width: 460px; font: 400 15px/24px var(--serif); color: var(--text-2); }
+.bornSide { display: flex; flex-direction: column; gap: 16px; padding-top: 8px; }
+.bornTitle { margin: 0; font: 600 40px/52px var(--serif); color: #f8fafc; }
+.bornActions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+.bornActions .btn { height: 48px; }
+.bornLink { margin-left: 24px; font: 500 14px/20px var(--sans); color: var(--text); }
+.bornLink:hover { color: var(--primary-text); }
+/* The reading sits on the page, unboxed. */
+.bornReading :global(.card) { padding: 0; background: none; border: 0; box-shadow: none; }
+.born11 [data-rise] { opacity: 0; animation: rise 0.5s ease-out forwards; animation-delay: calc(var(--i, 0) * 0.2s); }
+@media (prefers-reduced-motion: reduce) { .born11 [data-rise] { opacity: 1; animation: none; } }
+@media (max-width: 1100px) { .born11 { grid-template-columns: 1fr; gap: 32px; } .bornLink { margin-left: 8px; } }

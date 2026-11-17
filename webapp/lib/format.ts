@@ -12,7 +12,7 @@ export const moodOf = (m: Mood) => MOODS.find((x) => x.key === m) ?? MOODS[0];
 export const MIN_FLOAT_LENGTH = 50;
 
 const KST = "Asia/Seoul";
-const parts = (iso: string, opts: Intl.DateTimeFormatOptions) =>
+export const parts = (iso: string, opts: Intl.DateTimeFormatOptions) =>
   new Intl.DateTimeFormat("ko-KR", { timeZone: KST, ...opts }).format(new Date(iso));
 
 /** "11월 3일 · 21:30" */

@@ -2,54 +2,33 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
-import styles from "./Sidebar.module.css";
+import styles from "./TopBar.module.css";
 
-type Item = { href: string; label: string; icon: ReactNode; badge?: ReactNode };
+type Item = { href: string; label: string };
 
 function isActive(href: string, path: string | null) {
   if (path === null) return false;
-  if (href === "/") return path === "/" || path.startsWith("/stars");
-  // A notice opened from 알림 keeps 알림 lit (Web 시안 v2, 2026-11-11).
-  if (href === "/notifications" && path.startsWith("/notices/")) return true;
+  if (href === "/") return path === "/" || path === "/write";
+  // 웹 v1.1: a star opens under 기록 (its back link goes there).
+  if (href === "/records") return path.startsWith("/records") || path.startsWith("/stars");
   return path === href || path.startsWith(`${href}/`);
 }
 
-function Group({ items, path }: { items: Item[]; path: string | null }) {
-  return (
-    <>
-      {items.map((it) => {
-        const on = isActive(it.href, path);
-        return (
-          <Link key={it.href} href={it.href} className={styles.item} aria-current={on ? "page" : undefined}>
-            <span className={styles.icon}>{it.icon}</span>
-            {it.label}
-            {on ? <span className={styles.dot} aria-hidden="true" /> : it.badge}
-          </Link>
-        );
-      })}
-    </>
-  );
-}
-
 /** `active={null}` renders without a highlight (the Suspense fallback). */
-export function NavLinks({ main, more, active }: { main: Item[]; more: Item[]; active?: null }) {
-  return active === null ? <Links main={main} more={more} path={null} /> : <Current main={main} more={more} />;
+export function NavLinks({ items, active }: { items: Item[]; active?: null }) {
+  return active === null ? <Links items={items} path={null} /> : <Current items={items} />;
 }
 
-function Current({ main, more }: { main: Item[]; more: Item[] }) {
-  return <Links main={main} more={more} path={usePathname()} />;
+function Current({ items }: { items: Item[] }) {
+  return <Links items={items} path={usePathname()} />;
 }
 
-function Links({ main, more, path }: { main: Item[]; more: Item[]; path: string | null }) {
+function Links({ items, path }: { items: Item[]; path: string | null }) {
   return (
-    <nav aria-label="주요 메뉴" className={styles.nav}>
-      <div className={styles.group}><Group items={main} path={path} /></div>
-      <hr className={styles.divider} />
-      <div className={styles.group}>
-        <span className={styles.groupLabel}>더 보기</span>
-        <Group items={more} path={path} />
-      </div>
+    <nav aria-label="주요 메뉴" className={styles.tabs}>
+      {items.map((it) => (
+        <Link key={it.href} href={it.href} className={styles.tab} aria-current={isActive(it.href, path) ? "page" : undefined}>{it.label}</Link>
+      ))}
     </nav>
   );
 }

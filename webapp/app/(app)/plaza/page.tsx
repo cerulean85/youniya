@@ -5,7 +5,6 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { PlazaRow } from "@/components/PlazaRow";
-import { StarGlyph } from "@/components/StarGlyph";
 import { RestrictedBanner } from "@/components/Restricted";
 import { api } from "@/lib/api";
 import { requireNickname, withAgo } from "@/lib/plaza";
@@ -27,37 +26,18 @@ type Filter = (typeof FILTERS)[number]["key"];
 export default function PlazaPage({ searchParams }: PageProps<"/plaza">) {
   return (
     // The list and its side card as one block in the middle of wide screens (2026-11-10).
-    <div className="page-column" style={{ ["--column" as string]: "1056px" }}>
-      <Suspense fallback={<><Header /><PlazaSkeleton /></>}>
-        <Gate searchParams={searchParams} />
-      </Suspense>
-    </div>
+    <Suspense fallback={<><Header /><PlazaSkeleton /></>}>
+      <Gate searchParams={searchParams} />
+    </Suspense>
   );
 }
 
-// Figma Web 시안 v2 · 우주 광장 (593:28550): a band of the plaza's own stars across the top is the lead.
-function Header({ band = [], children }: { band?: PlazaStar[]; children?: React.ReactNode }) {
+// Figma 웹 v1.1 · 우주 광장 (639:31296): a plain heading; the list is the screen.
+function Header({ children }: { children?: React.ReactNode }) {
   return (
     <header className={styles.header}>
-      <span className="v2-glow" style={{ ["--c" as string]: "var(--primary)", left: "-6%", top: "-260px", width: "120%", height: "520px" }} aria-hidden="true" />
-      {band.length > 0 && (
-        <span className={styles.band} aria-hidden="true">
-          {Array.from({ length: Math.min(28, band.length * 6) }, (_, i) => band[i % band.length]).map((s, i) => {
-            // A fixed scatter of the plaza's own stars (cycled when there are few); the same star lands in the same
-            // place every visit, and the left side keeps to the top, clear of the title.
-            const r = (n: number) => { const x = Math.sin((i + 1) * 12.9898 + n * 78.233) * 43758.5453; return x - Math.floor(x); };
-            const x = r(1), y = x < 0.55 ? r(2) * 0.32 : r(2);
-            const size = s.has_starlight ? 8 + Math.round(r(3) * (i < band.length ? 16 : 10)) : 7;
-            return (
-              <span key={`${s.id}-${i}`} style={{ left: `${(x * 100).toFixed(1)}%`, top: `${(y * 100).toFixed(1)}%`, opacity: i < band.length ? 1 : 0.75 }}>
-                <StarGlyph points={s.has_starlight ? s.shape?.points : 4} sharpness={s.shape?.sharpness} mood={s.mood} size={size} twinkle />
-              </span>
-            );
-          })}
-        </span>
-      )}
-      <h1 className="v2-hero-s">우주 광장</h1>
-      {children ?? <p className="v2-body">별지기들이 나눈 별이에요. 눌러서 글을 읽고, 마음이 닿으면 공명을 남겨 보세요.</p>}
+      <h1 className="h1">우주 광장</h1>
+      {children ?? <p className="body-l muted">별지기들이 나눈 별이에요. 눌러서 글을 읽고, 마음이 닿으면 공명을 남겨 보세요.</p>}
     </header>
   );
 }
@@ -94,23 +74,22 @@ async function Plaza({ searchParams }: Pick<PageProps<"/plaza">, "searchParams">
   const notice = sp.reported ? "신고를 받았어요. 이제 보이지 않아요." : sp.blocked ? "차단했어요. 서로의 별과 별빛 한 줄이 더 이상 보이지 않아요." : null;
   return (
     <>
-      <Header band={stars.items}>
-        {tonight.count > 0 ? <p className={styles.tonight}>오늘 밤, {tonight.count.toLocaleString("ko-KR")}개의 마음이 모였어요</p>
-          : <p className="v2-body">별지기들이 나눈 별이에요. 눌러서 글을 읽고, 마음이 닿으면 공명을 남겨 보세요.</p>}
-        <p className={styles.tonightSub}>
-          {tonight.mine > 0 && <>내 별 {tonight.mine}개도 함께 빛나요 · </>}
-          <Link href="/settings/shares">내가 나눈 별 {mine.stars.length}개 ›</Link>
-        </p>
-      </Header>
-      {notice && <p className={styles.notice} role="status">{notice}</p>}
-      {me.plaza_restricted_until && new Date(me.plaza_restricted_until) > new Date() && <RestrictedBanner until={me.plaza_restricted_until} open={sp.restricted === "1"} />}
-      <nav className={styles.sorts} aria-label="거르기">
-        {FILTERS.map((f) => (
-          <Link key={f.key} href={f.key === "new" ? "/plaza" : `/plaza?filter=${f.key}`} aria-current={filter === f.key ? "true" : undefined}>{f.label}</Link>
-        ))}
-      </nav>
       <div className={styles.body}>
-        <section className={styles.records} aria-label="나눈 별">
+        <div className={styles.records}>
+        <Header>
+          <p className="body-l muted">
+            {tonight.count > 0 ? `오늘 밤, ${tonight.count.toLocaleString("ko-KR")}개의 마음이 모였어요` : "별지기들이 나눈 별이에요. 눌러서 글을 읽고, 마음이 닿으면 공명을 남겨 보세요."}
+            {tonight.mine > 0 && ` · 내 별 ${tonight.mine}개도 함께 빛나요`}
+          </p>
+        </Header>
+        {notice && <p className={styles.notice} role="status">{notice}</p>}
+        {me.plaza_restricted_until && new Date(me.plaza_restricted_until) > new Date() && <RestrictedBanner until={me.plaza_restricted_until} open={sp.restricted === "1"} />}
+        <nav className={styles.sorts} aria-label="거르기">
+          {FILTERS.map((f) => (
+            <Link key={f.key} href={f.key === "new" ? "/plaza" : `/plaza?filter=${f.key}`} aria-current={filter === f.key ? "true" : undefined}>{f.label}</Link>
+          ))}
+        </nav>
+        <section aria-label="나눈 별">
           {rows.length === 0 ? (
             filter === "beside" ? (
               <div className={styles.listEmpty}>
@@ -128,18 +107,23 @@ async function Plaza({ searchParams }: Pick<PageProps<"/plaza">, "searchParams">
           )}
           {stars.items.length >= limit && (more
             ? <p className={`caption faint ${styles.listEnd}`}>최근 {MAX}개까지 보여요</p>
-            : <Link href={`/plaza?${new URLSearchParams({ ...(filter !== "new" && { filter }), more: "1" })}`} scroll={false} className={`btn btn-secondary ${styles.more}`}>더 보기</Link>)}
+            : <div className={styles.moreRow}>
+                <Link href={`/plaza?${new URLSearchParams({ ...(filter !== "new" && { filter }), more: "1" })}`} scroll={false} className="btn btn-secondary">더 보기</Link>
+                <span className="caption faint">처음 {FIRST}개를 보여 줘요. 최근 {MAX}개까지 볼 수 있어요.</span>
+              </div>)}
         </section>
+        </div>
         <aside className={styles.side}>
-          <section className={styles.mine}>
-            <h2 className={styles.sideTitle}>내 별</h2>
+          <section className={styles.mine} aria-labelledby="mine-head">
+            <h2 id="mine-head" className="h3">내 별</h2>
             <Link href="/settings/shares"><span>내가 나눈 별</span><span>{mine.stars.length}개 ›</span></Link>
             <Link href="/plaza?filter=beside"><span>곁에 둔 별</span><span>{besideCount}개 ›</span></Link>
             <span className={styles.mineRow}><span>받은 별빛 한 줄</span><span>{lines}개</span></span>
           </section>
-          <hr className="v2-rule" />
-          <section className={styles.rules}>
-            <h2 className={styles.sideTitle} style={{ fontSize: 18 }}>광장에서 지켜 주세요</h2>
+          {/* 나누기 starts from one of my stars, so it opens 기록. */}
+          <Link href="/records" className="btn btn-secondary btn-block">내 별 나누기</Link>
+          <section className={styles.rules} aria-labelledby="rules-head">
+            <h2 id="rules-head" className="label-m">광장에서 지켜 주세요</h2>
             <ul>
               <li>별을 누르면 글 전체를 읽을 수 있어요.</li>
               <li>마음이 닿으면 공명이나 별빛 한 줄을 남겨요. 별빛 한 줄은 별 주인만 읽어요.</li>
@@ -147,7 +131,6 @@ async function Plaza({ searchParams }: Pick<PageProps<"/plaza">, "searchParams">
               <li>불편한 별은 ··· 에서 신고하거나 차단할 수 있어요.</li>
             </ul>
           </section>
-          <Link href="/records" className="btn btn-secondary btn-block">내 별 나누기</Link>
         </aside>
       </div>
     </>

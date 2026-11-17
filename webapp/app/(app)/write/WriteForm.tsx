@@ -18,7 +18,8 @@ const STAR_COST = 5;
 /** The star a 고쳐 쓰기 starts from, or the one a 별 잇기 joins the new star to. */
 export type Source = { kind: "rewrite" | "link"; id: string; title: string; question: string | null; moods: Mood[]; body: string };
 
-export function WriteForm({ draft, source, freeStarToday, coins }: { draft: Draft; source: Source | null; freeStarToday: number; coins: number }) {
+/** `date` puts the form on 오늘 as the writing desk (Figma 웹 v1.1 · 오늘 633:30936) instead of its own page. */
+export function WriteForm({ draft, source, freeStarToday, coins, date }: { draft: Draft; source: Source | null; freeStarToday: number; coins: number; date?: string }) {
   const rewrite = source?.kind === "rewrite" ? source : null;
   // 고쳐 쓰기 starts from the old writing unless a draft of it is waiting.
   const start = draft ?? (rewrite && { mood: rewrite.moods[0], moods: rewrite.moods, title: rewrite.title, body: rewrite.body });
@@ -197,6 +198,57 @@ export function WriteForm({ draft, source, freeStarToday, coins }: { draft: Draf
           </div>
         )}
         <button type="button" className="btn btn-primary btn-block" disabled={length === 0} onClick={() => confirm.current?.showModal()}>새 별로 띄우기</button>
+        <PrismOverlay mode="float" draft={localKey} />
+        {confirmDialog}
+        {extraDialogs}
+        {offlineUi}
+      </form>
+    );
+  }
+
+  // Figma 웹 v1.1 · 오늘 (633:30936) and 빈 오늘 (644:31488): the editor is the screen. One box with the moods,
+  // the title and the writing; its footer holds the count, what's free today, and the two ways to float.
+  if (date && !source) {
+    const note = !canFloat && length > 0 ? `${MIN_FLOAT_LENGTH - length}자 더 쓰면 별빛을 받을 수 있어요`
+      : freeLeft ? `오늘 무료 별빛 ${freeStarToday}번 남았어요` : `별빛을 받으면 ${STAR_COST}코인 (보유 ${coins.toLocaleString("ko-KR")})`;
+    return (
+      <form action={action} className={styles.desk} onSubmit={guard}>
+        <input type="hidden" name="moods" value={moods.join(",")} />
+        <AttemptField />
+        <div className={styles.deskDate}>
+          <span className="label-m muted">{date} · 오늘의 별</span>
+          <span className="caption faint" role="status">{saved ?? ""}</span>
+        </div>
+        <div className={styles.deskEditor}>
+          <div className={styles.deskMoods} role="group" aria-label="오늘의 마음">
+            <span className={styles.deskLabel}>오늘의 마음</span>
+            {MOODS.map((m) => (
+              <button key={m.key} type="button" aria-pressed={moods.includes(m.key)} className={styles.v2Mood}
+                style={{ ["--c" as string]: m.color }} onClick={() => toggleMood(m.key)}>{m.label}</button>
+            ))}
+            <span className="caption faint">{length === 0 ? "한 글자라도 쓰면 띄울 수 있어요" : "처음 고른 마음이 별의 색이 돼요"}</span>
+          </div>
+          <input name="title" className={styles.deskTitle} placeholder="제목 없는 별" value={title} maxLength={60}
+            onChange={(e) => setTitle(e.target.value)} aria-label="제목" />
+          <textarea name="body" className={styles.deskText} placeholder="오늘은 어떤 마음이 머물렀나요? 떠오르는 대로 적어 주세요."
+            value={body} maxLength={20000} onChange={(e) => setBody(e.target.value)} aria-label="본문" />
+          {state?.error && (
+            <div className={styles.error} role="alert">
+              {state.error}
+              {state.code === "insufficient_coins" && <CoinsLink className={styles.link}>코인 충전하기</CoinsLink>}
+            </div>
+          )}
+          <div className={styles.deskFooter}>
+            <span className={styles.deskCount}>
+              <span className="label-s muted">{length.toLocaleString("ko-KR")}자</span>
+              <span className="caption faint">{note} · 별빛 없이 띄우기는 언제나 무료</span>
+            </span>
+            <span className={styles.deskActions}>
+              <Submit mode="keep" label="별빛 없이 띄우기" style="btn-secondary" disabled={length === 0} />
+              <button type="button" className="btn btn-primary" disabled={!canFloat} onClick={openFloat}>별빛 받고 띄우기</button>
+            </span>
+          </div>
+        </div>
         <PrismOverlay mode="float" draft={localKey} />
         {confirmDialog}
         {extraDialogs}

@@ -1,32 +1,26 @@
-.header { position: relative; display: flex; flex-direction: column; gap: 10px; padding-top: 80px; }
-.header > :not(.band, :global(.v2-glow)) { position: relative; z-index: 1; }
-/* The plaza's own stars, scattered across the top (a fixed scatter per star order). */
-.band { position: absolute; left: -2%; right: -2%; top: -24px; height: 240px; pointer-events: none; }
-.band > span { position: absolute; transform: translate(-50%, -50%); }
+/* Figma 웹 v1.1 · 우주 광장 (639:31296): the list (764 of 1200) and 내 별 beside it. */
+.header { display: flex; flex-direction: column; gap: 6px; }
 .loading { min-height: 560px; opacity: 0.5; }
-.notice { align-self: flex-start; padding: 10px 16px; border-radius: 12px; background: var(--tint-calm); border: 1px solid rgba(52, 211, 153, 0.4); font: 400 13px/20px var(--sans); }
-.tonight { margin: 0; font: 600 22px/1.4 var(--serif); color: #fcd34d; }
-.tonightSub { margin: 0; font: 400 15px/22px var(--sans); color: #cbd5e1; }
-.tonightSub a { color: inherit; }
-.tonightSub a:hover { color: var(--text); }
-.sorts { display: flex; gap: 8px; }
-.sorts a { display: inline-flex; align-items: center; padding: 8px 16px; border-radius: 18px; font: 400 14px/20px var(--sans); background: rgb(255 255 255 / 0.04); border: 1px solid rgb(255 255 255 / 0.12); color: #cbd5e1; }
+.notice { margin-top: 16px; width: fit-content; padding: 10px 16px; border-radius: 12px; background: var(--tint-calm); border: 1px solid rgba(52, 211, 153, 0.4); font: 400 13px/20px var(--sans); }
+.sorts { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0 8px; }
+.sorts a { display: inline-flex; align-items: center; padding: 8px 16px; border-radius: 18px; font: 400 14px/20px var(--sans); background: rgb(255 255 255 / 0.04); border: 1px solid rgb(255 255 255 / 0.12); color: var(--text-2); }
 .sorts a:hover { color: var(--text); }
-.sorts a[aria-current="true"] { color: #f5f3ff; border-color: rgb(167 139 250 / 0.8); background: rgb(139 92 246 / 0.28); }
-.body { display: flex; gap: 100px; align-items: flex-start; }
-.records { flex: 1; min-width: 0; }
+.sorts a[aria-current="true"] { color: #f5f3ff; border-color: rgb(var(--primary-rgb) / 0.8); background: rgb(var(--tint-rgb) / 0.24); }
+.body { display: grid; grid-template-columns: minmax(0, 764fr) minmax(300px, 380fr); gap: 56px; align-items: start; }
+.records { min-width: 0; }
 .list { list-style: none; margin: 0; padding: 0; }
-.list li { border-bottom: 1px solid rgb(255 255 255 / 0.06); }
-.listEmpty { padding: 48px 4px; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
-.side { width: 296px; flex: none; display: flex; flex-direction: column; gap: 20px; position: sticky; top: 48px; }
-.sideTitle { margin: 0 0 6px; font: 600 20px/1.4 var(--serif); color: #f1f5f9; }
-.side .btn { height: 52px; }
-.mine { display: flex; flex-direction: column; gap: 14px; }
-.mine a, .mineRow { display: flex; justify-content: space-between; font: 400 15px/22px var(--sans); color: #cbd5e1; }
-.mine a > span:last-child, .mineRow > span:last-child { color: #c4b5fd; }
+.list li { border-bottom: 1px solid var(--border); }
+.listEmpty { padding: 48px 0; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.side { display: flex; flex-direction: column; gap: 24px; position: sticky; top: 104px; padding-top: 8px; }
+.side .btn { height: 48px; }
+.mine { display: flex; flex-direction: column; }
+.mine h2 { margin-bottom: 8px; }
+.mine a, .mineRow { display: flex; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); font: 400 14px/20px var(--sans); color: var(--text-2); }
+.mine a > span:last-child, .mineRow > span:last-child { color: var(--text); }
 .mine a:hover > span:first-child { color: var(--text); }
-.rules { display: flex; flex-direction: column; gap: 8px; }
-.rules ul { margin: 0; padding-left: 16px; display: grid; gap: 4px; font: 400 14px/21px var(--sans); color: #a3b0c6; }
-@media (max-width: 1100px) { .body { flex-direction: column; } .side { width: 100%; position: static; } }
-.more { display: flex; width: fit-content; min-width: 200px; margin: 16px auto 0; }
-.listEnd { text-align: center; margin-top: 16px; }
+.rules { display: flex; flex-direction: column; gap: 10px; padding-top: 24px; border-top: 1px solid var(--border); }
+.rules ul { margin: 0; padding-left: 14px; display: grid; gap: 8px; font: 400 13px/20px var(--sans); color: var(--text-2); }
+.moreRow { display: flex; align-items: center; gap: 16px; margin-top: 24px; }
+.moreRow .btn { height: 48px; }
+.listEnd { margin-top: 16px; }
+@media (max-width: 1100px) { .body { grid-template-columns: minmax(0, 1fr); } .side { position: static; } }
