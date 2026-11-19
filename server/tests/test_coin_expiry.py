@@ -4,7 +4,6 @@ App Store coins of the current products never expire (사용자 결정 2026-11-1
 from datetime import date, datetime, timezone
 
 import jwt
-import pytest
 import sqlalchemy as sa
 
 from youniya_api import coins
@@ -13,12 +12,6 @@ from youniya_api.views import KST
 
 from .conftest import sign_in
 from .test_marketing import FakePush
-
-
-@pytest.fixture(autouse=True)
-def _email_policy_in_force(monkeypatch):
-    from youniya_api.routers import auth
-    monkeypatch.setattr(auth, "EMAIL_FROM", datetime(2000, 1, 1, tzinfo=timezone.utc))
 
 
 def _at(y, m, d, hour=10):
@@ -157,15 +150,6 @@ def test_a_charge_restarts_the_year_and_the_notices(client):
         assert db.query(User).one().coins_notice_days is None
     _set_active(client, _at(2028, 1, 6))  # the charge's day, as if it were then
     assert _run(client, _at(2028, 1, 11))["expired"] == 0
-
-
-def test_no_email_kept_before_the_privacy_policy_change(client, monkeypatch):
-    from youniya_api.routers import auth
-
-    monkeypatch.setattr(auth, "EMAIL_FROM", datetime(2999, 1, 1, tzinfo=timezone.utc))
-    sign_in(client, jwt.encode({"sub": "s", "email": "a@b.com"}, "k" * 32, algorithm="HS256"))
-    with client.app.state.sessions() as db:
-        assert db.query(User).one().email_enc is None
 
 
 def test_migration_backfills_lots_from_history(tmp_path):

@@ -4,7 +4,6 @@ from datetime import datetime, timezone
 from typing import Literal
 
 import logging
-from zoneinfo import ZoneInfo
 
 import jwt
 from fastapi import APIRouter, Depends, Request
@@ -103,14 +102,8 @@ def _session_for(db: Session, provider: str, sub: str, secret: str, email_enc: s
     return _tokens(db, user, secret)
 
 
-# 개인정보 처리방침 개정(이메일 수집)이 시행되는 날, KST. Before it no email is kept.
-EMAIL_FROM = datetime(2026, 12, 19, tzinfo=ZoneInfo("Asia/Seoul"))
-
-
-def email_of(id_token: str, cipher, now: datetime | None = None) -> str | None:
+def email_of(id_token: str, cipher) -> str | None:
     """The `email` claim of an ID token already verified, encrypted; only for coin expiry notices (코인 소멸)."""
-    if (now or datetime.now(timezone.utc)) < EMAIL_FROM:
-        return None
     try:
         email = jwt.decode(id_token, options={"verify_signature": False}).get("email")
     except jwt.InvalidTokenError:
