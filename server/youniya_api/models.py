@@ -43,6 +43,12 @@ class User(Base):
     marketing_reminded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     settings: Mapped[dict] = mapped_column(JSON, default=dict)
     coins: Mapped[int] = mapped_column(Integer, default=0)
+    # 코인 소멸 (2026-12-01 시행): coins go after a year with no charge or use (youniya_api/coins.py).
+    # The last charge or use, and the smallest "days left" notice already sent since then (30, 7).
+    coins_active_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    coins_notice_days: Mapped[int | None] = mapped_column(Integer)
+    # The sign-in email (Apple or Google ID token), encrypted; only for coin expiry notices.
+    email_enc: Mapped[str | None] = mapped_column(Text)
     free_telescope_used: Mapped[bool] = mapped_column(Boolean, default=False)  # the sign-up one
     # Free uses (youniya_api/allowance.py): the Korean day and how many free floats it had,
     # and the month whose free telescope was used.
@@ -311,6 +317,23 @@ class CoinEntry(Base):
     # 28 코인 충전: "쓴 코인은 환불되지 않아요 …" agreed at purchase. Only then may a refund
     # request be answered with this purchase's consumption (Apple requires the consent).
     refund_consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+
+
+class CoinLot(Base):
+    """코인 소멸 (2026-12-01): what is left of each charge. The lots add up to users.coins; coins go from the oldest
+    lot first. `expires` False: App Store coins bought before Expiring Consumables (coins.NON_EXPIRING_APP_STORE),
+    which never go. Expiring lots share one date, a year after the last charge or use (coins.last_day)."""
+
+    __tablename__ = "coin_lots"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    user_id: Mapped[str] = user_fk()
+    entry_id: Mapped[str | None] = mapped_column(String(36), index=True)  # the 코인 충전 entry, if any
+    source: Mapped[str] = mapped_column(String(16))  # app_store | google_play | toss | server
+    expires: Mapped[bool] = mapped_column(Boolean)
+    amount: Mapped[int] = mapped_column(Integer)
+    remaining: Mapped[int] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
 
 
@@ -633,6 +656,8 @@ class StarlightAttempt(Base):
     status: Mapped[str] = mapped_column(String(12), default="running")
     used: Mapped[str | None] = mapped_column(String(8))  # member | free | coins, once done
     charged: Mapped[int] = mapped_column(Integer, default=0)
+    # The coin lots the charge came from, [[lot_id, n], …], so a cancel puts them back where they were.
+    charged_lots: Mapped[list | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -659,6 +684,8 @@ class AuthHandoff(Base):
     challenge: Mapped[str] = mapped_column(String(64))
     # purpose "delete": Apple's authorization code, encrypted, to revoke the Apple tokens (5.1.1(v)).
     apple_code_enc: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # purpose "signin": the email in Apple's ID token, encrypted, for the account it signs in to.
+    email_enc: Mapped[str | None] = mapped_column(Text, nullable=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

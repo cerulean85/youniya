@@ -254,6 +254,7 @@ def _keeper_row(db: Session, u: User) -> dict:
                         .where(StarShare.user_id == u.id))
     return {"id": u.id, "no": u.keeper_no, "nickname": u.nickname, "joined_at": iso(u.created_at), "provider": u.provider,
             "stars": stars, "shared": shared, "reports": reports, "coins": u.coins,
+            **coins.expiry_view(db, u),
             "status": "restricted" if _restricted(u) else "active", "restricted_until": iso(u.plaza_restricted_until)}
 
 
@@ -351,12 +352,9 @@ def keeper_action(user_id: str, body: KeeperAction, request: Request, op: Operat
         if body.amount is None:
             raise ApiError(422, "amount_required", "회수할 코인 수를 적어 주세요.")
         # Never below 0: more than the balance is refused, not cut down.
-        if not db.execute(update(User).where(User.id == u.id, User.coins >= body.amount)
-                          .values(coins=User.coins - body.amount)).rowcount:
+        if not coins.take(db, u, body.amount, "운영자 회수"):
             db.rollback()
             raise ApiError(409, "insufficient_balance", "남은 코인보다 많이 회수할 수 없어요.", coins=u.coins)
-        db.add(CoinEntry(user_id=u.id, title="운영자 회수", delta=-body.amount))
-        db.refresh(u)
         tell = ("코인이 회수됐어요", f"운영자가 코인 {body.amount}개를 회수했어요. 궁금한 점은 문의하기로 알려 주세요.",
                 {"screen": "coin_history"})
     elif a == "process_deletion":

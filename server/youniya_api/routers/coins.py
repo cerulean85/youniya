@@ -45,6 +45,9 @@ def balance(request: Request, user: User = Depends(consented_user), db: Session 
     """`packages` lists only what is on sale; older products are still accepted and refunded."""
     return {
         "coins": user.coins,
+        # 코인 소멸: how many coins can expire, and their last day (KST, YYYY-MM-DD) without a charge or use;
+        # null when none can (App Store coins don't expire).
+        **coins.expiry_view(db, user),
         "free_telescope_available": allowance.telescopes_left(user) > 0,
         **membership.free_summary(db, request.app.state.settings, user),
         "prices": {"star": STAR_FLOAT_COST, "telescope": TELESCOPE_COST},
@@ -115,7 +118,7 @@ def _grant(db: Session, user: User, product_id: str, transaction_id: str, quanti
             raise ApiError(409, "transaction_used", "이미 처리된 결제예요.")
         return {"coins": user.coins, "added": 0, "already_processed": True}
     added = package["coins"] * quantity
-    coins.add(db, user, added, "코인 충전", transaction_id=transaction_id,
+    coins.add(db, user, added, "코인 충전", transaction_id=transaction_id, product_id=product_id,
               refund_consent_at=datetime.now(timezone.utc) if consent else None)
     db.commit()
     return {"coins": user.coins, "added": added, "already_processed": False}

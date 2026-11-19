@@ -232,11 +232,9 @@ def refund(db: Session, toss: TossClient, order: TossOrder, reason: str, title: 
         taken = coins.take_back(db, user, order.coins, title, transaction_id=refund_id)
     elif user is not None:
         # Taken first (in this transaction): a spend racing this one can't use the coins while Toss cancels.
-        if not db.execute(update(User).where(User.id == user.id, User.coins >= order.coins)
-                          .values(coins=User.coins - order.coins)).rowcount:
+        if not coins.take(db, user, order.coins, title, transaction_id=refund_id):
             db.rollback()
             raise ApiError(409, "coins_spent", "이미 쓴 코인이 있어 환불할 수 없어요.")
-        db.add(CoinEntry(user_id=user.id, title=title, delta=-order.coins, transaction_id=refund_id))
         taken = order.coins
     elif not force:
         raise ApiError(409, "coins_spent", "이미 쓴 코인이 있어 환불할 수 없어요.")

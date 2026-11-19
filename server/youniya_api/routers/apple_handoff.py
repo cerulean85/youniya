@@ -35,7 +35,7 @@ from ..models import AuthHandoff
 from ..ratelimit import per_ip
 from ..security import Cipher
 from ..views import aware
-from .auth import _session_for
+from .auth import _session_for, email_of
 
 router = APIRouter(prefix="/v1/auth/apple", tags=["auth"])
 
@@ -59,10 +59,10 @@ def _hash(code: str) -> str:
 
 
 def _new_handoff(db: Session, purpose: str, provider: str, sub: str, challenge: str,
-                 apple_code_enc: str | None = None) -> str:
+                 apple_code_enc: str | None = None, email_enc: str | None = None) -> str:
     code = secrets.token_urlsafe(32)
     db.add(AuthHandoff(code_hash=_hash(code), purpose=purpose, provider=provider, sub=sub, challenge=challenge,
-                       apple_code_enc=apple_code_enc, expires_at=datetime.now(timezone.utc) + HANDOFF_TTL))
+                       apple_code_enc=apple_code_enc, email_enc=email_enc, expires_at=datetime.now(timezone.utc) + HANDOFF_TTL))
     db.commit()
     return code
 
@@ -119,7 +119,7 @@ def start(request: Request, code_challenge: str = Query(..., pattern=CHALLENGE),
                         "exp": int(time.time()) + STATE_TTL}, s.jwt_secret, algorithm="HS256")
     query = urlencode({"client_id": s.apple_services_id, "redirect_uri": s.apple_handoff_redirect_uri,
                        "response_type": "code id_token", "response_mode": "form_post", "state": state,
-                       "nonce": nonce})
+                       "nonce": nonce, **({"scope": "email"} if purpose == "signin" else {})})  # 코인 소멸 알림 메일
     return RedirectResponse(f"https://appleid.apple.com/auth/authorize?{query}", status_code=302)
 
 
@@ -160,7 +160,8 @@ def callback(request: Request, form: dict = Depends(apple_form), db: Session = D
             return _back_to_app(request, error="failed", purpose=purpose)
         cipher: Cipher = request.app.state.cipher
         enc = cipher.enc(apple_code)
-    code = _new_handoff(db, purpose, "apple", sub, state["c"], enc)
+    email = email_of(id_token, request.app.state.cipher) if purpose == "signin" else None
+    code = _new_handoff(db, purpose, "apple", sub, state["c"], enc, email)
     return _back_to_app(request, code=code, purpose=purpose)
 
 
@@ -176,4 +177,4 @@ def exchange(body: ExchangeIn, request: Request, db: Session = Depends(get_db)):
     row = take_handoff(db, body.code, body.code_verifier, "signin")
     if row is None:
         raise ApiError(400, "handoff_invalid", "로그인을 마치지 못했어요. 다시 시도해 주세요.")
-    return _session_for(db, row.provider, row.sub, request.app.state.settings.jwt_secret)
+    return _session_for(db, row.provider, row.sub, request.app.state.settings.jwt_secret, row.email_enc)

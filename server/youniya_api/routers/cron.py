@@ -28,11 +28,17 @@ router = APIRouter(prefix="/v1/cron", tags=["cron"], dependencies=[Depends(verce
 
 @router.get("/marketing-reconfirm")
 def marketing_reconfirm(request: Request, db: Session = Depends(get_db)):
-    """Daily: users whose 새 기능·혜택 알림 consent turned two years old hear that it is still on (14.3)."""
+    """Daily: users whose 새 기능·혜택 알림 consent turned two years old hear that it is still on (14.3).
+    Also the coin expiry notices and expiries (코인 소멸)."""
     sent = marketing.remind_due(db, request.app.state.push)
     db.add(AdminLog(action="cron_marketing_reconfirm", target_id=str(sent)))
     db.commit()
-    return {"reminded": sent}
+    # 코인 소멸 rides on this daily job (10:00 KST, so the notices don't come at night; two crons on the hobby plan).
+    s = request.app.state
+    expiry = coins.expire_due(db, s.push, s.cipher, s.settings)
+    db.add(AdminLog(action="cron_coin_expiry", target_id=f"{expiry['notified']}/{expiry['expired']}"))
+    db.commit()
+    return {"reminded": sent, "coin_expiry": expiry}
 
 
 @router.get("/purge-purchase-records")

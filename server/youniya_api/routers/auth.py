@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import Literal
 
 import logging
+from zoneinfo import ZoneInfo
 
 import jwt
 from fastapi import APIRouter, Depends, Request
@@ -91,13 +92,30 @@ def invite_sign_in(body: InviteSignIn, request: Request, db: Session = Depends(g
     return _tokens(db, user, request.app.state.settings.jwt_secret)
 
 
-def _session_for(db: Session, provider: str, sub: str, secret: str) -> dict:
+def _session_for(db: Session, provider: str, sub: str, secret: str, email_enc: str | None = None) -> dict:
     user = db.scalar(select(User).where(User.provider == provider, User.provider_sub == sub))
     if user is None:
         user = User(provider=provider, provider_sub=sub, settings={})
         db.add(user)
         db.flush()
+    if email_enc:  # the latest one the sign-in gave; a sign-in without one keeps the old
+        user.email_enc = email_enc
     return _tokens(db, user, secret)
+
+
+# 개인정보 처리방침 개정(이메일 수집)이 시행되는 날, KST. Before it no email is kept.
+EMAIL_FROM = datetime(2026, 12, 19, tzinfo=ZoneInfo("Asia/Seoul"))
+
+
+def email_of(id_token: str, cipher, now: datetime | None = None) -> str | None:
+    """The `email` claim of an ID token already verified, encrypted; only for coin expiry notices (코인 소멸)."""
+    if (now or datetime.now(timezone.utc)) < EMAIL_FROM:
+        return None
+    try:
+        email = jwt.decode(id_token, options={"verify_signature": False}).get("email")
+    except jwt.InvalidTokenError:
+        return None
+    return cipher.enc(email.strip().lower()) if isinstance(email, str) and "@" in email else None
 
 
 def _who_issued(id_token: str) -> str:
@@ -117,4 +135,5 @@ def sign_in(provider: Literal["apple", "google"], body: SignIn, request: Request
     except (jwt.InvalidTokenError, jwt.PyJWKClientError) as e:
         log.warning("%s sign-in refused: %s: %s (%s)", provider, type(e).__name__, e, _who_issued(body.id_token))
         raise ApiError(401, "invalid_id_token", "로그인 정보를 확인하지 못했어요.")
-    return _session_for(db, provider, sub, request.app.state.settings.jwt_secret)
+    return _session_for(db, provider, sub, request.app.state.settings.jwt_secret,
+                        email_of(body.id_token, request.app.state.cipher))

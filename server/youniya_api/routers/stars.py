@@ -135,18 +135,19 @@ def _float(db: Session, user: User, star: Star, request: Request, cipher: Cipher
         return result.status, 0
     if result.status != "ok":
         return result.status, 0
-    charged = 0
+    charged, lots = 0, None
     # A member's daily ones first, then the free one everybody has, then coins.
     used = "member" if member and membership.use_today(db, user, "star") else \
         "free" if free and allowance.use_star(db, user, per_day) else None
     if not used:
-        if not coins.spend(db, user, STAR_FLOAT_COST, "별 띄우기"):
+        lots = coins.spend(db, user, STAR_FLOAT_COST, "별 띄우기")
+        if lots is None:
             db.rollback()
             raise _insufficient(user, STAR_FLOAT_COST)
         used, charged = "coins", STAR_FLOAT_COST
     if attempt_id is not None:
         db.execute(update(StarlightAttempt).where(StarlightAttempt.id == attempt_id)
-                   .values(used=used, charged=charged))
+                   .values(used=used, charged=charged, charged_lots=lots))
     _apply(star, result.analysis, cipher)
     return result.status, charged
 
@@ -336,7 +337,7 @@ def _give_back(db: Session, user: User, row: StarlightAttempt) -> dict | None:
     elif row.used == "free":
         allowance.give_back_star(db, user)
     elif row.used == "coins" and row.charged:
-        coins.add(db, user, row.charged, "별빛 받기 그만두기")
+        coins.give_back(db, user, row.charged_lots, row.charged, "별빛 받기 그만두기")
     return {"used": row.used, "coins": row.charged if row.used == "coins" else 0} if row.used else None
 
 
