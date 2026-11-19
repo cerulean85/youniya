@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from .. import invites, runtime
 from .. import operators as ops
 from ..deps import ApiError, get_db
+from ..coins import EXPIRED_TITLE
 from .coins import source as coin_source
 from ..models import (AdminAudit, AdminLog, AiCost, AiUsage, CoinEntry, DeviceToken, Inquiry, InviteAccount, Notice,
                       Operator, PrismTest, ShareReport, Star, StarLineReport, User)
@@ -103,6 +104,8 @@ def _kind(e: CoinEntry) -> str:
         return "refund"
     if e.title == "운영자 지급":
         return "grant"
+    if e.title == EXPIRED_TITLE and not e.transaction_id:
+        return "expire"  # 코인 소멸: a year without a charge or use
     return "spend" if e.delta < 0 else "other"
 
 

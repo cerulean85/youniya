@@ -77,7 +77,9 @@ def source(entry: CoinEntry) -> str:
 
 
 def _kind(entry: CoinEntry) -> str:
-    """purchase (충전) · spend (사용) · refund (App Store 환불로 거둔 코인)"""
+    """purchase (충전) · spend (사용) · refund (App Store 환불로 거둔 코인) · expire (기간 만료 소멸)"""
+    if not entry.transaction_id and entry.title == coins.EXPIRED_TITLE:
+        return "expire"
     if entry.transaction_id and entry.transaction_id.startswith("refund:"):
         return "refund"
     return "purchase" if entry.transaction_id else "spend"

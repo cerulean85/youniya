@@ -135,6 +135,8 @@ def test_notices_then_expiry(make_app):
     with client.app.state.sessions() as db:
         assert db.query(User).one().coins == 5
         assert db.query(CoinEntry).filter_by(title=coins.EXPIRED_TITLE).one().delta == -30
+    items = client.get("/v1/coins/history", headers=h).json()["items"]
+    assert [i["kind"] for i in items if i["title"] == coins.EXPIRED_TITLE] == ["expire"]
     assert _run(client, _at(2028, 1, 12), mails)["expired"] == 0
 
 
