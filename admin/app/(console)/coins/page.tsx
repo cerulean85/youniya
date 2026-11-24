@@ -9,7 +9,7 @@ import type { LedgerKind } from "@/lib/types";
 
 export const metadata: Metadata = { title: "코인·결제" };
 
-const KIND: Record<LedgerKind, [string, string]> = { charge: ["badge-done", "충전"], use: ["badge-muted", "사용"], refund: ["badge-hidden", "환불"], grant: ["badge-info", "지급"], revoke: ["badge-hidden", "회수"] };
+const KIND: Record<LedgerKind, [string, string]> = { charge: ["badge-done", "충전"], use: ["badge-muted", "사용"], refund: ["badge-hidden", "환불"], grant: ["badge-info", "지급"], revoke: ["badge-hidden", "회수"], expire: ["badge-muted", "기간 만료 소멸"] };
 /** 결제 채널: App Store, 웹 결제 (Toss), Google Play (Android, 2026-11-11). */
 const CHANNEL: Record<string, string> = { app_store: "App Store", toss: "웹 결제", google_play: "Google Play" };
 const when = (iso: string) => new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(iso));

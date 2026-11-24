@@ -110,6 +110,14 @@ struct CoinChargeView: View {
                     }
                     .buttonStyle(.plain)
 
+                    // 2026-11-19: web · Google Play coins expire after a year unused.
+                    if let n = model.coinsExpiring, let day = model.coinsExpireAfter.flatMap(Self.dayText) {
+                        Text("이 중 \(n)개는 \(day)까지 쓰거나 충전하지 않으면 사라져요.")
+                            .textStyle(.caption)
+                            .foregroundStyle(Color.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
                     // Short screens (iPhone SE) drop the picture so all three packages
                     // fit above the consent and the button.
                     if model.membershipOn {
@@ -272,4 +280,13 @@ struct CoinHero: View {
 
 #Preview("28") {
     CoinChargeView(onBack: {}, onPolicy: {}).environment(AppModel())
+}
+
+extension CoinChargeView {
+    /// "2027-12-01" → "2027년 12월 1일"
+    static func dayText(_ ymd: String) -> String? {
+        let p = ymd.split(separator: "-").compactMap { Int($0) }
+        guard p.count == 3 else { return nil }
+        return "\(p[0])년 \(p[1])월 \(p[2])일"
+    }
 }

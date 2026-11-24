@@ -13,6 +13,8 @@ export async function GET(request: NextRequest) {
     redirect_uri: APPLE_REDIRECT_URI,
     response_type: "code id_token",
     response_mode: "form_post",
+    // The ID token carries the email only when it is asked for; the server keeps it encrypted (2026-11-19).
+    scope: "email",
     state,
     nonce,
   }).toString();

@@ -187,6 +187,15 @@ fun CoinChargeView(
                         tint = YColor.textSecondary,
                     )
                 }
+                // 코인 소멸: the coins that lapse unless something is charged or used by that day.
+                val expireAfter = model.coinsExpireAfter?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }
+                if (expireAfter != null && model.coinsExpiring > 0) {
+                    Text(
+                        "%,d코인 · %d년 %d월 %d일까지".format(model.coinsExpiring, expireAfter.year, expireAfter.monthValue, expireAfter.dayOfMonth),
+                        style = YText.caption,
+                        color = YColor.textTertiary,
+                    )
+                }
 
                 CoinHero()
 
@@ -235,7 +244,7 @@ fun CoinChargeView(
                 verticalArrangement = Arrangement.spacedBy(Space.lg),
             ) {
                 Text(
-                    "충전한 코인만큼 남아 있을 때만 환불할 수 있어요.\n48시간이 지난 환불은 문의하기에서 요청해 주세요.",
+                    "마지막 충전·사용일부터 1년 동안 충전·사용이 없으면 코인이 소멸돼요.\n충전한 코인만큼 남아 있을 때만 환불할 수 있어요.\n48시간이 지난 환불은 문의하기에서 요청해 주세요.",
                     style = YText.caption,
                     color = YColor.textTertiary,
                     textAlign = TextAlign.Center,

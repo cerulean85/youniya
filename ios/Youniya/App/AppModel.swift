@@ -496,6 +496,9 @@ final class AppModel {
     var hasSeenPlazaIntro: Bool {
         didSet { UserDefaults.standard.set(hasSeenPlazaIntro, forKey: "hasSeenPlazaIntro") }
     }
+    /// Live: coins due to expire (web · Google Play only) and their last day, "YYYY-MM-DD".
+    var coinsExpiring: Int?
+    var coinsExpireAfter: String?
     /// Coin balance: mocked on device, or the server's when live (kept apart).
     var coins: Int {
         didSet { UserDefaults.standard.set(coins, forKey: useLiveAPI ? "coins-live" : "coins") }

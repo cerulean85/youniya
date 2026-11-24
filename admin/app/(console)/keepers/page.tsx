@@ -47,7 +47,7 @@ export default async function KeepersPage({ searchParams }: PageProps<"/keepers"
               <tr key={k.id}>
                 <td><Link href={`/keepers/${encodeURIComponent(k.id)}`} className="row-link">{k.nickname ?? <span className="faint">이름 없음</span>}</Link></td>
                 <td>{k.no}</td><td>{k.joined_at.slice(0, 10)}</td><td>{PROVIDER_LABEL[k.provider] ?? k.provider}</td>
-                <td className="num">{k.stars}</td><td className="num">{k.shared}</td><td className="num">{k.reports}</td><td className="num">{k.coins.toLocaleString("ko-KR")}</td>
+                <td className="num">{k.stars}</td><td className="num">{k.shared}</td><td className="num">{k.reports}</td><td className="num">{k.coins.toLocaleString("ko-KR")}{k.coins_expiring && k.coins_expire_after ? <div className="caption faint">{k.coins_expiring.toLocaleString("ko-KR")} 소멸 예정 · {k.coins_expire_after.slice(5).replace("-", ".")}까지</div> : null}</td>
                 <td><span className={`badge ${k.status === "restricted" ? "badge-pending" : "badge-muted"}`}>{k.status === "restricted" ? `제한${k.restricted_until ? ` · ${k.restricted_until.slice(5, 10)}까지` : ""}` : "정상"}</span></td>
               </tr>
             ))}

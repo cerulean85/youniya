@@ -176,7 +176,7 @@ function toDashboard(d: any): Dashboard {
     payments_today: d.payments_today ?? { charge_krw: d.payments?.krw_estimate ?? 0, charge_count: d.payments?.count ?? 0, coins: d.payments?.coins },
   };
 }
-const LEDGER_KIND: Record<string, Ledger["items"][number]["kind"]> = { purchase: "charge", charge: "charge", spend: "use", use: "use", refund: "refund", grant: "grant", revoke: "revoke" };
+const LEDGER_KIND: Record<string, Ledger["items"][number]["kind"]> = { purchase: "charge", charge: "charge", spend: "use", use: "use", refund: "refund", grant: "grant", revoke: "revoke", expire: "expire" };
 function toLedger(d: any, month: string): Ledger {
   if (d.summary) return d;
   const t = d.totals ?? {};

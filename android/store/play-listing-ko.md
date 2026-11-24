@@ -50,7 +50,7 @@ YOUNIYA는 자기 이해를 돕는 기록 도구이며, 의료·상담·진단�
 - 개인정보처리방침 URL: https://youniya.dycdyp.com/privacy
 - 계정 삭제 URL: https://youniya.dycdyp.com/delete-account
 - 웹사이트: https://youniya.dycdyp.com
-- 이메일: zhwan85@gmail.com
+- 이메일: yuni-support@dycdyp.com
 - 앱 카테고리: 라이프스타일 (대안: 건강/운동은 의료 앱으로 오해받을 수 있어 비추천)
 - 태그: 일기, 저널, 마음 기록
 

@@ -91,6 +91,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         private set
     var coins by mutableIntStateOf(0)
         private set
+    var coinsExpiring by mutableIntStateOf(0)
+        private set
+    /** YYYY-MM-DD (KST), the last day [coinsExpiring] coins can be used; null when none can expire. */
+    var coinsExpireAfter by mutableStateOf<String?>(null)
+        private set
     var freeStarToday by mutableIntStateOf(0)
         private set
     var marketingOptIn by mutableStateOf(false)
@@ -434,6 +439,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         if (!isSignedIn) return@launch
         runCatching { api.get<Me>("/v1/me") }
             .onSuccess(::apply)
+        // 코인 소멸: how many coins can expire and their last day (KST); none for App Store coins.
+        runCatching { api.get<CoinsOut>("/v1/coins") }
+            .onSuccess { coinsExpiring = it.coinsExpiring; coinsExpireAfter = it.coinsExpireAfter }
     }
 
     suspend fun publishLit(
@@ -1285,6 +1293,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 @Serializable private data class SettingsPatchIn(val sky: String? = null, val reduceAnimations: Boolean? = null, val starReminder: Boolean? = null)
 @Serializable private data class MarketingIn(val optIn: Boolean)
 @Serializable private data class MarketingOut(val optIn: Boolean)
+@Serializable private data class CoinsOut(val coins: Int = 0, val coinsExpiring: Int = 0, val coinsExpireAfter: String? = null)
 @Serializable private data class ServerCoinItem(val id: String, val kind: String, val title: String, val delta: Int, val source: String = "server", val createdAt: String? = null)
 @Serializable private data class ServerCoinHistoryOut(val items: List<ServerCoinItem> = emptyList())
 @Serializable private data class ServerBlockItem(val id: String, val source: String = "line", val createdAt: String? = null)

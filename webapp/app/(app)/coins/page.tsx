@@ -49,6 +49,9 @@ async function Coins({ searchParams }: Pick<PageProps<"/coins">, "searchParams">
             별빛 받기 {Math.floor(info.coins / info.prices.star).toLocaleString("ko-KR")}번을 할 수 있어요 (1번에 {info.prices.star}코인)
             {info.free_star_today > 0 ? ` · 오늘 무료 별빛 ${info.free_star_today}번 남았어요` : " · 오늘 무료 별빛은 썼어요"}
           </p>
+          {info.coins_expiring != null && info.coins_expiring > 0 && info.coins_expire_after && (
+            <p className={`body-s ${styles.expiry}`}>그중 {info.coins_expiring.toLocaleString("ko-KR")}코인은 {expiryDay(info.coins_expire_after)}까지 쓸 수 있어요. 그 전에 충전하거나 쓰면 1년 늘어나요.</p>
+          )}
         </section>
         <Recharge packages={packages} available={Boolean(toss?.available)} site={SITE_URL} from={typeof sp.from === "string" && sp.from.startsWith("/") && !sp.from.startsWith("//") ? sp.from : null} />
       </div>
@@ -85,4 +88,10 @@ async function Coins({ searchParams }: Pick<PageProps<"/coins">, "searchParams">
 function lastDays(items: CoinEntryRow[], n: number) {
   const since = Date.now() - n * 86400000;
   return items.filter((x) => new Date(x.created_at).getTime() >= since);
+}
+
+/** "2027-12-01" (KST date from the API) → "2027년 12월 1일". */
+function expiryDay(d: string) {
+  const [y, m, day] = d.split("-").map(Number);
+  return `${y}년 ${m}월 ${day}일`;
 }

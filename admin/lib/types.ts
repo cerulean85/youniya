@@ -41,6 +41,8 @@ export type KeeperStatus = "active" | "restricted";
 export type KeeperRow = {
   id: string; no: string; nickname: string | null; joined_at: string; provider: "apple" | "google" | "invite" | string;
   stars: number; shared: number; reports: number; coins: number; status: KeeperStatus; restricted_until: string | null;
+  /** 1년 미이용 소멸 (2026-12-01~): coins that would expire and their last usable day (KST); null when none. */
+  coins_expiring?: number; coins_expire_after?: string | null;
 };
 export type KeeperDetail = KeeperRow & {
   last_seen_at: string | null;
@@ -90,7 +92,7 @@ export type Dashboard = {
   events: { at: string; text: string; status: "hidden" | "alert" | "done" | "pending" | "ok"; href?: string }[];
   payments_today: { charge_krw: number; charge_count: number; refund_krw?: number | null; refund_count?: number | null; used?: { starlight: number; telescope: number } | null; coins?: number };
 };
-export type LedgerKind = "charge" | "use" | "refund" | "grant" | "revoke";
+export type LedgerKind = "charge" | "use" | "refund" | "grant" | "revoke" | "expire";
 export type Ledger = {
   month: string;
   summary: { charge_krw: number; charge_count: number; refund_krw: number; refund_count: number; usage_share?: { starlight: number; telescope: number } | null; free_used?: { starlight: number; telescope: number } | null; spend_coins?: number; grant_coins?: number };

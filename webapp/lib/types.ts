@@ -141,7 +141,9 @@ export type Notice = { id: string; title: string; body: string; published_at: st
 
 /** GET /v1/coins: the balance, what's free today, and the packages on sale (the same as iOS). */
 export type CoinsInfo = {
-  coins: number; free_star_today: number; 
+  coins: number; free_star_today: number;
+  /** 1년 미이용 소멸 (시행 2026-12-01): coins that would expire, and the last day they can be used (KST, YYYY-MM-DD); null when none. */
+  coins_expiring?: number; coins_expire_after?: string | null;
   prices: { star: number };
   packages: { product_id: string; coins: number; price: number; bonus: number }[];
 };

@@ -33,3 +33,6 @@
 .delta[data-tone="plus"] { color: var(--text); }
 .delta[data-tone="free"] { color: var(--calm); }
 @media (max-width: 1100px) { .page { grid-template-columns: 1fr; } }
+
+/* 1년 미이용 소멸 안내 (2026-11-19) */
+.expiry { margin: 0; color: var(--gold); }

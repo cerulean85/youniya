@@ -6,6 +6,10 @@ private struct CoinBalance: Decodable {
     var coins: Int
     /// Free uses left (e24a01d): today's float (0/1).
     var freeStarToday: Int?
+    /// Coins that expire after a year unused (web · Google Play), and the last
+    /// day they can be used ("YYYY-MM-DD", Korea). App Store coins never expire.
+    var coinsExpiring: Int?
+    var coinsExpireAfter: String?
 }
 
 private struct CoinHistoryList: Decodable {
@@ -64,6 +68,8 @@ extension AppModel {
             async let history: CoinHistoryList = APIClient.shared.get("/v1/coins/history")
             let (b, h) = try await (balance, history)
             coins = b.coins
+            coinsExpiring = (b.coinsExpiring ?? 0) > 0 ? b.coinsExpiring : nil
+            coinsExpireAfter = coinsExpiring == nil ? nil : b.coinsExpireAfter
             applyFreeUses(star: b.freeStarToday)
             // Members: today's 10 floats / telescopes left.
             if membershipAvailable { await loadMembership() }

@@ -21,7 +21,9 @@ final class AppleSignIn: NSObject, ASAuthorizationControllerDelegate, ASAuthoriz
 
     func identityToken() async throws -> String {
         let request = ASAuthorizationAppleIDProvider().createRequest()
-        request.requestedScopes = []
+        // The server keeps the account email (encrypted) for coin-expiry notices
+        // (2026-11-19). Apple shares it only on the first sign-in with this app.
+        request.requestedScopes = [.email]
         let controller = ASAuthorizationController(authorizationRequests: [request])
         controller.delegate = self
         controller.presentationContextProvider = self
