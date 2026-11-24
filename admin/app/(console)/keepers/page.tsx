@@ -22,13 +22,13 @@ export default async function KeepersPage({ searchParams }: PageProps<"/keepers"
   return (
     <>
       <div className="head">
-        <div><h1>별지기</h1><p className="muted">별지기 이름, 번호로 찾을 수 있어요. 쓴 글은 볼 수 없어요.</p></div>
+        <div><h1>별지기</h1><p className="muted">별지기 이름, #번호, 로그인 이메일(@ 포함)로 찾을 수 있어요. 쓴 글은 볼 수 없어요.</p></div>
         {operator.role === "owner" && <a href="/keepers/export" className="btn-text" download>CSV 내보내기</a>}
       </div>
       <div className="toolbar">
         <form className="search" action="/keepers">
           {filter !== "all" && <input type="hidden" name="filter" value={filter} />}
-          <input name="q" defaultValue={q} placeholder="별지기 이름 또는 #번호로 찾기" aria-label="별지기 찾기" />
+          <input name="q" defaultValue={q} placeholder="이름, #번호, 이메일로 찾기" aria-label="별지기 찾기" />
         </form>
         <nav className="tabs" aria-label="거르기">
           {FILTERS.map(([k, label]) => <Link key={k} href={href(k)} aria-current={k === filter ? "true" : undefined}>{label}</Link>)}
