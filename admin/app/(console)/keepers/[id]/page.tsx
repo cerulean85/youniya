@@ -80,6 +80,7 @@ export default async function KeeperPage({ params }: PageProps<"/keepers/[id]">)
           <section className="section">
             <h2>계정</h2>
             <dl className="rows">
+              <div><dt>로그인 이메일</dt><dd>{k.email ?? <span className="faint">받지 않음</span>}</dd></div>
               <div><dt>약관 동의</dt><dd>{k.consents.terms_at ? `${dateTime(k.consents.terms_at)}${k.consents.terms_version ? ` (${k.consents.terms_version})` : ""}` : "—"}</dd></div>
               <div><dt>민감정보 동의</dt><dd>{k.consents.sensitive_at ? dateTime(k.consents.sensitive_at) : "—"}</dd></div>
               <div><dt>혜택 알림</dt><dd>{m.opt_in ? `동의 · ${m.at ? dateTime(m.at) : ""}` : "동의 안 함"}</dd></div>

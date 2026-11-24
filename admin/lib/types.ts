@@ -43,6 +43,8 @@ export type KeeperRow = {
   stars: number; shared: number; reports: number; coins: number; status: KeeperStatus; restricted_until: string | null;
   /** 1년 미이용 소멸 (2026-12-01~): coins that would expire and their last usable day (KST); null when none. */
   coins_expiring?: number; coins_expire_after?: string | null;
+  /** Sign-in email: whole for owners, masked (zh***@gmail.com) for moderators; null when Apple/Google gave none. */
+  email?: string | null;
 };
 export type KeeperDetail = KeeperRow & {
   last_seen_at: string | null;

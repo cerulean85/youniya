@@ -18,6 +18,7 @@ function seed() {
       last_seen_at: hours(Math.round(joined / 3)), star_counts: { lit, unlit },
       consents: { terms_at: days(joined), terms_version: "v2026-11-01", sensitive_at: days(joined), marketing: { opt_in: marketing, at: marketing ? days(joined) : null } },
       nickname_next_change: later(21), deletion_requested_at: null, history,
+      email: provider === "invite" ? null : provider === "apple" ? `${id.slice(2)}x7k@privaterelay.appleid.com` : `keeper${id.slice(2)}@gmail.com`,
     });
   k("u_48213", "#48213", "느린고래", 38, "apple", 40, 8, 6, 0, 120, null, true);
   k("u_48190", "#48190", "바람의끝", 39, "google", 15, 7, 9, 3, 0, 7, false, [
@@ -44,13 +45,13 @@ function seed() {
 }
 const st = () => (g.__mockMore ??= seed());
 
-const row = (k: KeeperDetail): KeeperRow => ({ id: k.id, no: k.no, nickname: k.nickname, joined_at: k.joined_at, provider: k.provider, stars: k.stars, shared: k.shared, reports: k.reports, coins: k.coins, status: k.status, restricted_until: k.restricted_until });
+const row = (k: KeeperDetail): KeeperRow => ({ id: k.id, no: k.no, nickname: k.nickname, joined_at: k.joined_at, provider: k.provider, stars: k.stars, shared: k.shared, reports: k.reports, coins: k.coins, status: k.status, restricted_until: k.restricted_until, email: k.email });
 
 export function listKeepers(token: string, q: string, filter: string): KeeperRow[] {
   operatorOf(token);
   const term = q.trim().replace(/^#/, "");
   return [...st().keepers.values()].filter((k) =>
-    (!term || (k.nickname ?? "").includes(term) || k.no.includes(term)) &&
+    (!term || (term.includes("@") ? (k.email ?? "").toLowerCase().includes(term.toLowerCase()) : (k.nickname ?? "").includes(term) || k.no.includes(term))) &&
     (filter === "restricted" ? k.status === "restricted" : filter === "reported" ? k.reports > 0 : filter === "invite" ? k.provider === "invite" : true),
   ).map(row);
 }

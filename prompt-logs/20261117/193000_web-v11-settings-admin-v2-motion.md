@@ -22,3 +22,17 @@
 - web 랜딩 (main 6dd5dbb, Sonnet 위임) → youniya.dycdyp.com. 1440·606 폭 브라우저 확인.
 - admin v2 (main 972a15a, 하위 에이전트) → admin.youniya.dycdyp.com. 목 데이터로 브라우저 확인, 실제 API·moderator 화면은 미확인.
 - 배경 반짝임: sparkle.svg(밝은 별 20개) 3층을 5·6·7초 박자로 켜고 끔. webapp(feat/web-v11, proxy matcher에 sparkle.svg 추가)·랜딩(main d06e801) 배포, 두 주소 200 확인. 랜딩은 로컬 브라우저에서 애니메이션 동작 확인.
+
+## 코인 소멸 반영 푸시 (2026-11-24)
+- 웹 앱·관리자 콘솔 변경은 e7cfd98 "Update"에 이미 커밋돼 있었음. 푸시가 GitHub 비밀 검사에 막힘(server/production 복사본 에 GCP 서비스 계정 키).
+- 그 파일만 커밋에서 빼고(디스크엔 남김) .gitignore에 /server/production* 추가, amend → main 4e67ed2 푸시. 배포는 아직.
+
+## 배포 (2026-11-24, 사용자 승인 "배포도 해줘")
+- webapp youniya-7drglijsp, admin youniya-admin-jp8slgs01 운영 배포 Ready.
+
+## 별지기 이메일 표시 (admin, 미커밋)
+- KeeperRow에 email(owner 전체, moderator 가림) 추가, 목록 이름 아래·상세 계정 "로그인 이메일" 행, 목 데이터. tsc 통과, 브라우저 확인 안 함.
+- API Session에 _keeper_row email 필드·이메일 검색 요청(상대 오프라인, 대기열).
+
+## 처리방침 이메일 용도 추가 (web/privacy.html, 미커밋)
+- 상단 안내·2조 이용 목적·개정 이력 12월 1일 줄에 "문의 응대·계정 확인" 추가. 관리자 별지기 검색 안내에 이메일 추가. 시행일 12-01 유지 여부는 오늘 공지 게시에 달림.
