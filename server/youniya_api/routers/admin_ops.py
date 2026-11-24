@@ -247,12 +247,21 @@ def _restricted(u: User) -> bool:
     return bool(u.plaza_restricted_until and aware(u.plaza_restricted_until) > _now())
 
 
-def _keeper_row(db: Session, u: User) -> dict:
+def _email(u: User, op: Operator | None, cipher: Cipher | None) -> str | None:
+    """The sign-in email: whole for owners, masked (zh●●●@gmail.com) for moderators. None without one."""
+    if not u.email_enc or op is None or cipher is None:
+        return None
+    email = cipher.dec(u.email_enc)
+    return email if op.role == "owner" else _mask_email(email)
+
+
+def _keeper_row(db: Session, u: User, op: Operator | None = None, cipher: Cipher | None = None) -> dict:
     stars = db.scalar(select(func.count()).select_from(Star).where(Star.user_id == u.id))
     shared = db.scalar(select(func.count()).select_from(StarShare).where(StarShare.user_id == u.id))
     reports = db.scalar(select(func.count()).select_from(ShareReport).join(StarShare, StarShare.id == ShareReport.target_id)
                         .where(StarShare.user_id == u.id))
-    return {"id": u.id, "no": u.keeper_no, "nickname": u.nickname, "joined_at": iso(u.created_at), "provider": u.provider,
+    return {"id": u.id, "no": u.keeper_no, "nickname": u.nickname, "email": _email(u, op, cipher),
+            "joined_at": iso(u.created_at), "provider": u.provider,
             "stars": stars, "shared": shared, "reports": reports, "coins": u.coins,
             **coins.expiry_view(db, u),
             "status": "restricted" if _restricted(u) else "active", "restricted_until": iso(u.plaza_restricted_until)}
@@ -261,19 +270,26 @@ def _keeper_row(db: Session, u: User) -> dict:
 @router.get("/keepers")
 def keepers(q: str | None = Query(None, max_length=40), filter: Literal["all", "restricted", "reported", "invite"] = "all",
             format: Literal["json", "csv"] = "json", limit: int = Query(100, ge=1, le=1000),
-            op: Operator = Depends(anyone), db: Session = Depends(get_db)):
-    """A-05: by 별지기 이름 or #번호. CSV (numbers only, no writing) for owners."""
+            op: Operator = Depends(anyone), cipher: Cipher = Depends(get_cipher), db: Session = Depends(get_db)):
+    """A-05: by 별지기 이름, #번호 or, with an "@", part of the sign-in email (lower case). CSV (numbers only,
+    no writing, no email) for owners."""
     stmt = select(User).order_by(User.created_at.desc())
     if q:
         if m := re.fullmatch(r"#?(\d+)", q.strip()):
             stmt = stmt.where(User.keeper_no == int(m.group(1)))
+        elif "@" in q:
+            # Emails are encrypted (Fernet, no equality), so they are opened and compared here.
+            needle = q.strip().lower()
+            ids = [i for i, enc in db.execute(select(User.id, User.email_enc).where(User.email_enc.is_not(None)))
+                   if needle in cipher.dec(enc).lower()]
+            stmt = stmt.where(User.id.in_(ids))
         else:
             stmt = stmt.where(User.nickname_key.contains(nickname.key(q)))
     if filter == "restricted":
         stmt = stmt.where(User.plaza_restricted_until > _now())
     elif filter == "invite":
         stmt = stmt.where(User.provider == "invite")
-    rows = [_keeper_row(db, u) for u in db.scalars(stmt.limit(limit))]
+    rows = [_keeper_row(db, u, op, cipher) for u in db.scalars(stmt.limit(limit))]
     if filter == "reported":
         rows = [r for r in rows if r["reports"]]
     if format == "csv":
@@ -291,7 +307,8 @@ def keepers(q: str | None = Query(None, max_length=40), filter: Literal["all", "
 
 
 @router.get("/keepers/{user_id}")
-def keeper(user_id: str, op: Operator = Depends(anyone), db: Session = Depends(get_db)):
+def keeper(user_id: str, op: Operator = Depends(anyone), cipher: Cipher = Depends(get_cipher),
+           db: Session = Depends(get_db)):
     """A-06: the account, its consents and what operators did, never its writing."""
     u = db.get(User, user_id)
     if u is None:
@@ -300,7 +317,7 @@ def keeper(user_id: str, op: Operator = Depends(anyone), db: Session = Depends(g
     total = db.scalar(select(func.count()).select_from(Star).where(Star.user_id == u.id))
     history = db.scalars(select(ops.AdminAudit).where(ops.AdminAudit.target == f"keeper:{u.id}")
                          .order_by(ops.AdminAudit.at.desc())).all()
-    return _keeper_row(db, u) | {
+    return _keeper_row(db, u, op, cipher) | {
         "last_seen_at": iso(u.last_seen_at), "star_counts": {"lit": lit, "unlit": total - lit},
         "consents": {"terms_at": iso(u.consented_at), "terms_version": None, "sensitive_at": iso(u.consented_at),
                      "marketing": {"opt_in": u.marketing_opt_in, "at": marketing.view(u)["consented_at"]}},
@@ -369,7 +386,7 @@ def keeper_action(user_id: str, body: KeeperAction, request: Request, op: Operat
     db.commit()
     if tell:
         notify(db, request.app.state.push, [u.id], Message(tell[0], tell[1], "report_result", tell[2] if len(tell) > 2 else None))
-    return _keeper_row(db, u)
+    return _keeper_row(db, u, op, request.app.state.cipher)
 
 
 # --- 웹 결제 (토스) 환불 ---------------------------------------------------------------------------
@@ -422,7 +439,7 @@ def refund_order(order_id: str, body: RefundIn, request: Request, op: Operator =
             "결제가 환불됐어요", f"{o.amount:,}원이 환불되고 코인 {taken}개가 회수됐어요.", "report_result",
             {"screen": "coin_history"}))
     return {"order": _order_view(o, u.coins if u else 0), "coins_taken": taken,
-            "keeper": _keeper_row(db, u) if u else None}
+            "keeper": _keeper_row(db, u, op, request.app.state.cipher) if u else None}
 
 
 # --- 문의 -----------------------------------------------------------------------------------------

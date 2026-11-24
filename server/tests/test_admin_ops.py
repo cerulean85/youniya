@@ -123,3 +123,31 @@ def test_reply_needs_the_mail_key(make_app):
     r = client.post(f"/v1/admin/inquiries/{iid}/reply", json={"body": "답"}, headers=oh)
     assert r.status_code == 503 and r.json()["error"]["code"] == "mail_unavailable"
     assert client.get(f"/v1/admin/inquiries/{iid}", headers=oh).json()["status"] == "new"
+
+
+def test_keepers_show_the_sign_in_email_by_role(make_app):
+    client, oh, mh = _setup(make_app)
+    app = client.app
+    h = sign_in(client, "with-email")
+    uid = client.get("/v1/me", headers=h).json()["id"]
+    sign_in(client, "no-email")
+    from youniya_api.models import User
+    with app.state.sessions() as db:
+        db.get(User, uid).email_enc = app.state.cipher.enc("starkeeper@gmail.com")
+        db.commit()
+
+    def row(headers, q=None):
+        items = client.get("/v1/admin/keepers", params={"q": q} if q else {}, headers=headers).json()["items"]
+        return {i["id"]: i["email"] for i in items}
+
+    owner_rows, mod_rows = row(oh), row(mh)
+    assert owner_rows[uid] == "starkeeper@gmail.com" and mod_rows[uid] == "st●●●●●●●●@gmail.com"
+    assert None in owner_rows.values()  # the account without one
+    assert client.get(f"/v1/admin/keepers/{uid}", headers=oh).json()["email"] == "starkeeper@gmail.com"
+    assert client.get(f"/v1/admin/keepers/{uid}", headers=mh).json()["email"] == "st●●●●●●●●@gmail.com"
+    # Search by part of the email (needs an "@"), case-insensitive.
+    assert list(row(oh, "Keeper@Gmail")) == [uid]
+    assert row(mh, "nobody@") == {}
+    # Not in the CSV.
+    csv = client.get("/v1/admin/keepers", params={"format": "csv"}, headers=oh).text
+    assert "starkeeper" not in csv and "email" not in csv

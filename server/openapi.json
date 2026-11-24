@@ -5279,7 +5279,7 @@
           "admin"
         ],
         "summary": "Keepers",
-        "description": "A-05: by 별지기 이름 or #번호. CSV (numbers only, no writing) for owners.",
+        "description": "A-05: by 별지기 이름, #번호 or, with an \"@\", part of the sign-in email (lower case). CSV (numbers only,\nno writing, no email) for owners.",
         "operationId": "keepers_v1_admin_keepers_get",
         "parameters": [
           {
